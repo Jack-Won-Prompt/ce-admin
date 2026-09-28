@@ -724,6 +724,7 @@ class Order extends Model
         // 영수인가 청구인가 — 신고할 때 정한 값을 적어 두고 종이 서식이 그것을 읽는다
         'tax_invoice_purpose',
         'tax_invoice_biz_name', 'tax_invoice_ceo_name', 'tax_invoice_biz_no', 'tax_invoice_email',
+        'tax_invoice_addr',
         'tax_invoice_supply', 'tax_invoice_vat',
         'tax_invoice_issued_at', 'tax_invoice_cancelled_at',
         // 현금영수증

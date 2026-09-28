@@ -1155,6 +1155,18 @@ class OrderController extends Controller
                 'message' => '개인 발행에는 주민등록번호 13자리가 필요합니다 — 거래처관리나 처방전에 먼저 저장해 주십시오.',
             ], 422);
         }
+        /* 공급받는자 주소 — 종이 서식의 「사업장 주소」 칸에 그대로 선다 (2026-09-28 지시).
+
+           개인 건은 환자의 주소가 곧 그 자리다. 사업자 건은 받아 둔 주소가 없다 —
+           지어내지 않고 비워 둔다. 빈 칸은 「적지 않았다」로 읽히지만, 엉뚱한 주소가
+           찍힌 세금계산서는 되돌릴 수 없다.
+
+           **지금 값을 적어 둔다.** 그릴 때마다 환자 자료에서 읽으면, 환자가 이사한 뒤
+           예전 계산서를 다시 뽑았을 때 그 시절에 없던 주소가 찍힌다. */
+        $invoiceeAddr = $invoiceeType === '개인'
+            ? trim((string) $order->patient?->full_address)
+            : '';
+
         if ($invoiceeType === '사업자' && strlen($invoiceeNum) !== 10) {
             return response()->json([
                 'success' => false,
@@ -1199,6 +1211,11 @@ class OrderController extends Controller
             $inv->invoiceeCorpName   = $data['tax_invoice_biz_name'];
             $inv->invoiceeCEOName    = $data['tax_invoice_ceo_name'];
             $inv->invoiceeEmail1     = $data['tax_invoice_email'] ?? '';
+            /* 공급받는자 주소 — 종이 서식의 「사업장 주소」 칸이다 (2026-09-28 지시).
+
+               여태 보내지도 적어 두지도 않아 그 칸이 늘 비어 있었다. 함께 신고해야
+               신고된 것과 우리가 그려 붙이는 종이가 같아진다. */
+            $inv->invoiceeAddr       = $invoiceeAddr;
             $inv->supplyCostTotal    = (string) $supply;
             $inv->taxTotal           = (string) $vat;
             $inv->totalAmount        = (string) ($supply + $vat);
@@ -1238,6 +1255,8 @@ class OrderController extends Controller
                     ? \App\Support\ResidentNo::mask($invoiceeNum)
                     : $invoiceeNum,
                 'tax_invoice_email'     => $data['tax_invoice_email'] ?? null,
+                // 신고한 주소를 그대로 적어 둔다 — 종이 서식이 이것을 읽는다
+                'tax_invoice_addr'      => $invoiceeAddr ?: null,
                 'tax_invoice_supply'    => $data['tax_invoice_supply'],
                 'tax_invoice_vat'       => $data['tax_invoice_vat'],
                 'tax_invoice_issued_at' => $issuedAt,

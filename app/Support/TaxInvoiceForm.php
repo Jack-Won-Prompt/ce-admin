@@ -233,14 +233,33 @@ final class TaxInvoiceForm
     }
 
     /**
-     * 네 줄짜리 당사자 칸.
+     * 네 줄짜리 당사자 칸 — 공급자와 공급받는자.
      *
      * 공급받는자가 개인이면 등록번호 자리에 주민등록번호가 선다. 그 값은 이미 가려진
      * 것이다(발행 때 마스킹해 저장한다) — 원문은 처방전의 전용 암호화 칸에만 있다.
+     *
+     * **공급받는자 「사업장 주소」도 채운다** (2026-09-28 지시). 여태 비워 두었는데,
+     * 받는 쪽이 아는 종이는 두 칸이 다 찬 그 서식이다. 값은 신고할 때 적어 둔
+     * tax_invoice_addr 을 읽는다 — 환자 자료에서 그때그때 읽으면 환자가 이사한 뒤
+     * 예전 계산서를 다시 뽑았을 때 그 시절에 없던 주소가 찍힌다.
+     *
+     * 그 칸이 없던 시절에 발행한 건은 환자의 지금 주소로 물러난다. 비워 두는 것보다
+     * 낫고, 개인 건의 주소는 대개 바뀌지 않는다.
      */
     private static function parties(Order $order, array $company): array
     {
         $buyerName = (string) ($order->tax_invoice_biz_name ?? '');
+
+        /* 개인 건만 주소를 세운다 — 사업자 건은 받아 둔 주소가 없다.
+           개인인지는 등록번호로 가른다(사업자등록번호는 열 자리다). */
+        $번호   = preg_replace('/\D/', '', (string) ($order->tax_invoice_biz_no ?? '')) ?? '';
+        $개인인가 = strlen($번호) !== 10;
+
+        $buyerAddr = (string) ($order->tax_invoice_addr ?? '');
+
+        if ($buyerAddr === '' && $개인인가) {
+            $buyerAddr = trim((string) $order->patient?->full_address);
+        }
 
         return [
             [
@@ -261,11 +280,16 @@ final class TaxInvoiceForm
                 'label' => '사업장 주소', 'label2' => '', 'narrow' => false, 'wide' => true,
                 'supplier'  => (string) ($company['addr'] ?? ''),
                 'supplier2' => '',
-                // 신고하지 않은 칸이다 — 종이에도 비워 둔다
-                'buyer'     => '',
+                'buyer'     => $buyerAddr,
                 'buyer2'    => '',
             ],
             [
+                /* 공급받는자 업태ㆍ종목은 **개인 건에서 비운다.**
+
+                   개인은 사업자가 아니라 적을 업태도 종목도 없다. 칸을 채우려고
+                   무엇이든 적으면 국세청에 신고한 적 없는 말이 세금계산서에 찍힌다 —
+                   빈 칸은 「해당 없음」으로 읽히지만 지어낸 말은 되돌릴 수 없다.
+                   사업자 건이면 받아 둔 값이 없어 역시 비운다. */
                 'label' => '업태', 'label2' => '종<br>목', 'narrow' => true, 'wide' => false,
                 'supplier'  => (string) ($company['biz_type'] ?? ''),
                 'supplier2' => (string) ($company['biz_class'] ?? ''),
