@@ -662,7 +662,10 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '작성일',            name: 'date',   width: 100, sortable: true },
-      { header: '주문번호/처방번호', name: 'mgt',    width: 180 },
+      /* 「주문번호」다 — 처방번호는 함께 세우지 않는다 (2026-09-28 지시).
+         한 칸에 둘을 줄 바꿔 넣었더니 줄 높이가 두 배가 되고, 훑을 때 읽는 것은
+         주문번호 하나였다. 처방번호는 줄을 열면 상세에 그대로 있다. */
+      { header: '주문번호', name: 'mgt',    width: 180 },
       { header: '공급받는자/이름', name: 'buyer',  width: 170, sortable: true },
       { header: '공급가액',          name: 'supply', width: 110, editor: 'number' },
       { header: '세액',              name: 'tax',    width: 90,  editor: 'number' },
@@ -1079,11 +1082,11 @@ async function loadHistory(page = 1) {
            어디에도 없었다 — 국세청발행번호와도 뒤섞여 읽혔다.
 
            세 가지를 갈라 세운다:
-             주문번호/처방번호 — 우리 번호
+             주문번호       — 우리 번호 (처방번호는 세우지 않는다 · 2026-09-28)
              연동관리번호     — 팝빌에 올린 번호(TI…)
              국세청발행번호   — 국세청이 준 번호 */
         date: wDate,
-        mgt: (r.orderNumber || '—') + (r.rxNumber ? String.fromCharCode(10) + r.rxNumber : ''),
+        mgt: (r.orderNumber || '—'),
         buyer: (r.invoiceeCorpName ?? '—'),
         supply, tax, type: ttTxt, status: sTxt,
 

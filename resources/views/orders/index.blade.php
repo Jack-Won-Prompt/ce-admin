@@ -511,6 +511,25 @@ window.HELP_TOUR_STEPS = [
         renderer: (v, row) => attFaxBtn(row),
       },
 
+      {
+        /* 파일 상세 — 옆 칸이 세운 수가 **무엇인지** 적는다 (2026-09-28 지시).
+
+           「7」만 보고는 공단에 낼 것이 다 모였는지 알 수 없어, 담당자는 팩스 창을
+           열어 목록을 읽고 닫기를 되풀이했다. 이름이 보이면 훑으면서 가린다.
+
+           같은 이름은 한 번만 선다 — 신분증이 앞뒤 두 장이면 「신분증」 하나다.
+           장수는 옆 칸이 말한다. 칸보다 길면 마우스를 올려 전부 읽는다. */
+        header: '파일 상세', name: 'doc_types', width: 260, sortable: true,
+        renderer: (v) => {
+          const s = document.createElement('span');
+          s.textContent = v || '';
+          s.title = v || '';
+          s.style.cssText = 'display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
+                          + 'font-size:12px;color:var(--text-secondary);';
+          return s;
+        },
+      },
+
       /* 제품명ㆍ수량은 목록에 두지 않는다. 한 줄이 이미 길어 가로로 밀어야
          하고, 훑을 때 필요한 것은 누구의 무슨 건이 어디까지 왔는가다 — 무엇을 얼마나
          보냈는지는 줄을 더블클릭해 상세에서 본다.

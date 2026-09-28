@@ -163,6 +163,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get( '/{prescription}/generated-docs', [PrescriptionController::class, 'generatedDocs'])->name('generatedDocs');
         /* 올린 서류와 만들어진 서류를 한 PDF 로 묶어 내려받는다 (2026-09-27 확인요청 2쪽) */
         Route::get( '/{prescription}/docs-merged',   [PrescriptionController::class, 'downloadDocsMerged'])->name('docsMerged');
+        /* 올라온 그대로 압축해 내려받는다 (2026-09-28 지시) — 묶음과 쓰임이 다르다.
+           묶음은 공단에 낼 한 벌이고, 압축은 원본이 그대로 필요할 때다. */
+        Route::get( '/{prescription}/docs-zip',      [PrescriptionController::class, 'downloadDocsZip'])->name('docsZip');
+        /* 처방전 그림 삭제 (2026-09-28 지시) — 첨부와 같은 권한으로 본다 */
+        Route::delete('/{prescription}/image',       [PrescriptionController::class, 'destroyImage'])->name('image.destroy');
         Route::patch('/{prescription}/assign',       [PrescriptionController::class, 'assignUser'])->name('assign');
         /* 주문 목록에서 고른 건을 한 사람에게 한 번에 넘긴다 — 고정 낱말이라 {prescription} 앞뒤 어디에 두어도 걸리지 않는다 */
         Route::post('/assign-bulk',                  [PrescriptionController::class, 'bulkAssign'])->name('assignBulk');

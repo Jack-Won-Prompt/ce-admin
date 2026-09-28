@@ -5169,6 +5169,150 @@ class PrescriptionController extends Controller
     }
 
     /**
+     * 이 건의 서류를 **올라온 그대로** 압축해 내려받는다 (2026-09-28 지시).
+     *
+     * 한 PDF 로 묶는 길(downloadDocsMerged)과 나란히 둔다. 둘은 쓰임이 다르다 —
+     * 묶음은 공단에 낼 한 벌이고, 압축은 원본을 그대로 받아야 할 때다. HEIC 나
+     * 한글 문서처럼 우리가 PDF 로 펼치지 못하는 것도 압축에는 그대로 담긴다.
+     *
+     * 이름은 「01_처방전.jpg」처럼 차례를 앞에 붙인다. 풀었을 때 화면에서 보던
+     * 그 순서로 서야 어느 것이 무엇인지 알아본다. 같은 이름이 겹치면 뒤에 번호를
+     * 덧붙인다 — 압축 안에서 같은 이름은 덮어써 한 장이 사라진다.
+     */
+    public function downloadDocsZip(Prescription $prescription)
+    {
+        if (! class_exists(\ZipArchive::class)) {
+            return response()->json([
+                'success' => false,
+                'message' => '이 서버에서는 압축 파일을 만들 수 없습니다 — 「모두 PDF로 다운로드」를 쓰십시오.',
+            ], 503);
+        }
+
+        $prescription->load(['patient', 'attachments']);
+
+        /* 담을 것을 먼저 모은다 — [디스크, 경로, 서류이름] */
+        $담을것 = [];
+
+        if ($prescription->image_path) {
+            $담을것[] = ['public', $prescription->image_path, '처방전'];
+        }
+
+        foreach ($prescription->attachments as $att) {
+            if ($att->file_path) {
+                $담을것[] = ['public', $att->file_path, $att->doc_type_label ?: '첨부'];
+            }
+        }
+
+        foreach (PrescriptionDocument::where('prescription_id', $prescription->id)
+                    ->whereNotNull('file_path')->orderBy('id')->get() as $doc) {
+            /* 만든 서류는 디스크가 둘로 갈린다 — 있는 쪽을 쓴다 */
+            foreach (['public', 'local'] as $disk) {
+                if (Storage::disk($disk)->exists($doc->file_path)) {
+                    $담을것[] = [$disk, $doc->file_path, $doc->typeLabel()];
+                    break;
+                }
+            }
+        }
+
+        $zip     = new \ZipArchive();
+        $임시     = tempnam(sys_get_temp_dir(), 'docs');
+        $담은것   = [];
+        $쓴이름   = [];
+
+        if ($zip->open($임시, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            @unlink($임시);
+
+            return response()->json(['success' => false, 'message' => '압축 파일을 만들지 못했습니다.'], 500);
+        }
+
+        $차례 = 0;
+
+        foreach ($담을것 as [$disk, $path, $이름]) {
+            if (! Storage::disk($disk)->exists($path)) {
+                continue;               // 지워진 파일 하나 때문에 전부 못 받게 하지 않는다
+            }
+
+            $차례++;
+            $확장 = strtolower(pathinfo($path, PATHINFO_EXTENSION)) ?: 'bin';
+            $속이름 = sprintf('%02d_%s', $차례, $이름);
+
+            /* 같은 이름이 겹치면 덮어써 한 장이 사라진다 — 차례가 앞에 붙어 대개
+               겹치지 않지만, 그래도 한 번 더 본다 */
+            $파일이름 = $속이름 . '.' . $확장;
+            $n  = 1;
+            while (isset($쓴이름[$파일이름])) {
+                $파일이름 = $속이름 . '(' . (++$n) . ').' . $확장;
+            }
+            $쓴이름[$파일이름] = true;
+
+            $zip->addFromString($파일이름, Storage::disk($disk)->get($path));
+            $담은것[] = $이름;
+        }
+
+        $zip->close();
+
+        if (! $담은것) {
+            @unlink($임시);
+
+            return response()->json([
+                'success' => false,
+                'message' => '압축할 서류가 없습니다 — 올린 서류나 만들어진 서류가 하나도 없습니다.',
+            ], 404);
+        }
+
+        $이름 = '서류묶음_' . (\App\Models\Patient::bare($prescription->patient?->name) ?: '무명')
+              . '_' . $prescription->rx_number . '.zip';
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)
+            ->withProperties(['담은 서류' => implode('ㆍ', $담은것)])
+            ->log('서류 압축 내려받기 (' . count($담은것) . '건)');
+
+        return response()->download($임시, $이름, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * 처방전 그림을 지운다 (2026-09-28 지시).
+     *
+     * 여태 첨부만 지울 수 있고 처방전 본 그림은 지울 길이 없었다. 잘못 올린 그림
+     * (다른 환자 것ㆍ뒤집힌 장)을 바로잡으려면 건을 통째로 지우고 다시 만드는 수밖에
+     * 없었는데, 그러면 주문ㆍ서명ㆍ이력이 함께 사라진다.
+     *
+     * **첨부와 같은 권한으로 본다**(prescriptions.delete). 화면도 같은 잣대로 단추를
+     * 감추지만 여기서 한 번 더 본다 — 화면만 믿지 않는다.
+     */
+    public function destroyImage(Request $request, Prescription $prescription): JsonResponse
+    {
+        if (! Auth::user()?->canDo('prescriptions', 'delete')) {
+            return response()->json(['success' => false, 'message' => '처방전을 지울 권한이 없습니다.'], 403);
+        }
+
+        if (! $prescription->image_path) {
+            return response()->json(['success' => false, 'message' => '지울 처방전 그림이 없습니다.'], 404);
+        }
+
+        $옛경로 = $prescription->image_path;
+
+        /* 파일을 먼저 지우지 않는다 — 표를 고치다 막히면 값은 그대로인데 파일만
+           사라져, 화면에 깨진 그림이 선다. 표를 고친 뒤에 파일을 지운다. */
+        $prescription->forceFill([
+            'image_path'      => null,
+            'image_mime_type' => null,
+        ])->save();
+
+        if (Storage::disk('public')->exists($옛경로)) {
+            Storage::disk('public')->delete($옛경로);
+        }
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)
+            ->withProperties(['지운 파일' => $옛경로])
+            ->log('처방전 그림 삭제');
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * 파일 하나를 PDF 바이너리로 — PDF 는 그대로, 그림은 한 쪽으로 감싼다.
      *
      * 읽지 못하는 것(없는 파일ㆍ모르는 꼴)은 `null` 을 돌려 조용히 빠진다. 한 장이

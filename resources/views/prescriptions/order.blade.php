@@ -1040,6 +1040,8 @@
 
   /* ── 문서 타일 (시안 137:806) — 3열, 타일 높이 80 ── */
   .attach-strip { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; padding:12px 16px; }
+  /* 미리보기 줄 아래 내려받기 단추 (2026-09-28 지시) — 썸네일과 붙지 않게 위에만 선을 둔다 */
+  .doc-dl-foot { display:flex; flex-wrap:wrap; gap:6px; padding:0 16px 12px; }
   /* 시안 148:1605 — 고르지 않은 타일에는 테두리가 없다. 고른 타일만 2px 주색이고,
      선이 안쪽에 그려져(strokeAlign INSIDE) 타일 바깥 크기는 93×80 로 같다.
      box-sizing:border-box 라 테두리가 굵어져도 자리가 밀리지 않는다. */
@@ -2379,17 +2381,17 @@ $calcDeposit  = $calcCopay;
             <button type="button" class="vw-btn-sm vw-btn-add" onclick="document.getElementById('attachUploadInput').click()">
               <i class="fa-solid fa-plus"></i> 첨부문서 추가
             </button>
-            {{-- 서류를 한 PDF 로 묶어 내려받는다 (2026-09-27 확인요청 2쪽).
+            {{-- 서류를 한꺼번에 내려받는다 (2026-09-27 확인요청 2쪽 · 2026-09-28 지시).
 
                  여태 한 장씩만 내려받을 수 있었다. 공단에 낼 묶음을 만들려면 대여섯
                  번을 누르고 받은 파일을 다른 프로그램으로 합쳐야 했다.
 
-                 팩스 합본과는 다른 것이다 — 저쪽은 공단 서식으로 다시 그린 것이고
-                 이것은 올라온 것 그대로다. --}}
-            <button type="button" class="vw-btn-sm" id="btnDocsMerged" onclick="downloadDocsMerged(event)"
-                    title="올린 서류와 만들어진 서류를 한 PDF 로 묶어 내려받습니다">
-              <i class="fa-solid fa-file-zipper"></i> 일괄 다운
-            </button>
+                 두 길을 나란히 둔다 — 쓰임이 다르다.
+                   · PDF 묶음 : 공단에 낼 한 벌. 그림도 PDF 한 쪽으로 감싸 잇는다.
+                   · 압축     : 올라온 원본 그대로. HEIC 처럼 우리가 못 펼치는 것도 담긴다.
+
+                 팩스 합본과는 또 다른 것이다 — 저쪽은 공단 서식으로 다시 그린 것이다. --}}
+            @include('prescriptions._docs_dl_btns', ['자리' => 'head'])
             {{-- 등록신청서 신청인 서명 (2026-09-17 지시 · 2026-09-20 자리 옮김).
 
                  병원이 ② 요양기관 확인란을 적어 준 종이라 ③ 신청인란은 비어 있다 —
@@ -2409,7 +2411,7 @@ $calcDeposit  = $calcCopay;
           올린 문서가 없습니다. 유형을 고르고 「첨부문서 추가」를 누르십시오.
         </div>
         <div class="attach-strip" id="docStrip">
-          {{-- 처방전 (삭제 불가) --}}
+          {{-- 처방전 — 지울 권한이 있으면 지울 수 있다 (2026-09-28 지시) --}}
           @if($prescription->image_url)
             @php $isRxPdfThumb = str_contains($prescription->image_mime_type ?? '', 'pdf'); @endphp
             <div class="attach-thumb doc-thumb active" data-doc-id="0" onclick="switchViewerDoc(this)">
@@ -2423,6 +2425,19 @@ $calcDeposit  = $calcCopay;
                       onclick="downloadDoc(event, @js($prescription->image_url), @js($prescription->rx_number))">
                 <i class="fa-solid fa-download"></i>
               </button>
+              {{-- 처방전 그림도 지울 수 있다 (2026-09-28 지시).
+
+                   여태 첨부만 지울 수 있었다. 잘못 올린 그림(다른 환자 것ㆍ뒤집힌 장)을
+                   바로잡으려면 건을 통째로 지우고 다시 만드는 수밖에 없었는데, 그러면
+                   주문ㆍ서명ㆍ이력이 함께 사라진다.
+
+                   첨부와 같은 권한으로 본다 — 서버도 같은 잣대로 한 번 더 본다
+                   (destroyImage). 화면만 믿지 않는다. --}}
+              @perm('prescriptions', 'delete')
+              <button class="attach-del-btn" onclick="deletePrescriptionImage(event, this)" title="처방전 삭제">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+              @endperm
             </div>
           @endif
           {{-- 첨부 파일 --}}
@@ -2453,6 +2468,13 @@ $calcDeposit  = $calcCopay;
                따로 목록 카드를 두던 것을 여기로 모았다. 서명이 끝나 위임장이 새로
                생기면 refreshGeneratedDocs() 가 이 자리를 다시 그린다. --}}
           <span id="genThumbs" style="display:contents"></span>
+        </div>
+        {{-- 미리보기 바로 아래에도 같은 두 단추를 둔다 (2026-09-28 지시).
+
+             서류가 여럿이면 썸네일 줄이 길어져 카드 머리가 화면 위로 밀려난다.
+             보고 있던 자리에서 손을 떼지 않고 누를 수 있어야 한다. --}}
+        <div class="doc-dl-foot">
+          @include('prescriptions._docs_dl_btns', ['자리' => 'foot'])
         </div>
       </div>
 
@@ -6306,6 +6328,91 @@ async function downloadDocsMerged(e) {
     showToast('서류를 묶지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', 'danger');
   } finally {
     if (btn) { btn.innerHTML = 본래; btn.disabled = false; }
+  }
+}
+
+/* 이 건의 서류를 **올라온 그대로** 압축해 내려받는다 (2026-09-28 지시).
+
+   PDF 묶음과 쓰임이 다르다 — 묶음은 공단에 낼 한 벌이고, 압축은 원본이 그대로
+   필요할 때다. HEIC 나 한글 문서처럼 PDF 로 펼치지 못하는 것도 압축에는 담긴다. */
+async function downloadDocsZip(e) {
+  e.stopPropagation();
+
+  const btn = e.currentTarget;
+  const 본래 = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 압축 중…'; btn.disabled = true; }
+
+  try {
+    const r = await fetch(`/prescriptions/${RX_NUMBER}/docs-zip`, { credentials: 'same-origin' });
+
+    if (!r.ok) {
+      /* 서버가 까닭을 적어 보낸다 — 「압축할 서류가 없습니다」 같은 것 */
+      let 말 = '서류를 압축하지 못했습니다.';
+      try { 말 = (await r.json()).message || 말; } catch (_) {}
+      showToast(말, 'warning', 4000);
+      return;
+    }
+
+    const 덩이 = await r.blob();
+    const 주소 = URL.createObjectURL(덩이);
+    const a = document.createElement('a');
+    a.href = 주소;
+    a.download = `서류묶음_${RX_NUMBER}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(주소), 1000);
+
+    showToast('서류를 압축했습니다.', 'success');
+  } catch (err) {
+    showToast('서류를 압축하지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', 'danger');
+  } finally {
+    if (btn) { btn.innerHTML = 본래; btn.disabled = false; }
+  }
+}
+
+/* 처방전 그림을 지운다 (2026-09-28 지시).
+
+   첨부와 달리 **되돌릴 수 없는 한 장**이라, 팝오버가 아니라 확인 창으로 묻는다 —
+   첨부 삭제 팝오버는 누르던 손끝에서 바로 닫히고 지워진다. */
+async function deletePrescriptionImage(e, btn) {
+  e.stopPropagation();
+
+  const 갈까 = await ceConfirm(
+    '처방전 그림을 지웁니다.\n\n되돌릴 수 없습니다. 첨부 서류와 주문은 그대로 남습니다.',
+    { title: '처방전 삭제', tone: 'danger', confirmText: '삭제', cancelText: '그만' });
+
+  if (!갈까) return;
+
+  try {
+    const r = await fetch(`{{ route('prescriptions.image.destroy', $prescription) }}`, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '',
+                 'Accept': 'application/json' },
+    });
+    const d = await r.json();
+
+    if (!r.ok || !d.success) {
+      showToast(d.message || '삭제하지 못했습니다.', 'warning', 4000);
+      return;
+    }
+
+    /* 화면에서 걷어 낸다 — 그림칸ㆍ문서 목록ㆍ건수ㆍ팩스 고르개가 같은 값을 본다 */
+    const thumb = btn.closest('.doc-thumb');
+    const docIdx = ALL_DOCS.findIndex(a => a.isRx === true);   // 처방전 본 그림 한 줄
+    if (docIdx !== -1) ALL_DOCS.splice(docIdx, 1);
+    if (thumb) thumb.remove();
+    syncDocEmpty();
+
+    const strip = document.getElementById('docStrip');
+    const firstThumb = strip ? strip.querySelector('.doc-thumb') : null;
+    if (firstThumb) switchViewerDoc(firstThumb);
+
+    renderFaxDocs();
+    showToast('처방전 그림을 지웠습니다.', 'success');
+  } catch (err) {
+    showToast('삭제하지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', 'danger');
   }
 }
 

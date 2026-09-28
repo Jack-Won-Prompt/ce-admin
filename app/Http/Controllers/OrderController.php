@@ -122,7 +122,48 @@ class OrderController extends Controller
             $attCounts[$pid] = (int) ($attCounts[$pid] ?? 0) + (int) $cnt;
         }
 
-        $gridData = $orders->map(function ($o) use ($extras, $attCounts) {
+        /* **무슨 서류가 붙어 있는가** — 옆의 「파일」 칸은 수만 세운다 (2026-09-28 지시).
+
+           「7」이라 적힌 줄을 보고도 그 일곱이 무엇인지 알 수 없어, 담당자는 팩스 창을
+           열어 목록을 읽고 닫기를 되풀이했다. 공단에 낼 것이 다 모였는지 훑으면서
+           가리려면 이름이 보여야 한다.
+
+           같은 이름은 한 번만 적는다 — 신분증이 앞뒤 두 장이면 「신분증」 하나다.
+           장수는 옆 칸이 이미 말한다. */
+        $서류이름 = [];
+
+        $이름담기 = function (int $pid, ?string $label) use (&$서류이름): void {
+            $label = trim((string) $label);
+
+            if ($label === '') {
+                return;
+            }
+
+            $서류이름[$pid][$label] = true;
+        };
+
+        /* 처방전 그림이 먼저다 — 문서 창에서도 첫 줄이다 */
+        foreach ($그림있는건 as $pid) {
+            $이름담기((int) $pid, '처방전');
+        }
+
+        foreach (\App\Models\PrescriptionAttachment::whereIn('prescription_id', $처방번호들)
+                    ->whereNotNull('file_path')
+                    ->orderBy('id')
+                    ->get(['id', 'prescription_id', 'doc_type', 'doc_label']) as $att) {
+            $이름담기((int) $att->prescription_id, $att->doc_type_label);
+        }
+
+        foreach (\App\Models\PrescriptionDocument::whereIn('prescription_id', $처방번호들)
+                    ->whereNotNull('file_path')
+                    ->orderBy('id')
+                    ->get(['id', 'prescription_id', 'type']) as $doc) {
+            $이름담기((int) $doc->prescription_id, $doc->typeLabel());
+        }
+
+        $서류이름 = array_map(fn (array $m) => implode(' · ', array_keys($m)), $서류이름);
+
+        $gridData = $orders->map(function ($o) use ($extras, $attCounts, $서류이름) {
             /* 유형 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류.
                여러 건이 붙었으면 몇 건인지 함께 적는다. 상세로 들어가 보라는 신호다.
                어디까지 진행됐는지는 옆 칸(등록 상태)에서 따로 본다 — 한 칸에 둘을 섞으면
@@ -138,6 +179,8 @@ class OrderController extends Controller
                 'order_no'  => $o->order_number,
                 /* 첨부 장수 — 0 이면 칸이 「-」로 선다. 처방전이 없는 건은 아예 없다. */
                 'att_count' => (int) ($attCounts[$o->prescription_id] ?? 0),
+                /* 무슨 서류인가 — 옆 칸이 세운 수의 내역이다. 같은 이름은 한 번만. */
+                'doc_types' => $서류이름[$o->prescription_id] ?? '',
                 'rx_no'     => $o->prescription?->rx_number ?? '',
                 'deal'      => $deal,
                 // 교환·반품·취소 건만 진행 상태가 있다. 판매는 옆의 '상태'가 그 자리다.
