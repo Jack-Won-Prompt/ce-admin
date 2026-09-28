@@ -34,6 +34,24 @@
 
 @section('content')
 
+{{-- 결과를 말하는 자리 (2026-09-28 시험에서 드러남).
+
+     목록에서 바로 서명할 수 있게 한 날까지 이 화면에는 안내말을 세우는 자리가
+     없었다. 서명하면 225,000원이 환불되는데 화면은 아무 말도 하지 않아, 눌린
+     것인지조차 알 수 없었다. 상세 화면과 같은 모양으로 둔다. --}}
+@if(session('status'))
+  <div style="background:var(--primary-light);border:1px solid var(--primary-200);color:var(--primary);
+              border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:12px;font-weight:700;">
+    {{ session('status') }}
+  </div>
+@endif
+@if($errors->any())
+  <div style="background:var(--danger-light);border:1px solid var(--alert-100);color:var(--danger);
+              border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:12px;font-weight:700;">
+    @foreach($errors->all() as $말)<p style="margin:0;">{{ $말 }}</p>@endforeach
+  </div>
+@endif
+
 @php $curType = request('type'); @endphp
 {{-- 종류는 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
      고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
