@@ -82,7 +82,14 @@ class MigratePatientsFromWithworksCommand extends Command
 
         $보기 = [];
 
-        $질의->chunk(500, function ($줄들) use (&$셈, &$보기, $정말, $묶음, $이름겹침, $주민겹침) {
+        /* 이미 옮겨 둔 거래처를 **한 번에** 읽어 둔다.
+
+           줄마다 물으면 12,829번 오간다 — 서버가 멀면 그것만으로 몇 분이 걸려
+           옮기는 일이 끝났는지 알 수 없다. 한 번에 읽어 손에 들고 견준다. */
+        $이미 = DB::table('patients')->whereNotNull('ww_account_id')
+            ->pluck('id', 'ww_account_id')->all();
+
+        $질의->chunk(500, function ($줄들) use (&$셈, &$보기, &$이미, $정말, $묶음, $이름겹침, $주민겹침) {
             foreach ($줄들 as $w) {
                 $셈['모두']++;
 
@@ -95,13 +102,18 @@ class MigratePatientsFromWithworksCommand extends Command
                 if ($w->phone_1 && ! $번호) { $셈['전화이상']++; }
                 if ($주소) { $셈['주소']++; }
 
-                $있나 = Patient::withTrashed()->where('ww_account_id', $w->ww_id)->first();
-                $있나 ? $셈['덧씀']++ : $셈['새로']++;
+                /* 주민번호도 **여기서** 센다. 담는 자리에서 세면 세어 보이기만 할 때
+                   0 으로 나와, 몇 명의 주민번호가 옮겨지는지 미리 알 수 없었다. */
+                $주민번호있나 = $w->resident_no && preg_match('/^\d{6}-?\d{7}$/', $w->resident_no);
+                if ($주민번호있나) { $셈['주민번호']++; }
+
+                $있는번호 = $이미[$w->ww_id] ?? null;
+                $있는번호 ? $셈['덧씀']++ : $셈['새로']++;
 
                 if (count($보기) < 5) {
                     $보기[] = [$w->ww_id, $이름, $번호 ?: '-',
                         $w->resident_no ? '있음' : '-', $주소 ? mb_substr($주소['address'], 0, 20) : '-',
-                        $있나 ? '덧씀' : '새로'];
+                        $있는번호 ? '덧씀' : '새로'];
                 }
 
                 if (! $정말) {
@@ -117,18 +129,23 @@ class MigratePatientsFromWithworksCommand extends Command
                     'updated_at'      => now(),
                 ] + ($주소 ?: []);
 
-                $거래처 = $있나 ?: new Patient();
+                $거래처 = $있는번호
+                    ? Patient::withTrashed()->find($있는번호)
+                    : new Patient();
+
                 $거래처->forceFill($값 + ['ww_account_id' => $w->ww_id]);
 
                 /* 주민번호는 **평문으로 넣지 않는다.** resident_no 에 값을 주면 모델의
                    씌우개(setResidentNoAttribute)가 암호문ㆍ해시ㆍ별표를 갈라 담고
                    보유 근거(rrn_purpose)까지 적는다. 그 자리를 지나치면 암호화가 빠진다. */
-                if ($w->resident_no && preg_match('/^\d{6}-?\d{7}$/', $w->resident_no)) {
+                if ($주민번호있나) {
                     $거래처->resident_no = $w->resident_no;
-                    $셈['주민번호']++;
                 }
 
                 $거래처->save();
+
+                /* 손에 든 지도도 함께 채운다 — 같은 판에 서명을 옮길 때 이것을 본다 */
+                $이미[$w->ww_id] = $거래처->id;
             }
         });
 
@@ -196,12 +213,16 @@ class MigratePatientsFromWithworksCommand extends Command
                 }
             });
 
+        /* 운영 고객 번호 → 거래처 번호. 한 번에 읽어 둔다 */
+        $거래처지도 = DB::table('patients')->whereNotNull('ww_account_id')
+            ->pluck('id', 'ww_account_id')->all();
+
         $셈 = ['서명완료' => 0, '이름생년월일' => 0, '이름만' => 0, '새로' => 0, '덧씀' => 0,
                '거래처없음' => 0, '짝없음' => 0, '생년월일어긋남' => 0, '여럿' => 0, '그림없음' => 0];
         $못한것 = [];
 
         DB::table('delegation_signs')->where('status', 'signed')->orderBy('id')
-            ->chunk(200, function ($줄들) use (&$셈, &$못한것, $정말, $묶음, $이름별) {
+            ->chunk(200, function ($줄들) use (&$셈, &$못한것, $정말, $묶음, $이름별, $거래처지도) {
                 foreach ($줄들 as $d) {
                     $셈['서명완료']++;
 
@@ -249,9 +270,9 @@ class MigratePatientsFromWithworksCommand extends Command
                         continue;
                     }
 
-                    $거래처 = Patient::withTrashed()->where('ww_account_id', $c->ww_id)->first();
+                    $거래처번호 = $거래처지도[$c->ww_id] ?? null;
 
-                    if (! $거래처) {
+                    if (! $거래처번호) {
                         $셈['거래처없음']++;
                         $못한것[] = [$d->id, $d->customer_name,
                             '운영 고객 #' . $c->ww_id . ' 이 아직 거래처로 옮겨지지 않음'];
@@ -266,7 +287,7 @@ class MigratePatientsFromWithworksCommand extends Command
                     }
 
                     ($있나 ?: new PatientDelegationSign())->forceFill([
-                        'patient_id'         => $거래처->id,
+                        'patient_id'         => $거래처번호,
                         'ww_account_id'      => $c->ww_id,
                         'delegation_sign_id' => $d->id,
                         'matched_by'         => $어떻게,
