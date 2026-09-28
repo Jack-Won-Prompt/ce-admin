@@ -171,10 +171,56 @@ class PurgeExternalTracesCommand extends Command
         $남은돈 = array_sum(array_map(fn ($t) =>
             (int) $t['amount'] - (int) ($t['cancel_amount'] ?? 0), $할것));
 
-        $this->line('  적힌 승인 ' . count($것들) . '건 · 아직 쥐고 있는 것 ' . count($할것)
+        $this->line('  적힌 승인 ' . count($것들) . '건 · 우리 표 기준으로 남은 것 ' . count($할것)
             . '건 (' . number_format($남은돈) . '원)');
 
-        if ($할것 === [] || ! $정말) {
+        if ($할것 === []) {
+            return;
+        }
+
+        /* 보여 주기일 때는 **저쪽에 직접 물어본다** (2026-09-29).
+
+           열쇠 파일은 지우던 그때를 찍어 둔 것이라, 치운 뒤에 다시 돌려도 같은
+           숫자를 낸다 — 아무 일도 일어나지 않은 것처럼 읽힌다. 실제로 그렇게 보여
+           한참을 헤맸다. 무엇이 남았는지는 토스가 아는 것이 맞다. */
+        if (! $정말) {
+            $this->line('  토스에 지금 상태를 물어봅니다 …');
+
+            $셈 = ['없음' => 0, '살아 있음' => 0, '무름' => 0, '못 물어봄' => 0];
+            $살아있는돈 = 0;
+
+            foreach ($할것 as $t) {
+                try {
+                    $res   = $toss->get('/v1/payments/' . $t['payment_key']);
+                    $상태 = (string) ($res['status'] ?? '?');
+                    $남은 = (int) ($res['balanceAmount'] ?? 0);
+
+                    if (in_array($상태, ['CANCELED', 'EXPIRED', 'ABORTED'], true) || $남은 === 0) {
+                        $셈['무름']++;
+                    } else {
+                        $셈['살아 있음']++;
+                        $살아있는돈 += $남은;
+                        $this->line('    살아 있음 ' . $t['payment_key'] . ' ' . $상태
+                            . ' ' . number_format($남은) . '원');
+                    }
+                } catch (\Throwable $e) {
+                    if (str_contains($e->getMessage(), 'NOT_FOUND_PAYMENT')) {
+                        $셈['없음']++;
+                    } else {
+                        $셈['못 물어봄']++;
+                    }
+                }
+            }
+
+            $this->line('    토스에 없음 ' . $셈['없음'] . '건 (시험 승인이라 장부에만 있었습니다)');
+            $this->line('    이미 무른 것 ' . $셈['무름'] . '건');
+            $this->line('    아직 살아 있는 것 ' . $셈['살아 있음'] . '건 ('
+                . number_format($살아있는돈) . '원)');
+
+            if ($셈['못 물어봄'] > 0) {
+                $this->warn('    물어보지 못한 것 ' . $셈['못 물어봄'] . '건');
+            }
+
             return;
         }
 
@@ -263,17 +309,37 @@ class PurgeExternalTracesCommand extends Command
     {
         $this->line('');
         $this->info('── 위드웍스 판매주문 ──');
-        $this->line('  판매주문 ' . count($판매) . '건 · 반품주문 ' . count($반품) . '건');
-
-        if (! $정말) {
-            return;
-        }
+        $this->line('  적힌 것 — 판매주문 ' . count($판매) . '건 · 반품주문 ' . count($반품) . '건');
 
         $주소 = rtrim((string) config('services.demoworks.api_url'), '/');
         $끈   = (string) config('services.demoworks.token');
 
         if (! $주소 || ! $끈) {
             $this->error('  위드웍스 연동 설정이 없습니다.');
+
+            return;
+        }
+
+        /* 여기도 보여 주기일 때는 창고에 직접 물어본다 — 열쇠 파일은 찍어 둔 그때다 */
+        if (! $정말) {
+            $this->line('  창고에 지금 상태를 물어봅니다 …');
+
+            $남음 = 0;
+            $없음 = 0;
+
+            foreach (array_merge(array_keys($판매), array_keys($반품)) as $주문번호) {
+                try {
+                    $res = Http::withToken($끈)->timeout(10)
+                        ->get($주소 . '/api/v1/ce-admin/so_show', ['ce_order_number' => (string) $주문번호]);
+
+                    ($res->successful() && ($res->json('success') ?? false) && $res->json('result'))
+                        ? $남음++ : $없음++;
+                } catch (\Throwable) {
+                    $없음++;
+                }
+            }
+
+            $this->line('    아직 남은 것 ' . $남음 . '건 · 없는 것 ' . $없음 . '건');
 
             return;
         }
