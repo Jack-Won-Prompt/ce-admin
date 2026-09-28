@@ -381,10 +381,23 @@ class OrderReturnController extends Controller
 
         $sent = $this->withworks->push($return->load('order.items'));
 
+        /* 창고에 전하지 못한 것은 **붉은 줄로 세운다** (2026-09-29 무한시험 6회차).
+
+           여태 「접수했습니다 … 위드웍스 전달은 실패했습니다」가 한 줄로 나갔다.
+           접수는 되었으니 파란 줄이고, 담당자는 앞 문장을 읽고 넘어간다 — 창고는
+           반품이 온다는 것을 모른 채 물건만 받는다. 무엇을 해야 하는지까지 적는다. */
+        if (! $sent) {
+            return redirect()->route('order-returns.show', $return)
+                ->with('status', "접수했습니다. 접수번호 {$return->receipt_no}." . $안내)
+                ->withErrors(['withworks' =>
+                    '창고(위드웍스)에 전달하지 못했습니다 — '
+                    . ($return->fresh()->withworks_error ?: '알 수 없는 오류') . '. '
+                    . '상세 화면의 ［위드웍스 다시 보내기］로 다시 보내거나, 창고에 직접 안내해 주십시오.']);
+        }
+
         return redirect()->route('order-returns.show', $return)
-            ->with('status', ($sent
-                ? "접수했습니다. 접수번호 {$return->receipt_no} — 위드웍스에 전달했습니다."
-                : "접수했습니다. 접수번호 {$return->receipt_no} — 위드웍스 전달은 실패했습니다.") . $안내);
+            ->with('status',
+                "접수했습니다. 접수번호 {$return->receipt_no} — 위드웍스에 전달했습니다." . $안내);
     }
 
     /**
@@ -902,9 +915,11 @@ class OrderReturnController extends Controller
     {
         $sent = $this->withworks->push($orderReturn->load('order.items'));
 
-        return back()->with('status', $sent
-            ? '위드웍스에 전달했습니다.'
-            : '전달하지 못했습니다: ' . ($orderReturn->fresh()->withworks_error ?: '알 수 없는 오류'));
+        /* 다시 보내기도 마찬가지다 — 못 보냈으면 붉은 줄이다 */
+        return $sent
+            ? back()->with('status', '위드웍스에 전달했습니다.')
+            : back()->withErrors(['withworks' => '전달하지 못했습니다 — '
+                . ($orderReturn->fresh()->withworks_error ?: '알 수 없는 오류')]);
     }
 
     /**
