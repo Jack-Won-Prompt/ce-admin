@@ -336,6 +336,10 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/{patient}/counsels/{prescription}', [PatientController::class, 'updateCounsel'])->name('counsels.update');
         // 상담을 어느 주문에 이을지 고르는 자리 — 처방으로 산 것과 처방 없이 산 것이 함께 온다
         Route::get('/{patient}/orders',     [PatientController::class, 'orders'])->name('orders');
+        /* 옮겨 담은 위임장 서명의 그림 — 웹에서 바로 열리지 않는 폴더에 있어
+           이 자리를 거쳐야 보인다(2026-09-29 지시). '/{patient}' 보다 앞에 둔다. */
+        Route::get('/{patient}/delegation-signs/{sign}/image',
+            [PatientController::class, 'delegationSignImage'])->name('delegationSigns.image');
         Route::get('/{patient}',     [PatientController::class, 'show'])->name('show');
         Route::put('/{patient}',     [PatientController::class, 'update'])->name('update');
         Route::delete('/{patient}',  [PatientController::class, 'destroy'])->name('destroy');

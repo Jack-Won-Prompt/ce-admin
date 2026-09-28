@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Patient;
+use App\Models\PatientDelegationSign;
+use App\Support\ResidentNo;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -26,12 +28,20 @@ class MigratePatientsFromWithworksCommand extends Command
                             {--force : 실제로 옮긴다. 없으면 세어 보이기만 한다}
                             {--batch= : 묶음 이름. 비우면 오늘 날짜로 짓는다}
                             {--limit= : 몇 명만 시험 삼아}
-                            {--with-signs : 위임장 서명도 함께 잇는다}';
+                            {--with-signs : 위임장 서명도 거래처로 옮겨 담는다}';
 
     protected $description = '운영 고객 정보(ww_customers)를 거래처 관리로 옮긴다';
 
-    /** 읽기만 하는 표 — 이 명령은 여기에 쓰지 않는다 */
-    private const 읽기만 = ['ww_customers', 'ww_customer_addresses', 'ww_prescription_infos'];
+    /**
+     * 읽기만 하는 표 — 이 명령은 여기에 한 칸도 쓰지 않는다.
+     *
+     * delegation_signs 도 여기 있다. 서명을 거래처로 옮기면서 그 표에 거래처 번호를
+     * 적어 두면 편하지만, 그것도 운영 데이터를 고치는 일이다(2026-09-29 지시).
+     * 옮겨 담은 사본(patient_delegation_signs)이 양쪽 열쇠를 들고 있어 그럴 까닭도 없다.
+     */
+    private const 읽기만 = [
+        'ww_customers', 'ww_customer_addresses', 'ww_prescription_infos', 'delegation_signs',
+    ];
 
     public function handle(): int
     {
@@ -127,7 +137,7 @@ class MigratePatientsFromWithworksCommand extends Command
         $this->table(['무엇', '몇'], collect($셈)->map(fn ($v, $k) => [$k, number_format($v)])->values()->all());
 
         if ($this->option('with-signs')) {
-            $this->서명잇기($정말);
+            $this->서명이관($정말, $묶음);
         }
 
         $this->line('');
@@ -145,36 +155,176 @@ class MigratePatientsFromWithworksCommand extends Command
     }
 
     /**
-     * 위임장 서명을 운영 고객ㆍ거래처와 잇는다.
+     * 위임장 서명을 거래처로 옮겨 담는다 (2026-09-29 지시).
      *
-     * **서명 표는 지우지 않는다 — 칸만 채운다.** 이름 하나로 또렷이 짝지어지는 것만
-     * 잇는다(3,639줄). 여럿이 걸리는 16줄은 두지 않는다 — 잘못 이으면 남의 서명이
-     * 남의 거래처에 붙는다.
+     * **원본 표는 읽기만 한다.** delegation_signs 는 운영 데이터 메뉴의 자리다 —
+     * 거래처 번호를 그쪽 칸에 적어 넣는 것도 그 표를 고치는 일이라 하지 않는다.
+     * 읽어다 patient_delegation_signs 에 담는다. 서명 그림도 함께 옮긴다.
+     *
+     * **서명까지 받은 줄만 옮긴다** (status = signed · 193줄). signed_at 만 보고
+     * 고르면 194줄이 되는데, 그 한 줄은 다시 보내어 「서명 대기」로 돌아간 건이다 —
+     * 원본 화면도 그 줄의 지난 서명은 내주지 않는다(DelegationSign::서명그림).
+     * 다시 받아야 하는 서명을 받아 둔 것처럼 거래처에 옮겨 놓아서는 안 된다.
+     *
+     * **짝짓는 잣대는 이름과 생년월일이다** (2026-09-29 지시).
+     *
+     *   하나  후보는 **환자((E)) 계정만** 둔다. 그러지 않으면 「(E)박민서」와
+     *         「박민서」 두 계정이 함께 걸려 여섯 줄이 갈렸다.
+     *   둘    이름은 (E) 를 떼고 견준다. 직접 발송한 줄은 담당자가 (E) 없이 적어
+     *         두어 그대로 견주면 짝을 못 찾았다(「김선미」).
+     *   셋    생년월일ㆍ성별은 **가린 주민등록번호**로 견준다. 복호화하지 않는다 —
+     *         가린 값이 YYMMDD-S****** 라 그 둘이 이미 들어 있다.
+     *   넷    어긋나면 **잇지 않는다.** 이름이 같아도 생년월일이 다르면 남이다.
+     *
+     * 전화번호는 잣대로 쓰지 않는다. 짝지어진 192줄 가운데 35줄이 어긋난다 —
+     * 번호가 바뀌었거나 보호자 번호가 적혀 있다(2026-09-29 확인).
      */
-    private function 서명잇기(bool $정말): void
+    private function 서명이관(bool $정말, string $묶음): void
     {
         $this->line('');
-        $this->info('  ── 위임장 서명 잇기 ──');
+        $this->info('  ── 위임장 서명 이관 ──');
 
-        $하나 = DB::table('delegation_signs as d')
-            ->whereRaw("(SELECT COUNT(*) FROM ww_customers w WHERE w.account_name = d.customer_name) = 1");
+        /* 후보 — 환자((E)) 계정만, (E) 뗀 이름으로 묶어 둔다 */
+        $이름별 = [];
 
-        $셀것 = (clone $하나)->count();
-        $this->line('    이름 하나로 짝지어지는 서명 ' . number_format($셀것) . '줄');
+        DB::table('ww_customers')->whereRaw("account_name LIKE '(E)%'")->whereNull('deleted_at')
+            ->select(['ww_id', 'account_name', 'resident_no'])
+            ->orderBy('ww_id')
+            ->chunk(2000, function ($줄들) use (&$이름별) {
+                foreach ($줄들 as $c) {
+                    $이름별[Patient::bare($c->account_name)][] = $c;
+                }
+            });
 
-        if (! $정말) {
-            return;
+        $셈 = ['서명완료' => 0, '이름생년월일' => 0, '이름만' => 0, '새로' => 0, '덧씀' => 0,
+               '거래처없음' => 0, '짝없음' => 0, '생년월일어긋남' => 0, '여럿' => 0, '그림없음' => 0];
+        $못한것 = [];
+
+        DB::table('delegation_signs')->where('status', 'signed')->orderBy('id')
+            ->chunk(200, function ($줄들) use (&$셈, &$못한것, $정말, $묶음, $이름별) {
+                foreach ($줄들 as $d) {
+                    $셈['서명완료']++;
+
+                    $후보 = $이름별[Patient::bare($d->customer_name)] ?? [];
+
+                    if ($후보 === []) {
+                        $셈['짝없음']++;
+                        $못한것[] = [$d->id, $d->customer_name, '운영 고객에 그 이름이 없음'];
+                        continue;
+                    }
+
+                    /* 생년월일ㆍ성별로 좁힌다. 원본에 주민등록번호가 없으면 견줄 수
+                       없으니 이름만으로 잇고, 그 사실을 줄에 적어 둔다. */
+                    $어떻게 = 'name';
+
+                    if ($d->resident_no_masked) {
+                        $좁힘 = array_values(array_filter(
+                            $후보,
+                            fn ($c) => ResidentNo::mask($c->resident_no) === $d->resident_no_masked
+                        ));
+
+                        if ($좁힘 === []) {
+                            $셈['생년월일어긋남']++;
+                            $못한것[] = [$d->id, $d->customer_name, '이름은 같으나 생년월일이 어긋남'];
+                            continue;
+                        }
+
+                        $후보   = $좁힘;
+                        $어떻게 = 'name_birth';
+                    }
+
+                    if (count($후보) > 1) {
+                        $셈['여럿']++;
+                        $못한것[] = [$d->id, $d->customer_name,
+                            '같은 이름ㆍ생년월일이 ' . count($후보) . '명'];
+                        continue;
+                    }
+
+                    $c = $후보[0];
+                    $어떻게 === 'name_birth' ? $셈['이름생년월일']++ : $셈['이름만']++;
+
+                    if (! $d->sign_base64 && ! $d->sign_path) {
+                        $셈['그림없음']++;
+                        $못한것[] = [$d->id, $d->customer_name, '서명 그림이 없음 — 옮기지 않았습니다'];
+                        continue;
+                    }
+
+                    $거래처 = Patient::withTrashed()->where('ww_account_id', $c->ww_id)->first();
+
+                    if (! $거래처) {
+                        $셈['거래처없음']++;
+                        $못한것[] = [$d->id, $d->customer_name,
+                            '운영 고객 #' . $c->ww_id . ' 이 아직 거래처로 옮겨지지 않음'];
+                        continue;
+                    }
+
+                    $있나 = PatientDelegationSign::where('delegation_sign_id', $d->id)->first();
+                    $있나 ? $셈['덧씀']++ : $셈['새로']++;
+
+                    if (! $정말) {
+                        continue;
+                    }
+
+                    ($있나 ?: new PatientDelegationSign())->forceFill([
+                        'patient_id'         => $거래처->id,
+                        'ww_account_id'      => $c->ww_id,
+                        'delegation_sign_id' => $d->id,
+                        'matched_by'         => $어떻게,
+
+                        'customer_name'      => $d->customer_name,
+                        'dealer_name'        => $d->dealer_name,
+                        'phone'              => $d->phone,
+                        'guardian_phone'     => $d->guardian_phone,
+                        'main_contact'       => $d->main_contact,
+                        'resident_no_masked' => $d->resident_no_masked,   // 가린 값만
+                        'birth_date'         => $d->birth_date,
+
+                        'guardian_name'       => $d->guardian_name,
+                        'guardian_relation'   => $d->guardian_relation,
+                        'guardian_birth_date' => $d->guardian_birth_date,
+
+                        'agree_delegation'   => (bool) $d->agree_delegation,
+                        'agree_privacy'      => (bool) $d->agree_privacy,
+                        'agree_marketing'    => (bool) $d->agree_marketing,
+
+                        'signed_at'          => $d->signed_at,
+                        'sign_path'          => $d->sign_path,
+                        'sign_filename'      => $d->sign_filename,
+                        'sign_base64'        => $d->sign_base64,
+
+                        'guardian_signature_data' => $d->guardian_signature_data,
+                        'guardian_sign_path'      => $d->guardian_sign_path,
+                        'guardian_id_path'        => $d->guardian_id_path,
+                        'guardian_id_mime'        => $d->guardian_id_mime,
+
+                        'nice_verified_at'   => $d->nice_verified_at,
+                        'nice_name'          => $d->nice_name,
+                        'nice_birthdate'     => $d->nice_birthdate,
+                        'nice_gender'        => $d->nice_gender,
+                        'nice_mobile'        => $d->nice_mobile,
+
+                        'source'             => $d->source,
+                        'sent_by_name'       => $d->sent_by_name,
+                        'sent_at'            => $d->sent_at,
+                        'ip'                 => $d->ip,
+                        'user_agent'         => mb_substr((string) $d->user_agent, 0, 255),
+
+                        'data_origin'        => 'migration',
+                        'data_batch'         => $묶음,
+                    ])->save();
+                }
+            });
+
+        $this->line('');
+        $this->table(['무엇', '몇'], collect($셈)->map(fn ($v, $k) => [$k, number_format($v)])->values()->all());
+
+        if ($못한것 !== []) {
+            $this->line('');
+            $this->warn('  ── 옮기지 못한 줄 — 사람이 보아야 합니다 ──');
+            $this->table(['원본 #', '이름', '왜'], $못한것);
         }
 
-        $고침 = DB::update("
-            UPDATE delegation_signs d
-              JOIN ww_customers w ON w.account_name = d.customer_name
-              LEFT JOIN patients p ON p.ww_account_id = w.ww_id
-               SET d.ww_account_id = w.ww_id,
-                   d.patient_id    = p.id
-             WHERE (SELECT COUNT(*) FROM ww_customers x WHERE x.account_name = d.customer_name) = 1");
-
-        $this->line('    이어 둔 줄 ' . number_format($고침));
+        $this->line('  delegation_signs 는 읽기만 했습니다 — 한 칸도 고치지 않았습니다.');
     }
 
     /**

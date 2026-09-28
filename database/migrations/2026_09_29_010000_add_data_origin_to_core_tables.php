@@ -21,8 +21,10 @@ use Illuminate\Support\Facades\Schema;
  * 같은 날 두 번 돌린 것을 가릴 수 없다.
  *
  * **운영 데이터 메뉴의 표(ww_customers · ww_customer_addresses · ww_prescription_infos ·
- * delegation_signs)에는 딱지를 붙이지 않는다.** 그 표는 읽기만 하는 자리이고, 지우는
- * 일이 닿아서는 안 된다(2026-09-29 지시).
+ * delegation_signs)에는 칸 하나도 더하지 않는다.** 그 표는 읽기만 하는 자리다 —
+ * 지우는 것도 고치는 것도 닿아서는 안 된다(2026-09-29 지시). 위임장 서명을 거래처와
+ * 잇는 일은 그 표에 patient_id 를 적어 넣는 것이 아니라, 서명을 거래처 쪽으로
+ * **옮겨 담아** 한다(patient_delegation_signs — 바로 다음 마이그레이션).
  */
 return new class extends Migration
 {
@@ -58,22 +60,6 @@ return new class extends Migration
             });
         }
 
-        /* 위임장 서명도 운영 고객과 이어 둔다 (2026-09-29 지시).
-
-           서명 3,659줄 가운데 3,639줄이 운영 고객 이름과 **하나로** 짝지어진다.
-           이어 두지 않으면 서명을 받은 사람이 거래처의 누구인지 화면에서 알 수 없다.
-           **표 자체는 운영 자료라 지우지 않는다** — 칸을 더할 뿐이다. */
-        if (Schema::hasTable('delegation_signs')) {
-            Schema::table('delegation_signs', function (Blueprint $table) {
-                if (! Schema::hasColumn('delegation_signs', 'ww_account_id')) {
-                    $table->unsignedBigInteger('ww_account_id')->nullable()->index();
-                }
-                if (! Schema::hasColumn('delegation_signs', 'patient_id')) {
-                    $table->unsignedBigInteger('patient_id')->nullable()->index();
-                }
-            });
-        }
-
         /* 지금 있는 줄은 **모두 시험이다** (2026-09-29 지시).
 
            딱지가 없는 줄은 지우지 않는 것이 규칙이므로, 여기서 붙여 두지 않으면
@@ -96,12 +82,6 @@ return new class extends Migration
             Schema::table('patients', function (Blueprint $table) {
                 $table->dropUnique(['ww_account_id']);
                 $table->dropColumn(['ww_account_id', 'ww_account_code']);
-            });
-        }
-
-        if (Schema::hasTable('delegation_signs')) {
-            Schema::table('delegation_signs', function (Blueprint $table) {
-                $table->dropColumn(['ww_account_id', 'patient_id']);
             });
         }
 

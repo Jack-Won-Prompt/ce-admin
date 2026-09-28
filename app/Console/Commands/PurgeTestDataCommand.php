@@ -160,6 +160,10 @@ class PurgeTestDataCommand extends Command
             // ── 거래처에 매달린 것
             ['patient_addresses',        'patient_id',      $거래처, '거래처 주소'],
             ['privacy_consents',         'patient_id',      $거래처, '개인정보 동의'],
+            /* 옮겨 담은 위임장 서명 — **사본이라 지운다.** 원본(delegation_signs)은
+               «막은표» 에 있어 닿지 않는다. 사본을 남겨 두면 다음에 옮길 때 주인 없는
+               서명이 거래처 화면에 서고, 유일 색인 때문에 다시 옮기지도 못한다. */
+            ['patient_delegation_signs', 'patient_id',      $거래처, '위임장 서명(옮겨 담은 것)'],
             ['patients',                 'id',              $거래처, '거래처'],
         ];
     }

@@ -288,6 +288,16 @@
             <i class="fa-solid fa-file-medical"></i> 주문 이력
             <span style="background:var(--primary-light);color:var(--primary);border-radius:12px;padding:1px 7px;font-size:11px;margin-left:4px;">{{ $patient->prescriptions->count() }}</span>
           </button>
+          {{-- 위임장 서명 — 운영 데이터에서 옮겨 담은 것(2026-09-29 지시).
+               서명을 받았는지, 무엇을 받았는지는 공단에 낼 서류가 서는 근거다.
+               운영 데이터 메뉴에서만 볼 수 있으면 이 사람의 건을 다루는 자리에서
+               매번 다른 화면을 열어야 했다. --}}
+          <button class="tab-btn" id="tab-btn-sign" onclick="switchTab(this,'tab-sign')">
+            <i class="fa-solid fa-file-signature"></i> 위임장 서명
+            @if($서명들->isNotEmpty())
+              <span style="background:var(--primary-light);color:var(--primary);border-radius:12px;padding:1px 7px;font-size:11px;margin-left:4px;">{{ $서명들->count() }}</span>
+            @endif
+          </button>
           {{-- 무엇이 무엇으로 바뀌었는지(2026-09-08 확인요청 3ㆍ5쪽). 수정자ㆍ수정일자는
                아래 줄에 이미 서 있었지만 **무엇이** 바뀌었는지는 없었다 — 전화번호를
                고쳐도 화면에는 아무 자취가 없어 저장이 됐는지조차 알 수 없었다. --}}
@@ -777,6 +787,109 @@
         <div class="tab-pane" id="tab-items">
           <div class="ds-grid-hint" id="itemsNote" style="margin-bottom:8px;"></div>
           <div id="itemsGrid"></div>
+        </div>
+
+        {{-- 위임장 서명 — 옮겨 담은 것을 그대로 보여 준다 (2026-09-29 지시).
+
+             고칠 수 있는 칸을 두지 않는다. 이 자리에서 서명을 새로 받는 것이 아니고,
+             받아 둔 것을 고치면 그것은 더 이상 그 사람이 한 서명이 아니다.
+             새로 받아야 하면 운영 데이터 › 위임장 서명에서 다시 보낸다. --}}
+        <div class="tab-pane" id="tab-sign" style="overflow-y:auto;">
+          @if($서명들->isEmpty())
+            <div style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+              <i class="fa-solid fa-file-signature" style="font-size:28px;opacity:.3;display:block;margin-bottom:10px;"></i>
+              받아 둔 위임장 서명이 없습니다.
+              <div style="font-size:12px;margin-top:6px;">
+                운영 데이터 › 위임장 서명에서 보내고 받은 서명이 이 자리로 옮겨집니다.
+              </div>
+            </div>
+          @else
+            @foreach($서명들 as $sg)
+              <div style="border:1px solid var(--border-color);border-radius:8px;padding:14px 16px;margin-bottom:12px;">
+                <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+
+                  {{-- 서명 그림 — 무엇을 받았는지는 그림을 보아야 안다 --}}
+                  <div style="flex:0 0 240px;">
+                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">본인 서명</div>
+                    <img src="{{ route('patients.delegationSigns.image', [$patient, $sg]) }}"
+                         alt="위임장 서명"
+                         style="width:240px;height:110px;object-fit:contain;background:#fff;border:1px solid var(--border-color);border-radius:6px;">
+                  </div>
+
+                  {{-- 무엇을 언제 받았는가 --}}
+                  <div style="flex:1;min-width:260px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;">
+                    <div style="color:var(--text-muted);">서명한 이름</div>
+                    <div>{{ $sg->이름() }}</div>
+
+                    <div style="color:var(--text-muted);">서명 일시</div>
+                    <div>{{ $sg->signed_at?->format('Y-m-d H:i') ?: '-' }}</div>
+
+                    <div style="color:var(--text-muted);">생년월일</div>
+                    <div>{{ $sg->birth_date?->format('Y-m-d') ?: '-' }}
+                      @if($sg->resident_no_masked)
+                        <span style="color:var(--text-muted);">({{ $sg->resident_no_masked }})</span>
+                      @endif
+                    </div>
+
+                    <div style="color:var(--text-muted);">위임 동의</div>
+                    <div>{{ $sg->동의말('agree_delegation') }}</div>
+
+                    <div style="color:var(--text-muted);">개인정보 동의</div>
+                    <div>{{ $sg->동의말('agree_privacy') }}</div>
+
+                    <div style="color:var(--text-muted);">마케팅 동의</div>
+                    <div>{{ $sg->동의말('agree_marketing') }}</div>
+
+                    <div style="color:var(--text-muted);">본인확인</div>
+                    <div>
+                      @if($sg->nice_verified_at)
+                        {{ $sg->nice_verified_at->format('Y-m-d H:i') }}
+                        @if($sg->nice_name) · {{ $sg->nice_name }} @endif
+                      @else
+                        확인 기록 없음
+                      @endif
+                    </div>
+
+                    {{-- 무엇으로 이었는지 적는다. 「이름만」이면 사람이 한 번 더 보아야
+                         하는 줄이다 — 동명이인이 나타나면 먼저 의심할 자리다. --}}
+                    <div style="color:var(--text-muted);">이은 근거</div>
+                    <div>
+                      {{ $sg->짝지은말() }}
+                      @if($sg->matched_by === 'name')
+                        <span style="color:var(--danger,#d9534f);">— 생년월일을 견주지 못했습니다. 확인이 필요합니다.</span>
+                      @endif
+                    </div>
+
+                    <div style="color:var(--text-muted);">보낸 담당자</div>
+                    <div>{{ $sg->sent_by_name ?: '-' }}
+                      @if($sg->sent_at)
+                        <span style="color:var(--text-muted);">({{ $sg->sent_at->format('Y-m-d H:i') }} 발송)</span>
+                      @endif
+                    </div>
+                  </div>
+
+                  {{-- 보호자가 대신 한 위임 — 미성년이면 법정대리인이 한다 --}}
+                  @if($sg->guardian_name || $sg->guardian_signature_data)
+                    <div style="flex:0 0 240px;">
+                      <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">
+                        보호자 서명
+                        @if($sg->guardian_name)
+                          — {{ $sg->guardian_name }}
+                          @if($sg->guardian_relation) ({{ $sg->guardian_relation }}) @endif
+                        @endif
+                      </div>
+                      @if($sg->guardian_signature_data)
+                        <img src="{{ $sg->guardian_signature_data }}" alt="보호자 서명"
+                             style="width:240px;height:110px;object-fit:contain;background:#fff;border:1px solid var(--border-color);border-radius:6px;">
+                      @else
+                        <div style="font-size:12px;color:var(--text-muted);">서명 그림이 없습니다.</div>
+                      @endif
+                    </div>
+                  @endif
+                </div>
+              </div>
+            @endforeach
+          @endif
         </div>
 
         {{-- 변경 이력 — 목록과 상세가 같은 자리를 나눠 쓴다. 주문 등록의 「저장 이력」과

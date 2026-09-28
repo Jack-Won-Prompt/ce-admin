@@ -297,7 +297,40 @@ class PatientController extends Controller
             'total_amt' => (int) ($rx->order?->total_amount ?? 0),
         ])->values();
 
-        return view('patients.show', compact('patient', 'rxRows'));
+        /* 옮겨 담은 위임장 서명 (2026-09-29 지시).
+
+           운영 데이터 › 위임장 서명에서 서명까지 받은 줄을 거래처로 옮겨 담아 둔
+           것이다. 원본 표를 여기서 보지 않는다 — 그 표는 이름만 들고 있어 거래처와
+           이을 수 없고, 운영 데이터는 읽기만 하는 자리다. */
+        $서명들 = \App\Models\PatientDelegationSign::where('patient_id', $patient->id)
+            ->orderByDesc('signed_at')->get();
+
+        return view('patients.show', compact('patient', 'rxRows', '서명들'));
+    }
+
+    /**
+     * 옮겨 담은 위임장 서명의 그림 (2026-09-29 지시).
+     *
+     * 그림은 웹에서 바로 열리지 않는 폴더(storage/app/private/delegation-signs)에
+     * 있거나 표 안에 담겨 있다. 어느 쪽이든 이 자리가 골라 내준다.
+     *
+     * 다른 거래처의 서명을 열지 못하게 거래처 번호를 함께 견준다 — 번호만 바꾸면
+     * 남의 서명이 열리는 자리가 된다.
+     */
+    public function delegationSignImage(Patient $patient, \App\Models\PatientDelegationSign $sign)
+    {
+        abort_if($sign->patient_id !== $patient->id, 404);
+
+        $그림 = $sign->서명그림();
+
+        abort_if($그림 === null, 404, '서명 이미지가 없습니다.');
+
+        return response($그림, 200, [
+            'Content-Type'        => 'image/png',
+            'Content-Disposition' => 'inline; filename="'
+                                   . rawurlencode($sign->sign_filename ?: 'sign.png') . '"',
+            'Cache-Control'       => 'private, no-store',
+        ]);
     }
 
     /**
