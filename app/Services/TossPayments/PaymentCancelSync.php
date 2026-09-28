@@ -92,14 +92,28 @@ class PaymentCancelSync
         }
 
         /* 결제된 링크와 아직 살아 있는 링크를 함께 닫는다 — 취소된 건의 링크로 또
-           결제되면 안 된다. 전액 취소일 때만 닫는다(부분취소는 남은 청구가 있다). */
+           결제되면 안 된다. 전액 취소일 때만 닫는다(부분취소는 남은 청구가 있다).
+
+           **받은 것과 안 받은 것을 갈라 적는다** (2026-09-28 지시).
+
+           여태 둘 다 「취소」로 뭉갰다. 그런데 안 받은 링크를 거두는 것(cancelled)과
+           받았다가 돌려주는 것(refunded)은 돈이 오갔는지가 다르다 — 현금ㆍ카드영수증
+           화면이 그 둘을 같은 값으로 읽어, 받지 않은 돈이 합계에 섞였다. */
         if ($전액인가) {
-            $닫은수 = PaymentLink::where('order_id', $order->id)
-                ->whereIn('status', ['sent', 'paid'])
+            $무른수 = PaymentLink::where('order_id', $order->id)
+                ->where('status', 'paid')
+                ->update(['status' => 'refunded']);
+
+            $거둔수 = PaymentLink::where('order_id', $order->id)
+                ->where('status', 'sent')
                 ->update(['status' => 'cancelled']);
 
-            if ($닫은수) {
-                $말[] = "결제 링크 {$닫은수}건을 해지했습니다";
+            if ($무른수 || $거둔수) {
+                $말[] = trim(
+                    ($무른수 ? "받은 결제 {$무른수}건을 환불로 적었습니다" : '')
+                    . ($무른수 && $거둔수 ? '. ' : '')
+                    . ($거둔수 ? "보낸 결제 링크 {$거둔수}건을 해지했습니다" : '')
+                );
             }
         }
 

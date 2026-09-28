@@ -88,21 +88,46 @@ class ReuploadRequestService
      */
     public function 닫기(Prescription $처방전, ?string $서류이름, ?int $새첨부id = null): int
     {
-        $질의 = $처방전->reuploadRequests()->whereNull('resolved_at');
-
-        /* 서류 이름을 알면 그것만, 모르면(본 그림을 갈아 끼웠을 때 따위) 그 처방전의
-           같은 이름짜리만 닫는다. 이름이 아예 없으면 아무것도 닫지 않는다 — 엉뚱한
-           요청까지 닫는 것보다 남겨 두는 편이 낫다. */
+        /* 이름이 아예 없으면 아무것도 닫지 않는다 — 엉뚱한 요청까지 닫는 것보다
+           남겨 두는 편이 낫다. */
         if (! $서류이름) {
             return 0;
         }
 
-        $질의->where('doc_label', $서류이름);
+        /* **한 장 올리면 한 건만 닫는다** (2026-09-28 지시).
 
-        return $질의->update([
+           여태 이름표만 보고 `update()` 로 쓸어 닫았다. 처방전ㆍ신분증처럼 같은
+           이름표를 여러 장 되물은 건에서, 한 장만 다시 올려도 그 이름표의 열린
+           요청이 **전부** 닫혔다 — 검수자는 두 장을 청했는데 한 장만 받고 목록에는
+           「해결됨」으로 보였다. 실제로 그런 건이 운영에 있었다(요청#17ㆍ#18).
+
+           요청에는 「어느 첨부를 되물었나」(attachment_id)가 적혀 있지만, 그것으로
+           맞출 수는 없다 — **다시 올리면 새 첨부 줄이 생기지** 그 줄을 갈아 끼우지
+           않기 때문이다. 올라온 파일과 되물은 파일을 잇는 값이 어디에도 없다.
+
+           그래서 수로 맞춘다. 되물은 만큼 올라와야 다 닫힌다.
+
+           되물은 첨부가 분명한 요청(attachment_id 가 있는 것)을 먼저 닫고, 그 다음
+           오래된 것을 닫는다 — 먼저 물은 것이 먼저 풀리는 것이 사람이 기대하는
+           차례다. */
+        $요청 = $처방전->reuploadRequests()
+            ->whereNull('resolved_at')
+            ->where('doc_label', $서류이름)
+            ->orderByRaw('attachment_id IS NULL')
+            ->orderBy('requested_at')
+            ->orderBy('id')
+            ->first();
+
+        if (! $요청) {
+            return 0;
+        }
+
+        $요청->forceFill([
             'resolved_at'            => now(),
             'resolved_attachment_id' => $새첨부id,
-        ]);
+        ])->save();
+
+        return 1;
     }
 
     // ──────────────────────────────────────────────────────

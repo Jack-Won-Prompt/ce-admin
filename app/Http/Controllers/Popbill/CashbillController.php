@@ -290,7 +290,10 @@ class CashbillController extends Controller
         if ($from) { $q->whereDate('created_at', '>=', $from); }
         if ($to)   { $q->whereDate('created_at', '<=', $to); }
 
-        $상태글 = ['sent' => '발송', 'paid' => '승인', 'cancelled' => '취소', 'failed' => '실패'];
+        /* 환불은 승인과 갈라 적는다 (2026-09-28 지시) — 받았다가 돌려준 것이라
+           취소(받기 전에 거둔 링크)와도 다르다. */
+        $상태글 = ['sent' => '발송', 'paid' => '승인', 'refunded' => '환불',
+                   'cancelled' => '취소', 'failed' => '실패'];
 
         $rows = $q->orderByDesc('id')->limit(500)->get()->map(fn ($l) => [
             'record_type' => 'card',
@@ -300,8 +303,11 @@ class CashbillController extends Controller
             'order_no'    => $l->order?->order_number ?? '',
             'rx_number'   => $l->order?->prescription?->rx_number ?? '',
             'patient'     => $l->order?->patient?->name ?? '',
-            /* 취소는 뺀 금액으로 적는다 — 승인과 나란히 놓았을 때 합이 맞아야 읽힌다 */
-            'amount'      => $l->status === 'cancelled' ? -(int) $l->amount : (int) $l->amount,
+            /* 취소ㆍ환불은 뺀 금액으로 적는다 — 승인과 나란히 놓았을 때 합이 맞아야
+               읽힌다. 환불을 승인으로 두어 합계가 부풀던 것을 여기서 바로잡는다. */
+            'amount'      => in_array($l->status, ['cancelled', 'refunded'], true)
+                ? -(int) $l->amount
+                : (int) $l->amount,
             'status'      => $상태글[$l->status] ?? $l->status,
             'method'      => '카드',
             'payment_key' => $l->payment_key ?? '',

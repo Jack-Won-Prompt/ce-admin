@@ -94,6 +94,8 @@ class PaymentCancelService extends TossClient
                 'amount' => $무른금액,
             ]);
 
+            $this->결제링크를환불로($payment, $order, $무른금액);
+
             activity()->performedOn($order)->log(sprintf(
                 '시험 환경 자동 결제 취소 — %s원 (토스에 요청하지 않았습니다)',
                 number_format($무른금액)
@@ -150,6 +152,8 @@ class PaymentCancelService extends TossClient
             'cancel_reason'  => mb_substr($reason, 0, 200),
             'raw_response'   => $res,   // 모델이 배열로 캐스팅한다
         ])->save();
+
+        $this->결제링크를환불로($payment, $order, $canceled);
 
         Log::info('[Toss] 결제 취소', [
             'order' => $order->order_number, 'status' => $res['status'] ?? '?',
@@ -224,5 +228,48 @@ class PaymentCancelService extends TossClient
     {
         return $order->tossPayment
             ?? TossPayment::where('order_id', $order->id)->latest('id')->first();
+    }
+    /**
+     * 받았다가 돌려준 결제 링크를 「환불」로 옮긴다 (2026-09-28 지시).
+     *
+     * 여태 이 자리가 없어 환불한 링크도 `paid` 로 남았다. 현금ㆍ카드영수증 화면은
+     * `paid` 를 더해 세므로 받지 않은 돈이 합계에 들어갔다 — 27,000원을 물리고
+     * 22,500원을 다시 받은 건이 49,500원으로 섰다.
+     *
+     * **방금 무른 그 결제의 링크만** 옮긴다(payment_key 로 가린다). 같은 주문의 다른
+     * 링크 — 새로 보낸 것, 아직 안 낸 것, 앞서 받았다 돌려준 것 — 은 건드리지 않는다.
+     *
+     * 값은 `toss_payments` 로 가리지 않는다. 그 표는 **한 주문에 한 줄**이라 재결제가
+     * 덮어쓴다(2026-09-23). 27,000원을 물리고 22,500원을 다시 받은 건에서 그 줄의
+     * payment_key 는 **지금 들고 있는 22,500원짜리**다 — 그것으로 가리면 환불된 줄이
+     * 아니라 살아 있는 줄에 「환불」이 찍힌다. 여기서는 방금 무른 결제를 손에 들고
+     * 있으므로 그 열쇠를 그대로 쓴다.
+     *
+     * **이번에 무른 몫이 그 링크를 덮을 때만** 옮긴다. 일부만 돌려준 것을 적을 자리가
+     * 링크에는 없다 — 그 건은 승인으로 두고 환불 내역이 따로 남는다.
+     */
+    private function 결제링크를환불로(
+        \App\Models\TossPayment $payment,
+        \App\Models\Order $order,
+        int $무른금액,
+    ): void {
+        if (! $payment->payment_key) {
+            return;
+        }
+
+        $링크 = \App\Models\PaymentLink::where('order_id', $order->id)
+            ->where('status', 'paid')
+            ->where('payment_key', $payment->payment_key)
+            ->first();
+
+        if (! $링크 || $무른금액 < (int) $링크->amount) {
+            return;
+        }
+
+        $링크->forceFill(['status' => 'refunded'])->save();
+
+        Log::info('[Toss] 결제 링크를 환불로 옮김', [
+            'order' => $order->order_number, 'link' => $링크->id, 'amount' => $링크->amount,
+        ]);
     }
 }

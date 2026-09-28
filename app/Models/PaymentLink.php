@@ -54,6 +54,16 @@ class PaymentLink extends Model
     public const STATUSES = [
         'sent'      => ['보냄',     'info'],
         'paid'      => ['결제완료', 'success'],
+        /* 받았다가 돌려준 것 (2026-09-28 지시).
+
+           여태 이 자리가 없어, 환불한 건도 결제완료로 남았다. 현금ㆍ카드영수증
+           화면은 결제완료를 더해 세므로 받지 않은 돈이 합계에 들어갔다 —
+           27,000원을 물리고 22,500원을 다시 받은 건이 49,500원으로 섰다.
+
+           취소(cancelled)와는 다른 것이다. 저쪽은 **받기 전에** 거둔 링크이고,
+           이것은 **받은 뒤에** 돌려준 것이다. 둘을 한 값으로 묶으면 「돈이 오갔는가」를
+           가릴 수 없다. */
+        'refunded'  => ['환불',     'warning'],
         'expired'   => ['기한지남', 'secondary'],
         'cancelled' => ['취소',     'secondary'],
         'failed'    => ['보내지 못함', 'danger'],
