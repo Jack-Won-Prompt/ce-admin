@@ -14,7 +14,10 @@ use App\Models\Order;
  * 장비코드도 함께 싣는다. 공단 요양기관정보마당은 우리 품번이 아니라 그 번호로
  * 조회하는데, 세무 자료에 없으니 대조할 때마다 다른 표를 열어야 했다.
  *
- *   세금계산서  품목마다 한 줄. 규격 칸에 장비코드를 적는다.
+ *   세금계산서  품목마다 한 줄. **규격 칸에 품목코드, 비고 칸에 장비코드**를 적는다
+ *               (2026-09-28 지시 · 받아 본 세금계산서 원본이 그 꼴이다).
+ *               한동안 규격에 장비코드를 적었는데, 규격은 제품 규격을 적는 자리이고
+ *               장비코드는 공단이 쓰는 번호라 비고가 제자리다.
  *   현금영수증  품목 줄이 없다 — 품명 한 칸뿐이라 「제품명 (장비코드) 외 2건」으로 적는다.
  */
 final class IssueLines
@@ -39,9 +42,21 @@ final class IssueLines
             $d = $svc->newDetail();
             $d->serialNum  = $i + 1;
             $d->itemName   = $r['name'];
-            $d->spec       = $r['device'];
-            $d->qty        = (string) $r['qty'];
-            $d->unitCost   = (string) $r['unit'];
+            /* 규격은 제품 규격(품목코드), 비고는 공단이 쓰는 장비코드다 (2026-09-28 지시).
+               종이와 신고가 같은 자리에 같은 값을 써야 대조하는 쪽이 한 문서로 읽는다. */
+            $d->spec       = $r['code'];
+            $d->remark     = $r['device'];
+            /* **수량ㆍ단가는 싣지 않는다** (2026-09-28 지시).
+
+               받아 본 세금계산서 원본이 그 두 칸을 비워 두고 공급가액ㆍ세액만 적는다.
+               우리가 파는 것은 기관 몫만 청구하는 건이 많아(일반 90%), 수량 × 단가가
+               공급가액과 맞지 않는 줄이 생긴다 — 받는 쪽은 그것을 셈이 틀린 종이로
+               읽는다. 비워 두면 그 어긋남 자체가 없다.
+
+               2026-09-26 에 단가를 「소비자가 ÷ 1.1」로 정한 것은 이 지시로 물린다.
+               값은 그대로 셈해 두지만 신고에도 종이에도 쓰지 않는다. */
+            $d->qty        = '';
+            $d->unitCost   = '';
             $d->supplyCost = (string) $r['supply'];
             $d->tax        = (string) $r['vat'];
 
@@ -67,7 +82,7 @@ final class IssueLines
      * 한동안 공급가 ÷ 수량을 적었는데, 이번에는 그 값이 실제 판 값과 달라 보이는 것이
      * 문제가 되었다. 둘 다 만족시킬 수는 없어 판 값 쪽을 고른 것이다.
      *
-     * @return array<int, array{name:string, device:string, qty:int, unit:int, supply:int, vat:int, amount:int}>
+     * @return array<int, array{name:string, code:string, device:string, qty:int, unit:int, supply:int, vat:int, amount:int}>
      */
     public static function split(Order $order, int $supply, int $vat): array
     {
@@ -76,6 +91,7 @@ final class IssueLines
         if (! $rows) {
             $rows = [[
                 'name'   => (string) ($order->product_name ?: '처방약'),
+                'code'   => '',
                 'device' => '',
                 'qty'    => 1,
                 'amount' => 0,
@@ -107,6 +123,7 @@ final class IssueLines
 
             $out[] = [
                 'name'   => $r['name'],
+                'code'   => $r['code'] ?? '',
                 'device' => $r['device'],
                 'qty'    => $qty,
                 /* 단가는 **소비자가에서 부가세를 구분한 값**이다 (2026-09-26 지시).
@@ -163,7 +180,7 @@ final class IssueLines
     /**
      * 발행에 실을 품목 줄 — 화면이 읽어 채운다(전자세금계산서 손 발행 자리).
      *
-     * @return array<int, array{name:string, device:string, qty:int, amount:int}>
+     * @return array<int, array{name:string, code:string, device:string, qty:int, amount:int}>
      */
     public static function rowsFor(Order $order): array
     {
@@ -194,6 +211,8 @@ final class IssueLines
 
                 return [
                     'name'   => mb_substr(trim((string) $i->product_name), 0, self::NAME_MAX),
+                    // 규격 칸에 서는 우리 품목코드
+                    'code'   => trim((string) $i->product_code),
                     'device' => (string) (DeviceCode::for($i->product_code) ?? ''),
                     'qty'    => $qty,
                     // 소비자가 — 세금계산서 단가 칸에 그대로 적는다 (2026-09-26 지시)
@@ -214,6 +233,7 @@ final class IssueLines
 
         return [[
             'name'   => mb_substr(trim((string) $order->product_name), 0, self::NAME_MAX),
+            'code'   => trim((string) $order->product_code),
             'device' => (string) (DeviceCode::for($order->product_code) ?? ''),
             'qty'    => max(1, (int) ($order->quantity ?? 1)),
             'amount' => (int) ($order->quantity ?? 1) * (int) ($order->unit_price ?? 0),

@@ -209,7 +209,9 @@ final class TaxInvoiceForm
 
             $head[] = [
                 'name'   => '외 ' . count($tail) . '건',
+                'code'   => '',
                 'device' => '',
+                // 수량은 종이에도 신고에도 쓰지 않는다 — 합계만 남겨 둔다
                 'qty'    => array_sum(array_column($tail, 'qty')),
                 'unit'   => 0,
                 'supply' => array_sum(array_column($tail, 'supply')),
@@ -219,16 +221,23 @@ final class TaxInvoiceForm
             $rows = $head;
         }
 
+        /* 규격에는 품목코드, 비고에는 장비코드가 선다 (2026-09-28 지시).
+
+           받아 본 세금계산서 원본이 그 꼴이다 — 규격 5368 · 비고 NBC0121000006.
+           한동안 규격에 장비코드를, 비고에 주문번호를 적었다. 주문번호는 위쪽
+           「비고1」 칸에 이미 한 번 서므로 품목 줄에서는 자리를 비켜 준다. */
         return array_map(fn (array $r) => [
             'month'  => (string) (int) $at->format('m'),
             'day'    => (string) (int) $at->format('d'),
             'name'   => $r['name'],
-            'spec'   => $r['device'],
-            'qty'    => number_format($r['qty']),
-            'price'  => $r['unit'] ? number_format($r['unit']) : '',
+            'spec'   => $r['code'] ?? '',
+            /* 수량ㆍ단가는 비운다 (2026-09-28 지시) — 원본이 그 두 칸을 비워 두고
+               공급가액ㆍ세액만 적는다. 신고 쪽도 같이 비운다(IssueLines::taxDetails). */
+            'qty'    => '',
+            'price'  => '',
             'supply' => number_format($r['supply']),
             'vat'    => number_format($r['vat']),
-            'note'   => (string) $order->order_number,
+            'note'   => $r['device'],
         ], $rows);
     }
 
