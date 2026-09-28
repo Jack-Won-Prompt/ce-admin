@@ -195,25 +195,29 @@
       { header: '이름',   name: 'patient',  width: 90 },
       { header: '유형',     name: 'type',     width: 60,  align: 'center', sortable: true },
       // 같은 「교환」이라도 변심과 불량은 승인자도 청구 방식도 다르다 — 사유를 세운다
-      { header: '사유',     name: 'scenario', width: 110, align: 'center', sortable: true },
+      /* 절차서의 갈래다(반품 및 환불ㆍ고객 변심 교환…). 고객이 말한 신청 사유는
+         따로 있어, 둘 다 「사유」라 부르면 가릴 수 없었다(2026-09-28 검증). */
+      { header: '절차 갈래', name: 'scenario', width: 120, align: 'center', sortable: true },
       { header: '상태',     name: 'status',   width: 90,  align: 'center', sortable: true },
       // 창고가 어디까지 했는가 — 우리 단계와 다른 것을 잰다(요청서 4쪽)
       { header: '3PL 상태', name: 'pl3',      width: 100, align: 'center', sortable: true },
       /* 창고가 검수 승인을 청했는가 (2026-09-28 지시) — 「요청」은 아직 아무도 보지
-         않은 것이라 눈에 띄어야 한다. 「확인함」ㆍ「승인됨」은 지나온 자취다. */
+         않은 것이라 눈에 띄어야 한다. 「확인」은 담당자가 열어 본 것이다.
+         결재가 어디까지 왔는지는 옆의 「결재 단계」 칸이 말한다. */
       {
         header: '창고 검수 요청', name: 'wh_inspect', width: 110, align: 'center', sortable: true,
         renderer: (v) => {
           const s = document.createElement('span');
           s.textContent = v || '';
-          if (v === '요청')   { s.style.cssText = 'font-weight:700;color:#0369A1;'; }
-          if (v === '승인됨') { s.style.color = 'var(--text-muted)'; }
+          if (v === '요청') { s.style.cssText = 'font-weight:700;color:#0369A1;'; }
+          if (v === '확인') { s.style.color = 'var(--text-muted)'; }
           return s;
         },
       },
-      /* 결재가 어디까지 왔는가 — 옆의 「상태」(절차 단계)와 다른 것을 잰다 */
+      /* 결재가 어디까지 왔는가 — 옆의 「상태」(절차 단계)와 다른 것을 잰다.
+         이 칸은 검수 상태가 아니라 **결재 단계**다(2026-09-28 검증에서 이름을 바로잡음). */
       {
-        header: '검수 상태', name: 'appr_stage', width: 100, align: 'center', sortable: true,
+        header: '결재 단계', name: 'appr_stage', width: 110, align: 'center', sortable: true,
         renderer: (v) => {
           const s = document.createElement('span');
           s.textContent = v || '';
@@ -223,8 +227,12 @@
           return s;
         },
       },
-      { header: '최종승인자 서명', name: 'final_sign', width: 150, sortable: true },
-      { header: '검수 비고', name: 'pl3_note', width: 90,  align: 'center', sortable: true },
+      /* 사람과 때를 나눈다 — 한 칸에 뭉치면 날짜로 정렬도 셈도 못 한다 */
+      { header: '최종승인자', name: 'final_signer', width: 100, sortable: true },
+      { header: '서명일시', name: 'final_signed_at', width: 150, align: 'center', sortable: true },
+      /* 글 자체가 아니라 있다ㆍ없다만 싣는다 — 읽는 자리는 상세다. 이름이 「비고」면
+         글이 뜰 것으로 읽혀, 「유무」를 붙여 못박는다. */
+      { header: '창고 검수 비고 유무', name: 'pl3_note', width: 130, align: 'center', sortable: true },
       {
         // 절차서의 기한을 넘긴 건. 묻히면 기한을 둔 뜻이 없다.
         header: '기한', name: 'overdue', width: 110, align: 'center', sortable: true,
@@ -239,7 +247,7 @@
       { header: '원 판매주문', name: 'origin_so', width: 130, sortable: true },
       {
         // 창고에 알렸는가. 못 알린 건은 눈에 띄어야 다시 보낸다.
-        header: '반품 주문', name: 'return_so', width: 130, sortable: true,
+        header: '반품 주문번호', name: 'return_so', width: 130, sortable: true,
         renderer: (v) => {
           const el = document.createElement('span');
           el.textContent = v ?? '';
@@ -250,7 +258,9 @@
         },
       },
       { header: '신청 사유', name: 'reason',   width: 110 },
-      { header: '환불금액', name: 'refund',   width: 100, align: 'right' },
+      /* 접수할 때 담당자가 적어 둔 값이다 — 결재가 정한 금액은 아래 두 칸이다.
+         이름을 가르지 않으면 교환 건에서 서로 반대로 말한다(2026-09-28 검증). */
+      { header: '환불금액 (접수)', name: 'refund',   width: 110, align: 'right' },
       /* 결재로 정해진 금액은 방향을 갈라 둔다 (2026-09-28 지시) — 위의 「환불금액」은
          접수할 때 적어 둔 값이고, 아래 둘은 결재가 정한 실제로 움직일(움직인) 돈이다. */
       {
@@ -274,9 +284,12 @@
       { header: '담당자',   name: 'assignee', width: 90 },
       // 접수한 사람과 승인한 사람은 다르다 — 절차서가 그렇게 나눈다
       { header: '접수자',   name: 'taker',    width: 90 },
-      { header: '반품 승인자', name: 'approver', width: 100 },
+      /* approved_by 는 「전자 승인」 단계를 누른 사람이다. 최종승인자 서명으로 왔을
+         수도, 금액 변동이 없어 진행 단계에서 옮긴 것일 수도 있다 — 「반품」이라는
+         말은 교환 건에도 떠서 헷갈렸다(2026-09-28 검증). */
+      { header: '전자 승인자', name: 'approver', width: 100 },
       // 시ㆍ분ㆍ초까지 적는다 — 같은 날 두 번 오간 건은 날짜만으로 가릴 수 없다
-      { header: '반품 승인일', name: 'approved_at', width: 150, align: 'center', sortable: true },
+      { header: '전자 승인일시', name: 'approved_at', width: 150, align: 'center', sortable: true },
 
       /* ── 무엇이 얼마나 되돌아왔는가 (요청서 4쪽) ────────── */
       { header: '원판매 주문수량', name: 'qty_ordered',  width: 120, align: 'right' },

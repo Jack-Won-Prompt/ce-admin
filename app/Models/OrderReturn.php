@@ -799,9 +799,9 @@ class OrderReturn extends Model
             return self::STAGE_LABELS[$this->refund_stage];
         }
 
-        if ($this->창고검수요청중()) {
-            return '창고 검수 요청';
-        }
+        /* 「창고 검수 요청」은 여기서 말하지 않는다 (2026-09-28 검증).
+           목록에도 상세에도 그것만 말하는 칸이 따로 있어, 두 자리가 같은 말을 했다.
+           이 자리는 **결재가 어디까지 왔는가**만 말한다 — 아직 시작하지 않았으면 빈칸이다. */
 
         if ($this->inspect_confirmed_at && ! $this->approved_at && $this->needsFinalSign()) {
             return '서명 대기';

@@ -92,18 +92,22 @@ class OrderReturnController extends Controller
             'status'    => $r->statusLabel(),
             // 창고가 알려 준 그대로다 — 우리가 적는 값이 아니다
             'pl3'       => $r->pl3_status_label ?? '',
-            /* 창고가 검수 승인을 청했는가 (2026-09-28 지시). 「요청」은 아직 아무도
-               보지 않은 것이고, 「확인함」은 담당자가 열어 본 것이다. */
+            /* 창고가 검수 승인을 청했는가 (2026-09-28 지시).
+
+               **요청 그 자체만 말한다.** 여태 책임자가 승인하면 「승인됨」으로 바꿨는데,
+               그것은 요청의 상태가 아니라 결재의 상태다 — 옆의 「결재 단계」 칸이 할 말을
+               이 칸이 대신하고 있었다(2026-09-28 검증). */
             'wh_inspect' => $r->warehouse_inspect_requested_at
-                ? ($r->창고검수요청중() ? '요청'
-                    : ($r->inspect_confirmed_at ? '승인됨' : '확인함'))
+                ? ($r->창고검수요청중() ? '요청' : '확인')
                 : '',
             // 결재가 어디까지 왔는가 — 상태(절차 단계)와 다른 것을 잰다
             'appr_stage' => $r->결재단계말(),
-            // 누가 서명했나
-            'final_sign' => $r->final_signed_at
-                ? (($r->finalSigner?->name ?? '') . ' · ' . $r->final_signed_at->format('Y-m-d H:i'))
-                : '',
+            /* 누가ㆍ언제 서명했나 — **두 칸으로 나눈다** (2026-09-28 검증).
+
+               한 칸에 「이름 · 일시」를 뭉쳐 두면 그 칸으로 날짜를 정렬할 수도,
+               엑셀에서 날짜로 셈할 수도 없다. 사람 이름과 때는 다른 것이다. */
+            'final_signer'    => $r->finalSigner?->name ?? '',
+            'final_signed_at' => $r->final_signed_at?->format('Y-m-d H:i:s') ?? '',
             /* 창고가 실물을 보고 적은 말. 목록에서는 있다·없다만 보이면 된다 —
                읽는 자리는 상세다. 있는데 아무 표가 없으면 열어 볼 까닭을 모른다. */
             'pl3_note'  => $r->pl3_note ? '있음' : '',
@@ -654,6 +658,31 @@ class OrderReturnController extends Controller
                 OrderReturn::STATUS_LABELS[$to] . '은(는) '
                 . (config('permissions.actions.' . (OrderReturn::APPROVAL_PERMS[$to] ?? 'approve')))
                 . ' 권한이 필요합니다 (' . $orderReturn->approverRole() . ').']);
+        }
+
+        /* 결재 판을 우회하지 못하게 막는다 (2026-09-28 검증에서 드러남).
+
+           「진행 단계」의 단추는 흐름만 본다. 그래서 최종승인자 권한이 있는 사람은
+           ［반품 승인］을 눌러 **서명 없이** approved 로 갈 수 있었다 — 결재는
+           끝난 것으로 서는데 서명이 곧 실행이므로 환불은 일어나지 않는다.
+           돈이 움직여야 할 건이 「승인」인 채로 멈춰 선다.
+
+           옛 건은 막지 않는다 — needsFinalSign() 은 검수 결과가 있어야 참이라,
+           결재 판을 탄 건에서만 걸린다. */
+        if ($to === 'approved' && $orderReturn->needsFinalSign() && ! $orderReturn->final_signed_at) {
+            return back()->withErrors(['to_status' =>
+                '이 건은 최종승인자 서명으로 승인합니다 — 「결재」 판에서 서명을 받아 주십시오. '
+                . '서명하는 즉시 ' . $orderReturn->refundRouteLabel() . ' '
+                . number_format($orderReturn->결재금액()) . '원이 처리됩니다.']);
+        }
+
+        /* 창고가 검수 승인을 청한 건은 책임자 검수를 거쳐야 한다. 진행 단계에서
+           그냥 옮기면 검수 결과도 차감 금액도 없이 「검수 확정」이 되어, 뒤따르는
+           결재 경로가 정해지지 않는다. */
+        if ($to === 'inspected' && $orderReturn->warehouse_inspect_requested_at
+            && ! $orderReturn->inspect_result) {
+            return back()->withErrors(['to_status' =>
+                '창고가 검수 승인을 청한 건입니다 — 「결재」 판에서 검수 결과를 선택하고 승인해 주십시오.']);
         }
 
         /* 조정 금액을 적지 않고 금액조정으로 넘어가면, 얼마로 조정한 것인지 아무 데도
