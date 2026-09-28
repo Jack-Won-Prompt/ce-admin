@@ -345,6 +345,24 @@
       <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">상세 내용</button>
     </div>
     <div id="pnlList">
+      {{-- 상한에 걸렸음을 적는다 (2026-09-29).
+
+           거래처가 12,604명이 되자 목록이 한 번에 다 그리지 못해 500명까지만
+           그린다. 그 사실을 적지 않으면 「총 12,604건」 옆에 500줄이 서고, 없는
+           사람을 없다고 읽는다 — 찾는 사람이 목록에 없으니 새로 등록해 버린다. --}}
+      @if($그린줄 < $total)
+        <div style="display:flex;gap:8px;align-items:center;padding:8px 12px;margin-bottom:8px;
+                    background:var(--warning-light,#fff4e5);border:1px solid var(--warning,#f0ad4e);
+                    border-radius:6px;font-size:13px;">
+          <i class="fa-solid fa-circle-info" style="color:var(--warning,#f0ad4e);"></i>
+          <span>
+            걸린 거래처 <b>{{ number_format($total) }}</b>명 가운데
+            <b>{{ number_format($그린줄) }}</b>명만 표에 그렸습니다
+            (한 번에 {{ number_format($상한) }}명까지).
+            찾으시는 분이 보이지 않으면 <b>위 검색칸에 이름이나 전화번호를 넣어</b> 찾아 주십시오.
+          </span>
+        </div>
+      @endif
       <div id="patientGrid"></div>
     </div>
 

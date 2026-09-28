@@ -35,6 +35,22 @@ class PatientController extends Controller
             ->keyBy(fn ($c) => $c->prescription?->patient_id);
     }
 
+    /**
+     * 목록이 한 번에 그리는 줄 수 (2026-09-29).
+     *
+     * 운영 고객 12,604명을 옮긴 순간 이 화면이 500 오류를 냈다 — 관계까지 딸려
+     * 모델 12,604개를 세우다 메모리 128MB 를 넘겼다. 시험 자료 90명일 때는
+     * 드러나지 않던 자리다.
+     *
+     * wwGrid 는 받은 줄을 브라우저에서 모두 그린다. 그래서 서버가 견딘다 해도
+     * 만 줄을 한 번에 보내면 화면이 멈춘다. 처방전 작업 대기 목록이 쓰는 것과
+     * 같은 잣대를 둔다(PrescriptionController::작업대기상한 = 500).
+     *
+     * **총 줄 수는 그대로 센다.** 상한에 걸려 500줄만 그리면서 「총 500건」이라고
+     * 적으면 12,104명이 없는 것처럼 읽힌다.
+     */
+    private const 목록상한 = 500;
+
     public function index(Request $request): View|\Illuminate\Http\JsonResponse
     {
         $query = Patient::withCount('prescriptions')
@@ -137,8 +153,12 @@ class PatientController extends Controller
            모르면 지난 주문이 어디로 갔는지 되짚을 수 없다. */
         $query->with(['creator:id,name', 'updater:id,name', 'addresses']);
 
+        /* 몇 명이 걸렸는지 먼저 센다 — 상한을 걸기 **앞에서**. 관계를 딸리지 않는
+           셈이라 줄 수와 상관없이 가볍다. */
+        $총 = (clone $query)->count();
+
         // ── wwGrid 데이터 ──────────────────────────────────
-        $gridData = $query->get()->map(function ($p) use ($consents, $마케팅) {
+        $gridData = $query->limit(self::목록상한)->get()->map(function ($p) use ($consents, $마케팅) {
             // 생년월일 + 나이
             $birth = $p->birth_date
                 ? $p->birth_date->format('Y-m-d') . ' (만 ' . $p->age . '세)'
@@ -251,13 +271,23 @@ class PatientController extends Controller
             ];
         });
 
-        $total = $gridData->count();
+        /* 화면의 「총 N건」은 **걸린 수**다. 그린 줄 수가 아니다. */
+        $total  = $총;
+        $그린줄 = $gridData->count();
+        $상한   = self::목록상한;
 
         /* 목록만 다시 달라는 부름(?json=1). 어디선가 거래처를 고치면 열려 있는 목록이
            화면을 다시 열지 않고 그 자리에서 줄을 새로 받는다 — 보던 탭도 체크해 둔 것도
            그대로 남는다. 찾는 조건은 주소에 그대로 실려 오므로 위 흐름을 함께 탄다. */
         if ($request->boolean('json')) {
-            return response()->json(['rows' => $gridData, 'total' => $total]);
+            return response()->json([
+                'rows'  => $gridData,
+                'total' => $total,
+                /* 자리에서 줄을 새로 받는 쪽도 상한을 알아야 한다 — 모르면 500줄을
+                   전부라고 믿고 그린다. */
+                'shown' => $그린줄,
+                'cap'   => $상한,
+            ]);
         }
 
         /* 재등록 임박이 몇 명인지 거르개에 적는다 (2026-09-18 지시).
@@ -271,7 +301,7 @@ class PatientController extends Controller
                 today()->addDays(14)->toDateString(),
             ])->count();
 
-        return view('patients.index', compact('gridData', 'total', '재등록임박'));
+        return view('patients.index', compact('gridData', 'total', '재등록임박', '그린줄', '상한'));
     }
 
     // ── 상세/편집 화면 ────────────────────────────────────
