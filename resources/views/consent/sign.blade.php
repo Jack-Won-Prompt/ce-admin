@@ -927,8 +927,10 @@
         </div>
       </div>
       <label class="g-upload" id="gIdDrop">
+        {{-- capture 를 달지 않는다 (2026-09-27 확인요청 10쪽) — 달아 두면 폰에서
+             카메라만 열려, 이미 찍어 둔 신분증 사진을 쓸 수 없었다. --}}
         <input type="file" id="gIdFile" accept="image/jpeg,image/png,image/heic,image/heif"
-               capture="environment" style="display:none;" onchange="onGuardianIdPick(this)" />
+               style="display:none;" onchange="onGuardianIdPick(this)" />
         <div id="gIdEmpty">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:26px;height:26px;">
             <path d="M3 7a2 2 0 012-2h3l1.5-2h5L19 5h3a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>

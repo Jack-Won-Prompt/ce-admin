@@ -113,8 +113,16 @@
         <div class="sec-help">사진을 촬영하거나 파일을 선택하십시오. (JPGㆍPNGㆍHEIC, 최대 10MB)</div>
       </label>
       <label class="upload" id="pDrop">
+        {{-- capture 를 달지 않는다 (2026-09-27 확인요청 10쪽).
+
+             capture="environment" 는 폰에서 **카메라만** 연다. 이미 찍어 둔 신분증
+             사진을 쓰려는 사람은 그 자리에서 막혔다 — 안내글은 「촬영하거나 파일을
+             선택하십시오」라 적혀 있는데 고를 자리가 없었다.
+
+             떼어 두면 폰이 카메라ㆍ사진 보관함ㆍ파일을 함께 내놓는다. 찍는 길이
+             사라지는 것이 아니라 고르는 길이 더해진다. --}}
         <input type="file" id="pFile" accept="image/jpeg,image/png,image/heic,image/heif"
-               capture="environment" style="display:none;" onchange="pick(this,'p')" />
+               style="display:none;" onchange="pick(this,'p')" />
         <div id="pEmpty">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:26px;height:26px;">
             <path d="M3 7a2 2 0 012-2h3l1.5-2h5L19 5h3a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
@@ -139,8 +147,9 @@
         </div>
       </label>
       <label class="upload" id="gDrop">
+        {{-- 본인 신분증과 같은 까닭으로 capture 를 달지 않는다 (2026-09-27) --}}
         <input type="file" id="gFile" accept="image/jpeg,image/png,image/heic,image/heif"
-               capture="environment" style="display:none;" onchange="pick(this,'g')" />
+               style="display:none;" onchange="pick(this,'g')" />
         <div id="gEmpty">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:26px;height:26px;">
             <path d="M3 7a2 2 0 012-2h3l1.5-2h5L19 5h3a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>

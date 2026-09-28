@@ -388,6 +388,19 @@ class PrescriptionController extends Controller
             'so_type'          => ['nullable', 'string', Rule::in(Order::saleSoTypes())],
         ]);
 
+        /* 취소로 닫은 건은 창고로 보내지 않는다 (2026-09-27 확인요청 6쪽).
+
+           사유를 「취소-」로 적어 두고도 주문을 낼 수 있었다. 화면에서도 막지만
+           (gate취소사유) 이 주소를 바로 부르는 길이 따로 있어 여기서 한 번 더 본다 —
+           잣대는 한 곳에서 온다(OrderReason::isCancelled). */
+        if (\App\Support\OrderReason::isCancelled($prescription->reason)) {
+            return response()->json([
+                'success' => false,
+                'message' => '사유가 「' . $prescription->reason . '」로 적힌 건입니다 — '
+                           . '취소로 닫은 건은 창고로 보낼 수 없습니다. 사유를 먼저 고쳐 주십시오.',
+            ], 422);
+        }
+
         /* 아직 살 때가 아니면 여기서 멈춘다(요청서 2쪽, 2026-08-31). 물건이 나가면
            되돌릴 수 없고, 이르게 나간 건은 나중에 청구가 반려된다 — 창고에 넘기기
            전인 이 자리가 막을 수 있는 마지막 곳이다. */

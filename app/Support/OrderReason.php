@@ -109,4 +109,21 @@ class OrderReason
     {
         return $value !== null && $value !== '' && in_array($value, self::all(), true);
     }
+
+    /**
+     * 닫힌 건인가 — 「취소-」로 고른 사유 (2026-09-27 확인요청 6쪽).
+     *
+     * 사유를 취소로 고쳐 두고도 제품을 담고 주문을 낼 수 있었다. 닫으려고 적은
+     * 까닭과 새로 사겠다는 손이 한 화면에서 엇갈린다 — 창고에는 물건이 나가고
+     * 우리 장부에는 「취소」가 적힌다.
+     *
+     * 목록에 없는 값(위드웍스에서 옮겨 온 것)도 「취소-」로 시작하면 취소로 본다 —
+     * 저쪽 목록이 늘어날 때마다 우리 표를 따라 고치지 않아도 된다.
+     */
+    public static function isCancelled(?string $value): bool
+    {
+        $v = trim((string) $value);
+
+        return $v !== '' && (in_array($v, self::CANCELLED, true) || str_starts_with($v, '취소-'));
+    }
 }

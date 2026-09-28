@@ -9204,7 +9204,37 @@ window.HELP_TOUR_STEPS = [
                              product_price:'', insurance_price:'', nhis_status:'eligible',
                              nhis_amount:0, patient_copay:0, r_box:'', stock:'' });
 
+  /* ── 취소 사유가 걸린 건에는 제품을 담지 않는다 (2026-09-27 확인요청 6쪽) ──
+
+     사유를 「취소-」로 고쳐 두고도 제품을 담고 주문을 낼 수 있었다. 닫으려고 적은
+     까닭과 새로 사겠다는 손이 한 화면에서 엇갈린다 — 창고에는 물건이 나가는데
+     우리 장부에는 「취소」가 적힌다.
+
+     잣대는 서버와 한 곳에서 온다(OrderReason::isCancelled). 목록에 없는 값이라도
+     「취소-」로 시작하면 취소로 본다 — 위드웍스에서 옮겨 온 사유가 그렇다. */
+  const CANCEL_REASONS = @json(\App\Support\OrderReason::CANCELLED);
+
+  function 취소사유인가() {
+    const v = (document.getElementById('f-reason')?.value ?? '').trim();
+    return v !== '' && (CANCEL_REASONS.includes(v) || v.startsWith('취소-'));
+  }
+
+  /** 취소 사유면 막고 알린다 — 막았으면 true */
+  function gate취소사유() {
+    if (! 취소사유인가()) return false;
+
+    const 사유 = (document.getElementById('f-reason')?.value ?? '').trim();
+    ceAlert('이 건은 사유가 「' + 사유 + '」로 적혀 있습니다.'
+          + String.fromCharCode(10, 10)
+          + '취소로 닫은 건에는 제품을 담거나 주문을 낼 수 없습니다. '
+          + '다시 진행하시려면 병원ㆍ처방 정보의 「사유」를 먼저 고쳐 주십시오.',
+      { title: '취소된 건입니다', tone: 'warning' });
+
+    return true;
+  }
+
   function addItem() {
+    if (gate취소사유()) return;
     items.push(emptyItem());
     if (document.getElementById('tabsCol')?.classList.contains('tab-view-table')) {
       renderItemsTable();
@@ -10992,6 +11022,9 @@ window.HELP_TOUR_STEPS = [
 
   function gateOrder() {
     /* 어느 문에서 막혔는지 적어 둔다 — 창을 닫아도 자취가 남는다 */
+    /* 취소로 닫은 건이 가장 먼저다 (2026-09-27 확인요청 6쪽) — 닫힌 건에 대고
+       검수가 어떻고 수량이 어떻고를 따지는 것은 뒤바뀐 차례다. */
+    if (gate취소사유())          { 막힘알림('취소 사유', '취소로 닫은 건입니다'); return false; }
     if (!gateReviewed())        { 막힘알림('검수',      '검수가 아직 끝나지 않았습니다'); return false; }
     if (!gateConsent())         { 막힘알림('동의',      '필요한 동의를 아직 받지 못했습니다'); return false; }
     if (!gateTotalCount(true))  { 막힘알림('총계',      '1일 처방 개수 × 총 처방일수가 총계와 맞지 않습니다'); return false; }
