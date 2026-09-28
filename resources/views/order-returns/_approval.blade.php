@@ -17,7 +17,9 @@
   $결재됨 = (bool) $r->inspect_confirmed_at;
   $서명됨 = (bool) $r->final_signed_at;
   $길     = $r->refundRoute();
-  $움직임 = $r->움직일금액();
+  /* 끝난 건은 다시 셈하지 않는다 — 실제로 오간 돈을 보인다 */
+  $움직임 = $r->결재금액();
+  $끝났나 = $r->refund_stage === 'refunded';
   $하자   = $r->inspect_result === \App\Models\OrderReturn::RESULT_DEFECT;
 @endphp
 
@@ -96,6 +98,13 @@
           · {{ number_format($움직임) }}원
         @endif
       </span></div>
+      @if($하자)
+        {{-- 차감 뒤의 금액만 보이면 「무엇에서 얼마를 뺐나」를 알 수 없다. 끝난 뒤에는
+             받은 돈이 이미 줄어 있어 그 셈을 화면에서 되짚을 수도 없다. --}}
+        <div class="rt-kv"><span>차감 전 금액</span><span style="font-weight:400;color:var(--text-muted);">
+          {{ number_format($움직임 + (int) $r->inspect_deduct_amount) }}원
+        </span></div>
+      @endif
 
       {{-- 승인을 되돌리는 자리는 두지 않는다. 서명을 받은 뒤라면 돈이 이미 움직였고,
            받기 전이라면 최종승인자가 반려하면 창고로 되돌아간다. 되돌리는 단추를
@@ -221,7 +230,15 @@
         <div class="t">{{ $r->refundRouteLabel() }}</div>
         <div class="n">{{ number_format($움직임) }}원</div>
         <div class="s">
-          @if($길 === \App\Models\OrderReturn::ROUTE_TOPUP)
+          @if($끝났나)
+            {{-- 끝난 건은 셈을 다시 적지 않는다. 받은 돈이 이미 줄어 있어 그 셈이
+                 맞지 않고, 읽는 사람은 금액이 바뀐 줄 안다. --}}
+            <b>실제로 환불한 금액입니다.</b>
+            {{ $r->refunded_at?->format('Y-m-d H:i') }}
+            @if($하자)
+              · 차감 {{ number_format((int) $r->inspect_deduct_amount) }}원을 뺀 금액입니다.
+            @endif
+          @elseif($길 === \App\Models\OrderReturn::ROUTE_TOPUP)
             고객에게 <b>더 받을</b> 금액입니다. 서명 뒤 담당자가 전화로 알린 다음
             ［차액 결제 링크 보내기］를 누릅니다 — 저절로 나가지 않습니다.
           @elseif($길 === \App\Models\OrderReturn::ROUTE_PARTIAL)

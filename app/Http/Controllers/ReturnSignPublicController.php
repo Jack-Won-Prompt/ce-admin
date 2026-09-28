@@ -39,7 +39,7 @@ class ReturnSignPublicController extends Controller
         return view('order-returns.public-sign', [
             'r'      => $r,
             '닫힘'   => $this->닫힌까닭($r),
-            '금액'   => $r->움직일금액(),
+            '금액'   => $r->결재금액(),
             '받은것' => (int) ($r->order?->받은금액() ?? 0),
         ]);
     }

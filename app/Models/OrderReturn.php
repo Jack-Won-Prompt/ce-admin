@@ -723,6 +723,24 @@ class OrderReturn extends Model
         return $길 === self::ROUTE_FULL ? $받은것 : 0;
     }
 
+    /**
+     * 결재가 다루는 금액 — **이미 움직인 뒤에는 실제로 오간 돈이다** (2026-09-28).
+     *
+     * 움직일금액() 은 「지금 서명하면 얼마가 움직이나」를 셈한다. 그래서 환불이 끝난
+     * 뒤 다시 부르면 남은 돈으로 새로 셈해 0원이 된다 — 19,500원을 무른 건이 화면에
+     * 「부분 환불 0원」으로 서서, 아무 일도 없었던 것처럼 보였다.
+     *
+     * 끝난 건은 표에 적힌 값을 그대로 내놓는다. 그것이 실제로 오간 돈이다.
+     */
+    public function 결재금액(): int
+    {
+        if ($this->refund_stage === 'refunded' && (int) $this->refund_amount > 0) {
+            return (int) $this->refund_amount;
+        }
+
+        return $this->움직일금액();
+    }
+
     /** 서명 링크가 아직 살아 있는가 */
     public function 서명링크살았나(): bool
     {
