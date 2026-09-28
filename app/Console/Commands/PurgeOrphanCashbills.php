@@ -7,30 +7,40 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * 주문이 사라진 현금영수증을 팝빌에서 지운다 (2026-09-29 지시).
+ * 주문이 사라진 현금영수증 — 무엇이 되고 무엇이 안 되는지 보여 준다 (2026-09-29).
  *
- * 세금계산서 쪽(popbill:purge-orphan-taxinvoices)과 같은 까닭이고 같은 짜임이다 —
- * 시험을 돌리다 주문을 지우면 팝빌의 현금영수증은 남고, 현금영수증 화면에
- * 주문번호가 「—」인 줄이 선다. 우리 표는 거울이라 표만 지우면 다음에 다시 받아 온다.
+ * 세금계산서 쪽(popbill:purge-orphan-taxinvoices)과 같은 일을 하려고 만들었다가,
+ * **현금영수증은 그렇게 되지 않는다**는 것을 팝빌이 직접 알려 주었다. 실제로 받은
+ * 답이 이렇다 —
  *
- * **팝빌은 발행취소된 것만 지운다.** 살아 있는 건은 먼저 취소해야 하는데,
- * 현금영수증의 취소는 「취소현금영수증을 새로 발행하는」 일이다(RevokeRegistIssue) —
- * 그러면 주인 없는 문서가 오히려 한 장 더 는다. 그래서 --cancel-live 를 주었을 때만
- * 그 길로 가고, 취소전표까지 이어서 지운다.
+ *   -14002007  삭제 가능한 상태가 아닙니다
+ *              → 국세청에 신고된(300ㆍ304) 현금영수증은 **삭제 자체가 안 된다.**
+ *                세금계산서는 발행취소(600)로 내린 뒤 지울 수 있지만, 현금영수증에는
+ *                그 길이 없다.
  *
- * 취소하려면 **원본의 국세청승인번호와 거래일자**가 있어야 한다. 표에 적어 둔
- * confirm_num · trade_date 를 쓴다 — 둘 중 하나라도 비면 취소하지 않고 건너뛴다.
- * 짐작으로 채워 넣으면 엉뚱한 거래를 취소한다.
+ *   -14001065  취소 현금영수증의 거래금액 합계는 당초 승인 금액을 초과할 수 없습니다
+ *              → 이미 취소전표가 딸린 건에 또 취소를 발행하려 해서 나온다.
  *
- * 되돌릴 수 없는 일이라 기본은 「보여 주기만」이다.
+ *   -14001041  당초 승인 현금영수증만 취소 현금영수증을 발행할 수 있습니다
+ *              → 취소전표(CRC…) 자체는 다시 취소할 수 없다.
+ *
+ * 그래서 이 명령은 **지우지 않는다.** 처음 판은 「지워 보고 안 되면 취소해 본다」였는데,
+ * 그 길로 가니 취소전표 세 장이 새로 발행되고 그것도 지워지지 않아 **주인 없는 문서가
+ * 오히려 늘었다**(2026-09-29). 현금영수증에서 취소는 「없애기」가 아니라 「거래를
+ * 무효로 만들고 전표를 한 장 더 남기기」다.
+ *
+ * 남는 일은 둘뿐이다 —
+ *   · 아직 취소되지 않은 승인거래를 **무효로 만든다** (--revoke). 자취는 줄지 않고
+ *     오히려 한 장 늘어난다. 그것을 알고 눌러야 한다.
+ *   · 그대로 둔다. 시험 계정의 문서는 국세청에 닿지 않는다.
  */
 class PurgeOrphanCashbills extends Command
 {
     protected $signature = 'popbill:purge-orphan-cashbills
-                            {--force : 정말 지운다 (없으면 무엇을 지울지 보여 주기만 한다)}
-                            {--cancel-live : 아직 살아 있는 건은 취소현금영수증을 발행하고 지운다}';
+                            {--revoke : 아직 취소되지 않은 승인거래를 무효로 만든다 (전표가 한 장 늘어난다)}
+                            {--force : --revoke 와 함께 주어야 실제로 발행한다}';
 
-    protected $description = '주문이 사라진 현금영수증을 팝빌에서 지운다';
+    protected $description = '주문이 사라진 현금영수증을 보여 준다 (팝빌은 삭제를 받아 주지 않는다)';
 
     public function handle(CashbillService $svc): int
     {
@@ -47,8 +57,15 @@ class PurgeOrphanCashbills extends Command
             return self::SUCCESS;
         }
 
+        /* 이미 취소전표가 딸린 원본은 다시 취소할 수 없다. 취소전표는 원본 번호 앞에
+           CRC 를 붙여 짓는 것이 우리 규칙이라, 그것으로 짝을 찾는다. */
+        $취소된것 = $줄->filter(fn ($r) => str_starts_with((string) $r->mgt_key, 'CRC')
+                                        || str_starts_with((string) $r->mgt_key, 'XCR'))
+            ->map(fn ($r) => preg_replace('/^(CRC|XCR)/', '', (string) $r->mgt_key))
+            ->flip();
+
         $this->table(
-            ['id', '관리번호', '상태', '거래', '고객', '합계', '거래일'],
+            ['id', '관리번호', '상태', '거래', '고객', '합계', '거래일', '무엇을 할 수 있나'],
             $줄->map(fn ($r) => [
                 $r->id,
                 $r->mgt_key,
@@ -57,95 +74,81 @@ class PurgeOrphanCashbills extends Command
                 $r->customer_name,
                 number_format((int) $r->total_amount),
                 $r->trade_date,
+                $this->할수있는일($r, $취소된것),
             ])->all()
         );
 
-        if (! $this->option('force')) {
-            $this->warn('보여 주기만 했습니다. 정말 지우려면 --force 를 주십시오.');
+        $this->line('');
+        $this->warn('  팝빌은 국세청에 신고된 현금영수증을 삭제해 주지 않습니다 (-14002007).');
+        $this->line('  세금계산서와 달리 「발행취소하고 지우는」 길이 없습니다.');
+        $this->line('  할 수 있는 것은 아직 취소되지 않은 승인거래를 **무효로 만드는** 것뿐이고,');
+        $this->line('  그러면 취소전표가 한 장 더 남아 자취는 오히려 늘어납니다.');
+        $this->line('');
+
+        if (! $this->option('revoke')) {
+            $this->line('  무효로 만들려면 --revoke --force 를 함께 주십시오.');
+            $this->line('');
 
             return self::SUCCESS;
         }
 
-        $지움 = 0;
-        $남김 = 0;
+        $할것 = $줄->filter(fn ($r) => $this->취소할수있나($r, $취소된것));
 
-        foreach ($줄 as $r) {
-            /* 먼저 그냥 지워 본다 — 이미 취소된 것과 취소전표는 이 자리에서 끝난다 */
-            if ($this->지우기($svc, $r)) {
-                $지움++;
+        if ($할것->isEmpty()) {
+            $this->info('  무효로 만들 수 있는 승인거래가 없습니다.');
 
-                continue;
-            }
+            return self::SUCCESS;
+        }
 
-            if (! $this->option('cancel-live')) {
-                $this->line("  건너뜀(살아 있음) {$r->mgt_key} state={$r->state_code}");
-                $남김++;
+        $this->line('  무효로 만들 승인거래 ' . $할것->count() . '건');
 
-                continue;
-            }
+        if (! $this->option('force')) {
+            $this->warn('  보여 주기만 했습니다. --force 를 함께 주십시오.');
 
-            /* 취소하려면 원본의 국세청승인번호와 거래일자가 있어야 한다 */
-            if (! $r->confirm_num || ! $r->trade_date) {
-                $this->warn("  취소 못함 {$r->mgt_key} — 원본 승인번호나 거래일자가 비어 있습니다");
-                $남김++;
+            return self::SUCCESS;
+        }
 
-                continue;
-            }
-
-            /* 취소현금영수증의 관리번호는 새로 짓는다 — 원본과 같은 번호는 쓸 수 없다 */
-            $취소번호 = 'X' . mb_substr($r->mgt_key, 0, 23);
+        foreach ($할것 as $r) {
+            $취소번호 = 'CRC' . mb_substr($r->mgt_key, 0, 21);
 
             try {
-                $c = $svc->revokeRegistIssue(
-                    $r->corp_num, $취소번호, $r->confirm_num, $r->trade_date);
-
-                $this->line('  취소발행 ' . $r->mgt_key . ' → ' . $취소번호
+                $c = $svc->revokeRegistIssue($r->corp_num, $취소번호, $r->confirm_num, $r->trade_date);
+                $this->line('  무효 ' . $r->mgt_key . ' → ' . $취소번호
                     . ' code=' . ($c->code ?? '?') . ' ' . ($c->message ?? ''));
             } catch (\Throwable $e) {
-                $this->error('  취소발행 실패 ' . $r->mgt_key . ' → ' . $e->getMessage());
-                $남김++;
-
-                continue;
-            }
-
-            /* 원본과 방금 만든 취소전표를 함께 지운다 — 취소전표를 남기면 주인 없는
-               문서가 오히려 한 장 늘어난다 */
-            $this->지우기($svc, $r) ? $지움++ : $남김++;
-
-            try {
-                $res = $svc->delete($r->corp_num, $취소번호);
-                $this->line('  취소전표 삭제 ' . $취소번호 . ' → code=' . ((int) ($res->code ?? 0))
-                    . ' ' . ($res->message ?? ''));
-            } catch (\Throwable $e) {
-                $this->warn('  취소전표 삭제 실패 ' . $취소번호 . ' → ' . $e->getMessage());
+                $this->error('  무효로 만들지 못함 ' . $r->mgt_key . ' → '
+                    . mb_substr($e->getMessage(), 0, 110));
             }
         }
 
-        $this->info("지움 {$지움}건 · 남김 {$남김}건");
+        $this->line('');
+        $this->line('  발행한 취소전표는 팝빌에 남습니다 — 지울 수 없습니다.');
+        $this->line('');
 
         return self::SUCCESS;
     }
 
-    /** 팝빌에서 지우고, 지워졌으면 우리 표에서도 지운다 */
-    private function 지우기(CashbillService $svc, object $r): bool
+    /** 이 줄에 할 수 있는 일 — 사람이 표에서 바로 읽게 */
+    private function 할수있는일(object $r, $취소된것): string
     {
-        try {
-            $res  = $svc->delete($r->corp_num, $r->mgt_key);
-            $code = (int) ($res->code ?? 0);
-
-            if ($code === 1) {
-                $this->line("  삭제 {$r->mgt_key} → 삭제 완료");
-                DB::table('cashbill_records')->where('id', $r->id)->delete();
-
-                return true;
-            }
-
-            $this->line("  삭제 안 됨 {$r->mgt_key} → code={$code} " . ($res->message ?? ''));
-        } catch (\Throwable $e) {
-            $this->line("  삭제 안 됨 {$r->mgt_key} → " . mb_substr($e->getMessage(), 0, 90));
+        if (str_starts_with((string) $r->mgt_key, 'CRC') || str_starts_with((string) $r->mgt_key, 'XCR')) {
+            return '없음 (취소전표)';
         }
 
-        return false;
+        if (isset($취소된것[$r->mgt_key])) {
+            return '없음 (이미 무효)';
+        }
+
+        if (! $r->confirm_num || ! $r->trade_date) {
+            return '없음 (승인번호·거래일 없음)';
+        }
+
+        return '무효로 만들 수 있음';
+    }
+
+    private function 취소할수있나(object $r, $취소된것): bool
+    {
+        return $this->할수있는일($r, $취소된것) === '무효로 만들 수 있음';
     }
 
     /** 사람이 읽을 상태 — 숫자만 두면 무엇인지 알 수 없다 */
