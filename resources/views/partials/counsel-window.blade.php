@@ -437,6 +437,10 @@
       const pane = document.getElementById('csStep1');
       _csGrid = new wwGrid({
         el: document.getElementById('csGrid'),
+        /* 줄을 화면 코드가 직접 훑는다(cg-row-selected 를 손으로 붙였다 뗀다).
+           보이는 것만 그리면 굴릴 때 그 표시가 지워지므로 가상화를 쓰지 않는다
+           (2026-09-28). */
+        virtual: false,
         height: Math.max(220, (pane?.clientHeight || 320) - 8),
         editable: false, rowCheckbox: false, rowNumber: false,
         toolbar: false, footer: { total: true, selected: false, modified: false },

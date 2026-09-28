@@ -929,6 +929,28 @@ class wwGrid {
     // footer: true(기본, 전체 표시) | false(숨김) | { total, selected, modified }
     this.footer  = options.footer  !== undefined ? options.footer  : true;
 
+    /* **줄이 많으면 화면에 보이는 것만 그린다** (2026-09-28 지시).
+
+       주문 등록의 주문 목록은 111줄 × 142칸이라 셀이 15,621개였다. 칸 너비를 한 번
+       바꾸면 브라우저가 그 전부를 다시 앉혀야 해서 31ms 가 들었고(칸 22개면 3.4ms),
+       거기에 17,234px 짜리 표를 다시 그리는 값이 더해져 화면이 멈췄다.
+
+       보이는 것은 어차피 열 몇 줄이다. 그 위아래만 그리고 나머지 자리는 빈 줄
+       하나로 받는다.
+
+         virtual     'auto'(기본) · true(무조건) · false(쓰지 않음)
+         virtualMin  'auto' 일 때 이 줄 수부터 켠다
+
+       **false 로 꺼야 하는 표가 있다.** 화면 코드가 줄 DOM 을 직접 훑는 곳
+       (환자 고르기ㆍ상담 창처럼 cg-row-selected 를 손으로 붙였다 떼는 표)은,
+       굴릴 때 줄이 다시 그려지면서 그 표시가 지워진다. 그런 표는 대개 작아서
+       기본 잣대(100줄)에 걸리지 않지만, 걸릴 수 있는 곳은 명시로 꺼 둔다. */
+    this.virtual    = options.virtual !== undefined ? options.virtual : 'auto';
+    this.virtualMin = options.virtualMin || 100;
+    this._줄높이    = 0;      // 잰 줄 높이(px) — 첫 그리기에서 잰다
+    this._가상범위  = null;   // { 첫, 끝 } — 같은 범위면 다시 그리지 않는다
+    this._가상대기  = 0;      // requestAnimationFrame 손잡이
+
     // 상태
     this._modifiedRows  = new Map();  // rowIndex -> { original, current, changed, isNew? }
     this._checkedRows   = new Set();  // rowIndex
@@ -1094,7 +1116,17 @@ class wwGrid {
     this._applyFitHeight();
     if (this.height === 'fit' && !this._fitBound) {
       this._fitBound = true;
-      window.addEventListener('resize', () => this._applyFitHeight());
+      window.addEventListener('resize', () => { this._applyFitHeight(); this._가상갱신(); });
+    }
+
+    /* 굴리면 보이는 줄이 달라진다 — 그때 그 자리를 그린다.
+       passive 로 단다: 굴림을 막을 일이 없고, 막지 않는다고 미리 알리면
+       브라우저가 굴림을 기다리지 않는다. */
+    this._wrapEl.addEventListener('scroll', () => this._가상갱신(), { passive: true });
+
+    /* 판 높이가 바뀌면(칸 접기ㆍ탭 전환ㆍ_applyFitHeight) 보일 줄 수가 달라진다 */
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => this._가상갱신()).observe(this._wrapEl);
     }
   }
 
@@ -1601,9 +1633,36 @@ class wwGrid {
       return;
     }
 
-    this.data.forEach((row, rowIndex) => {
-      this._tbodyEl.appendChild(this._makeRow(row, rowIndex));
-    });
+    /* 보이는 자리만 그린다 — 나머지는 위아래 빈 줄이 높이로만 받는다 */
+    const 가상 = this._가상쓰나();
+    const 범위 = 가상 ? this._보이는범위() : { 첫: 0, 끝: this.data.length - 1, 잰적있나: true };
+
+    if (가상 && 범위.첫 > 0) {
+      this._tbodyEl.appendChild(this._여백줄(범위.첫 * this._줄높이));
+    }
+
+    for (let i = 범위.첫; i <= 범위.끝; i++) {
+      this._tbodyEl.appendChild(this._makeRow(this.data[i], i));
+    }
+
+    if (가상) {
+      const 아래 = (this.data.length - 1 - 범위.끝) * this._줄높이;
+      if (아래 > 0) this._tbodyEl.appendChild(this._여백줄(아래));
+
+      this._가상범위 = { 첫: 범위.첫, 끝: 범위.끝 };
+
+      /* 줄 높이를 아직 모르면 이번 그리기로 잰다. 재고 나면 범위가 달라지므로
+         한 번 더 그린다 — 두 번째는 높이를 아니까 다시 돌지 않는다. */
+      if (!범위.잰적있나) {
+        const 첫줄 = this._tbodyEl.querySelector('tr[data-row-index]');
+        const h = 첫줄 ? Math.round(첫줄.getBoundingClientRect().height) : 0;
+        if (h > 0 && h !== this._줄높이) {
+          this._줄높이 = h;
+          this._renderBody();
+          return;
+        }
+      }
+    }
 
     /* 줄이 판보다 적을 때 남는 자리를 받는 빈 줄.
        이것이 없으면 합계(tfoot)와 「전체 N건」이 마지막 줄에 붙어 뜨고
@@ -1616,6 +1675,81 @@ class wwGrid {
     fillerTd.colSpan = this.columns.length + (this.rowCheckbox ? 1 : 0) + (this.rowNumber ? 1 : 0);
     filler.appendChild(fillerTd);
     this._tbodyEl.appendChild(filler);
+  }
+
+  /** 이 표를 가상으로 그릴 것인가 */
+  _가상쓰나() {
+    if (this.virtual === false) return false;
+    if (this.virtual === true)  return this.data.length > 0;
+
+    return this.data.length >= this.virtualMin;
+  }
+
+  /**
+   * 지금 그려야 할 줄의 범위.
+   *
+   * 굴린 자리와 판 높이로 셈한다. 위아래로 넉넉히 더 그려 두어(여유), 빨리 굴려도
+   * 빈 자리가 잠깐 비치지 않게 한다.
+   *
+   * 줄 높이를 아직 재지 못했으면 한 판 넉넉히 그려 두고 재라고 알린다.
+   */
+  _보이는범위() {
+    const n = this.data.length;
+
+    if (this._줄높이 <= 0 || !this._wrapEl) {
+      return { 첫: 0, 끝: Math.min(n - 1, 40), 잰적있나: false };
+    }
+
+    const h    = this._줄높이;
+    const 여유 = 10;
+    const 첫   = Math.max(0, Math.floor(this._wrapEl.scrollTop / h) - 여유);
+    const 보일수 = Math.ceil((this._wrapEl.clientHeight || 400) / h) + 여유 * 2;
+
+    return { 첫, 끝: Math.min(n - 1, 첫 + 보일수), 잰적있나: true };
+  }
+
+  /** 그리지 않은 줄들의 자리를 높이로만 받는 빈 줄 */
+  _여백줄(높이) {
+    const tr = document.createElement('tr');
+    tr.className = 'cg-spacer-row';
+    tr.setAttribute('aria-hidden', 'true');
+
+    const td = document.createElement('td');
+    td.colSpan = this.columns.length + (this.rowCheckbox ? 1 : 0) + (this.rowNumber ? 1 : 0);
+    td.style.height  = Math.max(0, Math.round(높이)) + 'px';
+    td.style.padding = '0';
+    td.style.border  = '0';
+
+    tr.appendChild(td);
+
+    return tr;
+  }
+
+  /**
+   * 굴렸을 때 — 보이는 범위가 달라졌으면 다시 그린다.
+   *
+   * 굴림은 한 번에 수십 번 온다. 프레임마다 한 번으로 묶고, 범위가 그대로면
+   * 아무것도 하지 않는다.
+   *
+   * **편집 중에는 건드리지 않는다.** 다시 그리면 편집하던 칸이 통째로 사라져
+   * 치던 값이 날아간다. 편집이 끝나면 그때 따라잡는다.
+   */
+  _가상갱신() {
+    if (!this._가상쓰나() || this._editingCell) return;
+    if (this._가상대기) return;
+
+    this._가상대기 = requestAnimationFrame(() => {
+      this._가상대기 = 0;
+
+      if (this._editingCell) return;
+
+      const r = this._보이는범위();
+      const 전 = this._가상범위;
+
+      if (전 && 전.첫 === r.첫 && 전.끝 === r.끝) return;
+
+      this._renderBody();
+    });
   }
 
   _makeRow(row, rowIndex) {
@@ -1760,7 +1894,9 @@ class wwGrid {
           else         this._checkedRows.delete(i);
         });
         this._tbodyEl.querySelectorAll('.cg-row-check').forEach(c => c.checked = checked);
-        this._tbodyEl.querySelectorAll('tr').forEach(tr => {
+        /* 줄 번호가 붙은 것만 칠한다 — 빈 줄(여백ㆍ채움)에 색이 들면 표가 깨져 보인다.
+           그린 줄에만 붙지만 고른 것은 _checkedRows 에 남아, 굴려서 다시 그려도 따라온다. */
+        this._tbodyEl.querySelectorAll('tr[data-row-index]').forEach(tr => {
           tr.classList.toggle('cg-row-selected', checked);
         });
         this._updateFooter();
@@ -2107,6 +2243,9 @@ class wwGrid {
     if (!this._editingCell) return;
     const { rowIndex, colName, td, editorEl } = this._editingCell;
     this._editingCell = null;
+    /* 편집하는 동안은 굴려도 다시 그리지 않았다 — 끝났으니 밀린 것을 따라잡는다.
+       프레임 뒤에 도므로 아래 값 저장이 끝난 자리에서 그려진다. */
+    this._가상갱신();
 
     const colDef = this.columns.find(c => c.name === colName);
 
@@ -2190,6 +2329,8 @@ class wwGrid {
     this._editingCell = null;
     this._calendar.close();
     this._refreshCell(rowIndex, colName);
+    /* 편집하는 동안은 굴려도 다시 그리지 않았다 — 끝났으니 밀린 것을 따라잡는다 */
+    this._가상갱신();
   }
 
   _commitValue(rowIndex, colName, value) {
@@ -2463,8 +2604,23 @@ class wwGrid {
       isNew: true
     });
 
-    const tr = this._makeRow(newRow, newIndex);
-    this._tbodyEl.appendChild(tr);
+    /* 가상으로 그리는 표에서는 줄을 직접 붙이면 안 된다 — 아래 여백줄 뒤에 붙어
+       엉뚱한 자리에 서고, 다음 굴림에 통째로 지워진다. 맨 아래로 굴린 뒤 다시 그려
+       새 줄이 보이는 범위 안에 들게 한다. */
+    const 가상 = this._가상쓰나();
+    let tr;
+
+    if (가상) {
+      this._renderBody();                                   // 아래 여백 높이를 새 줄 수로 맞춘다
+      this._wrapEl.scrollTop = this._wrapEl.scrollHeight;
+      this._가상범위 = null;                                 // 범위가 같아 보여도 다시 그리게 한다
+      this._renderBody();
+      tr = this._tbodyEl.querySelector(`tr[data-row-index="${newIndex}"]`);
+    } else {
+      tr = this._makeRow(newRow, newIndex);
+      this._tbodyEl.appendChild(tr);
+    }
+
     this._renderSummary();
     this._updateFooter();
 
@@ -2476,7 +2632,7 @@ class wwGrid {
        클릭이 「이미 편집 중」으로 되돌아가 조회 창이 영영 열리지 않는다. */
     const firstEditCol = this.columns.find(c =>
       c.editor && c.editor !== 'checkbox' && c.editor !== 'popup');
-    if (firstEditCol) {
+    if (firstEditCol && tr) {
       const td = tr.querySelector(`td[data-col-name="${firstEditCol.name}"]`);
       if (td) setTimeout(() => this._startEdit(newIndex, firstEditCol.name, td), 0);
     }
@@ -2714,6 +2870,13 @@ class wwGrid {
     this._checkedRows.clear();
     this._addedRows = [];
     this._deletedRows = [];
+
+    /* 자료가 통째로 바뀌었다 — 굴린 자리를 맨 위로 돌리고 그려 둔 범위를 버린다.
+       그러지 않으면 백 줄짜리를 보다 열 줄짜리로 바꿨을 때, 굴린 자리가 그대로 남아
+       빈 화면이 선다(줄은 있는데 한참 아래를 보고 있는 꼴). */
+    if (this._wrapEl) this._wrapEl.scrollTop = 0;
+    this._가상범위 = null;
+
     this._renderBody();
     this._renderSummary();
     this._updateFooter();

@@ -7386,6 +7386,10 @@ window.HELP_TOUR_STEPS = [
     if (!pkGrid) {
       pkGrid = new wwGrid({
         el: document.getElementById('pkGrid'),
+        /* 줄을 화면 코드가 직접 훑는다(cg-row-selected 를 손으로 붙였다 뗀다).
+           보이는 것만 그리면 굴릴 때 그 표시가 지워지므로 가상화를 쓰지 않는다
+           (2026-09-28). */
+        virtual: false,
         /* 키를 못 박지 않는다 — 창이 준 자리를 flex 로 받는다(위 .pk-body 규칙) */
         editable: false, rowCheckbox: false, rowNumber: true,
         toolbar: false, footer: { total: true, selected: false, modified: false },
@@ -7543,6 +7547,10 @@ window.HELP_TOUR_STEPS = [
         /* 'fit' 은 뷰포트 바닥까지 재는 것이라 창 안에서는 맞지 않다 — 창이 준
            자리를 flex 로 받는다(.pk-body 규칙). */
         el, editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
+        /* 줄을 화면 코드가 직접 훑는다(cg-row-selected 를 손으로 붙였다 뗀다).
+           보이는 것만 그리면 굴릴 때 그 표시가 지워지므로 가상화를 쓰지 않는다
+           (2026-09-28). */
+        virtual: false,
         columns: [
           { header: '일자',     name: 'date',      width: 110, align: 'center', sortable: true },
           { header: '처방번호', name: 'rx_number', width: 170 },
