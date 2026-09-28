@@ -620,25 +620,50 @@ class Order extends Model
      * 그것은 「한 번이라도 받았는가」라서, 정정으로 금액이 늘어 차액이 남은 건도
      * 참이 된다. 그 건은 링크를 더 보낼 수 있어야 한다.
      */
+    /**
+     * 교환 차액으로 **더 받은 돈** (2026-09-28 지시).
+     *
+     * 차액 결제는 toss_payments 에 담지 않는다 — 그 표는 한 주문 한 줄이라 차액이
+     * 원 결제 줄을 덮어쓴다(37,500원 결제가 4,500원이 되고 원 결제키가 사라진다).
+     * 그래서 접수에 적어 두고, 받은 돈을 셀 때 여기서 더한다.
+     *
+     * 이것을 더하지 않으면 본인부담금은 42,000원인데 받은 돈은 37,500원으로 읽혀,
+     * 정산에 4,500원 미수가 서고 결제 링크를 또 보낼 수 있게 된다.
+     */
+    public function 차액입금합(): int
+    {
+        /* 목록에서는 returns 가 이미 담겨 온다 — 줄마다 다시 묻지 않는다 */
+        if ($this->relationLoaded('returns')) {
+            return (int) $this->returns
+                ->filter(fn ($r) => $r->topup_paid_at !== null)
+                ->sum('topup_amount');
+        }
+
+        return (int) $this->returns()->whereNotNull('topup_paid_at')->sum('topup_amount');
+    }
+
     public function 받은금액(): int
     {
         $결제 = $this->tossPayment;
 
+        // 교환 차액으로 더 받은 돈은 어느 갈래에서든 더한다
+        $차액 = $this->차액입금합();
+
         /* 부분 취소를 함께 본다 (2026-09-28). is_done 은 DONE 하나만 보므로, 부분
            환불이 한 번 일어나면 남은 돈이 있는데도 이 자리가 0 으로 떨어졌다. */
         if ($결제 && $결제->쥐고있나()) {
-            return $결제->남은금액();
+            return $결제->남은금액() + $차액;
         }
 
         if ($this->deposit_confirmed_at !== null) {
             /* 담당자가 눈으로 확인한 건. 금액을 적어 두었으면 그것이고, 안 적었으면
                받을 돈을 다 받은 것으로 본다 — 확인은 그 뜻으로 누르는 단추다. */
-            return (int) $this->deposit_amount > 0
+            return ((int) $this->deposit_amount > 0
                 ? (int) $this->deposit_amount
-                : $this->expectedDeposit();
+                : $this->expectedDeposit()) + $차액;
         }
 
-        return 0;
+        return $차액;
     }
 
     /** 받을 돈을 다 받았는가 — 받을 것이 없는 건(전액 기관부담)은 아니다 */
