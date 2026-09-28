@@ -6257,6 +6257,11 @@ async function downloadDocsMerged(e) {
   const 본래 = btn ? btn.innerHTML : '';
   if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 묶는 중…'; btn.disabled = true; }
 
+  /* 진행 창 — 첨부가 여럿이면 몇 초가 걸린다 (2026-09-28 지시) */
+  const 창 = ceProgress('서류를 한 PDF 로 묶는 중', 2);
+  창.걸음(1, 합본안내말());
+  창.걸음(2, '한 벌로 잇는 중…');
+
   try {
     const r = await fetch(`/prescriptions/${RX_NUMBER}/docs-merged`, { credentials: 'same-origin' });
 
@@ -6278,10 +6283,12 @@ async function downloadDocsMerged(e) {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(주소), 1000);
 
+    창.마침('서류를 묶었습니다.');
     showToast('서류를 한 PDF 로 묶었습니다.', 'success');
   } catch (err) {
     showToast('서류를 묶지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', 'danger');
   } finally {
+    setTimeout(() => 창.닫기(), 400);
     if (btn) { btn.innerHTML = 본래; btn.disabled = false; }
   }
 }
@@ -6296,6 +6303,11 @@ async function downloadDocsZip(e) {
   const btn = e.currentTarget;
   const 본래 = btn ? btn.innerHTML : '';
   if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 압축 중…'; btn.disabled = true; }
+
+  /* 압축은 원본을 그대로 담아 묶음보다 빠르다 — 그래도 장수가 많으면 기다린다 */
+  const 창 = ceProgress('서류를 압축하는 중', 2);
+  창.걸음(1, 합본안내말());
+  창.걸음(2, '압축 파일로 담는 중…');
 
   try {
     const r = await fetch(`/prescriptions/${RX_NUMBER}/docs-zip`, { credentials: 'same-origin' });
@@ -6318,10 +6330,12 @@ async function downloadDocsZip(e) {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(주소), 1000);
 
+    창.마침('서류를 압축했습니다.');
     showToast('서류를 압축했습니다.', 'success');
   } catch (err) {
     showToast('서류를 압축하지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', 'danger');
   } finally {
+    setTimeout(() => 창.닫기(), 400);
     if (btn) { btn.innerHTML = 본래; btn.disabled = false; }
   }
 }
@@ -14268,7 +14282,21 @@ window.HELP_TOUR_STEPS = [
     if (!url) { showToast('PDF 파일이 없습니다.', 'warning'); return; }
 
     const pop = document.getElementById('faxPdfPopover');
-    document.getElementById('faxPdfFrame').src = url;
+    const frame = document.getElementById('faxPdfFrame');
+
+    /* 이 주소를 부르면 서버가 그 자리에서 합본을 **만든다** — 열자마자 나오는 것이
+       아니다 (2026-09-28 지시). 그동안 틀은 비어 있어, 창만 뜨고 아무것도 없는 것처럼
+       보였다. 다 그려질 때까지 진행 창을 세운다. */
+    const 창 = ceProgress('팩스 서류를 만드는 중', 2);
+    창.걸음(1, 합본안내말());
+    창.걸음(2, '한 벌로 잇는 중…');
+
+    const 닫기 = () => { 창.마침('서류를 만들었습니다.'); setTimeout(() => 창.닫기(), 300); };
+    frame.addEventListener('load', 닫기, { once: true });
+    /* 틀이 끝내 뜨지 않아도 창이 남아 화면을 덮으면 안 된다 */
+    setTimeout(() => 창.닫기(), 60000);
+
+    frame.src = url;
     document.getElementById('faxPdfDownloadBtn').href = url;
 
     // 버튼 아래, 화면 가로 중앙에 위치
@@ -15487,19 +15515,29 @@ window.HELP_TOUR_STEPS = [
   }
 
   // 팩스통합본 재생성 (현재 데이터로, 요양비위임장 포함)
+  /* 합본은 오래 걸린다 — 진행 창을 세운다 (2026-09-28 지시).
+
+     첨부 PDF 를 쪽마다 그림으로 펴고 밝기ㆍ명암을 입힌 뒤 한 벌로 잇는다. 첨부가
+     서넛만 되어도 몇 초가 걸리는데, 단추 안의 작은 돌개만으로는 멈춘 것처럼 보인다. */
   async function regenerateFax(btn) {
     if (!await ceConfirm('현재 데이터로 팩스통합본을 다시 생성하시겠습니까? (요양비위임장 포함)',
                          { confirmText: '재생성' })) return;
     const orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 재생성 중...';
+
+    const 창 = ceProgress('팩스통합본 다시 만드는 중', 2);
     try {
+      창.걸음(1, 합본안내말());
+      창.걸음(2, '서류를 한 벌로 잇는 중…');
+
       const res = await fetch(btn.dataset.url, {
         method: 'POST',
         headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content, 'Accept': 'application/json' }
       });
       const data = await res.json();
       if (data.success) {
+        창.마침('팩스통합본을 다시 만들었습니다.');
         showToast(data.message || '재생성 완료', 'success');
         setTimeout(() => location.reload(), 1200);
       } else {
@@ -15509,7 +15547,25 @@ window.HELP_TOUR_STEPS = [
     } catch (e) {
       showToast('오류가 발생했습니다.', 'danger');
       btn.disabled = false; btn.innerHTML = orig;
+    } finally {
+      setTimeout(() => 창.닫기(), 400);
     }
+  }
+
+  /* 이 건이 몇 장을 담는지 — 진행 창에 적는다.
+
+     퍼센트를 지어내지 않는다(ceProgress 의 약속). 대신 **얼마나 담는지**를 알려
+     주면 기다릴 만한지 가늠이 선다. 그림은 그대로 실리고 PDF 는 쪽마다 펴야 해서
+     느리므로, 그 둘을 갈라 적는다. */
+  function 합본안내말() {
+    const 서류 = (typeof ALL_DOCS !== 'undefined' ? ALL_DOCS : []).filter(d => d && d.id !== undefined);
+    const pdf  = 서류.filter(d => d.isPdf).length;
+    const 그림 = 서류.length - pdf;
+
+    if (!서류.length) return '서류를 모으는 중…';
+
+    return `서류 ${서류.length}장을 모읍니다`
+         + (pdf ? ` — PDF ${pdf}장은 쪽마다 그림으로 펴야 해서 시간이 걸립니다` : '');
   }
 
   document.addEventListener('click', e => {
