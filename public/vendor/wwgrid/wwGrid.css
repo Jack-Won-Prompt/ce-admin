@@ -150,6 +150,24 @@
 .cg-sort-asc  .cg-sort-icon { color: var(--cg-accent); }
 .cg-sort-desc .cg-sort-icon { color: var(--cg-accent); }
 
+/* 칸 너비를 끄는 동안 서는 세로 안내선 (2026-09-28 지시).
+
+   끄는 내내 <col> 너비를 바꾸면 브라우저가 표의 모든 칸을 다시 앉힌다 —
+   111줄 × 142칸짜리 표에서 한 번에 27.8ms 가 들어 화면에 모래시계가 떴다.
+   끄는 동안에는 이 선만 옮기고, 너비는 놓을 때 한 번 적용한다.
+
+   담는 상자(.cg-wrap)가 굴러가므로 자리는 내용 좌표로 잡는다. 높이는 내용
+   전체(scrollHeight)라 세로로 굴려도 끊기지 않는다. */
+.cg-resize-guide {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  background: var(--cg-accent, #28798B);
+  opacity: .75;
+  pointer-events: none;   /* 선이 마우스를 가로채면 끌던 것이 끊긴다 */
+  z-index: 5;
+}
+
 /* ── Resize handle ── */
 /* 손잡이가 5px 이고 아무 표시가 없어, 열너비를 끌어 고칠 수 있다는 것을 아무도
    몰랐다. 옅은 금을 늘 그어 두고 폭을 조금 넓힌다. 두 번 누르면 처음 너비로 돌아간다. */

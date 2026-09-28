@@ -1848,18 +1848,51 @@ class wwGrid {
       const startX  = e.clientX;
       const startW  = th.offsetWidth;
 
+      /* **끄는 동안에는 표를 건드리지 않는다** (2026-09-28 지시).
+
+         여태 mousemove 마다 <col> 너비를 바꿨다. 칸 하나가 넓어지면 브라우저는
+         그 표의 **모든 칸**을 다시 앉혀야 한다 — 주문 목록은 111줄 × 142칸이라
+         한 번에 27.8ms 가 들었다. 마우스는 초당 백 번쯤 움직이므로 주 스레드가
+         그대로 막혀, 화면에 모래시계가 떴다.
+
+         재어 본 값(주문 등록 › 주문 목록, 운영):
+           지금 그대로(111줄) 27.8ms · 본문 숨김 0.6ms · 10줄만 3.4ms
+         값을 치르는 것은 본문 재배치다.
+
+         그래서 끄는 동안에는 세로 안내선 하나만 옮기고, 너비는 **놓을 때 한 번**
+         적용한다. 27.8ms × 수십 번이 27.8ms 한 번이 된다. */
+      const wrap = this._wrapEl;
+      const 안내 = document.createElement('div');
+      안내.className = 'cg-resize-guide';
+
+      if (wrap) {
+        const wr = wrap.getBoundingClientRect();
+        /* 안내선은 스크롤되는 상자 안에 놓인다 — 자리는 「내용 좌표」로 잡아야
+           가로로 굴려도 칸 경계에 붙어 있다. */
+        var 시작왼쪽 = handle.getBoundingClientRect().right - wr.left + wrap.scrollLeft;
+        안내.style.height = wrap.scrollHeight + 'px';
+        안내.style.left   = 시작왼쪽 + 'px';
+        wrap.appendChild(안내);
+      }
+
+      let 마지막너비 = startW;
+
       const onMove = ev => {
-        const newW = Math.max(40, startW + ev.clientX - startX);
-        if (colEl) colEl.style.width = newW + 'px';
+        마지막너비 = Math.max(40, startW + ev.clientX - startX);
+        /* 표가 아니라 안내선만 움직인다 — 여기서 표를 만지면 재배치가 돌아온다 */
+        if (wrap) 안내.style.left = (시작왼쪽 + (마지막너비 - startW)) + 'px';
       };
+
       const onUp = () => {
-        // 변경된 너비를 columns 배열에도 반영 (재렌더 후에도 유지)
+        안내.remove();
+
         if (colEl) {
-          const finalW = parseInt(colEl.style.width) || startW;
+          colEl.style.width = 마지막너비 + 'px';          // 재배치는 여기 한 번뿐이다
+
           const colDef = this.columns.find(c => c.name === colName);
-          if (colDef) colDef.width = finalW;
+          if (colDef) colDef.width = 마지막너비;
           // 다음에 이 화면을 열 때도 이 너비로 선다
-          this._savedWidths[colName] = finalW;
+          this._savedWidths[colName] = 마지막너비;
           this._saveWidths();
         }
         document.removeEventListener('mousemove', onMove);
