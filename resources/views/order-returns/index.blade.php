@@ -328,8 +328,23 @@
       { header: '최종승인자', name: 'final_signer', width: 100, sortable: true },
       { header: '서명일시', name: 'final_signed_at', width: 150, align: 'center', sortable: true },
       /* 금액이 바뀐 건만 선다 — 금액 변경이 없으면 증빙은 손대지 않는 것이 규칙이다
-         (2026-09-28 지시). 빈칸이 곧 「증빙은 그대로다」라는 말이다. */
-      { header: '증빙 재발행', name: 'docs_reissued', width: 150, align: 'center', sortable: true },
+         (2026-09-28 지시). 빈칸이 곧 「증빙은 그대로다」라는 말이다.
+
+         무르지 못한 것이 있으면 **붉게** 세운다. 차액 입금은 웹훅에서 저절로 돌아
+         화면에 아무 말도 뜨지 않으므로, 목록에서 눈에 띄지 않으면 아무도 모른다. */
+      {
+        header: '증빙 재발행', name: 'docs_reissued', width: 150, align: 'center', sortable: true,
+        renderer: (v, row) => {
+          const s = document.createElement('span');
+          if (!v) { s.textContent = ''; return s; }
+          s.textContent = row.docs_ng ? (v + ' ⚠') : v;
+          if (row.docs_ng) {
+            s.style.cssText = 'font-weight:700;color:#B42318;';
+            s.title = '무르지 못한 증빙이 있습니다 — 상세의 「결재」 판에서 확인해 주십시오';
+          }
+          return s;
+        },
+      },
       /* 글 자체가 아니라 있다ㆍ없다만 싣는다 — 읽는 자리는 상세다. 이름이 「비고」면
          글이 뜰 것으로 읽혀, 「유무」를 붙여 못박는다. */
       { header: '창고 검수 비고 유무', name: 'pl3_note', width: 130, align: 'center', sortable: true },
