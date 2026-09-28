@@ -106,6 +106,12 @@ window.HELP_TOUR_STEPS = [
     border-radius: 4px; background: #fff;
   }
   .att-fax-pv-none { font-size: 11px; color: var(--text-muted); text-align: center; padding: 10px 0; }
+  /* 보낼 때 그리는 서식은 누른 뒤 서버가 그린다 — 그동안 이 줄이 선다 */
+  .att-fax-pv-wait { font-size: 11px; color: var(--text-muted); text-align: center; padding: 14px 0; }
+  /* PDF 를 이 자리에서 펼친다. onload 전에는 감춰 두어 빈 흰 칸이 깜빡이지 않게 한다 */
+  .att-fax-pv-pdf {
+    display: none; width: 100%; height: 320px; border: 0; border-radius: 4px; background: #fff;
+  }
   .att-fax-pv-open {
     display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700;
     color: var(--primary); text-decoration: underline;
@@ -685,9 +691,13 @@ window.HELP_TOUR_STEPS = [
                       : `<span class="att-fax-nm">${dsEsc(r.name || '')}</span>`);
           /* 미리보기 단추 — 볼 파일이 있는 줄에만 세운다. 없는 줄은 왜 없는지를
              단추 자리에 적어 둔다(「보낼 때 그림」) — 빈 자리는 고장으로 읽힌다. */
+          /* 보낼 때 그리는 서식도 이제 미리 본다 — 누르면 서버가 그 자리에서 그린다.
+             볼 수 없는 줄은 **왜 없는지**를 단추에 달아 둔다. 빈 자리는 고장으로 읽힌다.
+             그릴 수 없는 서식(서명 전 위임장 따위)은 가운데 칸에 적힌 그 까닭이 곧
+             단추의 까닭이다 — 두 자리에 다른 말을 적으면 어느 쪽이 맞는지 묻게 된다. */
           const 눈 = r.preview
             ? `<button type="button" class="att-fax-eye" data-pv="${i}">미리보기</button>`
-            : `<button type="button" class="att-fax-eye" disabled title="${r.auto ? '보낼 때 그려 넣는 서식이라 미리 볼 파일이 없습니다' : '볼 파일이 없습니다'}">${r.auto ? '보낼 때 그림' : '—'}</button>`;
+            : `<button type="button" class="att-fax-eye" disabled title="${dsEsc(r.why || (r.auto ? '보낼 때 그려 넣는 서식이라 미리 볼 파일이 없습니다' : '볼 파일이 없습니다'))}">—</button>`;
           return `
       <div class="att-fax-item" data-item="${i}">
         <label class="att-fax-row${r.ok ? '' : ' is-off'}">
@@ -717,10 +727,20 @@ window.HELP_TOUR_STEPS = [
         if (!열림 || 칸.dataset.done) return;
 
         칸.dataset.done = '1';
+        /* **PDF 도 이 자리에서 펼친다** (2026-09-28 지시).
+
+           예전에는 「새 창에서 확인하십시오」라고만 적었다. 그런데 미리보기가 필요한
+           까닭은 팩스가 되돌릴 수 없어서다 — 창을 하나 더 열어야 하면 대개 열지 않고
+           그냥 보낸다. 보낼 때 그리는 서식(위임장ㆍ요양비위임장ㆍ구매내역)은 특히
+           그렇다.
+
+           만드는 데 한두 걸음 걸리므로 「그리는 중」을 먼저 세운다. */
         칸.innerHTML = r.preview_kind === 'image'
           ? `<img src="${dsEsc(r.preview)}" alt="${dsEsc(r.label)} 미리보기"
                   onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'att-fax-pv-none',textContent:'그림을 불러오지 못했습니다.'}))">`
-          : `<div class="att-fax-pv-none">PDF 는 이 자리에 펼치지 않습니다 — 새 창에서 확인하십시오.</div>`;
+          : `<div class="att-fax-pv-wait">서식을 그리는 중…</div>
+             <iframe class="att-fax-pv-pdf" src="${dsEsc(r.preview)}" title="${dsEsc(r.label)} 미리보기"
+                     onload="this.previousElementSibling && this.previousElementSibling.remove(); this.style.display='block';"></iframe>`;
         칸.insertAdjacentHTML('beforeend',
           `<a class="att-fax-pv-open" href="${dsEsc(r.preview)}" target="_blank" rel="noopener">새 창에서 크게 보기</a>`);
       };

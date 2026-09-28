@@ -306,11 +306,21 @@ class OrderController extends Controller
             ['cash_receipt',     '현금영수증',    $order->cash_receipt_status === 'issued',    '아직 발행되지 않았습니다'],
         ];
 
-        /* 이미 발행한 증빙은 미리 볼 길이 있다 — 그 주소를 함께 준다.
-           나머지(위임장ㆍ구매내역)는 보낼 때 그리는 것이라 미리 볼 파일이 없다. */
+        /* **보낼 때 그리는 서식도 미리 본다** (2026-09-28 지시).
+
+           여태 위임장ㆍ요양비위임장ㆍ제품 구매내역은 미리 볼 파일이 없어 이름만 보고
+           골라야 했다. 팩스는 되돌릴 수 없는데 무엇이 나가는지 볼 길이 없었다.
+
+           보낼 때 쓰는 그 생성기를 그대로 부르는 길을 냈다(prescriptions.faxDocPreview)
+           — 미리보기 전용으로 따로 그리면 본 것과 나간 것이 갈린다.
+
+           세금계산서ㆍ현금영수증은 이미 발행된 것을 그대로 보여 주는 제 길이 있다. */
         $미리볼것 = [
-            'tax_invoice' => fn () => route('orders.taxInvoicePreview', $order),
-            'cash_receipt' => fn () => route('orders.cashReceiptPreview', $order),
+            'delegation'       => fn () => route('prescriptions.faxDocPreview', [$rx, 'doc' => 'delegation']),
+            'authorization'    => fn () => route('prescriptions.faxDocPreview', [$rx, 'doc' => 'authorization']),
+            'purchase_history' => fn () => route('prescriptions.faxDocPreview', [$rx, 'doc' => 'purchase_history']),
+            'tax_invoice'      => fn () => route('orders.taxInvoicePreview', $order),
+            'cash_receipt'     => fn () => route('orders.cashReceiptPreview', $order),
         ];
 
         foreach ($만드는것 as [$code, $label, $있다, $까닭]) {

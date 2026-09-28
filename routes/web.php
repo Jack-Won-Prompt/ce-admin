@@ -159,6 +159,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{prescription}/fax-send',      [PrescriptionController::class, 'sendFax'])->name('faxSend');
         Route::get( '/{prescription}/authorization', [PrescriptionController::class, 'authorization'])->name('authorization');
         Route::get( '/{prescription}/fax-pdf',      [PrescriptionController::class, 'downloadFaxPdf'])->name('faxPdf');
+        /* 보낼 때 그려 넣는 서식을 미리 본다 (2026-09-28 지시) — 내려받기와 달리 남기지 않는다 */
+        Route::get( '/{prescription}/fax-doc-preview', [PrescriptionController::class, 'previewFaxDoc'])->name('faxDocPreview');
         Route::post('/{prescription}/fax-regenerate', [PrescriptionController::class, 'regenerateFax'])->name('faxRegenerate');
         Route::get( '/{prescription}/generated-docs', [PrescriptionController::class, 'generatedDocs'])->name('generatedDocs');
         /* 올린 서류와 만들어진 서류를 한 PDF 로 묶어 내려받는다 (2026-09-27 확인요청 2쪽) */

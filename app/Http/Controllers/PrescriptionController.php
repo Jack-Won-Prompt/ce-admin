@@ -4903,6 +4903,51 @@ class PrescriptionController extends Controller
     }
 
     /**
+     * 보낼 때 그려 넣는 서식을 **미리** 본다 (2026-09-28 지시).
+     *
+     * 요양비위임장ㆍ위임장ㆍ제품 구매내역은 미리 만들어 둔 파일이 없다 — 팩스를
+     * 보내는 그 자리에서 그린다. 그래서 목록의 파일 창에서 고를 수는 있어도 무엇이
+     * 나가는지 볼 길이 없었다. 팩스는 되돌릴 수 없는데 이름만 보고 골라야 했다.
+     *
+     * **보낼 때 쓰는 그 생성기를 그대로 부른다**(buildFaxCombinedPdf). 미리보기
+     * 전용으로 따로 그리면 둘이 조금씩 갈라져, 본 것과 나간 것이 달라진다.
+     *
+     * 내려받기(downloadFaxPdf)와 다른 점은 하나다 — **남기지 않는다.**
+     * 저쪽은 그린 것을 팩스통합본으로 서류함에 넣는데, 미리 보기만 했는데 서류가
+     * 쌓이면 「낼 것이 준비됐다」는 판정(ClaimReadiness)까지 흔들린다.
+     */
+    public function previewFaxDoc(Request $request, Prescription $prescription): \Illuminate\Http\Response
+    {
+        $allowed = ['authorization', 'delegation', 'prescription', 'purchase_history', 'cash_receipt'];
+        $doc     = (string) $request->input('doc', '');
+
+        if (! in_array($doc, $allowed, true)) {
+            return response('미리 볼 수 있는 서식이 아닙니다.', 404);
+        }
+
+        try {
+            [$pdf] = $this->buildFaxCombinedPdf($prescription, [$doc]);
+        } catch (\Throwable $e) {
+            Log::warning('서식 미리보기 실패', ['doc' => $doc, 'rx' => $prescription->rx_number, 'error' => $e->getMessage()]);
+
+            return response('미리보기를 만들지 못했습니다.', 500);
+        }
+
+        /* 그릴 것이 하나도 없으면 백지 한 장이 나온다 — 그것을 보여 주면 「고장」으로
+           읽는다. 까닭을 적어 돌려보낸다. */
+        if (! $pdf) {
+            return response('이 서식에 그려 넣을 내용이 없습니다.', 404);
+        }
+
+        return response($pdf, 200, [
+            'Content-Type'        => 'application/pdf',
+            /* inline — 새 창이 아니라 창 안에서 펼쳐 본다 */
+            'Content-Disposition' => 'inline; filename="preview.pdf"',
+            'Cache-Control'       => 'private, max-age=60',
+        ]);
+    }
+
+    /**
      * 시스템이 만든 서류 목록 (서명 완료 뒤 문서 칸을 새로 고칠 때 쓴다).
      *
      * 예전에는 「생성 서류」 카드의 HTML 조각을 돌려줬다. 그 카드를 걷고 문서 칸
