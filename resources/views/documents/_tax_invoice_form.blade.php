@@ -43,14 +43,14 @@
 
   /* ── 공통 표 ────────────────────────────── */
   .ti-form table { width: 100%; border-collapse: collapse; table-layout: auto; }
-  .ti-form td { border: 0.25mm solid #d8232a; padding: 0.8mm 1mm; font-size: 7.5pt; line-height: 1.25;
+  .ti-form td { border: 0.25mm solid #d8232a; padding: 0.5mm 1mm; font-size: 7.5pt; line-height: 1.18;
                 color: #111111; vertical-align: middle; text-align: left; }
   .ti-form .lbl { color: #d8232a; font-weight: 700; text-align: center; }
   .ti-form .box { border: 0.6mm solid #d8232a; }
 
   /* ── 제목 줄 ────────────────────────────── */
   .ti-form .t-title { font-size: 15pt; font-weight: 700; color: #d8232a; text-align: center;
-                      letter-spacing: .12em; padding: 2.2mm 0; }
+                      letter-spacing: .12em; padding: 1.4mm 0; }
   .ti-form .t-keep  { color: #d8232a; font-weight: 700; text-align: center; font-size: 8pt;
                       line-height: 1.3; letter-spacing: .18em; }
   .ti-form .t-book  { color: #d8232a; font-weight: 700; font-size: 7.5pt; line-height: 1.5; }
@@ -66,14 +66,14 @@
   .ti-form .p-l2n { width: 2.6%; padding: 0; }   /* 「성 명」ㆍ「종 목」처럼 두 줄로 세우는 칸 */
 
   /* ── 작성일자ㆍ공급가액ㆍ세액 ───────────────── */
-  .ti-form .amt td { padding: 0.7mm 0.4mm; font-size: 7pt; text-align: center; }
+  .ti-form .amt td { padding: 0.45mm 0.4mm; font-size: 7pt; text-align: center; }
   .ti-form .amt .d { font-size: 8pt; }
   .ti-form .amt .ymd-y { width: 5.6%; }
   .ti-form .amt .ymd-m, .ti-form .amt .ymd-d { width: 3.2%; }
   .ti-form .amt .blankcnt { width: 6.4%; }
 
   /* ── 품목 ──────────────────────────────── */
-  .ti-form .items td { padding: 1mm; }
+  .ti-form .items td { padding: 0.55mm 1mm; }
   .ti-form .items .i-m, .ti-form .items .i-d { width: 3.2%; text-align: center; }
   .ti-form .items .i-name { width: 27%; }
   .ti-form .items .i-spec { width: 9%; text-align: center; }
