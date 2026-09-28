@@ -14,7 +14,23 @@
        · 폭은 칸에 몫(%)으로 적는다 — mm 로 적으면 안쪽 여백만큼 부푼다
 
      붉은 선과 붉은 글자는 서식이 미리 박아 둔 것이고, 검은 글자가 우리가 채운 값이다.
-     종이 원본이 그렇다. --}}
+     종이 원본이 그렇다.
+
+     **두 벌로 낸다** (2026-09-28 지시). 세금계산서는 원래 두 장이다 — 위가 공급자
+     보관용(적색), 아래가 공급받는자 보관용(청색). 한 벌만 내면 받는 쪽이 제 보관용을
+     못 가진다. 종이 원본이 그 두 장을 한 면에 위아래로 찍어 낸다.
+
+       $keep      '공급자'(기본) · '공급받는자'
+       $withStyle 스타일을 함께 낼지 — 두 번 끼울 때 아래 것은 false 로 둔다
+       $withTail  테두리 아래 꼬리(서식번호ㆍ종이규격ㆍ주의)를 낼지 — 받아 본 원본은
+                  위 장에만 있고 아래 장에는 없다 --}}
+@php
+    $_keep  = $keep ?? '공급자';
+    $_청색  = $_keep === '공급받는자';
+    $_꼬리  = $withTail ?? true;
+@endphp
+
+@if($withStyle ?? true)
 <style>
   .ti-form { width: 182mm; }
   .ti-form * { box-sizing: border-box; font-family: 'NanumGothic', sans-serif; }
@@ -78,14 +94,33 @@
   .ti-form .below td { border: 0; padding: 0; font-size: 6.5pt; color: #d8232a; line-height: 1.4; }
   .ti-form .below .rt { text-align: right; }
   .ti-form .note { width: 182mm; margin-top: 0.5mm; font-size: 6.5pt; color: #d8232a; line-height: 1.4; }
-</style>
 
-<div class="ti-form">
+  /* ── 공급받는자 보관용은 청색이다 ─────────────
+     서식이 미리 박아 둔 선과 글자만 갈린다. 우리가 채운 값(검정)은 두 장이 같다.
+     빛깔만 덧칠한다 — 칸 폭ㆍ글자 크기를 다시 적으면 두 장이 조금씩 어긋난다. */
+  .ti-form.blue td            { border-color: #1a4fa0; }
+  .ti-form.blue .box          { border-color: #1a4fa0; }
+  .ti-form.blue .above td,
+  .ti-form.blue .below td,
+  .ti-form.blue .note,
+  .ti-form.blue .lbl,
+  .ti-form.blue .band,
+  .ti-form.blue .t-title,
+  .ti-form.blue .t-keep,
+  .ti-form.blue .t-book,
+  .ti-form.blue .sum .s-last  { color: #1a4fa0; }
+  /* 우리가 채운 값은 두 장 모두 검정이다 */
+  .ti-form.blue .above .no-value,
+  .ti-form.blue .sum .s-last b { color: #111111; }
+</style>
+@endif
+
+<div class="ti-form{{ $_청색 ? ' blue' : '' }}">
 
   {{-- 테두리 위 — 서식 이름과 국세청승인번호 --}}
   <table class="above">
     <tr>
-      <td>[별지 제11호 서식] (96.3.30. 개정)</td>
+      <td>[별지 제 11호 서식] (96.3.30. 개정)</td>
       <td class="no-label">국세청승인번호:</td>
       <td class="no-value">{{ $doc['ntsNo'] }}</td>
     </tr>
@@ -99,7 +134,7 @@
         <table>
           <tr>
             <td class="t-title" style="width:58%;border-left:0;border-top:0">전자세금계산서</td>
-            <td class="t-keep" style="width:13%;border-top:0">공 급 자<br>(보 관 용)</td>
+            <td class="t-keep" style="width:13%;border-top:0">{{ $_keep === '공급받는자' ? '공급받는자' : '공 급 자' }}<br>(보 관 용)</td>
             <td class="t-book" style="width:29%;border-right:0;border-top:0">
               책번호:<span class="sp"></span>권<span class="sp"></span>호<br>일련번호:
             </td>
@@ -161,7 +196,7 @@
         {{-- 비고 --}}
         <table>
           <tr>
-            <td class="lbl" style="width:11.8%">비고</td>
+            <td class="lbl" style="width:11.8%">비고1</td>
             <td>{{ $doc['remark'] }}</td>
           </tr>
         </table>
@@ -211,7 +246,9 @@
     </tr>
   </table>
 
-  {{-- 테두리 아래 — 서식 번호와 종이 규격 --}}
+  {{-- 테두리 아래 — 서식 번호와 종이 규격.
+       받아 본 원본은 이 꼬리가 **위 장에만** 있다. 아래 장은 테두리에서 끝난다. --}}
+  @if($_꼬리)
   <table class="below">
     <tr>
       <td>22226-28131일 1996.2.27 개정</td>
@@ -222,5 +259,6 @@
     주의 : 본 세금계산서는 국세청고시 기준에 따라 {{ $doc['issuer'] }}에서 발행된 전자세금계산서로
     공동인증기관의 공동인증서를 사용하여 전자서명되어 인감날인이 없어도 법적 효력을 갖습니다.
   </div>
+  @endif
 
 </div>
