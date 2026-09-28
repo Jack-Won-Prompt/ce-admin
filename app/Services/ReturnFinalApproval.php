@@ -122,7 +122,7 @@ class ReturnFinalApproval
     public function 실행(OrderReturn $return): string
     {
         if ($return->refund_stage === 'refunded') {
-            return '이미 환불이 끝난 건입니다.';
+            return '이미 환불이 완료된 건입니다.';
         }
 
         $길 = $return->refundRoute();
@@ -134,7 +134,7 @@ class ReturnFinalApproval
             $return->forceFill(['refund_stage' => 'topup_wait'])->save();
 
             return sprintf(
-                '서명을 받았습니다 — 고객에게 %s원을 더 받아야 합니다. 전화로 알린 뒤 ［차액 결제 링크 보내기］를 눌러 주십시오.',
+                '서명을 받았습니다 — 고객에게 %s원을 추가로 청구해야 합니다. 전화로 안내한 뒤 ［차액 결제 링크 보내기］를 눌러 주십시오.',
                 number_format($return->움직일금액()));
         }
 
@@ -143,7 +143,7 @@ class ReturnFinalApproval
         if ($몫 <= 0) {
             $return->forceFill(['refund_stage' => 'signed'])->save();
 
-            return '! 돌려줄 금액이 0원입니다 — 받은 돈과 차감 금액을 확인해 주십시오.';
+            return '! 환불 금액이 0원입니다 — 수납 금액과 차감 금액을 확인해 주십시오.';
         }
 
         $결과 = app(\App\Services\TossPayments\PaymentCancelService::class)
@@ -161,7 +161,7 @@ class ReturnFinalApproval
             ]);
 
             return '! 서명은 받았으나 환불하지 못했습니다 — ' . ($결과['message'] ?? '')
-                 . ' 사유를 살펴본 뒤 ［환불 다시 시도］를 눌러 주십시오.';
+                 . ' 사유를 확인한 뒤 ［환불 다시 시도］를 눌러 주십시오.';
         }
 
         DB::transaction(function () use ($return, $몫) {
@@ -221,7 +221,7 @@ class ReturnFinalApproval
         $몫 = $return->움직일금액();
 
         if ($몫 <= 0) {
-            return '! 더 받을 금액이 없습니다.';
+            return '! 추가로 청구할 금액이 없습니다.';
         }
 
         $order = $return->order;

@@ -112,18 +112,18 @@
       <div class="n">{{ number_format($금액) }}원</div>
       <div class="s">
         @if ($내주나)
-          고객에게 <b>더 받을</b> 금액입니다. 서명 뒤 담당자가 전화로 알린 다음 결제 링크를 보냅니다.
+          고객에게 <b>추가 청구</b>할 금액입니다. 서명 후 담당자가 전화로 안내한 다음 결제 링크를 발송합니다.
         @elseif ($r->refundRoute() === \App\Models\OrderReturn::ROUTE_PARTIAL)
-          받은 돈 {{ number_format($받은것) }}원에서 차감 {{ number_format((int) $r->inspect_deduct_amount) }}원을 뺀 금액입니다.
+          수납 금액 {{ number_format($받은것) }}원에서 차감 {{ number_format((int) $r->inspect_deduct_amount) }}원을 뺀 금액입니다.
         @else
-          받은 돈 전부를 돌려드립니다.
+          수납 금액 전액을 환불해 드립니다.
         @endif
       </div>
     </div>
 
     @if ($r->inspect_result === \App\Models\OrderReturn::RESULT_DEFECT)
       <div class="note"><b>차감 사유</b>@if ($r->inspect_defect_qty) · 수량 차이 {{ $r->inspect_defect_qty }}개@endif
-{{ chr(10) }}{{ $r->inspect_defect_note ?: '(적힌 내용 없음)' }}</div>
+{{ chr(10) }}{{ $r->inspect_defect_note ?: '(입력 내용 없음)' }}</div>
     @endif
 
     @if ($r->reason_text || $r->reason_code)
@@ -159,7 +159,7 @@
     </div>
     <canvas id="sig"></canvas>
     <div class="sig-bar">
-      <span class="hint">손가락이나 마우스로 서명해 주십시오.</span>
+      <span class="hint">화면을 터치하거나 마우스로 서명해 주십시오.</span>
       <button type="button" class="btn sm" onclick="서명지우기()">지우기</button>
     </div>
 
@@ -169,7 +169,7 @@
     <button type="button" class="btn no" onclick="반려펴기()">반려하기</button>
 
     <div id="rej">
-      <textarea id="reason" placeholder="반려 사유를 적어 주십시오. 창고에 다시 검수를 청합니다."></textarea>
+      <textarea id="reason" placeholder="반려 사유를 입력해 주십시오. 창고로 반송하여 재검수를 요청합니다."></textarea>
       <button type="button" class="btn no" onclick="보내기('reject')">반려로 보내기</button>
     </div>
   </div>
@@ -266,8 +266,8 @@ async function 보내기(무엇) {
     몸.signature = cv.toDataURL('image/png');
   } else {
     몸.reason = document.getElementById('reason').value.trim();
-    if (!몸.reason) { document.getElementById('why').textContent = '반려 사유를 적어 주십시오.'; return; }
-    if (!confirm('반려하시겠습니까? 창고에 다시 검수를 청합니다.')) return;
+    if (!몸.reason) { document.getElementById('why').textContent = '반려 사유를 입력해 주십시오.'; return; }
+    if (!confirm('반려하시겠습니까? 창고로 반송하여 재검수를 요청합니다.')) return;
   }
 
   보내는중 = true;

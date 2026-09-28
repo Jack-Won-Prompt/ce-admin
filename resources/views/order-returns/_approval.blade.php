@@ -38,11 +38,11 @@
     @endif
   </div>
   <div class="rt-bd">
-    <div class="rt-kv"><span>요청 받은 때</span><span>{{ $r->warehouse_inspect_requested_at->format('Y-m-d H:i') }}</span></div>
-    <div class="rt-kv"><span>확인한 때</span><span>{{ $r->warehouse_inspect_seen_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
+    <div class="rt-kv"><span>요청 일시</span><span>{{ $r->warehouse_inspect_requested_at->format('Y-m-d H:i') }}</span></div>
+    <div class="rt-kv"><span>확인 일시</span><span>{{ $r->warehouse_inspect_seen_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
     @if($r->inspect_source)
       <div class="rt-kv"><span>검수 결과 출처</span><span>
-        {{ $r->inspect_source === 'warehouse' ? '창고가 보낸 값' : '담당자가 적은 값' }}
+        {{ $r->inspect_source === 'warehouse' ? '창고 전송' : '담당자 입력' }}
       </span></div>
     @endif
     @if($r->창고검수요청중())
@@ -50,7 +50,7 @@
         @csrf
         <button type="submit" class="ds-btn ds-btn-sm">확인했습니다</button>
         <span style="font-size:12px;color:var(--text-muted);">
-          목록의 「창고 검수 요청」 표시를 내립니다. 결재와는 무관합니다.
+          목록의 「창고 검수 요청」 표시를 해제합니다. 결재 단계와는 무관합니다.
         </span>
       </form>
     @endif
@@ -114,7 +114,7 @@
            또 두면 「어느 것으로 되돌렸는가」가 이력에서 갈리지 않는다. --}}
     @else
       @if($r->manager_rejected_at)
-        <div class="rt-kv rt-note"><span>지난 반려</span><span>
+        <div class="rt-kv rt-note"><span>이전 반려</span><span>
           {{ $r->manager_reject_reason }}
           <span class="rt-note-at">
             {{ $r->managerRejecter?->name }} · {{ $r->manager_rejected_at->format('Y-m-d H:i') }}
@@ -149,7 +149,7 @@
                 <label><input type="radio" name="inspect_result" value="defect" onchange="ap하자(true)"
                               @checked($하자)> 하자ㆍ수량 차이</label>
               </div>
-              <div class="ap-hint" id="apWhat">검수 결과를 고르면 결재 경로가 정해집니다.</div>
+              <div class="ap-hint" id="apWhat">검수 결과를 선택하면 결재 경로가 결정됩니다.</div>
             </div>
 
             <div class="ap-f ap-defect">
@@ -167,7 +167,7 @@
               <label>하자 내용</label>
               <input type="text" name="inspect_defect_note" class="form-control" maxlength="500"
                      value="{{ $r->inspect_defect_note }}"
-                     placeholder="무엇이 어떻게 다른지 적어 주십시오 — 최종승인자가 이 내용을 보고 서명합니다.">
+                     placeholder="하자 내용을 구체적으로 입력해 주십시오 — 최종승인자가 이 내용을 확인하고 서명합니다.">
             </div>
           </div>
 
@@ -187,11 +187,11 @@
           <div class="ap-f ap-wide" style="margin-top:10px;">
             <label>반려 사유</label>
             <input type="text" name="reason" class="form-control" maxlength="500" required
-                   placeholder="창고에 되돌려 다시 검수를 청합니다. 무엇이 잘못되었는지 적어 주십시오.">
+                   placeholder="창고로 반송하여 재검수를 요청합니다. 반려 사유를 입력해 주십시오.">
           </div>
           <div class="rt-go">
             <button type="submit" class="ds-btn"
-                    onclick="return ceConfirmClick(this, '반려하시겠습니까? 창고에 다시 검수를 청합니다.');">
+                    onclick="return ceConfirmClick(this, '반려하시겠습니까? 창고로 반송하여 재검수를 요청합니다.');">
               반려로 보내기
             </button>
             <button type="button" class="ds-btn ds-btn-sm" onclick="ap반려(false)">취소</button>
@@ -242,14 +242,14 @@
               · 차감 {{ number_format((int) $r->inspect_deduct_amount) }}원을 뺀 금액입니다.
             @endif
           @elseif($길 === \App\Models\OrderReturn::ROUTE_TOPUP)
-            고객에게 <b>더 받을</b> 금액입니다. 서명 뒤 담당자가 전화로 알린 다음
+            고객에게 <b>추가 청구</b>할 금액입니다. 서명 후 담당자가 전화로 안내한 다음
             ［차액 결제 링크 보내기］를 누릅니다 — 저절로 나가지 않습니다.
           @elseif($길 === \App\Models\OrderReturn::ROUTE_PARTIAL)
-            받은 돈 {{ number_format((int) ($r->order?->받은금액() ?? 0)) }}원에서
+            수납 금액 {{ number_format((int) ($r->order?->받은금액() ?? 0)) }}원에서
             차감 {{ number_format((int) $r->inspect_deduct_amount) }}원을 뺀 금액입니다.
             <b>서명하면 즉시 환불됩니다.</b>
           @else
-            받은 돈 전부입니다. <b>서명하면 즉시 환불됩니다.</b>
+            수납 금액 전액입니다. <b>서명하면 즉시 환불됩니다.</b>
           @endif
         </div>
       </div>
@@ -262,12 +262,12 @@
           {{ $r->final_signed_at->format('Y-m-d H:i') }}
         </span></div>
         @if($r->final_sign_base64)
-          <div class="rt-kv"><span>서명 그림</span><span>
+          <div class="rt-kv"><span>서명 이미지</span><span>
             <img src="{{ $r->final_sign_base64 }}" alt="최종승인자 서명" class="ap-sig-img">
           </span></div>
         @endif
         @if($r->final_sign_ip)
-          <div class="rt-kv"><span>서명 자리</span><span style="font-weight:400;color:var(--text-muted);">
+          <div class="rt-kv"><span>서명 IP</span><span style="font-weight:400;color:var(--text-muted);">
             {{ $r->final_sign_ip }}
           </span></div>
         @endif
@@ -282,7 +282,7 @@
           <form method="POST" action="{{ route('order-returns.retryRefund', $r) }}" class="rt-go">
             @csrf
             <button type="submit" class="ds-btn ds-btn-primary"
-                    onclick="return ceConfirmClick(this, '{{ number_format($움직임) }}원을 다시 환불 시도합니다. 계속하시겠습니까?');">
+                    onclick="return ceConfirmClick(this, '환불을 다시 시도합니다. 계속하시겠습니까?');">
               환불 다시 시도
             </button>
             <span style="font-size:12px;color:var(--text-muted);">서명은 그대로 유지됩니다.</span>
@@ -307,12 +307,12 @@
               <input type="text" name="mobile" class="form-control" maxlength="20"
                      value="{{ $r->order?->patient?->mobile }}" placeholder="받을 휴대폰 번호">
               <button type="submit" class="ds-btn ds-btn-primary"
-                      onclick="return ceConfirmClick(this, '고객에게 전화로 알리셨습니까? {{ number_format($움직임) }}원 결제 링크를 문자로 보냅니다.');">
+                      onclick="return ceConfirmClick(this, '고객에게 전화로 안내하셨습니까? 차액 결제 링크를 문자로 발송합니다.');">
                 {{ $r->topup_sent_at ? '차액 결제 링크 다시 보내기' : '차액 결제 링크 보내기' }}
               </button>
             </form>
             <div class="ap-hint">
-              전화로 알린 뒤 눌러 주십시오 — 설명 없이 링크만 가면 「왜 또 돈을 내라는가」가 됩니다.
+              고객에게 전화로 안내한 뒤 눌러 주십시오 — 사전 안내 없이 링크만 발송하면 고객 문의가 발생합니다.
             </div>
           @endif
         @endif
@@ -329,7 +329,7 @@
             @if($r->서명링크살았나())
               {{ $r->final_sign_expires_at?->format('Y-m-d H:i') }} 까지
             @else
-              <span style="color:var(--danger);">만료 — 다시 보내야 합니다</span>
+              <span style="color:var(--danger);">만료 — 재발송이 필요합니다</span>
             @endif
           </span></div>
         @endif
@@ -356,17 +356,17 @@
               <div class="ap-f">
                 <label>최종승인자</label>
                 <select name="user_id" class="form-control" id="apWho" onchange="ap번호채우기()" required>
-                  <option value="">— 고르십시오 —</option>
+                  <option value="">— 선택 —</option>
                 </select>
               </div>
               <div class="ap-f">
                 <label>휴대폰 번호</label>
                 <input type="text" name="mobile" class="form-control" id="apNum" maxlength="20"
-                       placeholder="비우면 사용자에 적힌 번호로 갑니다">
+                       placeholder="비워 두면 사용자 정보의 번호로 발송">
               </div>
             </div>
             <div class="ap-hint">
-              최종승인자 권한이 있는 분만 나옵니다 — 권한이 없는 분은 링크를 열어도 서명할 수 없습니다.
+              최종승인자 권한이 있는 사용자만 표시됩니다 — 권한이 없는 사용자는 링크를 열어도 서명할 수 없습니다.
               링크는 <b>24시간</b> 유효합니다.
             </div>
             <div class="rt-go">
@@ -402,11 +402,11 @@
             <div class="ap-f ap-wide" style="margin-top:10px;">
               <label>반려 사유</label>
               <input type="text" name="reason" class="form-control" maxlength="500" required
-                     placeholder="창고에 되돌려 다시 검수를 청합니다.">
+                     placeholder="창고로 반송하여 재검수를 요청합니다. 반려 사유를 입력해 주십시오.">
             </div>
             <div class="rt-go">
               <button type="submit" class="ds-btn"
-                      onclick="return ceConfirmClick(this, '반려하시겠습니까? 책임자 검수를 거두고 창고에 다시 검수를 청합니다.');">
+                      onclick="return ceConfirmClick(this, '반려하시겠습니까? 책임자 검수 승인을 취소하고 창고로 반송합니다.');">
                 반려로 보내기
               </button>
               <button type="button" class="ds-btn ds-btn-sm" onclick="ap최종반려(false)">취소</button>
@@ -448,7 +448,7 @@ function ap셈() {
   if (ap교환) {
     칸.className = 'ap-sum ' + (하자 ? 'take' : 'none');
     칸.textContent = 하자
-      ? '차액 청구 ' + 차감.toLocaleString() + '원 — 서명 뒤 담당자가 전화로 알린 다음 결제 링크를 보냅니다.'
+      ? '차액 청구 ' + 차감.toLocaleString() + '원 — 서명 후 담당자가 전화로 안내한 다음 결제 링크를 발송합니다.'
       : '금액 변동 없음 — 최종승인자 서명 없이 그대로 재발송합니다.';
     return;
   }
@@ -456,7 +456,7 @@ function ap셈() {
   const 줄것 = 하자 ? Math.max(0, ap받은것 - 차감) : ap받은것;
   칸.className = 'ap-sum give';
   칸.textContent = (하자 ? '부분 환불 ' : '전액 환불 ') + 줄것.toLocaleString() + '원'
-    + (하자 ? ' (받은 돈 ' + ap받은것.toLocaleString() + '원 − 차감 ' + 차감.toLocaleString() + '원)' : '')
+    + (하자 ? ' (수납 ' + ap받은것.toLocaleString() + '원 − 차감 ' + 차감.toLocaleString() + '원)' : '')
     + ' — 최종승인자가 서명하면 즉시 환불됩니다.';
 }
 
@@ -503,12 +503,12 @@ async function ap사람들() {
       return;
     }
 
-    sel.innerHTML = '<option value="">— 고르십시오 —</option>'
+    sel.innerHTML = '<option value="">— 선택 —</option>'
       + ap사람담김.map(u => '<option value="' + u.id + '" data-num="' + (u.mobile || '') + '">'
           + u.name + (u.group ? ' (' + u.group + ')' : '')
           + (u.mobile ? '' : ' · 번호 없음') + '</option>').join('');
   } catch (e) {
-    sel.innerHTML = '<option value="">목록을 가져오지 못했습니다 — 다시 열어 주십시오</option>';
+    sel.innerHTML = '<option value="">목록을 조회하지 못했습니다 — 다시 열어 주십시오</option>';
     ap사람담김 = null;
   }
 }
@@ -593,7 +593,10 @@ function ap서명보내기(btn) {
   if (ap보내는중) return false;
   if (!ap칠함) { ap서명셈(); return false; }
 
-  const 물음 = '서명하시겠습니까? {{ number_format($움직임) }}원 {{ $r->refundRouteLabel() }}이 즉시 처리됩니다.';
+  /* 글에 숫자를 섞지 않는다 — 메시지 관리 사전은 **실행 때의 글**로 찾는다.
+     숫자를 섞으면 등록된 줄과 글자가 달라 영영 찾지 못하고, 담당자가 고쳐도
+     화면은 그대로다. 금액은 바로 위 칸에 크게 적혀 있다. */
+  const 물음 = '서명하시겠습니까? 서명하는 즉시 환불 또는 차액 청구가 처리됩니다.';
 
   const 가자 = () => {
     ap보내는중 = true;

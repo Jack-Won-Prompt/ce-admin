@@ -71,14 +71,14 @@ class ReturnSignPublicController extends Controller
             $사유 = trim((string) ($값['reason'] ?? ''));
 
             if ($사유 === '') {
-                return response()->json(['success' => false, 'message' => '반려 사유를 적어 주십시오.'], 422);
+                return response()->json(['success' => false, 'message' => '반려 사유를 입력해 주십시오.'], 422);
             }
 
             app(ReturnFinalApproval::class)->반려($r, $서명자, $사유);
 
             return response()->json([
                 'success' => true,
-                'message' => '반려했습니다. 창고에 다시 검수를 청했습니다.',
+                'message' => '반려했습니다. 창고로 반송하여 재검수를 요청했습니다.',
             ]);
         }
 
@@ -106,11 +106,11 @@ class ReturnSignPublicController extends Controller
     private function 닫힌까닭(OrderReturn $r): ?string
     {
         if ($r->final_signed_at) {
-            return '이미 서명을 마친 건입니다. (' . $r->final_signed_at->format('Y-m-d H:i') . ')';
+            return '이미 서명이 완료된 건입니다. (' . $r->final_signed_at->format('Y-m-d H:i') . ')';
         }
 
         if ($r->final_rejected_at && ! $r->inspect_confirmed_at) {
-            return '반려로 마친 건입니다. 창고에서 다시 검수 중입니다.';
+            return '반려 처리된 건입니다. 창고에서 재검수 중입니다.';
         }
 
         if (! $r->inspect_confirmed_at) {

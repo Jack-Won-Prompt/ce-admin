@@ -987,12 +987,12 @@ class OrderReturnController extends Controller
 
         if ($이상있다 && $차감 <= 0) {
             return back()->withErrors(['appr' =>
-                '하자ㆍ수량 차이가 있으면 차감 금액을 적어 주십시오 — 최종승인자가 그 금액을 보고 서명합니다.']);
+                '하자ㆍ수량 차이가 있으면 차감 금액을 입력해 주십시오 — 최종승인자가 그 금액을 확인하고 서명합니다.']);
         }
 
         if (! $이상있다 && $차감 > 0) {
             return back()->withErrors(['appr' =>
-                '이상이 없다고 하셨는데 차감 금액이 적혀 있습니다 — 둘 중 하나를 고쳐 주십시오.']);
+                '「이상 없음」을 선택하셨으나 차감 금액이 입력되어 있습니다 — 둘 중 하나를 수정해 주십시오.']);
         }
 
         /* 차감이 받은 돈보다 크면 돌려줄 것이 음수가 된다 */
@@ -1000,7 +1000,7 @@ class OrderReturnController extends Controller
 
         if ($이상있다 && $orderReturn->type !== OrderReturn::TYPE_EXCHANGE && $차감 > $받은것) {
             return back()->withErrors(['appr' => sprintf(
-                '차감 금액(%s원)이 받은 돈(%s원)보다 큽니다.',
+                '차감 금액(%s원)이 수납 금액(%s원)보다 큽니다.',
                 number_format($차감), number_format($받은것))]);
         }
 
@@ -1099,8 +1099,8 @@ class OrderReturnController extends Controller
         app(\App\Services\ReturnNotice::class)
             ->tellTaker($orderReturn->fresh(), '책임자가 검수를 반려했습니다 — ' . $data['reason'], 'warning');
 
-        return back()->with('status', '반려했습니다 — 창고에 다시 검수를 청했습니다.'
-            . ($보냈나 ? '' : ' (창고에 전하지 못했습니다 — 담당자가 직접 알려 주십시오.)'));
+        return back()->with('status', '반려했습니다 — 창고로 반송하여 재검수를 요청했습니다.'
+            . ($보냈나 ? '' : ' (창고에 전달하지 못했습니다 — 담당자가 직접 안내해 주십시오.)'));
     }
 
     /**
@@ -1135,7 +1135,7 @@ class OrderReturnController extends Controller
         $번호   = preg_replace('/[^0-9]/', '', $data['mobile'] ?: (string) $받는이?->phone);
 
         if (strlen($번호) < 10) {
-            return back()->withErrors(['sign' => '받는 분의 휴대폰 번호가 없습니다 — 번호를 적어 주십시오.']);
+            return back()->withErrors(['sign' => '수신자의 휴대폰 번호가 없습니다 — 번호를 입력해 주십시오.']);
         }
 
         $토큰  = \Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(48));
@@ -1225,7 +1225,7 @@ class OrderReturnController extends Controller
         app(\App\Services\ReturnFinalApproval::class)
             ->반려($orderReturn, Auth::user(), $data['reason']);
 
-        return back()->with('status', '반려했습니다 — 창고에 다시 검수를 청했습니다.');
+        return back()->with('status', '반려했습니다 — 창고로 반송하여 재검수를 요청했습니다.');
     }
 
     /** 환불이 막혔을 때 다시 시도한다 — 서명은 그대로 둔다 */

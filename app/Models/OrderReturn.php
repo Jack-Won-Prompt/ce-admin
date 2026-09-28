@@ -640,7 +640,7 @@ class OrderReturn extends Model
         'manager_ok'     => '책임자 승인',
         'sign_sent'      => '서명 대기',
         'signed'         => '서명 완료',
-        'topup_wait'     => '차액 전화 대기',
+        'topup_wait'     => '차액 안내 대기',
         'refunded'       => '환불 완료',
         'topup_sent'     => '차액 청구 발송',
         'topup_paid'     => '차액 입금',

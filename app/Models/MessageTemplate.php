@@ -318,7 +318,7 @@ class MessageTemplate extends Model
                #{서명링크} 가 빠지면 받는 쪽은 무엇을 해야 할지 알 수 없다. */
             \App\Services\ReturnFinalApproval::문구코드 => [
                 'label' => '교환·반품 최종 승인 요청',
-                'desc'  => '최종승인자에게 서명 링크를 보낸다 — 책임자 승인 뒤 담당자가 보낸다',
+                'desc'  => '최종승인자에게 서명 링크를 발송 — 책임자 승인 후 담당자가 발송',
                 'text'  => \App\Services\ReturnFinalApproval::기본문구(),
             ],
             'custom' => [
