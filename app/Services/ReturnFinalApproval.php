@@ -197,8 +197,16 @@ class ReturnFinalApproval
     /**
      * 교환의 차액을 고객에게 청구한다 — 결제 링크를 보낸다.
      *
-     * 주문 금액을 올려 두어야 링크가 열린다. 「다 받았는가」로 가리므로(2026-09-15),
-     * 금액이 그대로면 「이미 결제가 끝난 주문」이라며 거절한다 — 그것이 옳다.
+     * **주문 금액은 건드리지 않는다** (2026-09-28 시험에서 바로잡음).
+     *
+     * 처음에는 주문 금액을 차액만큼 올렸다. 링크가 「아직 안 받은 몫」으로 열릴 것이라
+     * 보았는데, PaymentLinkService 는 늘 주문 금액 전액으로 링크를 냈다 — 4,500원을
+     * 청해야 하는데 42,000원 링크가 나가, 이미 37,500원을 낸 고객에게 처음부터 다시
+     * 내라는 문자가 갔다.
+     *
+     * 이제 링크에 차액을 직접 넘긴다. 주문 금액은 그대로 두는 것이 맞다 — 그 금액은
+     * 증빙(세금계산서ㆍ현금영수증)과 청구가 물고 있어, 결재 한 건으로 흔들면 그쪽이
+     * 함께 어긋난다. 차액은 접수의 차감 금액에 남는다.
      */
     public function 차액청구(OrderReturn $return, ?string $번호 = null): string
     {
@@ -222,18 +230,11 @@ class ReturnFinalApproval
             return '! 주문을 찾을 수 없습니다.';
         }
 
-        /* 주문 금액을 차액만큼 올린다 — 링크는 「아직 안 받은 몫」으로 열린다 */
-        $order->forceFill(['total_amount' => (int) $order->total_amount + $몫])->save();
-
         $링크 = app(\App\Services\PaymentLinkService::class)
-            ->issue($order->fresh(), \App\Models\PaymentLink::METHOD_CARD,
-                    $번호 ?: ($order->patient?->mobile));
+            ->issue($order, \App\Models\PaymentLink::METHOD_CARD,
+                    $번호 ?: ($order->patient?->mobile), $몫);
 
         if (! ($링크['sent'] ?? false)) {
-            /* 못 보냈으면 올린 금액을 되돌린다 — 링크도 없는데 금액만 올라 있으면
-               다음에 또 올려 두 배가 된다 */
-            $order->forceFill(['total_amount' => (int) $order->total_amount - $몫])->save();
-
             return '! 결제 링크를 보내지 못했습니다 — ' . ($링크['message'] ?? '');
         }
 

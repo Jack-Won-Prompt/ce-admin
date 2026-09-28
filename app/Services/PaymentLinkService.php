@@ -45,7 +45,15 @@ class PaymentLinkService
      *
      * @return array{link: PaymentLink, sent: bool, channel: ?string, message: string}
      */
-    public function issue(Order $order, string $method, ?string $mobile = null): array
+    /**
+     * 결제 링크를 내고 보낸다.
+     *
+     * $금액 을 주면 그 금액으로 낸다 (2026-09-28). 여태 늘 주문 금액 전액이었는데,
+     * 교환의 차액처럼 **주문 금액이 아닌 돈**을 청할 자리가 생겼다 — 전액으로 열면
+     * 이미 낸 사람에게 처음부터 다시 내라는 링크가 간다(4,500원을 청해야 하는데
+     * 42,000원 링크가 나갔다). 결제 화면과 문자는 둘 다 링크의 금액을 읽는다.
+     */
+    public function issue(Order $order, string $method, ?string $mobile = null, ?int $금액 = null): array
     {
         $mobile = $this->digits($mobile ?: ($order->patient?->mobile ?? ''));
 
@@ -53,7 +61,7 @@ class PaymentLinkService
             'order_id'   => $order->id,
             'token'      => PaymentLink::newToken(),
             'method'     => $method,
-            'amount'     => (int) $order->total_amount,
+            'amount'     => $금액 !== null ? max(0, $금액) : (int) $order->total_amount,
             'status'     => 'sent',
             'receiver'   => $mobile ?: null,
             'expires_at' => now()->addDays(self::VALID_DAYS),
