@@ -900,8 +900,14 @@ function renderHistPage(page) {
        여기서 부호를 뒤집는다 — 그래야 합계가 이 기간에 남은 금액이 된다. */
     const isCancel = String(r.tradeType ?? '').includes('취소') || r.status === 'cancelled';
     const amount   = (isCancel ? -1 : 1) * parseInt(r.totalAmount ?? r.amount ?? 0);
+    /* 열 이름이 「주문번호」이므로 주문번호만 세운다 (2026-09-28 지시) —
+       처방번호를 뒤에 붙이면 열 이름과 값이 어긋난다. 처방번호는 줄을 열면 나온다.
+
+       팝빌에서 직접 발행해 이을 주문이 없는 줄은 팝빌 관리번호가 선다. 비우면 그
+       줄을 목록에서 무엇으로도 가리킬 수 없다 — 같은 값이 아래 「연동관리번호」
+       열에도 있지만 그 열은 멀리 있어 훑을 때 눈에 들어오지 않는다. */
     const num     = r._source === 'order'
-      ? ((r.orderNumber ?? '') + (r.rxNumber ? ' / ' + r.rxNumber : ''))
+      ? (r.orderNumber ?? '—')
       : (r.mgtKey ?? '—');
     const source  = r.status === 'pending' ? '대기'
                   : r._source === 'card'  ? '카드'
