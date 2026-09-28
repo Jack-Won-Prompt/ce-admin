@@ -175,6 +175,37 @@
   </div>
 </div>
 
+{{-- 최종승인자 서명 팝오버 — 목록에서 바로 연다 (2026-09-28 지시).
+
+     상세의 결재 판에 있는 것과 같은 자리다. 무엇에 서명하는지(검수 결과ㆍ차감 금액ㆍ
+     환불/차액 두 항목)를 함께 세우고 그 아래에서 서명받는다 — 금액만 보고 누르게
+     두지 않는다. --}}
+<div id="rtSignWrap" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(15,23,42,.34);"
+     onclick="if(event.target===this) rtSignClose()">
+  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,94vw);
+              max-height:88vh;display:flex;flex-direction:column;background:var(--bg-card,#fff);
+              border-radius:12px;box-shadow:0 18px 48px rgba(15,23,42,.24);overflow:hidden;">
+    <div style="padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+      <span style="font-size:14px;font-weight:700;">최종승인자 서명</span>
+      <span id="rtSignNo" style="font-size:12px;color:var(--text-muted);"></span>
+      <span style="flex:1;"></span>
+      <button type="button" class="ds-btn ds-btn-sm" onclick="rtSignClose()">✕</button>
+    </div>
+    <div id="rtSignBody" style="padding:8px 16px 14px;overflow-y:auto;font-size:13px;"></div>
+    <div style="padding:11px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+      <span id="rtSignWhy" style="flex:1;font-size:12px;color:var(--danger);font-weight:700;align-self:center;"></span>
+      <button type="button" class="ds-btn" onclick="rtSignClose()">닫기</button>
+      <button type="button" id="rtSignGo" class="ds-btn ds-btn-primary" style="display:none;"
+              onclick="rtSignSubmit()">서명하고 승인</button>
+    </div>
+  </div>
+</div>
+
+<form id="rtSignForm" method="POST" action="" style="display:none;">
+  @csrf
+  <input type="hidden" name="signature" id="rtSignData">
+</form>
+
 <form id="rtnApForm" method="POST" action="{{ route('order-returns.bulkApprove') }}" style="display:none;">
   @csrf
   <div id="rtnApIds"></div>
@@ -226,6 +257,12 @@
           else if (/대기|요청/.test(v)) { s.style.cssText = 'font-weight:700;color:#B54708;'; }
           return s;
         },
+      },
+      /* 목록에서 바로 서명한다 (2026-09-28 지시).
+         건마다 상세를 열어 들어가면 결재가 몇 건 쌓인 날에는 그것만으로 한나절이 간다. */
+      {
+        header: '결재', name: 'sign_btn', width: 90, align: 'center', exportable: false,
+        renderer: (v, row) => rtSignBtn(v, row),
       },
       /* 사람과 때를 나눈다 — 한 칸에 뭉치면 날짜로 정렬도 셈도 못 한다 */
       { header: '최종승인자', name: 'final_signer', width: 100, sortable: true },
@@ -420,6 +457,194 @@
   /* 목록 · 상세 · 접수 탭. 접수 탭을 열면 원 주문 찾기에 바로 손이 가도록 커서를 옮긴다. */
   const PANES = { list: 'rtnPaneList', show: 'rtnPaneShow', new: 'rtnPaneNew' };
   const TABS  = { list: 'rtnTabList',  show: 'rtnTabShow',  new: 'rtnTabNew'  };
+
+  /* ── 목록의 「결재」 단추와 서명 팝오버 (2026-09-28 지시) ──────────────── */
+
+  window.rtSignBtn = function (v, row) {
+    const box = document.createElement('div');
+    box.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+
+    if (!v) { box.textContent = ''; return box; }
+
+    const 서명됨 = v === 'view';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = 서명됨 ? '서명 확인' : '서명';
+    b.title = 서명됨 ? '받은 서명을 확인합니다' : '이 자리에서 최종승인자 서명을 받습니다';
+    b.style.cssText = 'height:22px;padding:0 9px;font-size:11px;font-weight:700;cursor:pointer;'
+      + 'border-radius:999px;line-height:1;'
+      + (서명됨
+          ? 'border:1px solid var(--border);background:#fff;color:var(--text-muted);'
+          : 'border:1px solid var(--primary);background:var(--primary-light);color:var(--primary);');
+    b.onclick = (ev) => { ev.stopPropagation(); rtSignOpen(row.id); };
+    box.appendChild(b);
+    return box;
+  };
+
+  let rtSignId = null, rtSignCv = null, rtSignCtx = null, rtSign칠함 = false, rtSign보냄 = false;
+
+  window.rtSignClose = function () {
+    document.getElementById('rtSignWrap').style.display = 'none';
+    rtSignId = null; rtSignCv = null; rtSign칠함 = false;
+  };
+
+  window.rtSignOpen = async function (id) {
+    rtSignId = id; rtSign칠함 = false; rtSign보냄 = false;
+
+    const wrap = document.getElementById('rtSignWrap');
+    const body = document.getElementById('rtSignBody');
+    document.getElementById('rtSignGo').style.display = 'none';
+    document.getElementById('rtSignWhy').textContent = '';
+    document.getElementById('rtSignNo').textContent = '';
+    body.innerHTML = '<div style="padding:18px 0;color:var(--text-muted);">불러오는 중입니다…</div>';
+    wrap.style.display = 'block';
+
+    try {
+      const res = await fetch('/order-returns/' + id + '/approval-detail', {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      const j = await res.json();
+      rtSignDraw(j);
+    } catch (e) {
+      body.innerHTML = '<div style="padding:18px 0;color:var(--danger);">'
+                     + '내용을 조회하지 못했습니다 — 다시 열어 주십시오.</div>';
+    }
+  };
+
+  function rtSignDraw(j) {
+    document.getElementById('rtSignNo').textContent = j.receipt || '';
+
+    const 줄 = (라벨, 값, 굵게, 빛) => (값 ||값 === 0)
+      ? '<div class="rt-kv" style="display:flex;padding:6px 0;border-bottom:1px solid var(--border-light);">'
+        + '<span style="width:110px;flex-shrink:0;color:var(--text-muted);">' + 라벨 + '</span>'
+        + '<span style="flex:1;font-weight:' + (굵게 ? '700' : '500') + ';'
+        + (빛 ? 'color:' + 빛 + ';' : '') + '">' + 값 + '</span></div>'
+      : '';
+
+    const 돈 = (n) => Number(n || 0).toLocaleString();
+
+    let h = '';
+    h += 줄('구분', j.type);
+    h += 줄('주문번호', j.order_no);
+    h += 줄('고객', j.patient);
+    h += 줄('입고 검수', j.result + (j.defect && j.defect_qty ? ' · ' + j.defect_qty + '개' : ''),
+            true, j.defect ? '#B42318' : '');
+    if (j.defect && j.defect_note) { h += 줄('하자 내용', j.defect_note); }
+    if (j.deduct)                  { h += 줄('차감 금액', 돈(j.deduct) + '원', true, '#B42318'); }
+    h += 줄('책임자 승인', (j.manager || '') + (j.manager_at ? ' · ' + j.manager_at : ''));
+    h += 줄('결재 단계', j.stage);
+
+    /* 나가는 돈ㆍ들어오는 돈을 나란히 — 한 칸에 담으면 어느 쪽인지 가릴 수 없다 */
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;">'
+       + rtSign돈칸('환불 (고객에게 지급)', j.refund_out, 'give')
+       + rtSign돈칸('차액 입금 (고객에게 청구)', j.topup_in, 'take')
+       + '</div>';
+
+    if (j.signed) {
+      h += 줄('서명', (j.signer || '') + (j.signed_at ? ' · ' + j.signed_at : ''), true);
+      if (j.sign_ip) { h += 줄('서명 IP', j.sign_ip); }
+      if (j.sign_image) {
+        h += '<div style="margin-top:8px;"><img src="' + j.sign_image + '" alt="최종승인자 서명"'
+           + ' style="max-width:240px;max-height:90px;border:1px solid var(--border);'
+           + 'border-radius:6px;background:#fff;"></div>';
+      }
+    } else if (j.can_sign) {
+      h += '<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">'
+         + '아래에 서명하시면 즉시 처리됩니다.</div>'
+         + '<canvas id="rtSignCanvas" style="width:100%;height:150px;border:1px dashed var(--border);'
+         + 'border-radius:8px;background:#fff;touch-action:none;display:block;margin-top:6px;"></canvas>'
+         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">'
+         + '<span style="font-size:12px;color:var(--text-muted);">화면을 터치하거나 마우스로 서명해 주십시오.</span>'
+         + '<button type="button" class="ds-btn ds-btn-sm" onclick="rtSign지우기()">지우기</button></div>';
+    } else {
+      h += '<div style="font-size:12px;color:var(--text-muted);margin-top:6px;">'
+         + '이 건은 여기서 서명할 수 없습니다 — 책임자 검수 승인이 끝나야 하고,'
+         + ' 최종승인자 권한이 있어야 합니다.</div>';
+    }
+
+    document.getElementById('rtSignBody').innerHTML = h;
+
+    const go = document.getElementById('rtSignGo');
+    if (! j.signed && j.can_sign) {
+      document.getElementById('rtSignForm').action = j.sign_url;
+      go.style.display = '';
+      go.disabled = true;
+      document.getElementById('rtSignWhy').textContent = '서명란에 서명해 주십시오.';
+      requestAnimationFrame(rtSign캔버스);
+    } else {
+      go.style.display = 'none';
+    }
+  }
+
+  function rtSign돈칸(이름, 값, 갈래) {
+    const 있다 = Number(값 || 0) > 0;
+    const 바탕 = 있다 ? (갈래 === 'take' ? '#FEF3C7' : 'var(--primary-light)') : 'var(--gray-50,#fafbfc)';
+    const 테   = 있다 ? (갈래 === 'take' ? '#F2C97D' : 'var(--primary-200)') : 'var(--border)';
+    const 글빛 = 있다 ? (갈래 === 'take' ? '#B54708' : 'var(--primary)') : 'var(--text-muted)';
+    return '<div style="border:1px solid ' + 테 + ';border-radius:9px;padding:10px 12px;background:' + 바탕 + ';">'
+         + '<div style="font-size:11.5px;font-weight:700;color:var(--text-muted);">' + 이름 + '</div>'
+         + '<div style="font-size:17px;font-weight:800;margin-top:3px;color:' + 글빛 + ';">'
+         + (있다 ? Number(값).toLocaleString() + '원' : '해당 없음') + '</div></div>';
+  }
+
+  /* 서명판 — 상세의 결재 판과 같은 방식이다 */
+  function rtSign캔버스() {
+    rtSignCv = document.getElementById('rtSignCanvas');
+    if (!rtSignCv) return;
+
+    const r = rtSignCv.getBoundingClientRect();
+    const d = window.devicePixelRatio || 1;
+    rtSignCv.width  = Math.round(r.width  * d);
+    rtSignCv.height = Math.round(r.height * d);
+    rtSignCtx = rtSignCv.getContext('2d');
+    rtSignCtx.scale(d, d);
+    rtSignCtx.lineWidth = 2.2;
+    rtSignCtx.lineCap = 'round';
+    rtSignCtx.lineJoin = 'round';
+    rtSignCtx.strokeStyle = '#111827';
+    rtSign칠함 = false;
+    rtSign셈();
+
+    let 그리는중 = false;
+    const 자리 = (e) => {
+      const b = rtSignCv.getBoundingClientRect();
+      const p = e.touches ? e.touches[0] : e;
+      return { x: p.clientX - b.left, y: p.clientY - b.top };
+    };
+    rtSignCv.onmousedown = (e) => { e.preventDefault(); 그리는중 = true; const p = 자리(e); rtSignCtx.beginPath(); rtSignCtx.moveTo(p.x, p.y); };
+    rtSignCv.onmousemove = (e) => { if (!그리는중) return; e.preventDefault(); const p = 자리(e); rtSignCtx.lineTo(p.x, p.y); rtSignCtx.stroke(); rtSign칠함 = true; rtSign셈(); };
+    window.addEventListener('mouseup', () => { 그리는중 = false; });
+    rtSignCv.addEventListener('touchstart', (e) => { e.preventDefault(); 그리는중 = true; const p = 자리(e); rtSignCtx.beginPath(); rtSignCtx.moveTo(p.x, p.y); }, { passive: false });
+    rtSignCv.addEventListener('touchmove', (e) => { if (!그리는중) return; e.preventDefault(); const p = 자리(e); rtSignCtx.lineTo(p.x, p.y); rtSignCtx.stroke(); rtSign칠함 = true; rtSign셈(); }, { passive: false });
+    rtSignCv.addEventListener('touchend', () => { 그리는중 = false; });
+  }
+
+  window.rtSign지우기 = function () {
+    if (!rtSignCtx) return;
+    rtSignCtx.clearRect(0, 0, rtSignCv.width, rtSignCv.height);
+    rtSign칠함 = false;
+    rtSign셈();
+  };
+
+  function rtSign셈() {
+    const go = document.getElementById('rtSignGo');
+    if (go) go.disabled = !rtSign칠함 || rtSign보냄;
+    document.getElementById('rtSignWhy').textContent =
+      rtSign칠함 ? '서명하면 즉시 처리됩니다.' : '서명란에 서명해 주십시오.';
+  }
+
+  window.rtSignSubmit = function () {
+    if (rtSign보냄 || !rtSign칠함) { rtSign셈(); return; }
+
+    ceConfirm('서명하시겠습니까? 서명하는 즉시 환불 또는 차액 청구가 처리됩니다.').then(ok => {
+      if (!ok) return;
+      rtSign보냄 = true;
+      rtSign셈();
+      document.getElementById('rtSignData').value = rtSignCv.toDataURL('image/png');
+      if (window.ceProgress) window.ceProgress('결재를 처리하고 있습니다');
+      document.getElementById('rtSignForm').submit();
+    });
+  };
 
   window.rtnPanel = function (which) {
     if (!PANES[which]) which = 'list';

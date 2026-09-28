@@ -108,6 +108,10 @@ class OrderReturnController extends Controller
                엑셀에서 날짜로 셈할 수도 없다. 사람 이름과 때는 다른 것이다. */
             'final_signer'    => $r->finalSigner?->name ?? '',
             'final_signed_at' => $r->final_signed_at?->format('Y-m-d H:i:s') ?? '',
+            /* 목록의 「결재」 단추가 무엇으로 설지 — 서명 · 서명 확인 · 빈칸.
+               권한 판정은 서버가 한다(팝오버를 열 때 다시 묻는다). */
+            'sign_btn'        => $r->final_signed_at ? 'view'
+                : (($r->inspect_confirmed_at && $r->needsFinalSign()) ? 'sign' : ''),
             /* 창고가 실물을 보고 적은 말. 목록에서는 있다·없다만 보이면 된다 —
                읽는 자리는 상세다. 있는데 아무 표가 없으면 열어 볼 까닭을 모른다. */
             'pl3_note'  => $r->pl3_note ? '있음' : '',
@@ -1300,6 +1304,51 @@ class OrderReturnController extends Controller
         return str_starts_with($말, '!')
             ? back()->withErrors(['pay' => ltrim($말, '! ')])
             : back()->with('status', $말);
+    }
+
+    /**
+     * 결재 한 건의 내용 — 목록의 서명 팝오버가 읽는다 (2026-09-28 지시).
+     *
+     * 목록에서 바로 서명할 수 있어야 한다. 건마다 상세를 열어 들어가면, 결재가
+     * 몇 건 쌓인 날에는 그것만으로 한나절이 간다.
+     *
+     * 무엇에 서명하는지를 함께 보낸다 — 금액만 보고 누르게 두지 않는다.
+     */
+    public function approvalDetail(OrderReturn $orderReturn): \Illuminate\Http\JsonResponse
+    {
+        $r = $orderReturn->loadMissing(['order.patient', 'inspectConfirmer', 'finalSigner', 'finalSignTarget']);
+
+        return response()->json([
+            'success'   => true,
+            'receipt'   => $r->receipt_no,
+            'type'      => $r->typeLabel(),
+            'order_no'  => $r->order?->order_number ?? '',
+            'patient'   => $r->order?->patient?->name ?? '',
+            'stage'     => $r->결재단계말(),
+            'route'     => $r->refundRouteLabel(),
+            'result'    => $r->inspect_result
+                           ? (OrderReturn::RESULT_LABELS[$r->inspect_result] ?? '') : '',
+            'defect'    => $r->inspect_result === OrderReturn::RESULT_DEFECT,
+            'defect_qty'  => $r->inspect_defect_qty,
+            'defect_note' => $r->inspect_defect_note,
+            'deduct'    => (int) $r->inspect_deduct_amount,
+            'manager'   => $r->inspectConfirmer?->name ?? '',
+            'manager_at' => $r->inspect_confirmed_at?->format('Y-m-d H:i'),
+            // 나가는 돈ㆍ들어오는 돈을 가른 채로 보낸다
+            'refund_out' => $r->환불금액(),
+            'topup_in'   => $r->차액금액(),
+            'signed'     => (bool) $r->final_signed_at,
+            'signer'     => $r->finalSigner?->name ?? '',
+            'signed_at'  => $r->final_signed_at?->format('Y-m-d H:i'),
+            'sign_image' => $r->final_sign_base64,
+            'sign_ip'    => $r->final_sign_ip,
+            // 지금 이 사람이 여기서 서명할 수 있는가
+            'can_sign'   => ! $r->final_signed_at
+                            && $r->inspect_confirmed_at !== null
+                            && $r->needsFinalSign()
+                            && OrderReturn::canApproveStep('approved'),
+            'sign_url'   => route('order-returns.finalSign', $r),
+        ]);
     }
 
     /**

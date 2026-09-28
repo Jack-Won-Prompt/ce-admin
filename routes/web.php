@@ -288,6 +288,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{orderReturn}/approvers',         [\App\Http\Controllers\OrderReturnController::class, 'approverList'])->name('approverList');
         // 창고가 청한 검수 요청의 원문 — 팝오버가 읽는다
         Route::get('/{orderReturn}/inspection-detail', [\App\Http\Controllers\OrderReturnController::class, 'inspectionDetail'])->name('inspectionDetail');
+        // 결재 한 건의 내용 — 목록의 서명 팝오버가 읽는다
+        Route::get('/{orderReturn}/approval-detail',   [\App\Http\Controllers\OrderReturnController::class, 'approvalDetail'])->name('approvalDetail');
     });
 
     // CE 샘플판매주문 — 목록·상세·신규를 한 화면의 탭으로 둔다

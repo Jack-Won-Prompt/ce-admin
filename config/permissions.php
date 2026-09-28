@@ -429,6 +429,7 @@ return [
         'order-returns.seenInspection'    => ['order-returns', 'view'],
         'order-returns.approverList'      => ['order-returns', 'view'],
         'order-returns.inspectionDetail'  => ['order-returns', 'view'],
+        'order-returns.approvalDetail'    => ['order-returns', 'view'],
         'order-returns.managerApprove'    => ['order-returns', 'inspect_approve'],
         'order-returns.managerReject'     => ['order-returns', 'inspect_approve'],
         'order-returns.finalSignSend'     => ['order-returns', 'final_approve'],
