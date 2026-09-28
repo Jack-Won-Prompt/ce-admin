@@ -50,6 +50,21 @@ class OrderReturnController extends Controller
         if ($request->boolean('pending')) {
             $query->whereIn('status', OrderReturn::awaitingCandidates());
         }
+        /* 창고가 검수 승인을 청했는데 아직 아무도 보지 않은 건 (2026-09-28 지시).
+
+           여태 그 건들은 「검수중」 한 상태로 섞여 있었다 — 창고가 올린 것인지
+           담당자가 손으로 옮긴 것인지 가릴 수 없어, 지금 봐야 할 건이 묻혔다. */
+        if ($request->boolean('wh_inspect')) {
+            $query->whereNotNull('warehouse_inspect_requested_at')
+                  ->whereNull('warehouse_inspect_seen_at')
+                  ->whereNull('inspect_confirmed_at');
+        }
+
+        /* 결재가 어디서 멈춰 있는가 — 서명 대기ㆍ환불 실패ㆍ차액 미납 */
+        if ($request->filled('stage')) {
+            $query->where('refund_stage', (string) $request->string('stage'));
+        }
+
         if ($request->filled('q')) {
             $kw = $request->q;
             $query->where(fn ($s) => $s
@@ -77,6 +92,18 @@ class OrderReturnController extends Controller
             'status'    => $r->statusLabel(),
             // 창고가 알려 준 그대로다 — 우리가 적는 값이 아니다
             'pl3'       => $r->pl3_status_label ?? '',
+            /* 창고가 검수 승인을 청했는가 (2026-09-28 지시). 「요청」은 아직 아무도
+               보지 않은 것이고, 「확인함」은 담당자가 열어 본 것이다. */
+            'wh_inspect' => $r->warehouse_inspect_requested_at
+                ? ($r->창고검수요청중() ? '요청'
+                    : ($r->inspect_confirmed_at ? '승인됨' : '확인함'))
+                : '',
+            // 결재가 어디까지 왔는가 — 상태(절차 단계)와 다른 것을 잰다
+            'appr_stage' => $r->결재단계말(),
+            // 누가 서명했나
+            'final_sign' => $r->final_signed_at
+                ? (($r->finalSigner?->name ?? '') . ' · ' . $r->final_signed_at->format('Y-m-d H:i'))
+                : '',
             /* 창고가 실물을 보고 적은 말. 목록에서는 있다·없다만 보이면 된다 —
                읽는 자리는 상세다. 있는데 아무 표가 없으면 열어 볼 까닭을 모른다. */
             'pl3_note'  => $r->pl3_note ? '있음' : '',
@@ -177,6 +204,16 @@ class OrderReturnController extends Controller
 
         /* 승인을 기다리는 건은 찾는 조건과 상관없이 세어 둔다 — 거르고 있는 중에도
            쓸 일이 몇 건인지는 보여야 한다. */
+        /* 창고가 청했는데 아직 아무도 보지 않은 건 — 칩에 그 수를 적는다 */
+        $whInspectCount = OrderReturn::whereNotNull('warehouse_inspect_requested_at')
+            ->whereNull('warehouse_inspect_seen_at')
+            ->whereNull('inspect_confirmed_at')
+            ->count();
+
+        $signWaitCount   = OrderReturn::where('refund_stage', 'sign_sent')->count();
+        $refundFailCount = OrderReturn::where('refund_stage', 'refund_failed')->count();
+        $topupWaitCount  = OrderReturn::where('refund_stage', 'topup_sent')->count();
+
         $pendingCount = OrderReturn::whereIn('status', OrderReturn::awaitingCandidates())
             ->get()->filter(fn (OrderReturn $r) => $r->awaitsApproval())->count();
 
@@ -186,6 +223,10 @@ class OrderReturnController extends Controller
             'counts'   => $counts,
             'lateCount' => $lateCount,
             'pendingCount' => $pendingCount,
+            'whInspectCount'  => $whInspectCount,
+            'signWaitCount'   => $signWaitCount,
+            'refundFailCount' => $refundFailCount,
+            'topupWaitCount'  => $topupWaitCount,
         ]);
     }
 
@@ -890,6 +931,360 @@ class OrderReturnController extends Controller
         return $결과['message'] ?? '환불 처리했습니다.';
     }
 
+
+    // ── 두 걸음 결재 (2026-09-28 지시) ───────────────────────
+
+    /** 창고가 청한 검수 요청을 담당자가 열어 보았다 — 목록의 「요청」 표시를 내린다 */
+    public function seenInspection(OrderReturn $orderReturn): RedirectResponse
+    {
+        if (! $orderReturn->warehouse_inspect_seen_at) {
+            $orderReturn->forceFill(['warehouse_inspect_seen_at' => now()])->save();
+        }
+
+        return back()->with('status', '창고 검수 요청을 확인했습니다.');
+    }
+
+    /**
+     * 책임자 검수 승인 — 흐름의 `inspected`(검수 확정)가 그 자리다.
+     *
+     * 여기서 **결재 경로가 정해진다.** 이상이 없으면 전액(교환은 그대로 재발송),
+     * 하자ㆍ수량 차이가 있으면 부분 환불ㆍ차액 청구로 간다.
+     *
+     * 차감 금액은 이상이 있을 때만 받는다. 이상 없다면서 금액을 적으면 둘 중 하나가
+     * 잘못된 것이라 되묻는다 — 최종승인자가 서명하는 값이 여기서 굳는다.
+     */
+    public function managerApprove(Request $request, OrderReturn $orderReturn): RedirectResponse
+    {
+        if (! OrderReturn::canApproveStep('inspected')) {
+            return back()->withErrors(['appr' => '책임자 검수 권한이 필요합니다.']);
+        }
+
+        $data = $request->validate([
+            'inspect_result'        => 'required|in:ok,defect',
+            'inspect_defect_qty'    => 'nullable|integer|min:0',
+            'inspect_defect_note'   => 'nullable|string|max:500',
+            'inspect_deduct_amount' => 'nullable|integer|min:0',
+        ], [], [
+            'inspect_result'        => '검수 결과',
+            'inspect_deduct_amount' => '차감 금액',
+        ]);
+
+        $이상있다 = $data['inspect_result'] === OrderReturn::RESULT_DEFECT;
+        $차감     = (int) ($data['inspect_deduct_amount'] ?? 0);
+
+        if ($이상있다 && $차감 <= 0) {
+            return back()->withErrors(['appr' =>
+                '하자ㆍ수량 차이가 있으면 차감 금액을 적어 주십시오 — 최종승인자가 그 금액을 보고 서명합니다.']);
+        }
+
+        if (! $이상있다 && $차감 > 0) {
+            return back()->withErrors(['appr' =>
+                '이상이 없다고 하셨는데 차감 금액이 적혀 있습니다 — 둘 중 하나를 고쳐 주십시오.']);
+        }
+
+        /* 차감이 받은 돈보다 크면 돌려줄 것이 음수가 된다 */
+        $받은것 = (int) ($orderReturn->order?->받은금액() ?? 0);
+
+        if ($이상있다 && $orderReturn->type !== OrderReturn::TYPE_EXCHANGE && $차감 > $받은것) {
+            return back()->withErrors(['appr' => sprintf(
+                '차감 금액(%s원)이 받은 돈(%s원)보다 큽니다.',
+                number_format($차감), number_format($받은것))]);
+        }
+
+        DB::transaction(function () use ($orderReturn, $data, $이상있다, $차감) {
+            $orderReturn->forceFill([
+                'inspect_result'        => $data['inspect_result'],
+                'inspect_defect_qty'    => $이상있다 ? ($data['inspect_defect_qty'] ?? null) : null,
+                'inspect_defect_note'   => $이상있다 ? ($data['inspect_defect_note'] ?? null) : null,
+                'inspect_deduct_amount' => $이상있다 ? $차감 : null,
+                /* 창고가 보낸 값을 그대로 둔 것인지, 사람이 고쳐 적은 것인지 */
+                'inspect_source'        => ($orderReturn->inspect_source === 'warehouse'
+                                            && $orderReturn->inspect_result === $data['inspect_result'])
+                                            ? 'warehouse' : 'manual',
+                'inspect_confirmed_by'  => Auth::id(),
+                'inspect_confirmed_at'  => now(),
+                'warehouse_inspect_seen_at' => $orderReturn->warehouse_inspect_seen_at ?? now(),
+                'status'                => 'inspected',
+                'refund_stage'          => 'manager_ok',
+            ])->save();
+
+            /* 경로는 검수 결과가 담긴 뒤에야 셈이 선다 */
+            $orderReturn->forceFill(['refund_route' => $orderReturn->refundRoute()])->save();
+
+            OrderReturnLog::create([
+                'order_return_id' => $orderReturn->id,
+                'from_status'     => 'inspecting',
+                'to_status'       => 'inspected',
+                'reason'          => '책임자 검수 승인 — ' . (OrderReturn::RESULT_LABELS[$data['inspect_result']] ?? '')
+                                     . ($이상있다 ? ' · 차감 ' . number_format($차감) . '원' : ''),
+                'created_by'      => Auth::id(),
+            ]);
+        });
+
+        $r = $orderReturn->fresh();
+
+        /* 창고에도 알린다 — 저쪽 화면에서 우리가 어디까지 했는지 보인다 */
+        $this->withworks->pushStatus($r);
+
+        /* 돈이 움직이지 않는 건은 여기서 끝이다 — 서명을 받게 하면 아무 일도 하지
+           않는 결재가 하나 늘 뿐이다. 다음 걸음은 담당자가 평소대로 옮긴다. */
+        if (! $r->needsFinalSign()) {
+            return back()->with('status',
+                '책임자 검수를 승인했습니다 — 금액 변동이 없어 최종승인자 서명은 받지 않습니다.');
+        }
+
+        return back()->with('status', sprintf(
+            '책임자 검수를 승인했습니다 — %s %s원. 최종승인자에게 서명을 받아 주십시오.',
+            $r->refundRouteLabel(), number_format($r->움직일금액())));
+    }
+
+    /**
+     * 책임자 반려 — 창고에 되돌려 다시 검수를 청한다.
+     *
+     * 단계를 `inspecting` 으로 되돌리고 창고에 알린다. 창고가 다시 올리면
+     * 「창고 검수 요청」이 되살아난다(웹훅이 확인 표시를 지운다).
+     *
+     * 검수 결과ㆍ차감 금액은 지운다 — 반려했다는 것은 그 값을 믿지 않는다는 뜻이다.
+     */
+    public function managerReject(Request $request, OrderReturn $orderReturn): RedirectResponse
+    {
+        if (! OrderReturn::canApproveStep('inspected')) {
+            return back()->withErrors(['appr' => '책임자 검수 권한이 필요합니다.']);
+        }
+
+        $data = $request->validate(['reason' => 'required|string|max:500'], [], ['reason' => '반려 사유']);
+
+        DB::transaction(function () use ($orderReturn, $data) {
+            $orderReturn->forceFill([
+                'manager_rejected_by'   => Auth::id(),
+                'manager_rejected_at'   => now(),
+                'manager_reject_reason' => $data['reason'],
+                'inspect_result'        => null,
+                'inspect_defect_qty'    => null,
+                'inspect_defect_note'   => null,
+                'inspect_deduct_amount' => null,
+                'inspect_confirmed_by'  => null,
+                'inspect_confirmed_at'  => null,
+                'refund_route'          => null,
+                'refund_stage'          => null,
+                'status'                => 'inspecting',
+            ])->save();
+
+            OrderReturnLog::create([
+                'order_return_id' => $orderReturn->id,
+                'from_status'     => 'inspecting',
+                'to_status'       => 'inspecting',
+                'reason'          => '책임자 반려 — ' . $data['reason'],
+                'created_by'      => Auth::id(),
+            ]);
+        });
+
+        /* 창고에 되돌린다. 저쪽이 reject_reason 을 받도록 고치기 전까지는 상태만
+           전해지고 사유는 우리 쪽에만 남는다 — 그때는 담당자가 전화로 알린다. */
+        $보냈나 = $this->withworks->pushStatus($orderReturn->fresh());
+
+        app(\App\Services\ReturnNotice::class)
+            ->tellTaker($orderReturn->fresh(), '책임자가 검수를 반려했습니다 — ' . $data['reason'], 'warning');
+
+        return back()->with('status', '반려했습니다 — 창고에 다시 검수를 청했습니다.'
+            . ($보냈나 ? '' : ' (창고에 전하지 못했습니다 — 담당자가 직접 알려 주십시오.)'));
+    }
+
+    /**
+     * 최종승인자에게 서명 링크를 보낸다.
+     *
+     * 링크는 24시간 산다. 결재는 사람이 자리에 없을 수 있어 환자용(30분)보다 길게
+     * 둔다 — 그렇다고 며칠을 열어 두면 그 사이에 금액이 바뀐다.
+     *
+     * 보낼 사람은 **최종승인자 권한이 있는 사람**만 고를 수 있다. 권한 없는 사람에게
+     * 보내면 링크를 열어도 서명할 수 없어, 보낸 쪽도 받은 쪽도 까닭을 모른다.
+     */
+    public function finalSignSend(Request $request, OrderReturn $orderReturn): RedirectResponse
+    {
+        if (! OrderReturn::canApproveStep('approved')) {
+            return back()->withErrors(['sign' => '최종승인자 권한이 필요합니다.']);
+        }
+
+        if (! $orderReturn->inspect_confirmed_at) {
+            return back()->withErrors(['sign' => '책임자 검수 승인 뒤에 서명을 받을 수 있습니다.']);
+        }
+
+        if (! $orderReturn->needsFinalSign()) {
+            return back()->withErrors(['sign' => '금액 변동이 없는 건이라 서명을 받지 않습니다.']);
+        }
+
+        $data = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'mobile'  => 'nullable|string|max:20',
+        ]);
+
+        $받는이 = \App\Models\User::find($data['user_id']);
+        $번호   = preg_replace('/[^0-9]/', '', $data['mobile'] ?: (string) $받는이?->phone);
+
+        if (strlen($번호) < 10) {
+            return back()->withErrors(['sign' => '받는 분의 휴대폰 번호가 없습니다 — 번호를 적어 주십시오.']);
+        }
+
+        $토큰  = \Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(48));
+        $만료  = now()->addDay();
+
+        $orderReturn->forceFill([
+            'final_sign_token'          => $토큰,
+            'final_sign_target_user_id' => $받는이->id,
+            'final_sign_sent_to'        => $번호,
+            'final_sign_sent_at'        => now(),
+            'final_sign_expires_at'     => $만료,
+            'refund_stage'              => 'sign_sent',
+        ])->save();
+
+        /* 문구는 message_templates 가 정본이다 — 코드에 박아 두면 담당자가 고칠
+           자리가 없다. 표가 비었거나 꺼져 있으면 기본문구() 가 선다. */
+        $글 = \App\Models\MessageTemplate::문구(
+            \App\Services\ReturnFinalApproval::문구코드,
+            [
+                '#{접수번호}' => (string) $orderReturn->receipt_no,
+                '#{구분}'     => $orderReturn->typeLabel(),
+                '#{결재경로}' => $orderReturn->refundRouteLabel(),
+                '#{금액}'     => number_format($orderReturn->움직일금액()),
+                '#{서명링크}' => route('return-sign.show', $토큰),
+            ],
+            \App\Services\ReturnFinalApproval::기본문구());
+
+        /* 받는이 열쇠는 rcv ㆍ rcvnm 이다 — mobile 로 담으면 clean() 이 걸러 내
+           「보낼 수 있는 번호가 없습니다」로 조용히 0건이 된다.
+
+           업무발송 은 「이것은 시험이 아니다」라는 뜻이다(2026-09-16). 결재 요청은
+           시험 설정(우리에게만ㆍ시늉)을 따라서는 안 된다 — 최종승인자가 문자를 못
+           받으면 결재가 그 자리에서 멈춘다. */
+        $보냄 = app(\App\Services\MessageSender::class)->sendBulk(
+            'sms',
+            [['rcv' => $번호, 'rcvnm' => $받는이->name]],
+            $글,
+            \App\Services\ReturnFinalApproval::문구코드,
+            ['업무발송' => true]);
+
+        activity()->causedBy(Auth::user())->performedOn($orderReturn)
+            ->log("최종승인 서명 링크 발송 → {$받는이->name} {$번호}");
+
+        /* 못 보냈으면 그렇게 말한다. 「보냈습니다」로 덮으면 담당자는 기다리고
+           최종승인자는 아무것도 못 받은 채 하루가 간다. */
+        if (! ($보냄['success'] ?? false) || (int) ($보냄['success_count'] ?? 0) < 1) {
+            return back()->withErrors(['sign' =>
+                '문자를 보내지 못했습니다 — ' . ($보냄['message'] ?? '')
+                . ' 서명 링크는 만들어 두었으니, 화면에서 바로 서명을 받으실 수도 있습니다.']);
+        }
+
+        return back()->with('status',
+            "{$받는이->name} 님에게 서명 링크를 보냈습니다 — " . $만료->format('m월 d일 H:i') . ' 까지 유효합니다.');
+    }
+
+    /**
+     * 화면에서 바로 서명 — SMS 를 거치지 않는다.
+     *
+     * 최종승인자가 옆에 있거나 제 화면에서 처리할 때다. 저장하는 자리는 링크로 받은
+     * 것과 **같다** — 두 자리에 따로 담으면 「어느 것이 진짜 서명인가」를 묻게 된다.
+     */
+    public function finalSign(Request $request, OrderReturn $orderReturn): RedirectResponse
+    {
+        if (! OrderReturn::canApproveStep('approved')) {
+            return back()->withErrors(['sign' => '최종승인자 권한이 필요합니다.']);
+        }
+
+        $data = $request->validate(['signature' => 'required|string|max:500000']);
+
+        $말 = app(\App\Services\ReturnFinalApproval::class)
+            ->서명하고실행($orderReturn, Auth::user(), $data['signature'], $request->ip(), $request->userAgent());
+
+        return str_starts_with($말, '!')
+            ? back()->withErrors(['sign' => ltrim($말, '! ')])
+            : back()->with('status', $말);
+    }
+
+    /** 최종승인자 반려 — 책임자 반려와 같이 창고로 되돌린다 */
+    public function finalReject(Request $request, OrderReturn $orderReturn): RedirectResponse
+    {
+        if (! OrderReturn::canApproveStep('approved')) {
+            return back()->withErrors(['sign' => '최종승인자 권한이 필요합니다.']);
+        }
+
+        $data = $request->validate(['reason' => 'required|string|max:500'], [], ['reason' => '반려 사유']);
+
+        app(\App\Services\ReturnFinalApproval::class)
+            ->반려($orderReturn, Auth::user(), $data['reason']);
+
+        return back()->with('status', '반려했습니다 — 창고에 다시 검수를 청했습니다.');
+    }
+
+    /** 환불이 막혔을 때 다시 시도한다 — 서명은 그대로 둔다 */
+    public function retryRefund(OrderReturn $orderReturn): RedirectResponse
+    {
+        if (! perm('order-returns', 'send')) {
+            return back()->withErrors(['pay' => '결제 취소 권한이 필요합니다.']);
+        }
+
+        if (! $orderReturn->final_signed_at) {
+            return back()->withErrors(['pay' => '최종승인자 서명 뒤에 실행할 수 있습니다.']);
+        }
+
+        $말 = app(\App\Services\ReturnFinalApproval::class)->실행($orderReturn->fresh(['order.patient']));
+
+        return str_starts_with($말, '!')
+            ? back()->withErrors(['pay' => ltrim($말, '! ')])
+            : back()->with('status', $말);
+    }
+
+    /**
+     * 교환의 차액 결제 링크를 보낸다 — **담당자가 전화한 뒤 누른다** (2026-09-28 지시).
+     *
+     * 환불은 고객이 받는 것이라 서명 즉시 나가도 되지만, 추가 결제는 고객이 내는
+     * 것이다. 설명 없이 링크만 가면 「왜 또 돈을 내라는가」가 된다.
+     */
+    public function sendTopupLink(Request $request, OrderReturn $orderReturn): RedirectResponse
+    {
+        if (! perm('order-returns', 'send')) {
+            return back()->withErrors(['pay' => '발송 권한이 필요합니다.']);
+        }
+
+        $말 = app(\App\Services\ReturnFinalApproval::class)
+            ->차액청구($orderReturn->fresh(['order.patient']), $request->input('mobile'));
+
+        return str_starts_with($말, '!')
+            ? back()->withErrors(['pay' => ltrim($말, '! ')])
+            : back()->with('status', $말);
+    }
+
+    /**
+     * 서명을 보낼 최종승인자 목록 — **그 권한이 있는 사람만** 낸다.
+     *
+     * 권한 없는 사람에게 보내면 링크를 열어도 서명 단추가 서지 않는다. 보낸 쪽은
+     * 「보냈는데 왜 안 하나」, 받은 쪽은 「눌러도 안 된다」가 된다.
+     *
+     * 판정은 PermissionService 한 곳을 지난다(관리자ㆍ전권 그룹ㆍ표의 칸). 조회로
+     * 흉내 내면 규칙이 두 벌이 된다.
+     */
+    public function approverList(OrderReturn $orderReturn): \Illuminate\Http\JsonResponse
+    {
+        $사람들 = \App\Models\User::with('permissionGroup')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->filter(fn ($u) => $u->canDo('order-returns', 'final_approve')
+                             || $u->canDo('order-returns', 'approve'))
+            ->map(fn ($u) => [
+                'id'     => $u->id,
+                'name'   => $u->name,
+                'group'  => $u->permissionGroup?->name ?? ($u->role === 'admin' ? '관리자' : ''),
+                'mobile' => preg_replace('/[^0-9]/', '', (string) $u->phone),
+            ])
+            ->values();
+
+        return response()->json([
+            'success'   => true,
+            'approvers' => $사람들,
+            'amount'    => $orderReturn->움직일금액(),
+            'route'     => $orderReturn->refundRouteLabel(),
+        ]);
+    }
 
     public function pullInspection(OrderReturn $orderReturn): RedirectResponse
     {

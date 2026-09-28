@@ -640,6 +640,7 @@ class OrderReturn extends Model
         'manager_ok'     => '책임자 승인',
         'sign_sent'      => '서명 대기',
         'signed'         => '서명 완료',
+        'topup_wait'     => '차액 전화 대기',
         'refunded'       => '환불 완료',
         'topup_sent'     => '차액 청구 발송',
         'topup_paid'     => '차액 입금',
@@ -727,12 +728,56 @@ class OrderReturn extends Model
     {
         return $this->final_sign_token !== null
             && $this->final_signed_at === null
+            && $this->inspect_confirmed_at !== null
+            && $this->needsFinalSign()
             && (! $this->final_sign_expires_at || $this->final_sign_expires_at->isFuture());
+    }
+
+    /**
+     * 결재가 어디까지 왔는가 — 한 마디로.
+     *
+     * 상태(status)는 절차서의 단계이고 이것은 **결재와 실행**의 자리다. 둘은 다르다 —
+     * 「검수중」인 건이 창고 검수 요청일 수도, 책임자가 반려해 되돌린 것일 수도 있다.
+     *
+     * 목록의 한 칸에 서므로 짧아야 한다. 자세한 것은 상세에서 본다.
+     */
+    public function 결재단계말(): string
+    {
+        if ($this->manager_rejected_at && ! $this->inspect_confirmed_at) {
+            return '책임자 반려';
+        }
+
+        if ($this->final_rejected_at && ! $this->approved_at) {
+            return '최종 반려';
+        }
+
+        if ($this->refund_stage && isset(self::STAGE_LABELS[$this->refund_stage])) {
+            return self::STAGE_LABELS[$this->refund_stage];
+        }
+
+        if ($this->창고검수요청중()) {
+            return '창고 검수 요청';
+        }
+
+        if ($this->inspect_confirmed_at && ! $this->approved_at && $this->needsFinalSign()) {
+            return '서명 대기';
+        }
+
+        if ($this->inspect_confirmed_at) {
+            return '책임자 승인';
+        }
+
+        return '';
     }
 
     public function managerRejecter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'manager_rejected_by');
+    }
+
+    public function finalRejecter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'final_rejected_by');
     }
 
     public function finalSigner(): BelongsTo

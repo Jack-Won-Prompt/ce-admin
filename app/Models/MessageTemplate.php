@@ -311,6 +311,16 @@ class MessageTemplate extends Model
                 'text'  => \App\Services\ReturnPatientNotice::기본문구()[
                     \App\Services\ReturnPatientNotice::추가입금],
             ],
+            /* 최종승인자에게 서명 링크를 보내는 글 (2026-09-28 지시).
+
+               이것만 환자가 아니라 **우리 직원**에게 간다 — 담당자가 화면에서 고쳐야
+               할 자리가 있어 여기에 둔다(문구를 코드에 박아 두면 고칠 길이 없다).
+               #{서명링크} 가 빠지면 받는 쪽은 무엇을 해야 할지 알 수 없다. */
+            \App\Services\ReturnFinalApproval::문구코드 => [
+                'label' => '교환·반품 최종 승인 요청',
+                'desc'  => '최종승인자에게 서명 링크를 보낸다 — 책임자 승인 뒤 담당자가 보낸다',
+                'text'  => \App\Services\ReturnFinalApproval::기본문구(),
+            ],
             'custom' => [
                 'label' => '직접 입력',
                 'desc'  => '메시지를 직접 작성',

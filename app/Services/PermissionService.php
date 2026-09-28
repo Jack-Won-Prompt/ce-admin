@@ -160,16 +160,15 @@ class PermissionService
 
         $rows = PermissionGroupPage::where('permission_group_id', $user->permission_group_id)->get();
 
+        /* 액션표를 돌린다 — 여기에 액션을 적어 두면, 액션을 더한 날 화면에서는
+           체크가 되는데 판정은 늘 거짓이 된다 */
         $matrix = [];
         foreach ($rows as $r) {
-            $matrix[$r->page_key] = [
-                'view'   => (bool) $r->can_view,
-                'create' => (bool) $r->can_create,
-                'update' => (bool) $r->can_update,
-                'delete' => (bool) $r->can_delete,
-                'send'   => (bool) $r->can_send,
-                'approve' => (bool) $r->can_approve,
-            ];
+            $한줄 = [];
+            foreach (PermissionGroupPage::ACTION_COLUMN as $액션 => $칸) {
+                $한줄[$액션] = (bool) $r->{$칸};
+            }
+            $matrix[$r->page_key] = $한줄;
         }
 
         return $this->matrixCache[$user->id] = $matrix;

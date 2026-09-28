@@ -34,16 +34,15 @@ class PermissionGroup extends Model
      */
     public function permissionMatrix(): array
     {
+        /* 액션표를 돌린다 — 손으로 적어 두면 액션을 더할 때마다 여기가 빠진다
+           (2026-09-28 에 실제로 그랬다) */
         $matrix = [];
         foreach ($this->pages as $p) {
-            $matrix[$p->page_key] = [
-                'view'   => (bool) $p->can_view,
-                'create' => (bool) $p->can_create,
-                'update' => (bool) $p->can_update,
-                'delete' => (bool) $p->can_delete,
-                'send'   => (bool) $p->can_send,
-                'approve' => (bool) $p->can_approve,
-            ];
+            $한줄 = [];
+            foreach (PermissionGroupPage::ACTION_COLUMN as $액션 => $칸) {
+                $한줄[$액션] = (bool) $p->{$칸};
+            }
+            $matrix[$p->page_key] = $한줄;
         }
         return $matrix;
     }

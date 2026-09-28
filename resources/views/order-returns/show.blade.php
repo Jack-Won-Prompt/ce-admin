@@ -86,6 +86,50 @@
            padding-top:12px; border-top:1px solid var(--border-light); }
   .rt-go input[type=text] { flex:1; min-width:180px; height:32px; }
   .rt-locked { font-size:12px; color:#B54708; }
+
+  /* ── 두 걸음 결재 (2026-09-28 지시) ─────────────────────── */
+  .pnl-dot { color:var(--danger); font-size:9px; vertical-align:middle; margin-left:3px; }
+  .ap-chip { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700;
+             background:var(--gray-100,#f1f3f5); color:var(--gray-700,#495057); }
+  .ap-chip.ap-ok   { background:var(--primary-light); color:var(--primary); }
+  .ap-chip.ap-bad  { background:var(--danger-light); color:var(--danger); }
+  .ap-chip.ap-wait { background:#FEF3C7; color:#B54708; }
+  .ap-chip.ap-new  { background:var(--danger); color:#fff; }
+  .ap-chip.ap-seen { background:var(--gray-100,#f1f3f5); color:var(--text-muted); }
+
+  .ap-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; margin-top:12px; }
+  .ap-f { display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .ap-f > label { font-size:12px; color:var(--text-muted); }
+  .ap-f .form-control { height:32px; font-size:13px; }
+  .ap-wide { grid-column:1 / -1; }
+  .ap-pick { display:flex; gap:16px; padding:4px 0; }
+  .ap-pick label { display:flex; align-items:center; gap:5px; font-size:13px; cursor:pointer; }
+  .ap-hint { font-size:12px; color:var(--text-muted); margin-top:6px; }
+  @media (max-width: 720px) { .ap-grid { grid-template-columns:1fr; } }
+
+  /* 고른 값으로 무엇이 일어날지 — 승인 단추를 누르기 전에 읽어야 한다 */
+  .ap-sum { margin-top:10px; font-size:12.5px; font-weight:700; padding:8px 11px; border-radius:7px; }
+  .ap-sum:empty { display:none; }
+  .ap-sum.give { background:var(--primary-light); color:var(--primary); }
+  .ap-sum.take { background:#FEF3C7; color:#B54708; }
+  .ap-sum.none { background:var(--gray-100,#f1f3f5); color:var(--gray-700,#495057); }
+
+  /* 서명하면 움직일 돈 — 결재의 알맹이라 눈이 먼저 가야 한다 */
+  .ap-amt { margin:12px 0; padding:13px; border-radius:9px; text-align:center; }
+  .ap-amt.give { background:var(--primary-light); border:1px solid var(--primary-200); }
+  .ap-amt.take { background:#FEF3C7; border:1px solid #F2C97D; }
+  .ap-amt .t { font-size:12px; font-weight:700; color:var(--text-muted); }
+  .ap-amt .n { font-size:26px; font-weight:800; letter-spacing:-1px; margin-top:3px; }
+  .ap-amt.give .n { color:var(--primary); }
+  .ap-amt.take .n { color:#B54708; }
+  .ap-amt .s { font-size:12px; color:var(--text-muted); margin-top:5px; line-height:1.5; }
+
+  .ap-canvas { width:100%; height:170px; border:1px dashed var(--border); border-radius:8px;
+               background:#fff; touch-action:none; display:block; }
+  .ap-sigbar { display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
+  .ap-sigbar .ap-hint { margin-top:0; }
+  .ap-sig-img { max-width:220px; max-height:80px; border:1px solid var(--border);
+                border-radius:6px; background:#fff; }
 </style>
 @endpush
 
@@ -110,6 +154,10 @@
   <div class="pnl-tabs">
       <button type="button" class="pnl-tab active" data-rtab="apply" onclick="rtTab(this)">신청 내용</button>
       <button type="button" class="pnl-tab" data-rtab="notice" onclick="rtTab(this)">환자 안내ㆍ환불</button>
+      {{-- 결재는 진행 단계 앞에 둔다 — 단계를 옮기기 전에 결재가 끝나야 한다 --}}
+      <button type="button" class="pnl-tab" data-rtab="appr" onclick="rtTab(this)">결재
+        @if($r->창고검수요청중())<span class="pnl-dot" title="창고 검수 요청">●</span>@endif
+      </button>
       <button type="button" class="pnl-tab" data-rtab="flow" onclick="rtTab(this)">진행 단계</button>
       <button type="button" class="pnl-tab" data-rtab="items" onclick="rtTab(this)">반품 품목</button>
       <button type="button" class="pnl-tab" data-rtab="issue" onclick="rtTab(this)">발행ㆍ연계</button>
@@ -336,6 +384,10 @@
 </div>
   </div>
 
+  <div class="rt-pane" data-rtab="appr">
+@include('order-returns._approval')
+  </div>
+
   <div class="rt-pane" data-rtab="flow">
 {{-- 진행 단계 ─────────────────────────────────────────
      「Unicorn 교환·반품 절차」의 칸 하나가 단계 하나다. 어디까지 왔고 다음은 누가
@@ -395,6 +447,17 @@
       {{ $r->approver?->name ? '· ' . $r->approver->name : '' }}
       <span style="color:var(--text-muted);font-weight:400;">(승인 주체 {{ $r->approverRole() }})</span>
     </span></div>
+    {{-- 「검수 확정」과 「전자 승인」이 곧 두 걸음 결재다(2026-09-28). 어디까지 왔는지
+         여기서도 한 줄로 보여 준다 — 결재 판을 열지 않고도 알 수 있어야 한다. --}}
+    @if($r->결재단계말())
+      <div class="rt-kv"><span>결재 단계</span><span>
+        {{ $r->결재단계말() }}
+        @if($r->needsFinalSign() && ! $r->final_signed_at)
+          <a href="#" onclick="rtTab(document.querySelector('.rt-tabwrap .pnl-tab[data-rtab=appr]')); return false;"
+             style="color:var(--primary);font-weight:400;">결재 판으로</a>
+        @endif
+      </span></div>
+    @endif
     @if($r->scenario() === \App\Models\OrderReturn::SC_EXCHANGE_MIND)
       <div class="rt-kv"><span>입금 확인</span><span>{{ $r->payment_checked_at?->format('Y-m-d H:i') ?? '—' }}</span></div>
     @endif
@@ -410,7 +473,10 @@
         <input type="text" name="reason" class="form-control" maxlength="500"
                placeholder="변경 사유 (선택 · 이력에 기록됩니다)">
         @foreach($nexts as $st)
-          @php $locked = \App\Models\OrderReturn::needsApproval($st) && !$canApprove; @endphp
+          {{-- 걸음마다 보는 권한이 다르다(책임자 검수 · 최종승인자 서명).
+               하나로 보면 컨트롤러는 막는데 화면은 눌리는 자리가 생긴다. --}}
+          @php $locked = \App\Models\OrderReturn::needsApproval($st)
+                         && ! \App\Models\OrderReturn::canApproveStep($st); @endphp
           <button type="submit" name="to_status" value="{{ $st }}"
                   class="ds-btn {{ $st === 'cancelled' ? '' : 'ds-btn-primary' }}"
                   @disabled($locked)
@@ -421,7 +487,8 @@
           </button>
         @endforeach
       </form>
-      @if(!$canApprove && collect($nexts)->contains(fn ($st) => \App\Models\OrderReturn::needsApproval($st)))
+      @if(collect($nexts)->contains(fn ($st) => \App\Models\OrderReturn::needsApproval($st)
+                                              && ! \App\Models\OrderReturn::canApproveStep($st)))
         <div class="rt-locked" style="margin-top:6px;">
           이 단계는 승인 권한({{ $r->approverRole() }})이 있어야 누를 수 있습니다 —
           설정 › 권한 그룹에서 「교환·반품 전자 승인」을 받으십시오.

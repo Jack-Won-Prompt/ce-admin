@@ -77,6 +77,28 @@
              onchange="this.form.submit()" style="accent-color:#B54708;margin:0;">
       승인 대기@if($pendingCount) <b>{{ $pendingCount }}</b>@endif
     </label>
+    {{-- 창고가 검수 승인을 청했는데 아직 아무도 보지 않은 건 (2026-09-28 지시).
+
+         여태 그 건들은 「검수중」 한 상태로 섞여 있었다 — 창고가 올린 것인지 담당자가
+         손으로 옮긴 것인지 가릴 수 없어, 지금 봐야 할 건이 묻혔다. --}}
+    <label class="ds-btn" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+           {{ request()->boolean('wh_inspect') ? 'background:#E0F2FE;border-color:#0369A1;color:#0369A1;font-weight:600;' : '' }}">
+      <input type="checkbox" name="wh_inspect" value="1" @checked(request()->boolean('wh_inspect'))
+             onchange="this.form.submit()" style="accent-color:#0369A1;margin:0;">
+      창고 검수 요청@if($whInspectCount) <b>{{ $whInspectCount }}</b>@endif
+    </label>
+    {{-- 결재가 멈춰 있는 자리 셋. 건수가 0 이면 세우지 않는다 —
+         늘 서 있으면 「지금 볼 것이 있다」는 뜻이 옅어진다. --}}
+    @foreach([['sign_sent','서명 대기',$signWaitCount,'#B54708'],
+              ['refund_failed','환불 실패',$refundFailCount,'#B42318'],
+              ['topup_sent','차액 미납',$topupWaitCount,'#B54708']] as [$값,$글,$셈,$빛])
+      @if($셈)
+        <a href="{{ request()->fullUrlWithQuery(['stage' => request('stage') === $값 ? null : $값]) }}"
+           class="ds-btn" style="{{ request('stage') === $값 ? "background:{$빛}18;border-color:{$빛};color:{$빛};font-weight:600;" : '' }}">
+          {{ $글 }} <b>{{ $셈 }}</b>
+        </a>
+      @endif
+    @endforeach
     {{-- 늘 세워 둔다 — 거르고 있을 때만 나타나면 단추가 들락날락해
          옆에 붙은 「검색」이 자리를 옮긴다. 누를 것은 항상 같은 자리에 있어야 한다. --}}
     <a href="{{ route('order-returns.index') }}" class="ds-btn">초기화</a>
@@ -177,6 +199,31 @@
       { header: '상태',     name: 'status',   width: 90,  align: 'center', sortable: true },
       // 창고가 어디까지 했는가 — 우리 단계와 다른 것을 잰다(요청서 4쪽)
       { header: '3PL 상태', name: 'pl3',      width: 100, align: 'center', sortable: true },
+      /* 창고가 검수 승인을 청했는가 (2026-09-28 지시) — 「요청」은 아직 아무도 보지
+         않은 것이라 눈에 띄어야 한다. 「확인함」ㆍ「승인됨」은 지나온 자취다. */
+      {
+        header: '창고 검수 요청', name: 'wh_inspect', width: 110, align: 'center', sortable: true,
+        renderer: (v) => {
+          const s = document.createElement('span');
+          s.textContent = v || '';
+          if (v === '요청')   { s.style.cssText = 'font-weight:700;color:#0369A1;'; }
+          if (v === '승인됨') { s.style.color = 'var(--text-muted)'; }
+          return s;
+        },
+      },
+      /* 결재가 어디까지 왔는가 — 옆의 「상태」(절차 단계)와 다른 것을 잰다 */
+      {
+        header: '검수 상태', name: 'appr_stage', width: 100, align: 'center', sortable: true,
+        renderer: (v) => {
+          const s = document.createElement('span');
+          s.textContent = v || '';
+          if (/반려/.test(v))      { s.style.cssText = 'font-weight:700;color:#B42318;'; }
+          else if (/실패/.test(v)) { s.style.cssText = 'font-weight:700;color:#B42318;'; }
+          else if (/대기|요청/.test(v)) { s.style.cssText = 'font-weight:700;color:#B54708;'; }
+          return s;
+        },
+      },
+      { header: '최종승인자 서명', name: 'final_sign', width: 150, sortable: true },
       { header: '검수 비고', name: 'pl3_note', width: 90,  align: 'center', sortable: true },
       {
         // 절차서의 기한을 넘긴 건. 묻히면 기한을 둔 뜻이 없다.

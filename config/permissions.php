@@ -423,7 +423,11 @@ return [
         // 검수 확정ㆍ전자 승인은 승인자 몫이라 approve 로 가른다
         'order-returns.confirmInspection' => ['order-returns', 'approve'],
         'order-returns.approve'           => ['order-returns', 'approve'],
-        // 두 걸음 결재 (2026-09-28) — 책임자와 최종승인자를 가른다
+        // 두 걸음 결재 (2026-09-28) — 책임자와 최종승인자를 가른다.
+        // 「확인했습니다」와 최종승인자 목록은 값을 만들지 않는다 — 조회로 둔다
+        // (POST 라 그냥 두면 create 로 읽혀, 볼 수만 있는 사람이 표시를 못 내린다).
+        'order-returns.seenInspection'    => ['order-returns', 'view'],
+        'order-returns.approverList'      => ['order-returns', 'view'],
         'order-returns.managerApprove'    => ['order-returns', 'inspect_approve'],
         'order-returns.managerReject'     => ['order-returns', 'inspect_approve'],
         'order-returns.finalSignSend'     => ['order-returns', 'final_approve'],

@@ -273,6 +273,19 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{orderReturn}/retry-adjust',    [\App\Http\Controllers\OrderReturnController::class, 'retryAdjust'])->name('retryAdjust');
         // 부분ㆍ자격 변경 건의 조정 금액을 적는다(2026-09-02 유형표)
         Route::post('/{orderReturn}/adjust-amount',   [\App\Http\Controllers\OrderReturnController::class, 'adjustAmount'])->name('adjust-amount');
+
+        /* 두 걸음 결재 (2026-09-28 지시) — 창고가 검수 승인을 청하면 책임자가 보고
+           승인ㆍ반려하고, 승인된 건은 최종승인자가 서명한다. 서명이 곧 실행이다. */
+        Route::post('/{orderReturn}/seen-inspection',  [\App\Http\Controllers\OrderReturnController::class, 'seenInspection'])->name('seenInspection');
+        Route::post('/{orderReturn}/manager-approve',  [\App\Http\Controllers\OrderReturnController::class, 'managerApprove'])->name('managerApprove');
+        Route::post('/{orderReturn}/manager-reject',   [\App\Http\Controllers\OrderReturnController::class, 'managerReject'])->name('managerReject');
+        Route::post('/{orderReturn}/final-sign-send',  [\App\Http\Controllers\OrderReturnController::class, 'finalSignSend'])->name('finalSignSend');
+        Route::post('/{orderReturn}/final-sign',       [\App\Http\Controllers\OrderReturnController::class, 'finalSign'])->name('finalSign');
+        Route::post('/{orderReturn}/final-reject',     [\App\Http\Controllers\OrderReturnController::class, 'finalReject'])->name('finalReject');
+        Route::post('/{orderReturn}/retry-refund',     [\App\Http\Controllers\OrderReturnController::class, 'retryRefund'])->name('retryRefund');
+        Route::post('/{orderReturn}/send-topup-link',  [\App\Http\Controllers\OrderReturnController::class, 'sendTopupLink'])->name('sendTopupLink');
+        // 최종승인자를 고를 목록 — 그 권한이 있는 사람만 나온다
+        Route::get('/{orderReturn}/approvers',         [\App\Http\Controllers\OrderReturnController::class, 'approverList'])->name('approverList');
     });
 
     // CE 샘플판매주문 — 목록·상세·신규를 한 화면의 탭으로 둔다
@@ -717,6 +730,18 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // 관리자 초대 수락 (로그인 불필요 — 이메일 링크)
+/* 교환ㆍ반품 최종승인자 서명 (2026-09-28 지시).
+
+   서명할 사람이 내부 직원이라 본인확인(NICE)은 걸지 않는다. 대신 링크를 그 권한이
+   있는 사람에게만 보내고, 24시간 뒤에는 열리지 않는다.
+
+   로그인 밖에 둔다 — 최종승인자가 폰으로 여는 자리라 로그인을 요구하면 대개 그
+   자리에서 멈춘다. */
+Route::prefix('return-sign')->name('return-sign.')->group(function () {
+    Route::get( '/{token}', [\App\Http\Controllers\ReturnSignPublicController::class, 'show'])->name('show');
+    Route::post('/{token}', [\App\Http\Controllers\ReturnSignPublicController::class, 'submit'])->name('submit');
+});
+
 Route::get( '/admin/invite/{token}', [AdminInvitationController::class, 'accept'])->name('admin.invite.accept');
 Route::post('/admin/invite/{token}', [AdminInvitationController::class, 'confirm'])->name('admin.invite.confirm');
 
