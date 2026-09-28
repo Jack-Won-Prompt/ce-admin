@@ -4909,8 +4909,11 @@ class PrescriptionController extends Controller
      * 보내는 그 자리에서 그린다. 그래서 목록의 파일 창에서 고를 수는 있어도 무엇이
      * 나가는지 볼 길이 없었다. 팩스는 되돌릴 수 없는데 이름만 보고 골라야 했다.
      *
-     * **보낼 때 쓰는 그 생성기를 그대로 부른다**(buildFaxCombinedPdf). 미리보기
-     * 전용으로 따로 그리면 둘이 조금씩 갈라져, 본 것과 나간 것이 달라진다.
+     * **보낼 때 쓰는 그 생성기를 그대로 부른다**(faxPdfBytes). 미리보기 전용으로
+     * 따로 그리면 둘이 조금씩 갈라져, 본 것과 나간 것이 달라진다.
+     *
+     * 첨부는 넘기지 않는다 — 이 자리는 **고른 서식 한 장**을 보여 주는 곳이다.
+     * 합본(buildFaxCombinedPdf)은 첨부를 모두 담으므로 그쪽을 부르면 안 된다.
      *
      * 내려받기(downloadFaxPdf)와 다른 점은 하나다 — **남기지 않는다.**
      * 저쪽은 그린 것을 팩스통합본으로 서류함에 넣는데, 미리 보기만 했는데 서류가
@@ -4926,7 +4929,7 @@ class PrescriptionController extends Controller
         }
 
         try {
-            [$pdf] = $this->buildFaxCombinedPdf($prescription, [$doc]);
+            $pdf = $this->faxPdfBytes($prescription, [$doc], []);
         } catch (\Throwable $e) {
             Log::warning('서식 미리보기 실패', ['doc' => $doc, 'rx' => $prescription->rx_number, 'error' => $e->getMessage()]);
 
@@ -5021,61 +5024,28 @@ class PrescriptionController extends Controller
     }
 
     /**
-     * 팩스통합본 PDF 생성 → [바이너리, 파일명]. 'delegation' 선택 시 요양비위임장 PDF를 FPDI로 병합.
+     * 팩스통합본 PDF 생성 → [바이너리, 파일명].
+     *
+     * **만드는 일은 faxPdfBytes 한 곳에서 한다** (2026-09-28 지시).
+     *
+     * 여태 이 함수가 제 손으로 다시 그렸다. 그런데 보내는 자리(saveFaxPdf)가 담는
+     * 것 가운데 셋 — 첨부 그림ㆍPDF 첨부ㆍ세금계산서ㆍ현금영수증 — 을 넘기지 않아,
+     * 「팩스 서류 PDF 다운로드」와 「팩스통합본 재생성」에서는 그것들이 **골라도 빠진
+     * 채로** 나왔다. 화면은 똑같이 보여 주는데 받은 종이에는 없었다.
+     *
+     * **첨부는 모두 담는다.** 보내는 자리는 담당자가 고른 것만 싣지만, 이 길은
+     * 「이 건의 서류 한 벌」을 만드는 자리다 — 고르는 창이 없으므로 빠뜨릴 것이 없다.
      */
     private function buildFaxCombinedPdf(Prescription $prescription, array $docs): array
     {
-        $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
-            ->where('status', 'agreed')
-            ->latest()
-            ->first();
+        $첨부들 = PrescriptionAttachment::where('prescription_id', $prescription->id)
+            ->whereNotNull('file_path')
+            ->orderBy('display_order')->orderBy('id')
+            ->pluck('id')->all();
 
-        $prescription->load(['patient', 'items', 'order']);
-        $patient = $prescription->patient;
-        $order   = $prescription->order;
+        $pdfOutput = $this->faxPdfBytes($prescription, $docs, $첨부들);
 
-        // 처방전 이미지 → base64 data URI (가로형이면 90° 회전해 세로형으로)
-        $rxImageDataUri = null;
-        if (in_array('prescription', $docs) && $prescription->image_path) {
-            $absPath = Storage::disk('public')->path($prescription->image_path);
-            if (file_exists($absPath)) {
-                $rxImageDataUri = $this->rxImageToPortraitDataUri(
-                    $absPath,
-                    (int) ($prescription->img_brightness ?? 0),
-                    (int) ($prescription->img_contrast ?? 0),
-                );
-            }
-        }
-
-        $parts = [];
-
-        if ($this->faxBodyHasAnything($docs, $prescription, $rxImageDataUri)) {
-            $html = view('prescriptions.fax-pdf', [
-                'prescription'   => $prescription,
-                'patient'        => $patient,
-                'consent'        => $consent,
-                'order'          => $order,
-                'docs'           => $docs,
-                'rxImageDataUri' => $rxImageDataUri,
-            ])->render();
-
-            $dompdf = $this->makeFaxDompdf();
-            $dompdf->loadHtml($html, 'UTF-8');
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
-            $parts[] = $dompdf->output();
-        }
-
-        // 요양비위임장(별지 제19호의7 원본 오버레이) 병합
-        if (in_array('delegation', $docs)) {
-            $delegBytes = app(\App\Http\Controllers\ConsentController::class)->overlayPdfBytes($prescription);
-            if ($delegBytes) {
-                $parts[] = $delegBytes;
-            }
-        }
-
-        $pdfOutput = $this->joinFaxParts($parts);
-
+        $patient  = $prescription->patient;
         $mobile   = preg_replace('/[^0-9]/', '', $patient?->mobile ?? '');
         $filename = '팩스통합본_' . ($patient?->name ?? '') . '_' . $mobile . '_' . now()->format('Ymd') . '.pdf';
 
@@ -5468,6 +5438,41 @@ class PrescriptionController extends Controller
     // ── 팩스 합본 PDF 저장 ────────────────────────────────
     private function saveFaxPdf(Prescription $prescription, array $documents, array $attachmentIds = []): array
     {
+        $pdfOutput = $this->faxPdfBytes($prescription, $documents, $attachmentIds);
+
+        $patient  = $prescription->patient;
+        $mobile   = preg_replace('/[^0-9]/', '', $patient?->mobile ?? '');
+        $dir      = 'fax/' . $prescription->rx_number;
+        $filename = '팩스통합본_' . ($patient?->name ?? '') . '_' . $mobile . '_' . now()->format('Ymd') . '.pdf';
+        $fullPath = storage_path('app/public/' . $dir . '/' . $filename);
+
+        if (!is_dir(dirname($fullPath))) {
+            mkdir(dirname($fullPath), 0755, true);
+        }
+
+        file_put_contents($fullPath, $pdfOutput);
+
+        $relativePath = $dir . '/' . $filename;
+        $url          = rtrim(request()->root(), '/') . '/storage/' . $relativePath;
+
+        Log::info('[Fax] PDF 저장 완료', ['path' => $relativePath, 'url' => $url]);
+
+        return [$relativePath, $url];
+    }
+
+    /**
+     * 팩스 합본 한 벌을 **바이트로** 만든다 — 저장하지 않는다 (2026-09-28 지시).
+     *
+     * 여태 합본을 만드는 자리가 둘이었다. 이 자리(보내기)는 첨부 그림ㆍPDF 첨부ㆍ
+     * 세금계산서ㆍ현금영수증까지 다 담았는데, 다른 자리(buildFaxCombinedPdf —
+     * 「팩스 서류 PDF 다운로드」ㆍ「팩스통합본 재생성」이 쓰던 것)는 그 셋을 넘기지
+     * 않아 **골라도 빠진 채로** 나왔다. 화면은 똑같이 「세금계산서」를 보여 주는데
+     * 받은 종이에는 없었다.
+     *
+     * 둘로 두면 또 갈린다. 만드는 일은 여기 하나로 모으고, 저장은 부르는 쪽이 한다.
+     */
+    private function faxPdfBytes(Prescription $prescription, array $documents, array $attachmentIds = []): string
+    {
         $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
             ->where('status', 'agreed')->latest()->first();
 
@@ -5597,26 +5602,7 @@ class PrescriptionController extends Controller
             }
         }
 
-        $pdfOutput = $this->joinFaxParts($parts);
-
-        $patient  = $prescription->patient;
-        $mobile   = preg_replace('/[^0-9]/', '', $patient?->mobile ?? '');
-        $dir      = 'fax/' . $prescription->rx_number;
-        $filename = '팩스통합본_' . ($patient?->name ?? '') . '_' . $mobile . '_' . now()->format('Ymd') . '.pdf';
-        $fullPath = storage_path('app/public/' . $dir . '/' . $filename);
-
-        if (!is_dir(dirname($fullPath))) {
-            mkdir(dirname($fullPath), 0755, true);
-        }
-
-        file_put_contents($fullPath, $pdfOutput);
-
-        $relativePath = $dir . '/' . $filename;
-        $url          = rtrim(request()->root(), '/') . '/storage/' . $relativePath;
-
-        Log::info('[Fax] PDF 저장 완료', ['path' => $relativePath, 'url' => $url]);
-
-        return [$relativePath, $url];
+        return $this->joinFaxParts($parts);
     }
 
     /**
