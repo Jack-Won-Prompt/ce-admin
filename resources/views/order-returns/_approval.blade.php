@@ -315,14 +315,21 @@
           @if($r->topup_sent_at)
             <div class="rt-kv"><span>차액 링크</span><span>
               {{ $r->topup_sent_at->format('Y-m-d H:i') }} 발송
-              @if($r->refund_stage === 'topup_paid')
+              @if($r->topup_paid_at)
                 · <span class="ap-chip ap-ok">입금 확인</span>
               @else
                 · <span class="ap-chip ap-wait">미납</span>
               @endif
             </span></div>
           @endif
-          @if($r->refund_stage !== 'topup_paid')
+          @if($r->topup_paid_at)
+            <div class="rt-kv"><span>차액 입금</span><span>
+              <b style="color:#B54708;">{{ number_format((int) $r->topup_amount) }}원</b>
+              <span style="color:var(--text-muted);font-weight:400;">
+                {{ $r->topup_paid_at->format('Y-m-d H:i') }}</span>
+            </span></div>
+          @endif
+          @if(! $r->topup_paid_at)
             <form method="POST" action="{{ route('order-returns.sendTopupLink', $r) }}" class="rt-go">
               @csrf
               <input type="text" name="mobile" class="form-control" maxlength="20"
@@ -335,6 +342,38 @@
             <div class="ap-hint">
               고객에게 전화로 안내한 뒤 눌러 주십시오 — 사전 안내 없이 링크만 발송하면 고객 문의가 발생합니다.
             </div>
+          @endif
+        @endif
+
+        {{-- 증빙 재발행 (2026-09-28 지시) ─────────────────────────────────
+
+             「금액 변경이 없으면 증빙은 손대지 않고, 금액이 바뀐 건은 고객이 결제해서
+             웹훅으로 전달받으면 증빙을 전부 다시 발행한다.」
+
+             차액이 들어오면 저절로 돈다. 이 자리는 그것이 막혔거나(팝빌이 잠겨
+             있었다거나) 담당자가 금액을 고친 뒤에 쓴다. 먼저 남김없이 무르고 그
+             다음에 내므로, 몇 번 눌러도 한 장씩만 남는다. --}}
+        @if($r->topup_paid_at || $r->docs_reissued_at)
+          <div class="rt-kv"><span>증빙 재발행</span><span>
+            @if($r->docs_reissued_at)
+              {{ $r->docs_reissued_at->format('Y-m-d H:i') }}
+              <span style="color:var(--text-muted);font-weight:400;">{{ $r->docs_reissue_note }}</span>
+            @else
+              <span style="color:var(--danger);font-weight:700;">아직 다시 내지 않았습니다</span>
+            @endif
+          </span></div>
+
+          @if(perm('order-returns', 'send'))
+            <form method="POST" action="{{ route('order-returns.reissueDocs', $r) }}" class="rt-go">
+              @csrf
+              <button type="submit" class="ds-btn"
+                      onclick="return ceConfirmClick(this, '세금계산서ㆍ현금영수증을 취소하고 바뀐 금액으로 다시 발행합니다. 국세청까지 갑니다. 계속하시겠습니까?');">
+                {{ $r->docs_reissued_at ? '증빙 다시 발행' : '증빙 재발행' }}
+              </button>
+              <span style="font-size:12px;color:var(--text-muted);">
+                거래명세서ㆍ카드매출전표도 바뀐 금액으로 다시 그립니다.
+              </span>
+            </form>
           @endif
         @endif
 

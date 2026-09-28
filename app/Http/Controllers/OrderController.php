@@ -174,9 +174,22 @@ class OrderController extends Controller
                     . ($o->returns->count() > 1 ? ' 외 ' . ($o->returns->count() - 1) . '건' : '')
                 : '판매';
 
+            /* 어느 접수인지 **번호로** 싣는다 (2026-09-28 지시).
+
+               여태 「교환」ㆍ「반품」이라는 종류만 있어, 그 주문에 붙은 접수가 무엇인지
+               알려면 교환/반품 화면으로 가 주문번호로 다시 찾아야 했다. 번호를 싣고
+               누르면 그 접수로 곧바로 간다. */
+            $rtNo = $rt
+                ? $rt->receipt_no . ($o->returns->count() > 1
+                    ? ' 외 ' . ($o->returns->count() - 1) . '건' : '')
+                : '';
+
             return [
                 'id'        => $o->id,
                 'order_no'  => $o->order_number,
+                // 교환ㆍ반품ㆍ취소 접수번호와 그 접수로 가는 열쇠
+                'return_no' => $rtNo,
+                'return_id' => $rt?->id,
                 /* 첨부 장수 — 0 이면 칸이 「-」로 선다. 처방전이 없는 건은 아예 없다. */
                 'att_count' => (int) ($attCounts[$o->prescription_id] ?? 0),
                 /* 무슨 서류인가 — 옆 칸이 세운 수의 내역이다. 같은 이름은 한 번만. */

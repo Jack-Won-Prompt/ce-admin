@@ -370,6 +370,29 @@ class PaymentLinkController extends Controller
     {
         $va = $res['virtualAccount'] ?? null;
 
+        /* 교환 차액은 **원 결제 줄을 덮지 않는다** (2026-09-28 지시).
+
+           toss_payments 는 한 주문 한 줄이고 order_id 가 유일이다. 아래에서
+           firstOrNew(['order_id' => …]) 로 덮어쓰므로, 차액 4,500원이 들어오면
+           37,500원 결제 줄이 4,500원으로 바뀌고 원 결제키가 사라진다 — 받은 돈이
+           4,500원으로 읽히고, 원 결제를 무를 수도 없게 된다.
+
+           차액은 접수에 따로 적고, 그 자리에서 증빙을 전부 다시 낸다. */
+        $차액접수 = \App\Models\OrderReturn::where('topup_payment_link_id', $link->id)->first();
+
+        if ($차액접수) {
+            try {
+                app(\App\Services\ReturnTopupPaid::class)->받음($차액접수, $link, $res);
+            } catch (\Throwable $e) {
+                Log::error('[결제전송] 차액 입금 처리 실패', [
+                    'link' => $link->id, 'receipt' => $차액접수->receipt_no,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            return;
+        }
+
         /* 한 주문에 한 줄이다 — toss_payments 는 order_id 가 유일하다.
            그런데 예전에는 결제키로 찾아 올렸다. 가상계좌를 먼저 발급해 둔
            주문을 고객이 카드로 내면, 같은 주문에 다른 결제키로 한 줄을 더

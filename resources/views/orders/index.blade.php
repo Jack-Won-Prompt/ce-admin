@@ -458,6 +458,25 @@ window.HELP_TOUR_STEPS = [
         },
       },
       {
+        /* 그 주문에 붙은 교환ㆍ반품ㆍ취소 접수번호 (2026-09-28 지시).
+
+           여태 옆 칸이 종류만 말해, 어느 접수인지 알려면 교환/반품 화면으로 가
+           주문번호로 다시 찾아야 했다. 누르면 그 접수로 곧바로 간다. */
+        header: '교환/반품 접수번호', name: 'return_no', width: 160, sortable: true,
+        renderer: (v, row) => {
+          if (!v) { return document.createTextNode(''); }
+
+          const a = document.createElement('a');
+          a.textContent = v;
+          a.href = row.return_id ? ('/order-returns/' + row.return_id) : '/order-returns';
+          a.style.cssText = 'color:var(--primary);font-weight:600;';
+          a.setAttribute('data-ce-tab', '교환/반품 - ' + v);
+          a.setAttribute('data-ce-icon', 'bx-undo');
+          a.onclick = (ev) => ev.stopPropagation();
+          return a;
+        },
+      },
+      {
         /* 교환·반품·취소가 어디까지 왔는지. 판매 건은 빈칸이다 — 옆의 '상태'가 그 자리다.
 
            이름이 「등록 상태」였다 (2026-09-16 바로잡음). 담은 값은 접수ㆍ수거중ㆍ

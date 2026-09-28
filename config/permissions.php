@@ -438,6 +438,8 @@ return [
         // 실행이 막히면 다시 시도한다 — 돈이 나가는 일이라 send 로 가른다
         'order-returns.retryRefund'       => ['order-returns', 'send'],
         'order-returns.sendTopupLink'     => ['order-returns', 'send'],
+        // 증빙 재발행은 국세청까지 간다 — 등록ㆍ수정과 따로 통제한다
+        'order-returns.reissueDocs'       => ['order-returns', 'send'],
         // 마이너스 발행은 국세청으로 나간다 — 등록ㆍ수정과 따로 통제한다
         'order-returns.issueCredit'       => ['order-returns', 'send'],
         // 창고 검수 결과를 물어 오는 것은 조회다

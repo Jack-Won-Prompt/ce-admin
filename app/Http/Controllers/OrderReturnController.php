@@ -112,6 +112,9 @@ class OrderReturnController extends Controller
                권한 판정은 서버가 한다(팝오버를 열 때 다시 묻는다). */
             'sign_btn'        => $r->final_signed_at ? 'view'
                 : (($r->inspect_confirmed_at && $r->needsFinalSign()) ? 'sign' : ''),
+            /* 증빙을 다시 낸 자취 (2026-09-28 지시). 금액이 바뀐 건에만 선다 —
+               금액 변경이 없으면 증빙은 손대지 않는 것이 규칙이다. */
+            'docs_reissued'   => $r->docs_reissued_at?->format('Y-m-d H:i') ?? '',
             /* 창고가 실물을 보고 적은 말. 목록에서는 있다·없다만 보이면 된다 —
                읽는 자리는 상세다. 있는데 아무 표가 없으면 열어 볼 까닭을 모른다. */
             'pl3_note'  => $r->pl3_note ? '있음' : '',
@@ -1304,6 +1307,28 @@ class OrderReturnController extends Controller
         return str_starts_with($말, '!')
             ? back()->withErrors(['pay' => ltrim($말, '! ')])
             : back()->with('status', $말);
+    }
+
+    /**
+     * 증빙을 손으로 다시 낸다 (2026-09-28 지시).
+     *
+     * 차액이 들어오면 저절로 돈다. 이 단추는 그것이 막혔거나(팝빌이 잠겨 있었다거나)
+     * 담당자가 금액을 고친 뒤에 쓰는 자리다.
+     *
+     * 먼저 남김없이 무르고 그 다음에 내므로, 몇 번 눌러도 한 장씩만 남는다.
+     */
+    public function reissueDocs(OrderReturn $orderReturn): RedirectResponse
+    {
+        if (! perm('order-returns', 'send')) {
+            return back()->withErrors(['docs' => '발행 권한이 필요합니다.']);
+        }
+
+        $out = app(\App\Services\ReturnDocsReissue::class)
+            ->재발행($orderReturn->fresh(['order.patient', 'order.prescription']), Auth::user());
+
+        return $out['ok']
+            ? back()->with('status', '증빙을 다시 냈습니다 — ' . $out['note'])
+            : back()->withErrors(['docs' => $out['note']]);
     }
 
     /**

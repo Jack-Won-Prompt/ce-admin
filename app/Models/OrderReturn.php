@@ -55,6 +55,8 @@ class OrderReturn extends Model
         'final_sign_base64', 'final_sign_ip', 'final_sign_user_agent',
         'refund_attempts', 'refund_last_error',
         'topup_payment_link_id', 'topup_sent_at',
+        'topup_paid_at', 'topup_payment_key', 'topup_amount',
+        'docs_reissued_at', 'docs_reissued_by', 'docs_reissue_note',
         // 창고가 지금 무엇을 하고 있는가 — 우리 단계(status)와 다른 것을 잰다
         'pl3_status', 'pl3_status_label', 'pl3_status_at', 'pl3_note', 'pl3_note_at',
         // 환불을 실제로 처리한 자취(요청서 4쪽)
@@ -86,6 +88,8 @@ class OrderReturn extends Model
         'final_sign_expires_at' => 'datetime',
         'final_signed_at'       => 'datetime',
         'topup_sent_at'         => 'datetime',
+        'topup_paid_at'         => 'datetime',
+        'docs_reissued_at'      => 'datetime',
     ];
 
     public const TYPE_EXCHANGE = 'exchange';

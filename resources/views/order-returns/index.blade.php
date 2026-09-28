@@ -310,6 +310,9 @@
       /* 사람과 때를 나눈다 — 한 칸에 뭉치면 날짜로 정렬도 셈도 못 한다 */
       { header: '최종승인자', name: 'final_signer', width: 100, sortable: true },
       { header: '서명일시', name: 'final_signed_at', width: 150, align: 'center', sortable: true },
+      /* 금액이 바뀐 건만 선다 — 금액 변경이 없으면 증빙은 손대지 않는 것이 규칙이다
+         (2026-09-28 지시). 빈칸이 곧 「증빙은 그대로다」라는 말이다. */
+      { header: '증빙 재발행', name: 'docs_reissued', width: 150, align: 'center', sortable: true },
       /* 글 자체가 아니라 있다ㆍ없다만 싣는다 — 읽는 자리는 상세다. 이름이 「비고」면
          글이 뜰 것으로 읽혀, 「유무」를 붙여 못박는다. */
       { header: '창고 검수 비고 유무', name: 'pl3_note', width: 130, align: 'center', sortable: true },

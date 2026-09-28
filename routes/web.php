@@ -284,6 +284,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{orderReturn}/final-reject',     [\App\Http\Controllers\OrderReturnController::class, 'finalReject'])->name('finalReject');
         Route::post('/{orderReturn}/retry-refund',     [\App\Http\Controllers\OrderReturnController::class, 'retryRefund'])->name('retryRefund');
         Route::post('/{orderReturn}/send-topup-link',  [\App\Http\Controllers\OrderReturnController::class, 'sendTopupLink'])->name('sendTopupLink');
+        // 증빙을 손으로 다시 낸다 — 차액이 들어오면 저절로 돈다
+        Route::post('/{orderReturn}/reissue-docs',     [\App\Http\Controllers\OrderReturnController::class, 'reissueDocs'])->name('reissueDocs');
         // 최종승인자를 고를 목록 — 그 권한이 있는 사람만 나온다
         Route::get('/{orderReturn}/approvers',         [\App\Http\Controllers\OrderReturnController::class, 'approverList'])->name('approverList');
         // 창고가 청한 검수 요청의 원문 — 팝오버가 읽는다
