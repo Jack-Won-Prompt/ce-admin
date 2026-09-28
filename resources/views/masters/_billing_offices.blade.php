@@ -49,6 +49,15 @@
   <button type="button" class="ds-btn" onclick="boOpenNhis()" title="공단 지사찾기 사이트를 새 창으로 엽니다">
     <i class="fa-solid fa-arrow-up-right-from-square"></i> 공단 지사찾기
   </button>
+  {{-- 엑셀로 한꺼번에 올린다 (2026-09-27 확인요청 8쪽).
+
+       공단 지사만 172곳이다. 한 줄씩 손으로 넣으라고 하면 아무도 넣지 않고,
+       넣다 만 표는 없느니만 못하다 — 담당자가 「여기 없으니 없는 곳」으로 읽는다. --}}
+  <input type="file" id="boUploadInput" accept=".xlsx,.csv" style="display:none;" onchange="boUpload(this)">
+  <button type="button" class="ds-btn" onclick="document.getElementById('boUploadInput').click()"
+          title="엑셀(.xlsx) 또는 CSV 로 청구처를 한꺼번에 올립니다 — 같은 곳은 덮어씁니다">
+    <i class="fa-solid fa-file-arrow-up"></i> 엑셀 업로드
+  </button>
   <button type="button" class="ds-btn ds-btn-primary" onclick="boNew()">+ 청구처 추가</button>
 </div>
 
@@ -186,6 +195,53 @@ function boKind(btn, kind) {
 
 function boOpenNhis() {
   window.open(BO_NHIS_URL, 'nhis_branch');
+}
+
+/* 엑셀로 한꺼번에 올린다 (2026-09-27 확인요청 8쪽).
+
+   구분은 지금 보고 있는 갈래를 따른다 — 「지자체」를 보며 올리면 지자체로 들어간다.
+   「전체」를 보고 있으면 공단으로 본다(수가 압도적으로 많다).
+
+   같은 곳(구분＋기관명＋부서)은 덮어쓴다. 다시 올려도 줄이 불어나지 않으므로
+   고친 표를 그대로 다시 올리면 된다. */
+async function boUpload(input) {
+  const 파일 = input.files?.[0];
+  input.value = '';                       // 같은 파일을 다시 골라도 열리게 비운다
+  if (!파일) return;
+
+  const 갈래 = boKindFilter || 'nhis';
+  const 갈래말 = 갈래 === 'local' ? '지자체' : '건강보험공단';
+
+  const 갈까 = await ceConfirm(
+    '「' + 파일.name + '」을 ' + 갈래말 + ' 청구처로 올립니다.\n\n'
+    + '같은 곳(기관명ㆍ부서가 같은 줄)은 덮어씁니다. 표에 없는 곳은 지우지 않습니다.',
+    { title: '청구처 엑셀 업로드', confirmText: '올립니다', cancelText: '그만' });
+
+  if (!갈까) return;
+
+  const fd = new FormData();
+  fd.append('file', 파일);
+  fd.append('kind', 갈래);
+
+  try {
+    const res = await fetch(@json(route('billing-offices.upload')), {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json' },
+      body: fd,
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      ceAlert(data.message || '올리지 못했습니다.', { title: '청구처 업로드', tone: 'warning' });
+      return;
+    }
+
+    showToast(data.message, 'success', 5000);
+    boLoad();
+  } catch (e) {
+    ceAlert('올리지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.',
+            { title: '청구처 업로드', tone: 'danger' });
+  }
 }
 
 async function boLoad() {

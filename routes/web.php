@@ -645,6 +645,8 @@ Route::middleware(['auth'])->group(function () {
            고르면 그 값으로 등록되어, 다음 건부터는 위의 lookup 이 우리 표에서 찾는다. */
         Route::get('/resolve',          [\App\Http\Controllers\BillingOfficeController::class, 'resolve'])->name('resolve');
         Route::post('/',                [\App\Http\Controllers\BillingOfficeController::class, 'store'])->name('store');
+        /* 엑셀로 한꺼번에 올린다 (2026-09-27 확인요청 8쪽) — 공단 지사만 172곳이다 */
+        Route::post('/upload',          [\App\Http\Controllers\BillingOfficeController::class, 'upload'])->name('upload');
         Route::put('/{billingOffice}',  [\App\Http\Controllers\BillingOfficeController::class, 'update'])->name('update');
         Route::delete('/{billingOffice}', [\App\Http\Controllers\BillingOfficeController::class, 'destroy'])->name('destroy');
     });

@@ -7,6 +7,7 @@ use App\Models\BillingOfficeArea;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 /**
  * 청구처 정보 — 값을 주고받는 길만 남았다.
@@ -188,6 +189,159 @@ class BillingOfficeController extends Controller
             ->log("청구처 등록: {$office->displayName()}");
 
         return response()->json(['success' => true, 'row' => $this->payload($office->load('areas'))]);
+    }
+
+    /**
+     * 엑셀로 한꺼번에 올린다 (2026-09-27 확인요청 8쪽).
+     *
+     * 공단 지사만 172곳이다. 한 줄씩 손으로 넣으라고 하면 아무도 넣지 않고,
+     * 넣다 만 표는 없느니만 못하다 — 담당자가 「여기 없으니 없는 곳」으로 읽는다.
+     *
+     * **같은 곳은 덮어쓴다.** 무엇이 같은 곳인가는 구분＋기관명＋부서로 본다.
+     * 한 지사에 보험급여1팀ㆍ2팀이 따로 있어 기관명만으로는 갈리지 않는다.
+     * 그래서 다시 올려도 줄이 불어나지 않는다 — 고친 표를 그대로 다시 올리면 된다.
+     *
+     * 지우지는 않는다. 표에 없는 곳을 지우면, 한 지역만 담긴 표를 올렸을 때 나머지가
+     * 통째로 사라진다.
+     */
+    public function upload(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,csv,txt', 'max:10240'],
+            'kind' => ['nullable', 'string', Rule::in(array_keys(BillingOffice::KINDS))],
+        ], [
+            'file.mimes' => '엑셀(.xlsx) 또는 CSV 파일만 올릴 수 있습니다.',
+            'file.max'   => '파일 크기는 10MB 이하여야 합니다.',
+        ]);
+
+        /* 칸 이름은 여러 가지로 적힌다 — 「공단」ㆍ「기관명」ㆍ「지사」가 다 같은 칸이다 */
+        $칸이름 = [
+            'office_name'  => ['기관명', '공단', '지사', '기관', '청구처'],
+            'dept'         => ['부서', '담당부서'],
+            'region'       => ['지역본부', '지역'],
+            'manager_name' => ['담당자', '확인 담당자', '담당자명'],
+            'title'        => ['직책'],
+            'duty'         => ['담당업무', '업무'],
+            'tel'          => ['TEL', '전화번호', '전화'],
+            'fax'          => ['FAX', '팩스번호', '팩스'],
+            'address'      => ['주소', '소재지'],
+            'note'         => ['비고', '참고'],
+        ];
+
+        try {
+            [$머리, $줄들] = \App\Support\SimpleXlsx::머리글찾아읽기(
+                $request->file('file')->getRealPath(),
+                array_values($칸이름),
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        /* **칸을 모두 찾는다 — 같은 머리글이 두 번 나오는 표가 있다.**
+
+           받아 본 공단 지사 목록이 그랬다. 왼쪽에 예전 주소ㆍ부서ㆍTELㆍFAX 가 있고,
+           그 오른쪽에 「확인 담당자」와 함께 09월에 다시 확인한 같은 이름의 칸들이
+           붙어 있었다. 왼쪽만 집으면 「다른 지역으로 발령」이라 적힌 옛 값이 들어온다. */
+        $자리 = [];
+        foreach ($칸이름 as $칸 => $이름들) {
+            $자리[$칸] = \App\Support\SimpleXlsx::칸들찾기($머리, $이름들);
+        }
+
+        if (! $자리['office_name']) {
+            return response()->json([
+                'success' => false,
+                'message' => '기관명 칸을 찾지 못했습니다 — 머리글에 「기관명」 또는 「공단」이 있어야 합니다.',
+            ], 422);
+        }
+
+        /* 구분을 고르지 않았으면 공단으로 본다 — 지자체는 수가 적어 손으로 넣는다 */
+        $구분 = $request->input('kind') ?: BillingOffice::KIND_NHIS;
+
+        /* **다시 확인한 줄이 있으면 옛 줄은 버린다.**
+
+           같은 머리글이 두 벌인 표에서 오른쪽 벌이 비어 있는 줄은 아직 확인하지 않은
+           옛 줄이다. 같은 기관명을 다시 확인해 적은 줄이 표 안에 따로 있으면, 그 옛
+           줄은 담지 않는다 — 담으면 「보험급여팀 / 조미영과장님」처럼 발령 메모가
+           부서 이름으로 남아 한 지사가 두 줄로 서고, 담당자가 어느 쪽으로 팩스를
+           보낼지 가릴 수 없다.
+
+           확인한 줄이 아예 없는 곳(대구달성ㆍ부산동래)은 옛 값이라도 담는다.
+           비어 있는 것보다 낫고, 화면에서 고칠 수 있다. */
+        $오른칸 = [];
+        foreach ($자리 as $칸들) {
+            if (count($칸들) >= 2) {
+                $오른칸[] = end($칸들);
+            }
+        }
+
+        $다시확인함 = [];
+        if ($오른칸) {
+            foreach ($줄들 as $줄) {
+                $이름 = \App\Support\SimpleXlsx::값집기($줄, $자리['office_name']);
+                if ($이름 !== '' && \App\Support\SimpleXlsx::값집기($줄, $오른칸) !== '') {
+                    $다시확인함[$이름] = true;
+                }
+            }
+        }
+
+        $새로 = 0;
+        $고침 = 0;
+        $건너뜀 = 0;
+
+        DB::transaction(function () use ($줄들, $자리, $구분, $오른칸, $다시확인함, &$새로, &$고침, &$건너뜀) {
+            foreach ($줄들 as $줄) {
+                /* 칸이 여럿이면 오른쪽 것이 먼저다 — 고친 값을 오른쪽에 덧붙이기 때문 */
+                $집다 = static fn (array $칸들): string
+                    => \App\Support\SimpleXlsx::값집기($줄, $칸들);
+
+                $이름 = $집다($자리['office_name']);
+
+                /* 「No」만 적힌 줄, 합계 줄, 빈 줄은 지나간다 */
+                if ($이름 === '' || mb_strlen($이름) < 2) {
+                    $건너뜀++;
+                    continue;
+                }
+
+                /* 같은 곳을 다시 확인해 적은 줄이 있으면, 확인 안 된 이 줄은 옛 것이다 */
+                if ($오른칸 && ($다시확인함[$이름] ?? false) && $집다($오른칸) === '') {
+                    $건너뜀++;
+                    continue;
+                }
+
+                $값 = ['kind' => $구분, 'office_name' => $이름];
+                foreach (['dept', 'region', 'manager_name', 'title', 'duty', 'tel', 'fax', 'address', 'note'] as $칸) {
+                    $값[$칸] = $집다($자리[$칸]);
+                }
+
+                $있던것 = BillingOffice::where('kind', $구분)
+                    ->where('office_name', $이름)
+                    ->where('dept', $값['dept'])
+                    ->first();
+
+                if ($있던것) {
+                    /* 빈 칸으로 덮지 않는다 — 표에 안 적힌 것을 지우면, 손으로 채워
+                       둔 담당자ㆍ팩스가 표 한 번에 날아간다 */
+                    $고칠것 = array_filter($값, fn ($v) => $v !== '');
+                    $있던것->update($고칠것);
+                    $고침++;
+                } else {
+                    BillingOffice::create($값 + ['created_by' => auth()->id()]);
+                    $새로++;
+                }
+            }
+        });
+
+        activity()->causedBy(auth()->user())
+            ->withProperties(['새로' => $새로, '고침' => $고침, '건너뜀' => $건너뜀])
+            ->log('청구처 엑셀 업로드 (' . BillingOffice::KINDS[$구분] . ')');
+
+        return response()->json([
+            'success' => true,
+            'message' => "새로 {$새로}곳, 고쳐 쓴 곳 {$고침}곳" . ($건너뜀 ? ", 건너뛴 줄 {$건너뜀}개" : '') . '.',
+            'added'   => $새로,
+            'updated' => $고침,
+            'skipped' => $건너뜀,
+        ]);
     }
 
     public function update(Request $request, BillingOffice $billingOffice): JsonResponse
