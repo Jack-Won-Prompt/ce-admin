@@ -217,6 +217,31 @@
 <script>
 (function () {
   const SHOW_BASE = @json(url('order-returns'));
+  /* 「결재」 단추는 그리드가 그릴 때 곧바로 불린다 — **그리드보다 먼저** 서 있어야
+     한다. 값을 담는 함수는 호이스팅되지 않아, 아래에 두면 첫 그림에서 죽는다
+     (2026-09-28 시험에서 ReferenceError 로 드러남). */
+  window.rtSignBtn = function (v, row) {
+    const box = document.createElement('div');
+    box.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+
+    if (!v) { box.textContent = ''; return box; }
+
+    const 서명됨 = v === 'view';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = 서명됨 ? '서명 확인' : '서명';
+    b.title = 서명됨 ? '받은 서명을 확인합니다' : '이 자리에서 최종승인자 서명을 받습니다';
+    b.style.cssText = 'height:22px;padding:0 9px;font-size:11px;font-weight:700;cursor:pointer;'
+      + 'border-radius:999px;line-height:1;'
+      + (서명됨
+          ? 'border:1px solid var(--border);background:#fff;color:var(--text-muted);'
+          : 'border:1px solid var(--primary);background:var(--primary-light);color:var(--primary);');
+    b.onclick = (ev) => { ev.stopPropagation(); rtSignOpen(row.id); };
+    box.appendChild(b);
+    return box;
+  };
+
+
   const grid = new wwGrid({
     el: document.getElementById('rtnGrid'),
     height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
@@ -459,27 +484,6 @@
   const TABS  = { list: 'rtnTabList',  show: 'rtnTabShow',  new: 'rtnTabNew'  };
 
   /* ── 목록의 「결재」 단추와 서명 팝오버 (2026-09-28 지시) ──────────────── */
-
-  window.rtSignBtn = function (v, row) {
-    const box = document.createElement('div');
-    box.style.cssText = 'display:flex;align-items:center;justify-content:center;';
-
-    if (!v) { box.textContent = ''; return box; }
-
-    const 서명됨 = v === 'view';
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = 서명됨 ? '서명 확인' : '서명';
-    b.title = 서명됨 ? '받은 서명을 확인합니다' : '이 자리에서 최종승인자 서명을 받습니다';
-    b.style.cssText = 'height:22px;padding:0 9px;font-size:11px;font-weight:700;cursor:pointer;'
-      + 'border-radius:999px;line-height:1;'
-      + (서명됨
-          ? 'border:1px solid var(--border);background:#fff;color:var(--text-muted);'
-          : 'border:1px solid var(--primary);background:var(--primary-light);color:var(--primary);');
-    b.onclick = (ev) => { ev.stopPropagation(); rtSignOpen(row.id); };
-    box.appendChild(b);
-    return box;
-  };
 
   let rtSignId = null, rtSignCv = null, rtSignCtx = null, rtSign칠함 = false, rtSign보냄 = false;
 
