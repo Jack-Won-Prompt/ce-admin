@@ -81,6 +81,15 @@ class OrderGridExtras
      */
     private array $linkSent = [];
 
+    /**
+     * 정정을 거친 주문 id (2026-09-27 확인요청 5쪽).
+     *
+     * 「원/추가」 칸이 정정 건에서도 「원 주문」이라고만 적혀, 지금 보고 있는 줄이
+     * 고쳐진 뒤의 것인지 알 수 없었다. 네 화면이 이 칸을 함께 쓰므로 여기서 한 번에
+     * 가린다 — 화면마다 따로 적으면 언젠가 갈린다.
+     */
+    private array $amended = [];
+
     public static function forPatients(Collection $patientIds): self
     {
         $self = new self();
@@ -93,6 +102,7 @@ class OrderGridExtras
         $self->loadPrivacy($ids);
         $self->loadOrderSeq($ids);
         $self->loadPaymentLinks($ids);
+        $self->loadAmended($ids);
 
         /* 위임동의는 처방전에 달리고 처방전이 사람에 달린다. 사람마다 「가장 최근 하나」를
            본다 — 동의를 받았으면 그것이 사실이고, 없으면 마지막으로 보낸 것이 어떻게
@@ -191,8 +201,17 @@ class OrderGridExtras
             'agency_code'     => $o?->prescription?->claim_agency ?? '',
             /* 주문 구분 — 원 주문인가 추가 주문인가 (2026-09-14 확인요청 4쪽).
                옆의 「유형」 칸은 위드웍스가 준 판매유형이라 우리가 새 이름을 넣을 수 없다.
-               둘 다 적는다 — 빈칸은 「원 주문」과 「아직 안 정해짐」을 가르지 못한다. */
-            'order_kind'      => $o?->orderKindLabel() ?? '',
+               둘 다 적는다 — 빈칸은 「원 주문」과 「아직 안 정해짐」을 가르지 못한다.
+
+               정정을 거친 건이면 「-정정」을 붙인다 (2026-09-27 확인요청 5쪽) —
+               원주문 / 원주문-취소 / 원주문-정정. 물러난 두 줄은 이 칸을 각 화면이
+               덮어 적는다(OrderAmendLines::원줄말ㆍ취소줄말). */
+            'order_kind'      => $o
+                ? \App\Support\OrderAmendLines::지금줄말(
+                      $o->orderKindLabel(),
+                      isset($this->amended[$o->id])
+                  )
+                : '',
             /* 취소 상태 — 창고가 되돌리기를 기다리는 동안의 자리 (2026-09-14 지시).
                며칠이 걸릴 수도 있어, 그 사이 이 주문이 「취소를 청해 둔 건」임을 목록이
                말해 주어야 한다. 그러지 않으면 다른 담당자가 결제 안내를 보낸다. */
@@ -398,6 +417,29 @@ class OrderGridExtras
 
         foreach ($rows as $oid) {
             $this->linkSent[(int) $oid] = true;
+        }
+    }
+
+    /**
+     * 정정을 거친 주문을 한 번에 가려 둔다 (2026-09-27 확인요청 5쪽).
+     *
+     * 표가 아직 없는 서버(마이그레이션 전)에서는 조용히 지나간다 — 배포 순서 탓에
+     * 네 화면이 한꺼번에 죽으면 안 된다.
+     */
+    private function loadAmended(Collection $ids): void
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('order_amendments')) {
+            return;
+        }
+
+        $rows = \App\Models\OrderAmendment::query()
+            ->join('orders', 'orders.id', '=', 'order_amendments.order_id')
+            ->whereIn('orders.patient_id', $ids)
+            ->distinct()
+            ->pluck('order_amendments.order_id');
+
+        foreach ($rows as $oid) {
+            $this->amended[(int) $oid] = true;
         }
     }
 

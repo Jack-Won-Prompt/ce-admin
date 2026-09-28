@@ -271,6 +271,10 @@ class SettlementController extends Controller
               + $extras->ww($order, $order->prescription, $order->patient)
               + $extras->of($order);
 
+            /* 지금 값 줄의 「원/추가」는 OrderGridExtras::of 가 이미 적었다
+               (「원주문-정정」). 물러난 두 줄이 쓸 바탕말만 여기서 쥔다. */
+            $바탕구분 = $order->orderKindLabel();
+
             $폄 = [$줄];
 
             /* 물러난 줄에는 **id 를 싣지 않는다** — 마감 확정ㆍ입금 확인 같은 단추가
@@ -314,8 +318,10 @@ class SettlementController extends Controller
                     'ww_so_no'      => $a->withworks_so_no ?? '',
                 ];
 
+                /* 「원/추가」 칸도 줄마다 갈라 적는다 (2026-09-27 확인요청 5쪽) */
                 $폄[] = ['status'       => \App\Support\OrderAmendLines::원주문말($a),
                          'status_key'   => '',
+                         'order_kind'   => \App\Support\OrderAmendLines::원줄말($바탕구분),
                          'total_amount' => $금액,
                          'nhis_amount'  => (int) $a->nhis_amount,
                          'copay'        => (int) $a->patient_copay]
@@ -323,6 +329,7 @@ class SettlementController extends Controller
 
                 $폄[] = ['status'       => \App\Support\OrderAmendLines::취소말($a),
                          'status_key'   => '',
+                         'order_kind'   => \App\Support\OrderAmendLines::취소줄말($바탕구분),
                          'total_amount' => -$금액,
                          'nhis_amount'  => -(int) $a->nhis_amount,
                          'copay'        => -(int) $a->patient_copay]

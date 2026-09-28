@@ -380,6 +380,10 @@ class FinanceController extends Controller
             $금액 = (int) $a->patient_copay + (int) $a->nhis_amount;
             $날   = $a->amended_at?->format('Y-m-d') ?? '';
 
+            /* 「원/추가」 칸도 줄마다 갈라 적는다 (2026-09-27 확인요청 5쪽).
+               지금 값 줄은 OrderGridExtras::of 가 「원주문-정정」으로 적는다. */
+            $바탕구분 = $o?->orderKindLabel() ?? '원 주문';
+
             $바탕 = [
                 'reason'     => $a->reason ?? '',
                 'order_no'   => $o?->order_number ?? '',
@@ -398,6 +402,7 @@ class FinanceController extends Controller
             // 아래에서 위로 쌓으므로 취소를 먼저 넣는다 — 화면에는 원 주문이 먼저 선다
             $out[$a->order_id][] = $바탕 + [
                 'kind'       => "정정 {$a->seq}차 · 원 주문",
+                'order_kind' => \App\Support\OrderAmendLines::원줄말($바탕구분),
                 'qty'        => (int) $a->quantity,
                 'total'      => $금액,
                 'billed'     => (int) $a->total_amount,
@@ -413,6 +418,7 @@ class FinanceController extends Controller
 
             $out[$a->order_id][] = $바탕 + [
                 'kind'       => "정정 {$a->seq}차 · 취소",
+                'order_kind' => \App\Support\OrderAmendLines::취소줄말($바탕구분),
                 'qty'        => -(int) $a->quantity,
                 'total'      => -$금액,
                 'billed'     => -(int) $a->total_amount,

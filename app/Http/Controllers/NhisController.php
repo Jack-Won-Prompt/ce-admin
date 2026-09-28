@@ -220,6 +220,10 @@ class NhisController extends Controller
               + $extras->ww($o, $o->prescription, $o->patient)
               + $extras->of($o);
 
+            /* 지금 값 줄의 「원/추가」는 OrderGridExtras::of 가 이미 적었다
+               (「원주문-정정」). 물러난 두 줄이 쓸 바탕말만 여기서 쥔다. */
+            $바탕구분 = $o->orderKindLabel();
+
             $폄 = [$줄];
 
             /* 물러난 줄에는 **id 를 싣지 않는다.** 겹쳐 누르면 이미 지난 금액으로
@@ -259,7 +263,10 @@ class NhisController extends Controller
 
                    두 이름을 다 싣는다. 이 표를 읽는 자리가 청구 화면 하나가 아니고,
                    한쪽만 맞춰 두면 다음에 또 갈린다. */
+                /* 「원/추가」 칸도 줄마다 갈라 적는다 (2026-09-27 확인요청 5쪽).
+                   바탕말은 지금 주문의 것을 쓴다 — 추가 주문이면 「추가주문-취소」다. */
                 $폄[] = ['nhis_status'   => \App\Support\OrderAmendLines::원주문말($a),
+                         'order_kind'    => \App\Support\OrderAmendLines::원줄말($바탕구분),
                          'nhis_amount'   => (int) $a->nhis_amount,
                          'copay'         => (int) $a->patient_copay,
                          'patient_copay' => (int) $a->patient_copay,
@@ -267,6 +274,7 @@ class NhisController extends Controller
                       + $물러난값 + $줄;
 
                 $폄[] = ['nhis_status'   => \App\Support\OrderAmendLines::취소말($a),
+                         'order_kind'    => \App\Support\OrderAmendLines::취소줄말($바탕구분),
                          'nhis_amount'   => -(int) $a->nhis_amount,
                          'copay'         => -(int) $a->patient_copay,
                          'patient_copay' => -(int) $a->patient_copay,
