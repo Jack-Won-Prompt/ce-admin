@@ -1164,8 +1164,20 @@ class OrderReturnController extends Controller
         app(\App\Services\ReturnNotice::class)
             ->tellTaker($orderReturn->fresh(), '책임자가 검수를 반려했습니다 — ' . $data['reason'], 'warning');
 
-        return back()->with('status', '반려했습니다 — 창고로 반송하여 재검수를 요청했습니다.'
-            . ($보냈나 ? '' : ' (창고에 전달하지 못했습니다 — 담당자가 직접 안내해 주십시오.)'));
+        /* 창고에 전하지 못한 것은 **붉은 줄로 세운다** (2026-09-28 무한시험 4회차).
+
+           여태 파란 줄 뒤에 괄호로 붙였다. 반려는 되었으나 창고는 모르는 상태인데,
+           파란 줄이라 담당자는 끝난 것으로 읽고 전화하지 않는다 — 물건은 창고에
+           그대로 있고 아무도 다시 검수하지 않는다. */
+        if (! $보냈나) {
+            return back()
+                ->with('status', '반려했습니다 — 창고로 반송하여 재검수를 요청했습니다.')
+                ->withErrors(['appr' =>
+                    '창고에 전달하지 못했습니다 — 담당자가 창고에 직접 안내해 주십시오. '
+                    . '전하지 않으면 물건이 창고에 그대로 있고 다시 검수되지 않습니다.']);
+        }
+
+        return back()->with('status', '반려했습니다 — 창고로 반송하여 재검수를 요청했습니다.');
     }
 
     /**
