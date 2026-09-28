@@ -190,6 +190,15 @@ class WithworksLink
             'shipping_address'        => $this->배송지($order),
             'shipping_address_detail' => $order->shipping_address_detail ?? $rx?->address_detail,
             'delivery_date'           => $order->ship_request_date?->format('Y-m-d'),
+            /* 거래명세서 발행일 — 종이에 찍힌 날을 창고도 알아야 한다 (2026-09-28 지시).
+
+               여태 확정(so_confirm)에만 실었다. 그 길로는 **정정이 빠진다** — 정정은
+               옛 판매주문을 취소하고 so_store 로 새로 세우는데, 그때 이미 굳어 있던
+               발행일이 새 주문에는 실리지 않아 창고 쪽 칸이 비어 있었다.
+
+               저쪽이 등록 경로에서도 받도록 고쳤다(withworks 64c792638). 날이 아직
+               없으면 보내지 않는다 — 없는 것은 없는 대로 둔다. */
+            'statement_date'          => $order->statement_date?->format('Y-m-d'),
             // 콜로플라스트 거래처 id — 테스트와 운영이 다르다(설정 화면에서 관리)
             'ho_account_id'           => config('services.demoworks.account_id'),
             /* 창고 「비고」 — 창고에 전할 말이 있으면 그것, 없으면 등록자 메모 */
