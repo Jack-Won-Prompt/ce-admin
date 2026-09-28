@@ -269,9 +269,13 @@
       { header: '이름',   name: 'patient',  width: 90 },
       { header: '유형',     name: 'type',     width: 60,  align: 'center', sortable: true },
       // 같은 「교환」이라도 변심과 불량은 승인자도 청구 방식도 다르다 — 사유를 세운다
-      /* 절차서의 갈래다(반품 및 환불ㆍ고객 변심 교환…). 고객이 말한 신청 사유는
-         따로 있어, 둘 다 「사유」라 부르면 가릴 수 없었다(2026-09-28 검증). */
-      { header: '절차 갈래', name: 'scenario', width: 120, align: 'center', sortable: true },
+      /* 절차서가 정한 처리 유형이다 — 고객 변심 교환ㆍ불량 교환ㆍ반품 및 환불ㆍ
+         불량 반품ㆍ출고 전 취소ㆍ자격 변경. 옆의 「유형」(교환ㆍ반품ㆍ취소)을 사유로
+         한 번 더 나눈 것이라, 단계ㆍ승인자ㆍ청구 방식이 여기서 갈린다.
+
+         고객이 말한 신청 사유는 「신청 사유」 칸에 따로 있다 — 둘 다 「사유」라
+         부르면 가릴 수 없었다(2026-09-28 검증). */
+      { header: '처리 유형', name: 'scenario', width: 120, align: 'center', sortable: true },
       { header: '상태',     name: 'status',   width: 90,  align: 'center', sortable: true },
       // 창고가 어디까지 했는가 — 우리 단계와 다른 것을 잰다(요청서 4쪽)
       { header: '3PL 상태', name: 'pl3',      width: 100, align: 'center', sortable: true },
