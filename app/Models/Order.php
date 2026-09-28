@@ -530,7 +530,10 @@ class Order extends Model
      */
     public function isDepositConfirmed(): bool
     {
-        return $this->deposit_confirmed_at !== null || (bool) $this->tossPayment?->is_done;
+        /* 부분 취소된 건도 「들어왔다」다 (2026-09-28) — 일부를 돌려주었을 뿐 돈은
+           들어왔었고 남아 있다. 전액 취소는 쥐고있나() 가 거짓이라 여기서 빠진다. */
+        return $this->deposit_confirmed_at !== null
+            || (bool) $this->tossPayment?->쥐고있나();
     }
 
     /**
@@ -621,8 +624,10 @@ class Order extends Model
     {
         $결제 = $this->tossPayment;
 
-        if ($결제 && $결제->is_done) {
-            return max(0, (int) $결제->amount - (int) ($결제->cancel_amount ?? 0));
+        /* 부분 취소를 함께 본다 (2026-09-28). is_done 은 DONE 하나만 보므로, 부분
+           환불이 한 번 일어나면 남은 돈이 있는데도 이 자리가 0 으로 떨어졌다. */
+        if ($결제 && $결제->쥐고있나()) {
+            return $결제->남은금액();
         }
 
         if ($this->deposit_confirmed_at !== null) {
@@ -662,11 +667,13 @@ class Order extends Model
      */
     public function 결제기준금액(): int
     {
-        /* 토스로 받은 건 — 부분 취소가 있었으면 그만큼 뺀 것이 지금 우리가 쥔 돈이다 */
+        /* 토스로 받은 건 — 부분 취소가 있었으면 그만큼 뺀 것이 지금 우리가 쥔 돈이다.
+           쥐고있나() 로 묻는다 (2026-09-28) — is_done 은 부분 취소 뒤 거짓이 되어,
+           적어 둔 이 주석과 달리 뺄 자리에 닿지도 않았다. */
         $결제 = $this->tossPayment;
 
-        if ($결제 && $결제->is_done) {
-            return max(0, (int) $결제->amount - (int) ($결제->cancel_amount ?? 0));
+        if ($결제 && $결제->쥐고있나()) {
+            return $결제->남은금액();
         }
 
         /* 담당자가 눈으로 확인한 건 — 적어 둔 금액이 곧 받은 돈이다 */

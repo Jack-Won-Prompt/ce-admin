@@ -76,6 +76,29 @@ class TossPayment extends Model
     }
 
     /**
+     * 승인이 났고 **아직 그 돈을 쥐고 있는가** (2026-09-28 시험에서 드러남).
+     *
+     * is_done 은 status==='DONE' 하나만 본다. 부분 취소가 일어나면 토스가 상태를
+     * PARTIAL_CANCELED 로 바꾸므로 is_done 이 거짓이 되고, 받은금액()ㆍ결제기준금액()
+     * 이 「한 번도 받은 적 없음」으로 떨어졌다 — 19,500원을 무르고 3,000원이 남아
+     * 있는데 받은 돈이 0원으로 읽혔다.
+     *
+     * 전액 취소(CANCELED)는 들지 않는다. 그때는 쥐고 있는 돈이 정말로 없다.
+     */
+    public function 쥐고있나(): bool
+    {
+        return in_array($this->status, ['DONE', 'PARTIAL_CANCELED'], true);
+    }
+
+    /** 무른 것을 뺀, 지금 우리가 쥐고 있는 돈 */
+    public function 남은금액(): int
+    {
+        return $this->쥐고있나()
+            ? max(0, (int) $this->amount - (int) ($this->cancel_amount ?? 0))
+            : 0;
+    }
+
+    /**
      * 토스가 알려 준 **실제** 결제 유형 (2026-09-09 지시).
      *
      * 「링크페이」는 우리가 무엇으로 안내했는가일 뿐, 환자가 그 창에서 무엇을 골랐는지는

@@ -170,7 +170,12 @@ class ReturnFinalApproval
                 'refund_attempts'   => (int) $return->refund_attempts + 1,
                 'refund_last_error' => null,
                 'refunded_at'       => $return->refunded_at ?? now(),
-                'refund_amount'     => $return->refund_amount ?: $몫,
+                /* 실제로 무른 돈을 적는다 (2026-09-28 시험에서 드러남).
+
+                   접수할 때 담당자가 적어 둔 값(받은 돈 그대로)이 이미 들어 있어
+                   ?: 로는 덮이지 않았다 — 19,500원을 물렀는데 표에는 22,500원이
+                   남아, 목록의 「환불금액」과 실제 오간 돈이 달랐다. */
+                'refund_amount'     => $몫,
                 $return->refund_method === 'va' ? 'bank_cancelled_at' : 'card_cancelled_at' => now(),
                 'status'            => 'refunded',
             ])->save();
@@ -316,7 +321,20 @@ class ReturnFinalApproval
 
         $길 = 'return-signs/' . $return->id . '/' . uniqid('sig_') . '.' . ($m[1] === 'jpeg' ? 'jpg' : 'png');
 
-        Storage::disk('local')->put($길, $바이트);
+        /* put 은 못 써도 던지지 않고 false 를 돌려준다(throw=false). 그것을 보지
+           않으면 없는 파일을 가리키는 길이 표에 남는다 — 종이로 뽑으려 할 때야
+           비어 있는 것을 안다. 파일을 못 써도 서명은 잃지 않는다(표의 base64). */
+        try {
+            if (! Storage::disk('local')->put($길, $바이트)) {
+                throw new \RuntimeException('put 이 false 를 돌려주었습니다');
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[교환반품] 최종 서명 그림을 쓰지 못했습니다', [
+                'receipt' => $return->receipt_no, 'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
 
         return $길;
     }
