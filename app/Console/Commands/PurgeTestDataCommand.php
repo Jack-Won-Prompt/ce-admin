@@ -36,7 +36,8 @@ class PurgeTestDataCommand extends Command
                             {--force : 실제로 지운다. 없으면 세어 보이기만 한다}
                             {--files : 딸린 파일도 지운다}
                             {--traces : 주인 없이 남는 이력까지 지운다. 기본은 남긴다}
-                            {--orphan-files : 가리키는 줄이 없는 파일을 치운다}';
+                            {--orphan-files : 가리키는 줄이 없는 파일을 치운다}
+                            {--origin=test : 어느 딱지를 지울까. test 또는 migration 뿐}';
 
     protected $description = '시험 딱지가 붙은 자료를 지운다 (운영 데이터 표는 건드리지 않는다)';
 
@@ -53,10 +54,26 @@ class PurgeTestDataCommand extends Command
         'delegation_signs',
     ];
 
+    /**
+     * 지울 수 있는 딱지 — 이 둘뿐이다 (2026-09-29).
+     *
+     * live 와 빈칸은 여기 없다. 사람이 업무로 만든 줄과 어디서 왔는지 모르는 줄은
+     * 지우지 않는다 — 모르는 것은 남기는 편이 언제나 낫다.
+     */
+    private const 지울수있는딱지 = ['test', 'migration'];
+
     public function handle(): int
     {
         $묶음 = $this->option('batch');
         $정말 = (bool) $this->option('force');
+        $딱지 = (string) $this->option('origin');
+
+        if (! in_array($딱지, self::지울수있는딱지, true)) {
+            $this->error('  지울 수 있는 딱지는 ' . implode(' · ', self::지울수있는딱지)
+                . ' 뿐입니다. 「' . $딱지 . '」 는 지울 수 없습니다.');
+
+            return self::FAILURE;
+        }
 
         if ($this->option('orphan-files')) {
             $this->주인없는파일($정말);
@@ -65,8 +82,10 @@ class PurgeTestDataCommand extends Command
         }
 
         $this->line('');
-        $this->info('══ 시험 자료 지우기 ' . ($정말 ? '(실제로 지웁니다)' : '(세어 보이기만 합니다)') . ' ══');
-        $this->line('  묶음 : ' . ($묶음 ?: '(test 딱지 전부)'));
+        $this->info('══ ' . ($딱지 === 'test' ? '시험 자료' : '옮겨 온 자료') . ' 지우기 '
+            . ($정말 ? '(실제로 지웁니다)' : '(세어 보이기만 합니다)') . ' ══');
+        $this->line('  딱지 : ' . $딱지);
+        $this->line('  묶음 : ' . ($묶음 ?: '(' . $딱지 . ' 딱지 전부)'));
         $this->line('');
 
         /* 지울 것을 고른다 — 나머지는 이것을 따라 내려간다.
@@ -76,7 +95,7 @@ class PurgeTestDataCommand extends Command
            빠진다 — 처방전 36줄ㆍ주문 14줄이 그러했다(2026-09-29 확인). 그 줄만
            남으면 딸린 품목ㆍ결제ㆍ서류가 주인 없이 남고, 다음 시험에서 셈이 어긋난다.
            지우려고 고르는 자리에서 「이미 지운 것처럼 보이는 줄」을 빼서는 안 된다. */
-        $고르기 = fn (string $표) => DB::table($표)->where('data_origin', 'test')
+        $고르기 = fn (string $표) => DB::table($표)->where('data_origin', $딱지)
             ->when($묶음, fn ($q) => $q->where('data_batch', $묶음))
             ->pluck('id');
 
@@ -86,7 +105,7 @@ class PurgeTestDataCommand extends Command
         $반품   = $고르기('order_returns');
 
         if ($거래처->isEmpty() && $처방->isEmpty() && $주문->isEmpty()) {
-            $this->warn('  지울 것이 없습니다 — 시험 딱지가 붙은 줄이 없습니다.');
+            $this->warn('  지울 것이 없습니다 — ' . $딱지 . ' 딱지가 붙은 줄이 없습니다.');
 
             return self::SUCCESS;
         }

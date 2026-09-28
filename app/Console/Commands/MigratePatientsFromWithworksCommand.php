@@ -162,7 +162,12 @@ class MigratePatientsFromWithworksCommand extends Command
         if (! $정말) {
             $this->warn('  세어 보이기만 했습니다. 실제로 옮기려면 --force 를 적어 주십시오.');
         } else {
-            $this->info('  옮겼습니다. 되돌리려면 test-data:purge --batch=' . $묶음 . ' 를 쓰십시오.');
+            /* 되돌리는 길을 **정확히** 적는다. 앞서는 --batch 만 적었는데, 지우는
+               명령은 기본으로 test 딱지만 보므로 그대로 쳐도 「지울 것이 없습니다」가
+               나왔다 — 옮겨 온 줄은 migration 딱지다. 되돌릴 수 있다고 믿고 옮겼다가
+               되돌리지 못하는 것이 가장 나쁘다. */
+            $this->info('  옮겼습니다. 되돌리려면 —');
+            $this->line('    php artisan test-data:purge --origin=migration --batch=' . $묶음 . ' --force');
         }
 
         $this->line('  ' . implode(' · ', self::읽기만) . ' 는 읽기만 했습니다.');
