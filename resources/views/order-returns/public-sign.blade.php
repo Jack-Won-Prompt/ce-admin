@@ -90,7 +90,7 @@
     <dl style="margin:0">
       <div class="kv"><dt>접수번호</dt><dd>{{ $r->receipt_no }}</dd></div>
       <div class="kv"><dt>구분</dt><dd>{{ $r->typeLabel() }}</dd></div>
-      <div class="kv"><dt>주문번호</dt><dd>{{ $r->order?->order_no ?? '-' }}</dd></div>
+      <div class="kv"><dt>주문번호</dt><dd>{{ $r->order?->order_number ?? '-' }}</dd></div>
       <div class="kv"><dt>고객</dt><dd>{{ $r->order?->patient?->name ?? '-' }}</dd></div>
       <div class="kv"><dt>입고 검수</dt><dd>
         @if ($r->inspect_result === \App\Models\OrderReturn::RESULT_DEFECT)
@@ -123,7 +123,7 @@
 
     @if ($r->inspect_result === \App\Models\OrderReturn::RESULT_DEFECT)
       <div class="note"><b>차감 사유</b>@if ($r->inspect_defect_qty) · 수량 차이 {{ $r->inspect_defect_qty }}개@endif
-{{ $r->inspect_defect_note ?: '(적힌 내용 없음)' }}</div>
+{{ chr(10) }}{{ $r->inspect_defect_note ?: '(적힌 내용 없음)' }}</div>
     @endif
 
     @if ($r->reason_text || $r->reason_code)
