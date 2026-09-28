@@ -147,6 +147,40 @@ class ReturnSettlement
             return ['ok' => false, 'note' => $note];
         }
 
+        /* 차감이 있는 건은 **남은 금액으로 증빙을 다시 낸다** (2026-09-28 지시).
+
+           하자가 있어 차감한 반품은 전량 반품으로 잡혀(수량을 줄이지 않았으므로)
+           아래 close() 로 가 증빙을 통째로 무른다. 그런데 225,000원 가운데
+           202,500원만 돌려주고 22,500원은 우리가 가졌다 — 그 돈의 증빙이 사라져
+           국세청에 신고한 매출과 어긋난다 (2026-09-28 무한시험 2회차).
+
+           금액이 바뀐 건은 증빙을 전부 다시 낸다는 것이 오늘의 규칙이다. 남은 돈을
+           주문에 반영하고 다시 낸다 — 먼저 남김없이 무르고 그 다음에 내므로 한
+           장씩만 남는다. */
+        if ((int) $return->inspect_deduct_amount > 0 && $return->refunded_at) {
+            $남은돈 = $order->받은금액();
+
+            $order->forceFill([
+                'patient_copay' => $남은돈,
+                'total_amount'  => $남은돈,
+            ])->save();
+
+            $다시 = app(\App\Services\ReturnDocsReissue::class)
+                ->재발행($return->fresh(['order.patient', 'order.prescription']), Auth::user(),
+                        $return->receipt_no . ' 차감 ' . number_format((int) $return->inspect_deduct_amount) . '원');
+
+            $note = sprintf('차감 %s원을 뺀 %s원으로 증빙을 다시 냈습니다 — %s',
+                number_format((int) $return->inspect_deduct_amount),
+                number_format($남은돈), $다시['note']);
+
+            $return->forceFill([
+                'credit_issued_at' => now(),
+                'credit_note'      => mb_substr($note, 0, 500),
+            ])->save();
+
+            return ['ok' => $다시['ok'], 'note' => $note];
+        }
+
         if ($return->is_partial) {
             /* 얼마로 반영할지를 함께 적는다. 「최종 청구분에 반영합니다」만 남겨 두면
                청구할 사람이 원 주문과 반품 줄을 놓고 다시 셈해야 했다(2026-09-02). */
