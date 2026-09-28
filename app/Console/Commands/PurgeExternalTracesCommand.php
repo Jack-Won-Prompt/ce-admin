@@ -32,6 +32,7 @@ class PurgeExternalTracesCommand extends Command
     protected $signature = 'test-data:purge-external
                             {--file= : 열쇠 파일. 비우면 purge-traces 의 가장 나중 것}
                             {--only= : toss 또는 withworks 만}
+                            {--refund-account= : 가상계좌 무르기용 「은행코드:계좌번호:예금주」}
                             {--force : 정말 치운다}';
 
     protected $description = '시험 자료가 밖에 남긴 자취(토스 승인ㆍ위드웍스 판매주문)를 치운다';
@@ -149,6 +150,16 @@ class PurgeExternalTracesCommand extends Command
      *
      * 이미 다 무른 것은 건너뛴다 — 다시 부르면 저쪽이 거절하고, 그 거절이 실패로
      * 읽혀 「치우지 못했다」로 남는다.
+     *
+     * **우리 표에 적힌 승인이 곧 토스가 쥔 돈은 아니다** (2026-09-29 확인).
+     * 시험 승인(/pay/{token}/simulate)은 장부에만 적는 것이라 결제열쇠가
+     * `TEST_…` 로 서고 토스에는 그런 결제가 없다 — 무르려 하면
+     * `NOT_FOUND_PAYMENT` 가 돌아온다. 서른한 건 가운데 서른 건이 그러했다.
+     * 그러니 그 답은 실패가 아니라 **치울 것이 없다**는 뜻으로 적는다.
+     *
+     * 가상계좌로 받은 돈은 돌려줄 계좌가 있어야 무를 수 있다
+     * (`INVALID_REFUND_ACCOUNT_NUMBER`). 주문을 지운 뒤라 고객의 계좌를 알 수
+     * 없으므로 짐작해 넣지 않는다 — 사람이 --refund-account 로 준다.
      */
     private function 토스(TossClient $toss, array $것들, bool $정말): void
     {
@@ -167,28 +178,79 @@ class PurgeExternalTracesCommand extends Command
             return;
         }
 
-        $무름 = 0;
-        $못함 = 0;
+        $몸통 = ['cancelReason' => '시험 자료 정리 (주문 삭제됨)'];
+
+        if ($계좌 = $this->환불계좌()) {
+            $몸통['refundReceiveAccount'] = $계좌;
+        }
+
+        $무름   = 0;
+        $없음   = 0;
+        $계좌필요 = 0;
+        $못함   = 0;
 
         foreach ($할것 as $t) {
             $열쇠 = (string) $t['payment_key'];
             $몫   = (int) $t['amount'] - (int) ($t['cancel_amount'] ?? 0);
 
             try {
-                $res = $toss->post('/v1/payments/' . $열쇠 . '/cancel', [
-                    'cancelReason' => '시험 자료 정리 (주문 삭제됨)',
-                ]);
+                $res = $toss->post('/v1/payments/' . $열쇠 . '/cancel', $몸통);
 
                 $this->line('  무름 ' . $열쇠 . ' ' . number_format($몫) . '원 → '
                     . ($res['status'] ?? '?'));
                 $무름++;
             } catch (\Throwable $e) {
-                $this->error('  무르지 못함 ' . $열쇠 . ' → ' . mb_substr($e->getMessage(), 0, 110));
+                $말 = $e->getMessage();
+
+                if (str_contains($말, 'NOT_FOUND_PAYMENT')) {
+                    $없음++;
+
+                    continue;
+                }
+
+                if (str_contains($말, 'REFUND_ACCOUNT')) {
+                    $this->warn('  돌려줄 계좌가 있어야 무릅니다 (가상계좌) ' . $열쇠
+                        . ' ' . number_format($몫) . '원');
+                    $계좌필요++;
+
+                    continue;
+                }
+
+                $this->error('  무르지 못함 ' . $열쇠 . ' → ' . mb_substr($말, 0, 110));
                 $못함++;
             }
         }
 
-        $this->info('  무름 ' . $무름 . '건 · 못함 ' . $못함 . '건');
+        if ($없음 > 0) {
+            $this->line('  토스에 없는 승인 ' . $없음 . '건 — 시험 승인이라 장부에만 있었습니다.');
+        }
+
+        if ($계좌필요 > 0) {
+            $this->line('  --refund-account=은행코드:계좌번호:예금주 를 주면 무를 수 있습니다.');
+        }
+
+        $this->info('  무름 ' . $무름 . '건 · 치울 것 없음 ' . $없음
+            . '건 · 계좌 필요 ' . $계좌필요 . '건 · 못함 ' . $못함 . '건');
+    }
+
+    /** 「은행코드:계좌번호:예금주」 를 토스가 받는 꼴로 */
+    private function 환불계좌(): ?array
+    {
+        $값 = (string) $this->option('refund-account');
+
+        if ($값 === '') {
+            return null;
+        }
+
+        $조각 = explode(':', $값);
+
+        if (count($조각) !== 3) {
+            $this->error('  --refund-account 는 「은행코드:계좌번호:예금주」 꼴이어야 합니다.');
+
+            return null;
+        }
+
+        return ['bank' => $조각[0], 'accountNumber' => $조각[1], 'holderName' => $조각[2]];
     }
 
     /**
@@ -218,8 +280,9 @@ class PurgeExternalTracesCommand extends Command
 
         /* 판매주문과 반품주문 모두 주문번호를 열쇠로 지운다. 적어 둔 것은
            [주문번호 => 판매주문번호] 꼴이라 열쇠 쪽을 쓴다. */
-        $지움 = 0;
-        $못함 = 0;
+        $지움     = 0;
+        $이미없음 = 0;
+        $못함     = 0;
 
         foreach (['판매주문' => $판매, '반품주문' => $반품] as $무엇 => $것들) {
             foreach ($것들 as $주문번호 => $판매번호) {
@@ -229,14 +292,26 @@ class PurgeExternalTracesCommand extends Command
                             'ce_order_number' => (string) $주문번호,
                         ]);
 
-                    $몸 = $res->json();
+                    $몸  = $res->json();
+                    $말  = (string) ($몸['message'] ?? $res->status());
                     $됐나 = $res->successful() && ($몸['success'] ?? false);
 
-                    $this->line('  ' . ($됐나 ? '지움  ' : '못 지움') . ' ' . $무엇 . ' '
-                        . $주문번호 . ' (SO ' . $판매번호 . ') → '
-                        . mb_substr((string) ($몸['message'] ?? $res->status()), 0, 80));
+                    /* 창고가 「찾을 수 없거나 이미 삭제되었다」고 답하면서도 success 를
+                       준다. 그것을 「지움」으로 적으면 이번에 지운 것처럼 읽힌다 —
+                       무엇이 실제로 사라졌는지 셈이 어긋난다. */
+                    $이미 = $됐나 && str_contains($말, '찾을 수 없');
 
-                    $됐나 ? $지움++ : $못함++;
+                    $this->line('  ' . ($이미 ? '이미 없음' : ($됐나 ? '지움    ' : '못 지움  '))
+                        . ' ' . $무엇 . ' ' . $주문번호 . ' (SO ' . $판매번호 . ') → '
+                        . mb_substr($말, 0, 80));
+
+                    if ($이미) {
+                        $이미없음++;
+                    } elseif ($됐나) {
+                        $지움++;
+                    } else {
+                        $못함++;
+                    }
                 } catch (\Throwable $e) {
                     $this->error('  못 지움 ' . $무엇 . ' ' . $주문번호 . ' → '
                         . mb_substr($e->getMessage(), 0, 100));
@@ -245,6 +320,7 @@ class PurgeExternalTracesCommand extends Command
             }
         }
 
-        $this->info('  지움 ' . $지움 . '건 · 못함 ' . $못함 . '건');
+        $this->info('  지움 ' . $지움 . '건 · 이미 없던 것 ' . $이미없음
+            . '건 · 못함 ' . $못함 . '건');
     }
 }
