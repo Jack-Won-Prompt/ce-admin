@@ -314,10 +314,20 @@ table.purchase-tbl td.center { text-align:center; }
 
 {{-- ⑤ 세금계산서 — 내려받는 PDF 와 같은 서식 조각을 그대로 끼운다.
      예전에는 장표를 PNG 로 따로 그려 실었는데, 그 그림은 국세청 서식이 아니라
-     「라벨: 값」 목록이었다. 서식이 두 벌이면 팩스와 종이가 서로 다른 것을 보여 준다. --}}
+     「라벨: 값」 목록이었다. 서식이 두 벌이면 팩스와 종이가 서로 다른 것을 보여 준다.
+
+     **두 벌을 다 넣는다** (2026-09-28 지시) — 위가 공급자 보관용(적색), 아래가
+     공급받는자 보관용(청색). 한 벌만 보내면 받는 쪽이 제 보관용을 못 가진다.
+     내려받는 PDF 와 같은 꼴이라, 팩스로 받은 것과 손으로 받은 것이 같은 종이다. --}}
 @if($hasTaxInvoice)
 <div @if($hasAttachments) class="page-break" @endif>
-  @include('documents._tax_invoice_form', $taxInvoiceForm)
+  @include('documents._tax_invoice_form', $taxInvoiceForm + ['keep' => '공급자'])
+
+  {{-- 자르는 자리 — 내려받는 PDF 와 같은 점선 --}}
+  <div style="width:182mm;margin:3.5mm 0;font-size:6.5pt;color:#777777;letter-spacing:1.6mm;white-space:nowrap;overflow:hidden;">{{ str_repeat('·', 120) }}</div>
+
+  {{-- 스타일은 위에서 한 번 냈다. 꼬리는 위 장에만 둔다 — 받아 본 원본이 그렇다. --}}
+  @include('documents._tax_invoice_form', $taxInvoiceForm + ['keep' => '공급받는자', 'withStyle' => false, 'withTail' => false])
 </div>
 @endif
 
