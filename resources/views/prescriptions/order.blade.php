@@ -2379,6 +2379,17 @@ $calcDeposit  = $calcCopay;
             <button type="button" class="vw-btn-sm vw-btn-add" onclick="document.getElementById('attachUploadInput').click()">
               <i class="fa-solid fa-plus"></i> 첨부문서 추가
             </button>
+            {{-- 서류를 한 PDF 로 묶어 내려받는다 (2026-09-27 확인요청 2쪽).
+
+                 여태 한 장씩만 내려받을 수 있었다. 공단에 낼 묶음을 만들려면 대여섯
+                 번을 누르고 받은 파일을 다른 프로그램으로 합쳐야 했다.
+
+                 팩스 합본과는 다른 것이다 — 저쪽은 공단 서식으로 다시 그린 것이고
+                 이것은 올라온 것 그대로다. --}}
+            <button type="button" class="vw-btn-sm" id="btnDocsMerged" onclick="downloadDocsMerged(event)"
+                    title="올린 서류와 만들어진 서류를 한 PDF 로 묶어 내려받습니다">
+              <i class="fa-solid fa-file-zipper"></i> 일괄 다운
+            </button>
             {{-- 등록신청서 신청인 서명 (2026-09-17 지시 · 2026-09-20 자리 옮김).
 
                  병원이 ② 요양기관 확인란을 적어 준 종이라 ③ 신청인란은 비어 있다 —
@@ -6258,6 +6269,46 @@ function _closeAttachPopover() {
  * <a download> 만 걸지 않고 blob 으로 받아 넘긴다 — 파일이 다른 곳(S3 등)에서
  * 오면 download 속성이 무시되어 새 탭만 열리고 끝난다. 이름도 우리가 정한다.
  */
+/* 이 건의 서류를 한 PDF 로 묶어 내려받는다 (2026-09-27 확인요청 2쪽).
+
+   묶는 일은 서버가 한다 — 그림을 PDF 한 쪽으로 감싸고 FPDI 로 잇는 자리가
+   이미 거기 있다(팩스 합본이 쓰던 것). 화면은 청하고 받아서 저장만 한다. */
+async function downloadDocsMerged(e) {
+  e.stopPropagation();
+
+  const btn = e.currentTarget;
+  const 본래 = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 묶는 중…'; btn.disabled = true; }
+
+  try {
+    const r = await fetch(`/prescriptions/${RX_NUMBER}/docs-merged`, { credentials: 'same-origin' });
+
+    if (!r.ok) {
+      /* 서버가 까닭을 적어 보낸다 — 「묶을 서류가 없습니다」 같은 것 */
+      let 말 = '서류를 묶지 못했습니다.';
+      try { 말 = (await r.json()).message || 말; } catch (_) {}
+      showToast(말, 'warning', 4000);
+      return;
+    }
+
+    const 덩이 = await r.blob();
+    const 주소 = URL.createObjectURL(덩이);
+    const a = document.createElement('a');
+    a.href = 주소;
+    a.download = `서류묶음_${RX_NUMBER}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(주소), 1000);
+
+    showToast('서류를 한 PDF 로 묶었습니다.', 'success');
+  } catch (err) {
+    showToast('서류를 묶지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', 'danger');
+  } finally {
+    if (btn) { btn.innerHTML = 본래; btn.disabled = false; }
+  }
+}
+
 async function downloadDoc(e, url, 이름) {
   e.stopPropagation();          // 그림칸을 누른 것으로 보지 않는다
 

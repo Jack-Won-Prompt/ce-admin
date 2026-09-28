@@ -161,6 +161,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get( '/{prescription}/fax-pdf',      [PrescriptionController::class, 'downloadFaxPdf'])->name('faxPdf');
         Route::post('/{prescription}/fax-regenerate', [PrescriptionController::class, 'regenerateFax'])->name('faxRegenerate');
         Route::get( '/{prescription}/generated-docs', [PrescriptionController::class, 'generatedDocs'])->name('generatedDocs');
+        /* 올린 서류와 만들어진 서류를 한 PDF 로 묶어 내려받는다 (2026-09-27 확인요청 2쪽) */
+        Route::get( '/{prescription}/docs-merged',   [PrescriptionController::class, 'downloadDocsMerged'])->name('docsMerged');
         Route::patch('/{prescription}/assign',       [PrescriptionController::class, 'assignUser'])->name('assign');
         /* 주문 목록에서 고른 건을 한 사람에게 한 번에 넘긴다 — 고정 낱말이라 {prescription} 앞뒤 어디에 두어도 걸리지 않는다 */
         Route::post('/assign-bulk',                  [PrescriptionController::class, 'bulkAssign'])->name('assignBulk');

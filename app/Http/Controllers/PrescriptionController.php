@@ -5096,6 +5096,135 @@ class PrescriptionController extends Controller
         }
     }
 
+    /**
+     * 이 건의 서류를 **한 장짜리 PDF 로 묶어 내려받는다** (2026-09-27 확인요청 2쪽).
+     *
+     * 여태 서류는 한 장씩만 내려받을 수 있었다. 공단에 낼 묶음을 만들려면 담당자가
+     * 대여섯 번을 누르고, 받은 파일을 다른 프로그램으로 합쳐야 했다.
+     *
+     * 담는 차례는 화면에 선 차례 그대로다 — 처방전 본 그림 · 올린 첨부 · 만들어진
+     * 서류. 그림(JPGㆍPNG)은 PDF 한 쪽으로 감싸 넣는다.
+     *
+     * 팩스 합본(buildFaxCombinedPdf)과는 다른 것이다. 저쪽은 **공단 서식으로 다시
+     * 그린 것**이고 이것은 **올라온 것 그대로**다 — 둘을 한 자리에 두면 무엇을 보내는
+     * 것인지 헷갈린다.
+     */
+    public function downloadDocsMerged(Prescription $prescription)
+    {
+        $prescription->load(['patient', 'attachments']);
+
+        $조각 = [];
+        $담은것 = [];
+
+        /* 처방전 본 그림이 먼저다 — 묶음을 펼쳤을 때 무슨 건인지 첫 장에서 보인다 */
+        if ($prescription->image_path) {
+            if ($pdf = $this->파일을PDF로($prescription->image_path, 'public')) {
+                $조각[]  = $pdf;
+                $담은것[] = '처방전';
+            }
+        }
+
+        foreach ($prescription->attachments as $att) {
+            if ($pdf = $this->파일을PDF로($att->file_path, 'public')) {
+                $조각[]  = $pdf;
+                $담은것[] = $att->doc_type_label ?: '첨부';
+            }
+        }
+
+        /* 만들어진 서류(위임장ㆍ지급청구서ㆍ세금계산서 따위)도 담는다 —
+           담당자가 「서류」라 부르는 것에는 이것도 들어간다. */
+        foreach (PrescriptionDocument::where('prescription_id', $prescription->id)
+                    ->orderBy('id')->get() as $doc) {
+            foreach (['public', 'local'] as $disk) {
+                if ($doc->file_path && Storage::disk($disk)->exists($doc->file_path)) {
+                    if ($pdf = $this->파일을PDF로($doc->file_path, $disk)) {
+                        $조각[]  = $pdf;
+                        $담은것[] = $doc->typeLabel();
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (! $조각) {
+            return response()->json([
+                'success' => false,
+                'message' => '묶을 서류가 없습니다 — 올린 서류나 만들어진 서류가 하나도 없습니다.',
+            ], 404);
+        }
+
+        $묶음 = count($조각) === 1 ? $조각[0] : $this->mergePdfBytes($조각);
+
+        $이름 = '서류묶음_' . (\App\Models\Patient::bare($prescription->patient?->name) ?: '무명')
+              . '_' . $prescription->rx_number . '.pdf';
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)
+            ->withProperties(['담은 서류' => implode('ㆍ', $담은것)])
+            ->log('서류 묶음 내려받기 (' . count($조각) . '건)');
+
+        return response($묶음, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . rawurlencode($이름) . '"',
+        ]);
+    }
+
+    /**
+     * 파일 하나를 PDF 바이너리로 — PDF 는 그대로, 그림은 한 쪽으로 감싼다.
+     *
+     * 읽지 못하는 것(없는 파일ㆍ모르는 꼴)은 `null` 을 돌려 조용히 빠진다. 한 장이
+     * 깨졌다고 묶음 전체를 못 내려받게 하면, 담당자는 어느 것이 문제인지 모른 채
+     * 아무것도 얻지 못한다.
+     */
+    private function 파일을PDF로(?string $path, string $disk): ?string
+    {
+        if (! $path || ! Storage::disk($disk)->exists($path)) {
+            return null;
+        }
+
+        $확장 = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        if ($확장 === 'pdf') {
+            return Storage::disk($disk)->get($path);
+        }
+
+        if (! in_array($확장, ['jpg', 'jpeg', 'png', 'gif'], true)) {
+            return null;                       // HEIC 따위는 우리가 펼치지 못한다
+        }
+
+        try {
+            $abs  = Storage::disk($disk)->path($path);
+            $size = @getimagesize($abs);
+            if (! $size) {
+                return null;
+            }
+
+            /* 가로가 길면 눕혀 담는다 — 세로 쪽에 억지로 넣으면 글씨가 작아진다 */
+            $눕힐까 = $size[0] > $size[1];
+
+            $pdf = new \TCPDF($눕힐까 ? 'L' : 'P', 'mm', 'A4', true, 'UTF-8', false);
+            $pdf->setPrintHeader(false);
+            $pdf->setPrintFooter(false);
+            $pdf->SetAutoPageBreak(false);
+            $pdf->SetMargins(0, 0, 0);
+            $pdf->AddPage();
+
+            $쪽너비 = $눕힐까 ? 297 : 210;
+            $쪽높이 = $눕힐까 ? 210 : 297;
+
+            /* 여백을 조금 두고 비율을 지켜 채운다 */
+            $pdf->Image($abs, 5, 5, $쪽너비 - 10, $쪽높이 - 10, '', '', '', false, 300,
+                        '', false, false, 0, 'CM');
+
+            return $pdf->Output('', 'S');
+        } catch (\Throwable $e) {
+            Log::warning('서류 묶음 — 그림을 PDF 로 감싸지 못했습니다', [
+                'path' => $path, 'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
     /** 여러 PDF 바이너리를 FPDI로 순서대로 병합해 하나의 PDF 바이너리 반환 */
     private function mergePdfBytes(array $pdfList): string
     {
