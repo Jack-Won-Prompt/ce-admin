@@ -805,6 +805,20 @@ class OrderReturnController extends Controller
         if ($to === 'credited') {
             $out   = $this->settlement->credit($orderReturn->fresh(['order', 'items']));
             $extra = ' ' . $out['note'];
+
+            /* 무르지 못한 것이 있으면 **오류 자리에 세운다** (2026-09-28 시험에서 드러남).
+
+               여태 「상태를 변경했습니다」 뒤에 붙여 파란 줄 하나로 나갔다. 담당자는
+               앞 문장을 읽고 넘어가는데, 뒤에 「세금계산서를 취소하지 못했습니다」가
+               숨어 있었다 — 국세청에 신고된 계산서가 살아 있는 채로 단계만 넘어간다.
+
+               단계는 옮긴다(절차는 진행된 것이 맞다). 다만 손볼 것이 남았음을
+               붉은 줄로 따로 세운다. */
+            if (! $out['ok']) {
+                return back()
+                    ->with('status', '상태를 변경했습니다.')
+                    ->withErrors(['credit' => '증빙을 무르지 못한 것이 있습니다 — ' . $out['note']]);
+            }
         }
 
         /* 교환으로 물건이 바뀌면 거래명세서를 다시 그린다 (2026-09-17 지시).
