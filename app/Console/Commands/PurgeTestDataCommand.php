@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -34,7 +35,8 @@ class PurgeTestDataCommand extends Command
                             {--batch= : 지울 묶음(data_batch). 비우면 test 딱지 전부}
                             {--force : 실제로 지운다. 없으면 세어 보이기만 한다}
                             {--files : 딸린 파일도 지운다}
-                            {--traces : 주인 없이 남는 이력까지 지운다. 기본은 남긴다}';
+                            {--traces : 주인 없이 남는 이력까지 지운다. 기본은 남긴다}
+                            {--orphan-files : 가리키는 줄이 없는 파일을 치운다}';
 
     protected $description = '시험 딱지가 붙은 자료를 지운다 (운영 데이터 표는 건드리지 않는다)';
 
@@ -55,6 +57,12 @@ class PurgeTestDataCommand extends Command
     {
         $묶음 = $this->option('batch');
         $정말 = (bool) $this->option('force');
+
+        if ($this->option('orphan-files')) {
+            $this->주인없는파일($정말);
+
+            return self::SUCCESS;
+        }
 
         $this->line('');
         $this->info('══ 시험 자료 지우기 ' . ($정말 ? '(실제로 지웁니다)' : '(세어 보이기만 합니다)') . ' ══');
@@ -85,6 +93,18 @@ class PurgeTestDataCommand extends Command
 
         $this->바깥자취($주문, $반품);
 
+        /* 딸린 파일의 길을 **지우기 앞에서** 모은다 (2026-09-29 확인).
+
+           지운 뒤에 모으려 했더니 0개가 나왔다 — 첨부 줄이 이미 사라져 길을 읽을
+           자리가 없었기 때문이다. 파일 527개(77MB)가 주인 없이 서버에 남았다.
+           길은 표에만 적혀 있으므로 표를 지우는 순간 영영 알 수 없게 된다. */
+        $파일길 = $this->파일길모으기($처방);
+
+        /* 남는 이력도 **지우기 앞에서** 센다. 뒤에 세면 외래키가 번호를 비운(SET NULL)
+           다음이라 한 줄도 잡히지 않는다 — 「남깁니다」라고 표를 보여 주면서 13줄만
+           적어, 문자 619줄이 어떻게 되었는지 사람이 알 수 없었다. */
+        $this->남는이력($처방, $주문);
+
         /* 지울 차례 — 매달린 것부터, 뿌리는 마지막에 */
         $셈 = [];
 
@@ -107,10 +127,8 @@ class PurgeTestDataCommand extends Command
         $this->line('');
         $this->table(['표', '무엇', '줄'], $셈);
 
-        $this->남는이력($거래처, $처방, $주문, $정말);
-
         if ($this->option('files')) {
-            $this->파일지우기($처방, $정말);
+            $this->파일지우기($파일길, $정말);
         }
 
         $this->line('');
@@ -241,34 +259,43 @@ class PurgeTestDataCommand extends Command
     }
 
     /**
-     * 지운 뒤 주인 없이 남는 이력 (2026-09-29 지시).
+     * 지운 뒤 이력은 어떻게 되는가 (2026-09-29 지시).
      *
-     * 「테스트 이력 제거하지 않음」이 지시라 **기본은 남긴다.** 무엇을 언제 보냈고
-     * 무엇을 발행했는지는 지운 자료와 별개로 남아야 하는 자취다.
+     * 「테스트 이력 제거하지 않음」이 지시다. 실제로 어떻게 되는지는 표가 아니라
+     * **외래키 규칙**이 정한다 —
      *
-     * 다만 남는다는 것을 **보여 주어야** 한다. 거래처와 주문이 사라진 뒤 이 줄들은
-     * 가리킬 곳이 없는 번호를 들고 있게 되고, 그것을 모르면 다음 시험에서 「문자가
-     * 619건이나 나갔다」로 읽힌다. 세어 보이고, 정말 치우려면 --traces 를 적게 한다.
+     *   SET NULL   줄은 남고 처방전ㆍ주문 번호만 빈다. 문자 619ㆍ위드웍스 487ㆍ
+     *              팝빌 72+9ㆍ팩스 7 이 그렇다. 지시대로 남는 자리다.
+     *   CASCADE    줄이 **딸려 지워진다.** 지역 청구 발송ㆍ건보 팩스 기록이 그렇다.
+     *              막을 길이 없다 — 주문을 지우면 표가 함께 지운다.
+     *
+     * 둘을 갈라 적는다. 앞선 판은 CASCADE 인 것을 「남깁니다」에 적어 두어, 3줄이
+     * 조용히 사라지는데도 남는다고 읽혔다.
+     *
+     * **세기만 한다.** 지우기 앞에서 불려야 하므로, 여기서 지우면 뿌리보다 먼저
+     * 지우는 셈이 된다. --traces 는 지우는 자리에서 따로 다룬다.
      */
-    private function 남는이력($거래처, $처방, $주문, bool $정말): void
+    private function 남는이력($처방, $주문): void
     {
+        /* [표, 칸, 열쇠, 이름, 딸려지워지나] */
         $것들 = [
-            ['message_histories',              'prescription_id', $처방,   '문자ㆍ알림 발송 이력'],
-            ['withworks_events',               'order_id',        $주문,   '위드웍스 주고받은 것'],
-            ['popbill_taxinvoices',            'order_id',        $주문,   '팝빌 세금계산서 자취'],
-            ['cashbill_records',               'order_id',        $주문,   '팝빌 현금영수증 자취'],
-            ['prescription_reupload_requests', 'prescription_id', $처방,   '처방전 다시 올리기 요청'],
-            ['fax_histories',                  'prescription_id', $처방,   '팩스 보낸 자취'],
-            ['local_claim_dispatches',         'order_id',        $주문,   '지역 청구 발송'],
+            ['message_histories',              'prescription_id', $처방, '문자ㆍ알림 발송 이력',     false],
+            ['withworks_events',               'order_id',        $주문, '위드웍스 주고받은 것',     false],
+            ['popbill_taxinvoices',            'order_id',        $주문, '팝빌 세금계산서 자취',     false],
+            ['cashbill_records',               'order_id',        $주문, '팝빌 현금영수증 자취',     false],
+            ['prescription_reupload_requests', 'prescription_id', $처방, '처방전 다시 올리기 요청',  false],
+            ['fax_histories',                  'prescription_id', $처방, '팩스 보낸 자취',           false],
+            ['local_claim_dispatches',         'order_id',        $주문, '지역 청구 발송',           true],
+            ['nhis_fax_logs',                  'order_id',        $주문, '건보 팩스 기록',           true],
         ];
 
-        $지울까 = (bool) $this->option('traces');
-        $셈 = [];
+        $남음 = [];
+        $딸림 = [];
 
-        foreach ($것들 as [$표, $칸, $열쇠, $이름]) {
+        foreach ($것들 as [$표, $칸, $열쇠, $이름, $딸려지나]) {
             $this->확인($표);
 
-            if (! \Illuminate\Support\Facades\Schema::hasTable($표)) {
+            if (! Schema::hasTable($표)) {
                 continue;
             }
 
@@ -278,47 +305,167 @@ class PurgeTestDataCommand extends Command
                 continue;
             }
 
-            $셈[] = [$표, $이름, number_format($n)];
-
-            if ($지울까 && $정말) {
-                DB::table($표)->whereIn($칸, $열쇠)->delete();
+            if ($딸려지나) {
+                $딸림[] = [$표, $이름, number_format($n)];
+            } else {
+                $남음[] = [$표, $이름, number_format($n)];
             }
         }
 
-        if ($셈 === []) {
-            return;
+        if ($남음 !== []) {
+            $this->line('');
+            $this->info('  ── 이력은 남습니다 (번호만 빕니다) — 지시대로 ──');
+            $this->table(['표', '무엇', '줄'], $남음);
         }
 
-        $this->line('');
-        $this->warn($지울까
-            ? '  ── 이력도 함께 지웁니다 (--traces) ──'
-            : '  ── 주인 없이 남는 이력 — 지시대로 남깁니다 ──');
-        $this->table(['표', '무엇', '줄'], $셈);
-
-        if (! $지울까) {
-            $this->line('  이 줄들은 사라진 거래처ㆍ주문의 번호를 들고 남습니다.');
-            $this->line('  정말 치우려면 --traces 를 함께 적어 주십시오.');
+        if ($딸림 !== []) {
+            $this->line('');
+            $this->warn('  ── 이 표는 딸려 지워집니다 (표가 그렇게 맺어져 있습니다) ──');
+            $this->table(['표', '무엇', '줄'], $딸림);
         }
     }
 
-    /** 딸린 파일 — 지우면 되돌릴 수 없어 따로 물어본다(--files) */
-    private function 파일지우기($처방, bool $정말): void
+    /**
+     * 가리키는 줄이 없는 파일을 치운다 (2026-09-29).
+     *
+     * 파일 길은 표에만 적혀 있어, 표를 먼저 지우면 길을 알 수 없게 된다. 실제로
+     * 그렇게 되어 527개(77MB)가 서버에 남았다 — 「딸린 파일 0개」로 보고되었다.
+     * 지우는 차례는 고쳤지만, 이미 남은 것을 치울 길이 따로 있어야 한다.
+     *
+     * **폴더를 통째로 지우지 않는다.** 파일 하나하나를 표와 견주어, 아무 줄도
+     * 가리키지 않는 것만 지운다. 폴더째 지우면 아직 쓰이는 파일이 함께 사라진다 —
+     * 팩스 자취(fax/)와 문의 첨부가 같은 자리 아래에 있다.
+     */
+    private function 주인없는파일(bool $정말): void
     {
-        $길 = DB::table('prescription_attachments')->whereIn('prescription_id', $처방)
-            ->whereNotNull('file_path')->pluck('file_path');
+        $this->line('');
+        $this->info('══ 주인 없는 파일 치우기 ' . ($정말 ? '(실제로 지웁니다)' : '(세어 보이기만 합니다)') . ' ══');
 
-        $this->line('  딸린 파일 ' . $길->count() . '개' . ($정말 ? ' — 지웁니다' : ''));
+        /* 아직 쓰이는 길 — 표에 적힌 것 모두. 여기 없는 파일이 주인 없는 파일이다. */
+        $쓰는길 = collect();
+
+        foreach ([['prescription_attachments', 'file_path'],
+                  ['prescription_attachments', 'overlay_source_path'],
+                  ['prescription_documents',   'file_path'],
+                  ['chat_messages',            'attachment_path'],
+                  ['fax_histories',            'pdf_path'],
+                  ['inquiries',                'attachment_path']] as [$표, $칸]) {
+            if (! Schema::hasTable($표) || ! Schema::hasColumn($표, $칸)) {
+                continue;
+            }
+
+            $쓰는길 = $쓰는길->merge(
+                DB::table($표)->whereNotNull($칸)->where($칸, '<>', '')->pluck($칸)
+            );
+        }
+
+        $쓰는길 = $쓰는길->map(fn ($p) => ltrim((string) $p, '/'))->unique()->flip();
+
+        $this->line('  표가 가리키는 파일 ' . number_format($쓰는길->count()) . '개');
+
+        $disk  = Storage::disk('public');
+        $주인없음 = [];
+        $크기    = 0;
+
+        foreach ($disk->allFiles() as $f) {
+            if (isset($쓰는길[$f])) {
+                continue;
+            }
+
+            /* 우리가 만든 것이 아닌 자리는 건드리지 않는다 — 폴더 이름으로 가린다.
+               나중에 다른 기능이 같은 저장소를 쓰기 시작해도 그 파일은 남는다. */
+            if (! preg_match('~^(attachments|prescriptions|inquiry-attachments)/~', $f)) {
+                continue;
+            }
+
+            $주인없음[] = $f;
+            $크기 += (int) $disk->size($f);
+        }
+
+        $this->line('  주인 없는 파일 ' . number_format(count($주인없음)) . '개 ('
+            . number_format($크기 / 1048576, 1) . 'MB)');
+
+        if ($주인없음 === []) {
+            $this->line('');
+
+            return;
+        }
+
+        $this->line('  보기 —');
+        foreach (array_slice($주인없음, 0, 5) as $f) {
+            $this->line('    ' . $f);
+        }
+
+        if (! $정말) {
+            $this->line('');
+            $this->warn('  세어 보이기만 했습니다. 실제로 지우려면 --force 를 적어 주십시오.');
+            $this->line('');
+
+            return;
+        }
+
+        $지움 = 0;
+
+        foreach ($주인없음 as $f) {
+            if ($disk->delete($f)) {
+                $지움++;
+            }
+        }
+
+        $this->line('');
+        $this->info('  지운 파일 ' . number_format($지움) . '개');
+        $this->line('');
+    }
+
+    /**
+     * 딸린 파일의 길 — **지우기 앞에서** 모은다.
+     *
+     * 첨부(처방전 사진ㆍ덧그린 서류)와 서류함(만들어 낸 PDF) 두 자리에 있다.
+     * 첨부는 덧그리기 원본(overlay_source_path)도 따로 들고 있어 그것까지 모은다 —
+     * 빠뜨리면 원본만 남아 폴더가 줄지 않는다.
+     */
+    private function 파일길모으기($처방): \Illuminate\Support\Collection
+    {
+        $길 = collect();
+
+        foreach ([['prescription_attachments', 'file_path'],
+                  ['prescription_attachments', 'overlay_source_path'],
+                  ['prescription_documents',   'file_path']] as [$표, $칸]) {
+            if (! Schema::hasTable($표) || ! Schema::hasColumn($표, $칸)) {
+                continue;
+            }
+
+            $길 = $길->merge(
+                DB::table($표)->whereIn('prescription_id', $처방)
+                    ->whereNotNull($칸)->where($칸, '<>', '')->pluck($칸)
+            );
+        }
+
+        return $길->unique()->values();
+    }
+
+    /** 딸린 파일 — 지우면 되돌릴 수 없어 따로 물어본다(--files) */
+    private function 파일지우기($길, bool $정말): void
+    {
+        $this->line('');
+        $this->line('  딸린 파일 ' . number_format($길->count()) . '개' . ($정말 ? ' — 지웁니다' : ''));
 
         if (! $정말) {
             return;
         }
 
+        $지움 = 0;
+        $못함 = 0;
+
         foreach ($길 as $p) {
             try {
-                Storage::disk('public')->delete($p);
+                Storage::disk('public')->delete($p) ? $지움++ : $못함++;
             } catch (\Throwable $e) {
-                $this->warn('    지우지 못함: ' . $p);
+                $못함++;
             }
         }
+
+        $this->line('    지운 것 ' . number_format($지움)
+            . ' · 찾지 못한 것 ' . number_format($못함));
     }
 }
