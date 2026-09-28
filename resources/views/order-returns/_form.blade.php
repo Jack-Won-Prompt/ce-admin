@@ -382,7 +382,18 @@
     /* 교환은 따로 물을 것이 없다 — 무엇을 되돌리는지는 아래 주문 제품에 나와 있고,
        바꿔 보낼 물건과 보낼 곳은 창고가 수거·검수를 마친 뒤 정해진다.
        환불은 교환이 아닐 때만 묻는다. */
-    $('rtoRefundSec').style.display = t === 'exchange' ? 'none' : 'block';
+    const 환불묻나 = t !== 'exchange';
+    $('rtoRefundSec').style.display = 환불묻나 ? 'block' : 'none';
+
+    /* 감춘 칸은 **값을 보내지 않는다** (2026-09-28 시험에서 드러남).
+
+       display:none 은 보이지 않게만 할 뿐 보내는 것은 그대로다. 주문을 고를 때
+       환불 금액이 미리 채워지므로, 교환으로 바꿔 접수하면 돌려줄 일이 없는 건에
+       「환불금액 37,500원」이 적혔다 — 목록에도 그렇게 섰다.
+       disabled 를 걸면 그 칸은 보내지지 않는다. */
+    $('rtoRefundSec').querySelectorAll('input, select').forEach(el => {
+      el.disabled = ! 환불묻나;
+    });
     // 취소일 때만 갈래를 묻는다 — 교환·반품에는 갈래가 없다
     $('rtoSubtypeWrap').classList.toggle('on', t === 'cancel');
     syncReason();

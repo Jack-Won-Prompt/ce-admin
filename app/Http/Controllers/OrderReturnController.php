@@ -233,6 +233,19 @@ class OrderReturnController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        /* 교환은 돌려줄 돈이 없다 (2026-09-28 시험에서 드러남).
+
+           화면은 환불 칸을 감추지만 감춘 칸도 값을 보낸다 — 주문을 고를 때 미리
+           채워진 금액이 그대로 실려, 교환 건에 「환불금액 37,500원」이 적혔다.
+           화면에서도 막았지만(disabled) 이 주소를 바로 부르는 길이 있다. */
+        if ($request->input('type') === OrderReturn::TYPE_EXCHANGE) {
+            $request->merge([
+                'refund_method' => null, 'refund_bank'   => null,
+                'refund_account' => null, 'refund_holder' => null,
+                'refund_amount' => null,
+            ]);
+        }
+
         $data = $request->validate([
             'order_id'          => 'required|exists:orders,id',
             'type'              => 'required|in:exchange,return,cancel',
