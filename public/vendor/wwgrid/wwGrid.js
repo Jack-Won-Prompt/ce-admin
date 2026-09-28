@@ -1617,6 +1617,9 @@ class wwGrid {
 
   /* ── 바디 렌더링 ────────────────────────────── */
   _renderBody() {
+    /* 비우기 전에 굴린 자리를 재 둔다 — 비우면 되감긴다(_보이는범위 주석 참고) */
+    const 굴린자리 = this._wrapEl ? this._wrapEl.scrollTop : 0;
+
     this._tbodyEl.innerHTML = '';
 
     /* 찾은 것이 없을 때도 표는 자리를 지킨다. 머리줄만 남기면 못 불러온 것인지
@@ -1635,7 +1638,7 @@ class wwGrid {
 
     /* 보이는 자리만 그린다 — 나머지는 위아래 빈 줄이 높이로만 받는다 */
     const 가상 = this._가상쓰나();
-    const 범위 = 가상 ? this._보이는범위() : { 첫: 0, 끝: this.data.length - 1, 잰적있나: true };
+    const 범위 = 가상 ? this._보이는범위(굴린자리) : { 첫: 0, 끝: this.data.length - 1, 잰적있나: true };
 
     if (가상 && 범위.첫 > 0) {
       this._tbodyEl.appendChild(this._여백줄(범위.첫 * this._줄높이));
@@ -1650,6 +1653,12 @@ class wwGrid {
       if (아래 > 0) this._tbodyEl.appendChild(this._여백줄(아래));
 
       this._가상범위 = { 첫: 범위.첫, 끝: 범위.끝 };
+
+      /* 비우는 동안 되감긴 자리를 제자리로 돌린다. 여백줄이 다시 높이를 세워
+         두었으므로 이 값은 그대로 들어간다. */
+      if (this._wrapEl && this._wrapEl.scrollTop !== 굴린자리) {
+        this._wrapEl.scrollTop = 굴린자리;
+      }
 
       /* 줄 높이를 아직 모르면 이번 그리기로 잰다. 재고 나면 범위가 달라지므로
          한 번 더 그린다 — 두 번째는 높이를 아니까 다시 돌지 않는다. */
@@ -1693,16 +1702,23 @@ class wwGrid {
    *
    * 줄 높이를 아직 재지 못했으면 한 판 넉넉히 그려 두고 재라고 알린다.
    */
-  _보이는범위() {
+  _보이는범위(굴린자리) {
     const n = this.data.length;
 
     if (this._줄높이 <= 0 || !this._wrapEl) {
       return { 첫: 0, 끝: Math.min(n - 1, 40), 잰적있나: false };
     }
 
+    /* **굴린 자리는 밖에서 받는다.**
+
+       _renderBody 는 tbody 를 먼저 비운다. 그 순간 표가 쪼그라들어 브라우저가
+       scrollTop 을 0 으로 되감는다 — 비운 뒤에 읽으면 어디를 보고 있었든 늘 맨
+       위가 나온다. 실제로 그렇게 두었더니 아무리 굴려도 첫 32줄만 그렸다. */
+    const 자리 = 굴린자리 !== undefined ? 굴린자리 : this._wrapEl.scrollTop;
+
     const h    = this._줄높이;
     const 여유 = 10;
-    const 첫   = Math.max(0, Math.floor(this._wrapEl.scrollTop / h) - 여유);
+    const 첫   = Math.max(0, Math.floor(자리 / h) - 여유);
     const 보일수 = Math.ceil((this._wrapEl.clientHeight || 400) / h) + 여유 * 2;
 
     return { 첫, 끝: Math.min(n - 1, 첫 + 보일수), 잰적있나: true };
