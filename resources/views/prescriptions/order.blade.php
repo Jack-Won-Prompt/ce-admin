@@ -2145,86 +2145,17 @@ $calcDeposit  = $calcCopay;
       </div>
       @endif
 
-      {{-- 세금계산서 --}}
+      {{-- 세금계산서 — **발행 단추는 두지 않는다** (2026-09-28 지시).
+
+           발행은 청구ㆍ회계의 전자세금계산서 화면에서 한다. 이 줄에 두었더니
+           주문을 보다 말고 여기서 낼 수 있어, 금액을 확인하는 자리와 국세청에
+           신고하는 자리가 한 손 안에 있었다.
+
+           이미 발행된 건의 표시와 그 「취소」는 남긴다 — 정정ㆍ취소 안내가
+           「화면 위의 세금계산서에서 직접 취소해 주십시오」라 적고 있고,
+           그 길까지 없애면 발행된 것을 무를 자리가 이 화면에서 사라진다. --}}
       @if($prescription->order?->tax_invoice_status === 'issued')
       <div id="tiIssuedBadge" style="display:flex;align-items:center;height:32px;gap:4px;padding:4px 9px;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);font-size:11px;white-space:nowrap;">
-        <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:10px;"></i>
-        <span style="font-weight:700;color:var(--primary);">세금계산서</span>
-        <button onclick="cancelTaxInvoice()" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:6px;cursor:pointer;margin-left:2px;">취소</button>
-      </div>
-      @else
-      <div id="tiNotIssuedWrap" style="position:relative;">
-        <button class="pib-btn" id="btnTiTrigger" onclick="toggleTaxInvoicePopover(event)">
-          <i class="fa-solid fa-file-invoice"></i> 세금계산서
-        </button>
-        <div id="taxInvoicePopover" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:400px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:501;">
-          <div style="position:absolute;top:-8px;right:24px;width:14px;height:8px;overflow:hidden;">
-            <div style="width:10px;height:10px;background:var(--primary);border:1px solid var(--primary);transform:rotate(45deg);margin:3px auto 0;"></div>
-          </div>
-          <div style="background:var(--primary);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:10px 14px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-file-invoice" style="color:#fff;font-size:15px;flex-shrink:0;"></i>
-            <span style="font-size:13px;font-weight:700;color:#fff;flex:1;">세금계산서 발행</span>
-            <button onclick="closeTaxInvoicePopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
-          </div>
-          <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
-            <div>
-              <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">발행 유형</label>
-              <select id="ti-type" class="form-control" style="font-size:12px;">
-                <option value="electronic">전자세금계산서</option>
-                <option value="manual">수기</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">공급받는자 구분 <span style="color:var(--danger);">*</span></label>
-              {{-- 이 화면의 세금계산서는 환자가 구매한 건이라 '개인'이 정상이다.
-                   사업자는 대리점·병원이 사가는 예외 건에만 쓴다. --}}
-              <select id="ti-invoicee" class="form-control" style="font-size:12px;" onchange="tiInvoiceeChanged()">
-                <option value="개인">개인 — 환자 (주민등록번호)</option>
-                <option value="사업자">사업자 (사업자등록번호)</option>
-              </select>
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">공급받는자 상호 <span style="color:var(--danger);">*</span></label>
-              <input type="text" id="ti-biz-name" class="form-control" style="font-size:12px;" placeholder="(주)예시">
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">대표자명 <span style="color:var(--danger);">*</span></label>
-              <input type="text" id="ti-ceo-name" class="form-control" style="font-size:12px;" placeholder="홍길동">
-            </div>
-            <div>
-              <label id="ti-biz-no-label" style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">사업자등록번호 <span style="color:var(--danger);">*</span></label>
-              <input type="text" id="ti-biz-no" class="form-control" style="font-size:12px;" placeholder="123-45-67890">
-              <div id="ti-biz-no-hint" style="display:none;font-size:11px;color:var(--text-muted);margin-top:4px;">
-                비워 두면 이 처방전에 저장된 환자 주민등록번호로 발행합니다. 번호는 화면에 나오지 않으며 열람 이력이 기록됩니다.
-              </div>
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">이메일 (전자발송)</label>
-              <input type="email" id="ti-email" class="form-control" style="font-size:12px;" placeholder="billing@example.com">
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <div>
-                <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">공급가액 <span style="color:var(--danger);">*</span></label>
-                <input type="text" id="ti-supply" class="form-control" style="font-size:12px;" inputmode="numeric" placeholder="0" oninput="formatCrAmount(this); autoCalcVat()">
-              </div>
-              <div>
-                <label style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;display:block;">세액 <span style="color:var(--danger);">*</span></label>
-                <input type="text" id="ti-vat" class="form-control" style="font-size:12px;" inputmode="numeric" placeholder="0" oninput="formatCrAmount(this)">
-              </div>
-            </div>
-            <div style="font-size:11px;color:var(--text-muted);background:var(--bg);border-radius:var(--radius);padding:7px 10px;">
-              <i class="fa-solid fa-circle-info"></i> 공급가액 입력 시 세액(10%)이 자동 계산됩니다.
-            </div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;">
-              <button class="btn btn-outline btn-sm" onclick="closeTaxInvoicePopover()">취소</button>
-              <button class="btn btn-primary btn-sm" id="btnSubmitTaxInvoice" onclick="submitTaxInvoice()">
-                <i class="fa-solid fa-file-invoice"></i> 발행
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="tiResultBadge" style="display:none;align-items:center;height:32px;gap:4px;padding:4px 9px;background:var(--primary-50);border:1px solid var(--primary-200);border-radius:var(--radius);font-size:11px;white-space:nowrap;">
         <i class="fa-solid fa-circle-check" style="color:var(--primary);font-size:10px;"></i>
         <span style="font-weight:700;color:var(--primary);">세금계산서</span>
         <button onclick="cancelTaxInvoice()" style="height:16px;padding:0 5px;font-size:10px;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:6px;cursor:pointer;margin-left:2px;">취소</button>
@@ -12938,7 +12869,7 @@ window.HELP_TOUR_STEPS = [
   });
 
   function closeAllPopovers() {
-    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','privacyPopover','crIssuePopover','taxInvoicePopover','payPopover','guardianPop','pkModal','boFindPop'].forEach(id => {
+    ['kakaoPopover','smsPopover','faxPopover','vaPopover','crDetailPopover','consentPopover','consentSignPopover','privacyPopover','crIssuePopover','payPopover','guardianPop','pkModal','boFindPop'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -16571,19 +16502,6 @@ window.HELP_TOUR_STEPS = [
     w.onload = () => { w.print(); };
   }
 
-  function toggleTaxInvoicePopover(e) {
-    e.stopPropagation();
-    const pop = document.getElementById('taxInvoicePopover');
-    if (!pop) return;
-    if (pop.style.display !== 'none') { pop.style.display = 'none'; return; }
-    openTaxInvoiceModal();
-  }
-
-  function closeTaxInvoicePopover() {
-    const pop = document.getElementById('taxInvoicePopover');
-    if (pop) pop.style.display = 'none';
-  }
-
   /**
    * 청구전략이 정한 몫 — 얼마짜리 증빙을 내는가.
    *
@@ -16601,143 +16519,6 @@ window.HELP_TOUR_STEPS = [
       s + Number(i.patient_copay || 0) + Number(i.nhis_amount || 0), 0);
 
     return Math.round(base * pct / 100);
-  }
-
-  function openTaxInvoiceModal() {
-    /* 무른 건은 적혀 있던 금액을 쓰지 않는다 (2026-09-18 운영 시험에서 드러남).
-
-       정정으로 계산서를 물러도 tax_invoice_supply 에는 그때 낸 금액이 그대로
-       남는다. 그것을 먼저 쓰면 발행 화면이 **옛 금액**으로 열려, 정정한 바로
-       다음에 누른 재발행이 바뀐 금액이 아닌 예전 금액으로 나간다. */
-    const 낸것있나    = @json($prescription->order?->tax_invoice_status === 'issued');
-    const savedSupply = 낸것있나 ? {{ (int)($prescription->order?->tax_invoice_supply ?? 0) }} : 0;
-    const savedVat    = 낸것있나 ? {{ (int)($prescription->order?->tax_invoice_vat    ?? 0) }} : 0;
-    /* 전략이 정한 몫을 먼저 쓴다. 전략이 아직 정해지지 않았으면(확인중ㆍ미선택)
-       예전처럼 이 건의 값으로 연다 — 담당자가 고쳐 적을 수 있다. */
-    const target = bsAmountFor('tax_invoice') || _ORDER_TOTAL;
-    const supply = savedSupply || Math.round(target / 1.1);
-    const vat    = savedVat    || (target - Math.round(target / 1.1));
-
-    document.getElementById('ti-type').value     = @json($prescription->order?->tax_invoice_type     ?? 'electronic');
-    document.getElementById('ti-biz-name').value = @json($prescription->order?->tax_invoice_biz_name ?? '');
-    document.getElementById('ti-ceo-name').value = @json($prescription->order?->tax_invoice_ceo_name ?? '');
-    /* 이메일은 지난 발행에 적었던 것을 먼저 쓰고, 없으면 화면의 환자 이메일을 가져온다.
-       같은 사람에게 보내는 계산서인데 환자 정보에 적어 둔 주소를 두고 빈칸으로 열려,
-       담당자가 옆 칸을 보고 옮겨 적어야 했다. */
-    const tiSavedEmail = @json($prescription->order?->tax_invoice_email ?? '');
-    document.getElementById('ti-email').value =
-      tiSavedEmail || (document.getElementById('f-email')?.value?.trim() ?? '');
-    document.getElementById('ti-supply').value   = supply ? supply.toLocaleString('ko-KR') : '';
-    document.getElementById('ti-vat').value      = vat    ? vat.toLocaleString('ko-KR')    : '';
-
-    /* 이 화면은 환자가 사 간 건이라 개인이 기본이다. 지난 발행이 사업자였을 때만 사업자로 연다.
-       주민번호는 마스킹해 저장하므로 그대로 다시 보내면 안 된다 — 비워 두고 서버가 꺼내 쓰게 한다. */
-    const savedBizNo = @json($prescription->order?->tax_invoice_biz_no ?? '');
-    const wasBiz     = /^\d{10}$/.test(String(savedBizNo).replace(/\D/g, ''));
-    document.getElementById('ti-invoicee').value = wasBiz ? '사업자' : '개인';
-    document.getElementById('ti-biz-no').value   = wasBiz ? savedBizNo : '';
-    tiInvoiceeChanged();
-
-    closeAllPopovers();
-    const pop = document.getElementById('taxInvoicePopover');
-    if (pop) pop.style.display = 'block';
-  }
-
-  document.addEventListener('click', e => {
-    const pop = document.getElementById('taxInvoicePopover');
-    const btn = document.getElementById('btnTiTrigger');
-    if (pop && pop.style.display !== 'none' && !pop.contains(e.target) && e.target !== btn && !(btn && btn.contains(e.target))) {
-      pop.style.display = 'none';
-    }
-  });
-
-  function autoCalcVat() {
-    const supply = parseInt(document.getElementById('ti-supply').value.replace(/,/g, '')) || 0;
-    const vat    = Math.round(supply * 0.1);
-    document.getElementById('ti-vat').value = vat ? vat.toLocaleString('ko-KR') : '';
-  }
-
-  /* 발행하면 팩스 서류 목록의 '세금계산서' 를 바로 고를 수 있게 연다. */
-  function setFaxTaxInvoiceState(issued, tiNo) {
-    const label = document.getElementById('fax-ti-label');
-    const chk   = document.getElementById('fax-doc-tax-invoice');
-    const badge = document.getElementById('fax-ti-badge');
-    const desc  = document.getElementById('fax-ti-desc');
-    if (!label || !chk) return;
-    label.style.cursor  = issued ? 'pointer' : 'default';
-    label.style.opacity = issued ? '1' : '0.5';
-    chk.disabled        = !issued;
-    chk.checked         = !!issued;
-    if (badge) {
-      badge.textContent   = issued ? '발행완료' : '미발행';
-      badge.style.cssText = issued
-        ? 'font-size:10px;border-radius:6px;padding:1px 6px;background:var(--primary-50);color:var(--primary-600);border:1px solid var(--primary-200);'
-        : 'font-size:10px;border-radius:6px;padding:1px 6px;background:var(--gray-100);color:var(--gray-600);border:1px solid var(--gray-300);';
-    }
-    if (desc) desc.textContent = issued
-      ? (tiNo ? `승인번호: ${tiNo}` : '발행완료')
-      : '세금계산서 발행 후 선택 가능';
-  }
-
-  /* 개인이면 사업자번호 자리가 주민등록번호가 된다. 비워 두면 서버가 처방전의
-     주민번호를 꺼내 쓰므로, 번호를 화면으로 내려보내지 않는다. */
-  function tiInvoiceeChanged() {
-    const isPerson = document.getElementById('ti-invoicee').value === '개인';
-    const label = document.getElementById('ti-biz-no-label');
-    const input = document.getElementById('ti-biz-no');
-    const hint  = document.getElementById('ti-biz-no-hint');
-    label.innerHTML = isPerson
-      ? '주민등록번호'
-      : '사업자등록번호 <span style="color:var(--danger);">*</span>';
-    input.placeholder = isPerson ? '비워 두면 환자 주민등록번호로 발행' : '123-45-67890';
-    hint.style.display = isPerson ? 'block' : 'none';
-    if (isPerson && !document.getElementById('ti-biz-name').value.trim()) {
-      const name = document.getElementById('f-name')?.value?.trim();
-      if (name) {
-        document.getElementById('ti-biz-name').value = name;
-        document.getElementById('ti-ceo-name').value = name;
-      }
-    }
-  }
-
-  async function submitTaxInvoice() {
-    if (!_ORDER_ID) { showToast('주문을 생성한 뒤에 발행할 수 있습니다.', 'danger'); return; }
-    const btn      = document.getElementById('btnSubmitTaxInvoice');
-    const invoicee = document.getElementById('ti-invoicee').value;
-    const bizName  = document.getElementById('ti-biz-name').value.trim();
-    const ceoName  = document.getElementById('ti-ceo-name').value.trim();
-    const bizNo    = document.getElementById('ti-biz-no').value.trim();
-    const supply   = document.getElementById('ti-supply').value.replace(/,/g, '');
-    const vat      = document.getElementById('ti-vat').value.replace(/,/g, '');
-    if (!bizName) { showToast('공급받는자 상호를 입력해 주십시오.', 'danger'); return; }
-    if (!ceoName) { showToast('대표자명을 입력해 주십시오.', 'danger'); return; }
-    if (invoicee === '사업자' && !bizNo) { showToast('사업자등록번호를 입력해 주십시오.', 'danger'); return; }
-    if (!supply)  { showToast('공급가액을 입력해 주십시오.', 'danger'); return; }
-
-    BtnState.loading(btn, '발행 중...');
-    const res = await apiRequest(`/orders/${_ORDER_ID}/tax-invoice`, 'POST', {
-      tax_invoice_type:     document.getElementById('ti-type').value,
-      tax_invoice_invoicee: invoicee,
-      tax_invoice_biz_name: bizName,
-      tax_invoice_ceo_name: ceoName,
-      tax_invoice_biz_no:   bizNo,
-      tax_invoice_email:    document.getElementById('ti-email').value.trim() || null,
-      tax_invoice_supply:   supply,
-      tax_invoice_vat:      vat,
-    });
-    BtnState.reset(btn, '<i class="fa-solid fa-file-invoice"></i> 발행');
-
-    if (res.success) {
-      closeTaxInvoicePopover();
-      const tiWrap = document.getElementById('tiNotIssuedWrap');
-      const tiRb   = document.getElementById('tiResultBadge');
-      if (tiWrap) tiWrap.style.display = 'none';
-      if (tiRb)   tiRb.style.display   = 'flex';
-      setFaxTaxInvoiceState(true, res.tax_invoice_no);
-      showToast(`세금계산서 발행 완료 (${res.tax_invoice_no})`, 'success');
-    } else {
-      showToast(res.message || '발행 실패', 'danger');
-    }
   }
 
   function showDangerConfirm(title, msg, onConfirm) {
