@@ -110,8 +110,16 @@ class OrderReturnController extends Controller
             'final_signed_at' => $r->final_signed_at?->format('Y-m-d H:i:s') ?? '',
             /* 목록의 「결재」 단추가 무엇으로 설지 — 서명 · 서명 확인 · 빈칸.
                권한 판정은 서버가 한다(팝오버를 열 때 다시 묻는다). */
+            /* 「결재」 칸의 단추가 무엇으로 설지 — 지금 **누가 무엇을 할 차례인가**를
+               말한다 (2026-09-28 무한시험 2회차).
+
+               여태 서명 차례에만 단추가 섰다. 그래서 창고가 검수를 청한 건은 목록에
+               「요청」이라고만 뜨고 무엇을 눌러야 할지 없어, 담당자가 상세로 들어가
+               탭을 찾아야 그제야 알았다. 검수 차례에도 단추를 세운다. */
             'sign_btn'        => $r->final_signed_at ? 'view'
-                : (($r->inspect_confirmed_at && $r->needsFinalSign()) ? 'sign' : ''),
+                : (($r->inspect_confirmed_at && $r->needsFinalSign()) ? 'sign'
+                : ((! $r->inspect_confirmed_at
+                    && ($r->warehouse_inspect_requested_at || $r->inspect_result)) ? 'inspect' : '')),
             /* 증빙을 다시 낸 자취 (2026-09-28 지시). 금액이 바뀐 건에만 선다 —
                금액 변경이 없으면 증빙은 손대지 않는 것이 규칙이다. */
             'docs_reissued'   => $r->docs_reissued_at?->format('Y-m-d H:i') ?? '',

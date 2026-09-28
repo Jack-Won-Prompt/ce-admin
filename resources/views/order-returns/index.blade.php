@@ -244,17 +244,30 @@
 
     if (!v) { box.textContent = ''; return box; }
 
-    const 서명됨 = v === 'view';
+    /* 지금 누가 무엇을 할 차례인가를 말한다 — 검수 · 서명 · 서명 확인 */
+    const 꼴 = {
+      inspect: { 글: '검수',      귀띔: '책임자 검수를 합니다 — 결재 판으로 갑니다',
+                 색: 'border:1px solid #0369A1;background:#E0F2FE;color:#0369A1;' },
+      sign:    { 글: '서명',      귀띔: '이 자리에서 최종승인자 서명을 받습니다',
+                 색: 'border:1px solid var(--primary);background:var(--primary-light);color:var(--primary);' },
+      view:    { 글: '서명 확인', 귀띔: '받은 서명을 확인합니다',
+                 색: 'border:1px solid var(--border);background:#fff;color:var(--text-muted);' },
+    }[v];
+
+    if (!꼴) { box.textContent = ''; return box; }
+
     const b = document.createElement('button');
     b.type = 'button';
-    b.textContent = 서명됨 ? '서명 확인' : '서명';
-    b.title = 서명됨 ? '받은 서명을 확인합니다' : '이 자리에서 최종승인자 서명을 받습니다';
+    b.textContent = 꼴.글;
+    b.title = 꼴.귀띔;
     b.style.cssText = 'height:22px;padding:0 9px;font-size:11px;font-weight:700;cursor:pointer;'
-      + 'border-radius:999px;line-height:1;'
-      + (서명됨
-          ? 'border:1px solid var(--border);background:#fff;color:var(--text-muted);'
-          : 'border:1px solid var(--primary);background:var(--primary-light);color:var(--primary);');
-    b.onclick = (ev) => { ev.stopPropagation(); rtSignOpen(row.id); };
+      + 'border-radius:999px;line-height:1;' + 꼴.색;
+    b.onclick = (ev) => {
+      ev.stopPropagation();
+      /* 검수는 적을 것이 많아 팝오버에 담지 않는다 — 결재 판으로 곧바로 보낸다 */
+      if (v === 'inspect') { location.href = '/order-returns/' + row.id + '?tab=appr'; return; }
+      rtSignOpen(row.id);
+    };
     box.appendChild(b);
     return box;
   };
