@@ -63,8 +63,8 @@ class MigratePatientsFromWithworksCommand extends Command
             $질의->limit((int) $한도);
         }
 
-        $셈 = ['모두' => 0, '새로' => 0, '덧씀' => 0, '주민번호' => 0, '주소' => 0,
-               '전화이상' => 0, '이름겹침' => 0, '주민겹침' => 0];
+        $셈 = ['모두' => 0, '새로' => 0, '덧씀' => 0, '주민번호' => 0, '생년월일' => 0,
+               '성별' => 0, '주소' => 0, '전화이상' => 0, '이름겹침' => 0, '주민겹침' => 0];
 
         /* 겹치는 사람을 미리 센다 — 한 사람이 위드웍스에 두 계정으로 있는 일이 있다.
            이름 52명ㆍ주민번호 106명(2026-09-29 확인). 옮기기 자체는 막지 않는다 —
@@ -107,6 +107,24 @@ class MigratePatientsFromWithworksCommand extends Command
                 $주민번호있나 = $w->resident_no && preg_match('/^\d{6}-?\d{7}$/', $w->resident_no);
                 if ($주민번호있나) { $셈['주민번호']++; }
 
+                /* 생년월일과 성별은 **가린 주민번호에서 읽는다** — 복호화하지 않는다.
+                   뒷자리 첫 숫자가 세기와 성별을 다 말해 주기 때문이다.
+
+                   비워 두면 나이는 보이는데(그것도 주민번호에서 세므로) 생년월일 칸이
+                   빈다. 무엇보다 「생년」으로 찾는 거르개가 birth_date 를 보므로,
+                   채우지 않으면 12,604명 가운데 한 명도 찾히지 않는다. */
+                $생년월일 = null;
+                $성별     = null;
+
+                if ($주민번호있나) {
+                    $가린것   = ResidentNo::mask($w->resident_no);
+                    $생년월일 = ResidentNo::birthDateFromMasked($가린것)?->toDateString();
+                    $성별     = ResidentNo::genderFromMasked($가린것);
+
+                    if ($생년월일) { $셈['생년월일']++; }
+                    if ($성별)     { $셈['성별']++; }
+                }
+
                 $있는번호 = $이미[$w->ww_id] ?? null;
                 $있는번호 ? $셈['덧씀']++ : $셈['새로']++;
 
@@ -123,11 +141,20 @@ class MigratePatientsFromWithworksCommand extends Command
                 $값 = [
                     'name'            => $이름,
                     'mobile'          => $번호,
+                    /* 사업부는 IC 다 — 옮기는 것이 모두 (E) 계정, 곧 카테터 환자다.
+                       비워 두면 화면의 「사업부」 칸이 빈 채로 서고, 더 나쁘게는
+                       저장할 때 이름 앞에 (E) 가 붙지 않는다. 위드웍스는 개인 거래처를
+                       (E) 로 적으므로 그것이 빠지면 두 시스템이 같은 사람을 다른
+                       이름으로 읽는다(Patient::nameWithCareTag). */
+                    'care_type'       => 'IC',
                     'ww_account_code' => $w->account_code,
                     'data_origin'     => 'migration',
                     'data_batch'      => $묶음,
                     'updated_at'      => now(),
-                ] + ($주소 ?: []);
+                ] + array_filter([
+                    'birth_date' => $생년월일,
+                    'gender'     => $성별,
+                ]) + ($주소 ?: []);
 
                 $거래처 = $있는번호
                     ? Patient::withTrashed()->find($있는번호)
