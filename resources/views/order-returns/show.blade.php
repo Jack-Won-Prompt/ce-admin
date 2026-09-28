@@ -130,6 +130,20 @@
   .ap-sigbar .ap-hint { margin-top:0; }
   .ap-sig-img { max-width:220px; max-height:80px; border:1px solid var(--border);
                 border-radius:6px; background:#fff; }
+
+  /* 나가는 돈ㆍ들어오는 돈을 나란히 둔다 (2026-09-28 지시). 한 칸에 담으면
+     그 숫자가 돌려줄 돈인지 더 받을 돈인지 서명하는 사람이 가릴 수 없다.
+     해당하지 않는 쪽도 세워 둔다 — 빈자리가 곧 「이쪽은 없다」는 말이다. */
+  .ap-two { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; }
+  .ap-one { border:1px solid var(--border); border-radius:9px; padding:10px 12px;
+            background:var(--gray-50,#fafbfc); }
+  .ap-one .t { font-size:11.5px; font-weight:700; color:var(--text-muted); }
+  .ap-one .n { font-size:17px; font-weight:800; margin-top:3px; color:var(--text-muted); }
+  .ap-one.on.give { background:var(--primary-light); border-color:var(--primary-200); }
+  .ap-one.on.give .n { color:var(--primary); }
+  .ap-one.on.take { background:#FEF3C7; border-color:#F2C97D; }
+  .ap-one.on.take .n { color:#B54708; }
+  @media (max-width: 720px) { .ap-two { grid-template-columns:1fr; } }
 </style>
 @endpush
 

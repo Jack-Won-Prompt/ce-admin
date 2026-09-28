@@ -20,6 +20,9 @@
   /* 끝난 건은 다시 셈하지 않는다 — 실제로 오간 돈을 보인다 */
   $움직임 = $r->결재금액();
   $끝났나 = $r->refund_stage === 'refunded';
+  /* 나가는 돈과 들어오는 돈을 가른다 (2026-09-28 지시) — 한 건에 둘이 함께 서지 않는다 */
+  $환불액 = $r->환불금액();
+  $차액   = $r->차액금액();
   $하자   = $r->inspect_result === \App\Models\OrderReturn::RESULT_DEFECT;
 @endphp
 
@@ -45,15 +48,21 @@
         {{ $r->inspect_source === 'warehouse' ? '창고 전송' : '담당자 입력' }}
       </span></div>
     @endif
-    @if($r->창고검수요청중())
-      <form method="POST" action="{{ route('order-returns.seenInspection', $r) }}" class="rt-go">
-        @csrf
-        <button type="submit" class="ds-btn ds-btn-sm">확인했습니다</button>
-        <span style="font-size:12px;color:var(--text-muted);">
-          목록의 「창고 검수 요청」 표시를 해제합니다. 결재 단계와는 무관합니다.
-        </span>
-      </form>
-    @endif
+    <div class="rt-go">
+      {{-- 창고가 실제로 무엇을 보냈는지는 웹훅 원문에만 있다 — 받은 수량ㆍ보낸 수량은
+           우리 표에 담는 칸이 없어, 여태 위드웍스 화면을 따로 열어야 했다. --}}
+      <button type="button" class="ds-btn ds-btn-sm" onclick="ap창고열기()">요청 내용 보기</button>
+      @if($r->창고검수요청중())
+        <form method="POST" action="{{ route('order-returns.seenInspection', $r) }}"
+              style="display:inline-flex;gap:8px;align-items:center;margin:0;">
+          @csrf
+          <button type="submit" class="ds-btn ds-btn-sm">확인했습니다</button>
+          <span style="font-size:12px;color:var(--text-muted);">
+            목록의 「창고 검수 요청」 표시를 해제합니다. 결재 단계와는 무관합니다.
+          </span>
+        </form>
+      @endif
+    </div>
   </div>
 </div>
 @endif
@@ -92,11 +101,20 @@
           {{ number_format((int) $r->inspect_deduct_amount) }}원
         </span></div>
       @endif
-      <div class="rt-kv"><span>결재 경로</span><span>
-        <b>{{ $r->refundRouteLabel() }}</b>
-        @if($길 !== \App\Models\OrderReturn::ROUTE_NONE)
-          · {{ number_format($움직임) }}원
-        @endif
+      <div class="rt-kv"><span>결재 경로</span><span><b>{{ $r->refundRouteLabel() }}</b></span></div>
+      {{-- 나가는 돈과 들어오는 돈을 **다른 줄**에 둔다. 한 줄에 담으면 목록에서도
+           상세에서도 그 숫자가 돌려줄 돈인지 더 받을 돈인지 가릴 수 없다. --}}
+      <div class="rt-kv"><span>환불 (지급)</span><span>
+        @if($환불액)
+          <b style="color:var(--primary);">{{ number_format($환불액) }}원</b>
+          <span style="color:var(--text-muted);font-weight:400;">고객에게 지급</span>
+        @else — @endif
+      </span></div>
+      <div class="rt-kv"><span>차액 입금 (청구)</span><span>
+        @if($차액)
+          <b style="color:#B54708;">{{ number_format($차액) }}원</b>
+          <span style="color:var(--text-muted);font-weight:400;">고객에게 청구</span>
+        @else — @endif
       </span></div>
       @if($하자 && $길 === \App\Models\OrderReturn::ROUTE_PARTIAL)
         {{-- 차감 뒤의 금액만 보이면 「무엇에서 얼마를 뺐나」를 알 수 없다. 끝난 뒤에는
@@ -229,8 +247,11 @@
     @else
 
       {{-- 서명하면 무슨 일이 일어나는가. 이 숫자가 결재의 알맹이다. --}}
-      <div class="ap-amt {{ $길 === \App\Models\OrderReturn::ROUTE_TOPUP ? 'take' : 'give' }}">
-        <div class="t">{{ $r->refundRouteLabel() }}</div>
+      <div class="ap-amt {{ $차액 ? 'take' : 'give' }}">
+        <div class="t">
+          {{ $r->refundRouteLabel() }}
+          · <b>{{ $차액 ? '고객에게 청구' : '고객에게 지급' }}</b>
+        </div>
         <div class="n">{{ number_format($움직임) }}원</div>
         <div class="s">
           @if($끝났나)
@@ -375,26 +396,85 @@
             </div>
           </form>
 
-          {{-- 화면 안 서명 --}}
-          <form method="POST" action="{{ route('order-returns.finalSign', $r) }}" id="apSign" style="display:none;">
-            @csrf
-            <input type="hidden" name="signature" id="apSigData">
-            <div class="ap-f ap-wide" style="margin-top:10px;">
-              <label>최종승인자 서명 — {{ number_format($움직임) }}원 {{ $r->refundRouteLabel() }}</label>
-              <canvas id="apCanvas" class="ap-canvas"></canvas>
-              <div class="ap-sigbar">
-                <span class="ap-hint" id="apSigWhy">서명란에 서명해 주십시오.</span>
-                <button type="button" class="ds-btn ds-btn-sm" onclick="ap지우기()">지우기</button>
+          {{-- 화면 안 서명 — **확인 팝오버** (2026-09-28 지시).
+
+               서명은 돈을 움직이는 결재다. 카드 안에 펼치면 무엇에 서명하는지가
+               위아래로 흩어져, 서명하는 사람은 금액만 보고 누른다. 팝오버 한 자리에
+               확인할 것을 모아 두고 그 아래에서 서명받는다. --}}
+          <div id="apSignPop" style="display:none;position:fixed;inset:0;z-index:1200;
+                                     background:rgba(15,23,42,.34);"
+               onclick="if(event.target===this) ap서명열기(false)">
+            <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+                        width:min(560px,94vw);max-height:88vh;display:flex;flex-direction:column;
+                        background:var(--bg-card,#fff);border-radius:12px;
+                        box-shadow:0 18px 48px rgba(15,23,42,.24);overflow:hidden;">
+              <div style="padding:13px 16px;border-bottom:1px solid var(--border);
+                          display:flex;align-items:center;gap:8px;">
+                <span style="font-size:14px;font-weight:700;">최종승인자 서명</span>
+                <span style="font-size:12px;color:var(--text-muted);">{{ $r->receipt_no }}</span>
+                <span style="flex:1;"></span>
+                <button type="button" class="ds-btn ds-btn-sm" onclick="ap서명열기(false)">✕</button>
               </div>
+
+              <form method="POST" action="{{ route('order-returns.finalSign', $r) }}" id="apSign"
+                    style="padding:12px 16px;overflow-y:auto;">
+                @csrf
+                <input type="hidden" name="signature" id="apSigData">
+
+                {{-- 서명하기 전에 확인할 것 --}}
+                <div class="rt-kv"><span>구분</span><span>{{ $r->typeLabel() }}</span></div>
+                <div class="rt-kv"><span>주문번호</span><span>{{ $r->order?->order_number ?? '—' }}</span></div>
+                <div class="rt-kv"><span>고객</span><span>{{ $r->order?->patient?->name ?? '—' }}</span></div>
+                <div class="rt-kv"><span>입고 검수</span><span>
+                  @if($하자)<span class="ap-chip ap-bad">하자ㆍ수량 차이</span>
+                  @else<span class="ap-chip ap-ok">이상 없음</span>@endif
+                  @if($하자 && $r->inspect_defect_qty)
+                    <span style="color:var(--text-muted);font-weight:400;">· {{ $r->inspect_defect_qty }}개</span>
+                  @endif
+                </span></div>
+                @if($하자)
+                  <div class="rt-kv rt-note"><span>하자 내용</span><span>{{ $r->inspect_defect_note ?: '—' }}</span></div>
+                  <div class="rt-kv"><span>차감 금액</span><span style="color:var(--danger);font-weight:700;">
+                    {{ number_format((int) $r->inspect_deduct_amount) }}원
+                  </span></div>
+                @endif
+                <div class="rt-kv"><span>책임자 승인</span><span>
+                  {{ $r->inspectConfirmer?->name ?? '—' }}
+                  <span style="color:var(--text-muted);font-weight:400;">
+                    {{ $r->inspect_confirmed_at?->format('Y-m-d H:i') }}</span>
+                </span></div>
+
+                {{-- 서명하면 움직일 돈 — 두 항목을 나란히 두어 방향을 못박는다 --}}
+                <div class="ap-two">
+                  <div class="ap-one {{ $환불액 ? 'on give' : '' }}">
+                    <div class="t">환불 (고객에게 지급)</div>
+                    <div class="n">{{ $환불액 ? number_format($환불액) . '원' : '해당 없음' }}</div>
+                  </div>
+                  <div class="ap-one {{ $차액 ? 'on take' : '' }}">
+                    <div class="t">차액 입금 (고객에게 청구)</div>
+                    <div class="n">{{ $차액 ? number_format($차액) . '원' : '해당 없음' }}</div>
+                  </div>
+                </div>
+
+                <div class="ap-f ap-wide" style="margin-top:10px;">
+                  <label>서명</label>
+                  <canvas id="apCanvas" class="ap-canvas"></canvas>
+                  <div class="ap-sigbar">
+                    <span class="ap-hint" id="apSigWhy">서명란에 서명해 주십시오.</span>
+                    <button type="button" class="ds-btn ds-btn-sm" onclick="ap지우기()">지우기</button>
+                  </div>
+                </div>
+
+                <div class="rt-go">
+                  <button type="submit" class="ds-btn ds-btn-primary" id="apSigGo" disabled
+                          onclick="return ap서명보내기(this);">
+                    서명하고 승인
+                  </button>
+                  <button type="button" class="ds-btn ds-btn-sm" onclick="ap서명열기(false)">닫기</button>
+                </div>
+              </form>
             </div>
-            <div class="rt-go">
-              <button type="submit" class="ds-btn ds-btn-primary" id="apSigGo" disabled
-                      onclick="return ap서명보내기(this);">
-                서명하고 승인 — {{ number_format($움직임) }}원
-              </button>
-              <button type="button" class="ds-btn ds-btn-sm" onclick="ap서명열기(false)">취소</button>
-            </div>
-          </form>
+          </div>
 
           {{-- 최종 반려 --}}
           <form method="POST" action="{{ route('order-returns.finalReject', $r) }}" id="apFinRej" style="display:none;">
@@ -418,6 +498,27 @@
   </div>
 </div>
 @endif
+
+{{-- 창고 검수 요청 원문 팝오버 (2026-09-28 지시) --}}
+<div id="apWhPop" style="display:none;position:fixed;inset:0;z-index:1200;background:rgba(15,23,42,.34);"
+     onclick="if(event.target===this) ap창고열기(false)">
+  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+              width:min(560px,94vw);max-height:86vh;display:flex;flex-direction:column;
+              background:var(--bg-card,#fff);border-radius:12px;
+              box-shadow:0 18px 48px rgba(15,23,42,.24);overflow:hidden;">
+    <div style="padding:13px 16px;border-bottom:1px solid var(--border);
+                display:flex;align-items:center;gap:8px;">
+      <span style="font-size:14px;font-weight:700;">창고 검수 요청 내용</span>
+      <span style="font-size:12px;color:var(--text-muted);">{{ $r->receipt_no }}</span>
+      <span style="flex:1;"></span>
+      <button type="button" class="ds-btn ds-btn-sm" onclick="ap창고열기(false)">✕</button>
+    </div>
+    <div id="apWhBody" style="padding:8px 16px 14px;overflow-y:auto;font-size:13px;"></div>
+    <div style="padding:11px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
+      <button type="button" class="ds-btn" onclick="ap창고열기(false)">닫기</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ── 책임자 검수 칸 ───────────────────────────────────────
@@ -524,10 +625,88 @@ function ap번호채우기() {
 let apCv = null, apCtx = null, ap그리는중 = false, ap칠함 = false;
 
 function ap서명열기(펼까 = true) {
-  const f = document.getElementById('apSign');
-  if (!f) return;
-  f.style.display = 펼까 ? 'block' : 'none';
-  if (펼까) { ap캔버스(); }
+  const pop = document.getElementById('apSignPop');
+  if (!pop) return;
+  pop.style.display = 펼까 ? 'block' : 'none';
+  /* 팝오버가 뜬 뒤라야 캔버스의 크기를 잴 수 있다 — 감춰진 자리에서 세우면
+     너비가 0 이라 그어도 아무것도 남지 않는다. */
+  if (펼까) { requestAnimationFrame(() => ap캔버스()); }
+}
+
+/* ── 창고 검수 요청 원문 ───────────────────────────────────
+   카드에는 요청 일시와 출처만 선다. 창고가 실제로 보낸 값(받은 수량ㆍ보낸 수량)은
+   웹훅 원문에만 있어 여기서 읽어 온다. */
+let ap창고담김 = null;
+
+async function ap창고열기(펼까 = true) {
+  const pop = document.getElementById('apWhPop');
+  if (!pop) return;
+
+  pop.style.display = 펼까 ? 'block' : 'none';
+  if (!펼까) return;
+
+  const 몸 = document.getElementById('apWhBody');
+
+  if (ap창고담김) { 몸.innerHTML = ap창고담김; return; }
+
+  몸.innerHTML = '<div style="padding:16px 0;color:var(--text-muted);">불러오는 중입니다…</div>';
+
+  try {
+    const res = await fetch(@json(route('order-returns.inspectionDetail', $r)), {
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    const j = await res.json();
+
+    const 줄 = (라벨, 값, 굵게) => 값 || 값 === 0
+      ? '<div class="rt-kv"><span>' + 라벨 + '</span><span'
+        + (굵게 ? ' style="font-weight:700;"' : '') + '>' + String(값) + '</span></div>'
+      : '';
+
+    let h = '';
+    h += 줄('접수번호', j.receipt);
+    h += 줄('구분', j.type);
+    h += 줄('주문번호', j.order_no);
+    h += 줄('고객', j.patient);
+    h += 줄('반품 주문번호', j.so_no);
+    h += 줄('요청 일시', j.requested_at, true);
+    h += 줄('확인 일시', j.seen_at || '—');
+    h += 줄('창고 입고', j.arrived_at);
+    h += 줄('검수 결과 출처', j.source);
+    h += 줄('검수 결과', j.result, true);
+    h += 줄('하자 수량', j.defect_qty != null ? j.defect_qty + '개' : '');
+
+    /* 우리 표에 담는 칸이 없는 값 — 원문에서만 읽힌다 */
+    if (j.received_qty != null || j.expected_qty != null) {
+      h += 줄('창고 수량', (j.received_qty ?? '?') + ' / ' + (j.expected_qty ?? '?')
+                            + ' (받은 수량 / 보낸 수량)');
+    }
+    if (j.defect_note) {
+      h += '<div class="rt-kv rt-note"><span>하자 내용</span><span>' + j.defect_note + '</span></div>';
+    }
+    h += 줄('창고 상태', j.pl3_status);
+    if (j.pl3_note) {
+      h += '<div class="rt-kv rt-note"><span>창고 검수 비고</span><span>' + j.pl3_note
+         + (j.pl3_note_at ? '<span class="rt-note-at">' + j.pl3_note_at + '</span>' : '')
+         + '</span></div>';
+    }
+
+    if ((j.events || []).length) {
+      h += '<div style="margin-top:10px;font-size:12px;font-weight:700;color:var(--text-muted);">'
+         + '창고가 보낸 사건</div>';
+      j.events.forEach(e => {
+        h += '<div class="rt-kv"><span>' + (e.at || '') + '</span><span>'
+           + e.event + (e.label ? ' · ' + e.label : '') + '</span></div>';
+      });
+    }
+
+    if (!h) { h = '<div style="padding:16px 0;color:var(--text-muted);">창고가 보낸 내용이 없습니다.</div>'; }
+
+    ap창고담김 = h;
+    몸.innerHTML = h;
+  } catch (e) {
+    몸.innerHTML = '<div style="padding:16px 0;color:var(--danger);">'
+                 + '내용을 조회하지 못했습니다 — 다시 열어 주십시오.</div>';
+  }
 }
 
 function ap캔버스() {

@@ -286,6 +286,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{orderReturn}/send-topup-link',  [\App\Http\Controllers\OrderReturnController::class, 'sendTopupLink'])->name('sendTopupLink');
         // 최종승인자를 고를 목록 — 그 권한이 있는 사람만 나온다
         Route::get('/{orderReturn}/approvers',         [\App\Http\Controllers\OrderReturnController::class, 'approverList'])->name('approverList');
+        // 창고가 청한 검수 요청의 원문 — 팝오버가 읽는다
+        Route::get('/{orderReturn}/inspection-detail', [\App\Http\Controllers\OrderReturnController::class, 'inspectionDetail'])->name('inspectionDetail');
     });
 
     // CE 샘플판매주문 — 목록·상세·신규를 한 화면의 탭으로 둔다

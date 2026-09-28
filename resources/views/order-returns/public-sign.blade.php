@@ -105,10 +105,13 @@
       </dd></div>
     </dl>
 
-    {{-- 서명하면 무슨 일이 일어나는지 한 줄로. 최종승인자가 보는 것은 이 숫자다. --}}
+    {{-- 서명하면 무슨 일이 일어나는지 한 줄로. 최종승인자가 보는 것은 이 숫자다.
+         나가는 돈인지 들어오는 돈인지를 제목에 못박는다 — 숫자만으로는 가릴 수 없다. --}}
     @php $내주나 = $r->refundRoute() === \App\Models\OrderReturn::ROUTE_TOPUP; @endphp
     <div class="amt {{ $내주나 ? 'take' : 'give' }}">
-      <div class="t">{{ $r->refundRouteLabel() }}</div>
+      <div class="t">
+        {{ $r->refundRouteLabel() }} · <b>{{ $내주나 ? '고객님께 청구' : '고객님께 지급' }}</b>
+      </div>
       <div class="n">{{ number_format($금액) }}원</div>
       <div class="s">
         @if ($내주나)

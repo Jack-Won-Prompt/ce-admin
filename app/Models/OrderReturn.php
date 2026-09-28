@@ -741,6 +741,32 @@ class OrderReturn extends Model
         return $this->움직일금액();
     }
 
+    /**
+     * 고객에게 **지급**할 돈 — 환불 (2026-09-28 지시).
+     *
+     * 돈이 나가는 쪽과 들어오는 쪽을 한 칸에 담으면, 목록에서 「19,500원」이 돌려준
+     * 돈인지 더 받을 돈인지 가릴 수 없다. 두 칸으로 나눈다.
+     */
+    public function 환불금액(): int
+    {
+        return in_array($this->refundRoute(), [self::ROUTE_FULL, self::ROUTE_PARTIAL], true)
+            ? $this->결재금액() : 0;
+    }
+
+    /** 고객에게서 **받을** 돈 — 교환의 차액 */
+    public function 차액금액(): int
+    {
+        return $this->refundRoute() === self::ROUTE_TOPUP ? $this->결재금액() : 0;
+    }
+
+    /** 돈이 어느 쪽으로 움직이나 — give(지급) · take(청구) · none */
+    public function 금액방향(): string
+    {
+        if ($this->차액금액() > 0) { return 'take'; }
+
+        return $this->환불금액() > 0 ? 'give' : 'none';
+    }
+
     /** 서명 링크가 아직 살아 있는가 */
     public function 서명링크살았나(): bool
     {

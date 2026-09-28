@@ -251,6 +251,26 @@
       },
       { header: '신청 사유', name: 'reason',   width: 110 },
       { header: '환불금액', name: 'refund',   width: 100, align: 'right' },
+      /* 결재로 정해진 금액은 방향을 갈라 둔다 (2026-09-28 지시) — 위의 「환불금액」은
+         접수할 때 적어 둔 값이고, 아래 둘은 결재가 정한 실제로 움직일(움직인) 돈이다. */
+      {
+        header: '환불 (지급)', name: 'refund_out', width: 110, align: 'right', sortable: true,
+        renderer: (v) => {
+          const s = document.createElement('span');
+          s.textContent = v || '';
+          if (v) { s.style.cssText = 'font-weight:700;color:#3C82C4;'; }
+          return s;
+        },
+      },
+      {
+        header: '차액 입금 (청구)', name: 'topup_in', width: 120, align: 'right', sortable: true,
+        renderer: (v) => {
+          const s = document.createElement('span');
+          s.textContent = v || '';
+          if (v) { s.style.cssText = 'font-weight:700;color:#B54708;'; }
+          return s;
+        },
+      },
       { header: '담당자',   name: 'assignee', width: 90 },
       // 접수한 사람과 승인한 사람은 다르다 — 절차서가 그렇게 나눈다
       { header: '접수자',   name: 'taker',    width: 90 },

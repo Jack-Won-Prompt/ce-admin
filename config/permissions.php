@@ -428,6 +428,7 @@ return [
         // (POST 라 그냥 두면 create 로 읽혀, 볼 수만 있는 사람이 표시를 못 내린다).
         'order-returns.seenInspection'    => ['order-returns', 'view'],
         'order-returns.approverList'      => ['order-returns', 'view'],
+        'order-returns.inspectionDetail'  => ['order-returns', 'view'],
         'order-returns.managerApprove'    => ['order-returns', 'inspect_approve'],
         'order-returns.managerReject'     => ['order-returns', 'inspect_approve'],
         'order-returns.finalSignSend'     => ['order-returns', 'final_approve'],

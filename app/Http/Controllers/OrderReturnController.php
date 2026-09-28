@@ -117,6 +117,13 @@ class OrderReturnController extends Controller
             'patient'   => $r->order?->patient?->name ?? '-',
             'reason'    => OrderReturn::reasonLabel($r->reason_code),
             'refund'    => $r->refund_amount ? number_format($r->refund_amount) : '-',
+            /* 돈이 나가는 쪽과 들어오는 쪽을 가른다 (2026-09-28 지시).
+
+               한 칸에 담으면 목록의 「19,500원」이 돌려준 돈인지 더 받을 돈인지
+               가릴 수 없다. 환불은 고객에게 지급할 돈, 차액 입금은 고객에게서
+               받을 돈이다 — 한 건에 둘이 함께 서는 일은 없다. */
+            'refund_out' => ($몫 = $r->환불금액()) ? number_format($몫) : '',
+            'topup_in'   => ($몫 = $r->차액금액()) ? number_format($몫) : '',
             /* 승인 팝오버가 읽는다 — 승인하기 전에 무엇을 승인하는지를 보여 준다.
                목록의 값은 사람이 읽는 꼴(리 넣은 글)이라, 셀할 수 있는 숫자를 따로 싣는다. */
             'ap_next'      => (function () use ($r) {
@@ -1264,6 +1271,64 @@ class OrderReturnController extends Controller
         return str_starts_with($말, '!')
             ? back()->withErrors(['pay' => ltrim($말, '! ')])
             : back()->with('status', $말);
+    }
+
+    /**
+     * 창고가 청한 검수 요청의 **원문** (2026-09-28 지시).
+     *
+     * 카드에는 요청 일시와 출처만 선다. 창고가 실제로 무엇을 보냈는지 — 받은 수량,
+     * 보낸 수량, 하자 내용 — 는 웹훅 원문에만 있어, 여태 그것을 보려면 위드웍스
+     * 화면을 따로 열어야 했다.
+     *
+     * 사건 표는 접수와 이어 두는 칸이 없어 원문의 접수번호로 찾는다.
+     */
+    public function inspectionDetail(OrderReturn $orderReturn): \Illuminate\Http\JsonResponse
+    {
+        $사건들 = \App\Models\WithworksEvent::where('event', 'like', 'ro.%')
+            ->where(function ($q) use ($orderReturn) {
+                $q->where('payload->ce_return_number', $orderReturn->receipt_no)
+                  ->orWhere('payload', 'like', '%' . $orderReturn->receipt_no . '%');
+            })
+            ->orderByDesc('id')->limit(10)->get();
+
+        $검수 = null;
+
+        foreach ($사건들 as $e) {
+            if (! empty($e->payload['inspection'])) {
+                $검수 = $e->payload['inspection'];
+                break;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'receipt' => $orderReturn->receipt_no,
+            'type'    => $orderReturn->typeLabel(),
+            'patient' => $orderReturn->order?->patient?->name ?? '',
+            'order_no' => $orderReturn->order?->order_number ?? '',
+            'requested_at' => $orderReturn->warehouse_inspect_requested_at?->format('Y-m-d H:i'),
+            'seen_at'      => $orderReturn->warehouse_inspect_seen_at?->format('Y-m-d H:i'),
+            'arrived_at'   => $orderReturn->arrived_at?->format('Y-m-d H:i'),
+            'source'  => $orderReturn->inspect_source === 'warehouse' ? '창고 전송'
+                         : ($orderReturn->inspect_source ? '담당자 입력' : ''),
+            'result'  => $orderReturn->inspect_result
+                         ? (OrderReturn::RESULT_LABELS[$orderReturn->inspect_result] ?? '') : '',
+            'defect_qty'  => $orderReturn->inspect_defect_qty,
+            'defect_note' => $orderReturn->inspect_defect_note,
+            /* 창고가 보낸 원문 — 받은 수량ㆍ보낸 수량은 우리 표에 담는 칸이 없다 */
+            'received_qty' => $검수['received_qty'] ?? null,
+            'expected_qty' => $검수['expected_qty'] ?? null,
+            'raw_note'     => $검수['defect_note'] ?? null,
+            'pl3_status'   => $orderReturn->pl3_status_label,
+            'pl3_note'     => $orderReturn->pl3_note,
+            'pl3_note_at'  => $orderReturn->pl3_note_at?->format('Y-m-d H:i'),
+            'so_no'        => $orderReturn->withworks_so_no,
+            'events'       => $사건들->map(fn ($e) => [
+                'event' => $e->event,
+                'label' => $e->status_label ?: $e->status,
+                'at'    => $e->occurred_at?->format('Y-m-d H:i'),
+            ])->values(),
+        ]);
     }
 
     /**
