@@ -718,13 +718,25 @@ class OrderReturn extends Model
             return $차감;
         }
 
+        /* **부분 반품은 되돌리는 몫만 돌려준다** (2026-09-29 무한시험 6회차).
+
+           360개 가운데 120개만 되돌리는 건에서 81,000원 전액이 나갔다 — 27,000원을
+           돌려주어야 하는데 세 배를 돌려준다. 접수할 때 그 몫을 refund_amount 에
+           담아 두는데(화면이 수량으로 셈해 채운다), 2중 결재 경로가 그것을 보지 않고
+           받은 돈 전액을 집었다. 옛 길(돈무르기)은 진작 보고 있었다.
+
+           적어 둔 몫이 받은 돈보다 클 수는 없다 — 그보다 크면 받은 돈까지만 무른다. */
         $받은것 = (int) ($this->order?->받은금액() ?? 0);
 
+        $돌려줄것 = ($this->is_partial && (int) $this->refund_amount > 0)
+            ? min((int) $this->refund_amount, $받은것)
+            : $받은것;
+
         if ($길 === self::ROUTE_PARTIAL) {
-            return max(0, $받은것 - $차감);
+            return max(0, $돌려줄것 - $차감);
         }
 
-        return $길 === self::ROUTE_FULL ? $받은것 : 0;
+        return $길 === self::ROUTE_FULL ? $돌려줄것 : 0;
     }
 
     /**
