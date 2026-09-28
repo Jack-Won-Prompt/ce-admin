@@ -147,18 +147,29 @@ class ReturnSettlement
             return ['ok' => false, 'note' => $note];
         }
 
-        /* 차감이 있는 건은 **남은 금액으로 증빙을 다시 낸다** (2026-09-28 지시).
+        /* **일부만 돌려준 건은 남은 금액으로 증빙을 다시 낸다** (2026-09-29).
 
-           하자가 있어 차감한 반품은 전량 반품으로 잡혀(수량을 줄이지 않았으므로)
-           아래 close() 로 가 증빙을 통째로 무른다. 그런데 225,000원 가운데
-           202,500원만 돌려주고 22,500원은 우리가 가졌다 — 그 돈의 증빙이 사라져
-           국세청에 신고한 매출과 어긋난다 (2026-09-28 무한시험 2회차).
+           갈래를 가리지 않는다. 하자로 차감한 건이든 수량을 줄인 부분 반품이든,
+           돈을 일부만 돌려주었으면 우리가 쥔 돈이 남아 있고 그 돈의 증빙이 있어야 한다.
 
-           금액이 바뀐 건은 증빙을 전부 다시 낸다는 것이 오늘의 규칙이다. 남은 돈을
-           주문에 반영하고 다시 낸다 — 먼저 남김없이 무르고 그 다음에 내므로 한
-           장씩만 남는다. */
-        if ((int) $return->inspect_deduct_amount > 0 && $return->refunded_at) {
-            $남은돈 = $order->받은금액();
+           여태 —
+             차감 건      전량 반품으로 잡혀 close() 로 가 증빙을 **통째로** 물렀다.
+                          225,000원 가운데 22,500원을 가졌는데 그 매출의 증빙이 사라졌다.
+             부분 반품    「최종 청구분에 반영합니다. 취소한 뒤 다시 발행해야 합니다」라는
+                          **글만** 남겨, 담당자가 주문 화면에서 손으로 해야 했다.
+                          그 글을 읽지 않으면 옛 금액의 계산서가 그대로 살아 있다.
+
+           금액이 바뀐 건은 증빙을 전부 다시 낸다 — 오늘의 규칙을 두 갈래에 함께 쓴다.
+           먼저 남김없이 무르고 그 다음에 내므로 한 장씩만 남는다.
+
+           남은 돈이 0원이면 여기로 오지 않는다. 그때는 돌려줄 것을 다 돌려준 것이라
+           증빙을 통째로 무르는 것이 맞다(아래 close()). */
+        $남은돈 = $order->받은금액();
+
+        if ($return->refunded_at && $남은돈 > 0) {
+            $줄인것 = (int) $return->inspect_deduct_amount > 0
+                ? '차감 ' . number_format((int) $return->inspect_deduct_amount) . '원'
+                : '부분 반품';
 
             $order->forceFill([
                 'patient_copay' => $남은돈,
@@ -167,16 +178,18 @@ class ReturnSettlement
 
             $다시 = app(\App\Services\ReturnDocsReissue::class)
                 ->재발행($return->fresh(['order.patient', 'order.prescription']), Auth::user(),
-                        $return->receipt_no . ' 차감 ' . number_format((int) $return->inspect_deduct_amount) . '원');
+                        $return->receipt_no . ' ' . $줄인것);
 
-            $note = sprintf('차감 %s원을 뺀 %s원으로 증빙을 다시 냈습니다 — %s',
-                number_format((int) $return->inspect_deduct_amount),
-                number_format($남은돈), $다시['note']);
+            $note = sprintf('%s — 남은 %s원으로 증빙을 다시 냈습니다. %s',
+                $줄인것, number_format($남은돈), $다시['note']);
 
             $return->forceFill([
                 'credit_issued_at' => now(),
                 'credit_note'      => mb_substr($note, 0, 500),
             ])->save();
+
+            activity()->causedBy(Auth::user())->performedOn($order)
+                ->log("{$return->receipt_no} {$줄인것} — 남은 " . number_format($남은돈) . '원으로 증빙 재발행');
 
             return ['ok' => $다시['ok'], 'note' => $note];
         }
@@ -196,9 +209,10 @@ class ReturnSettlement
 
                여기서 대신 눌러 주지 않는다 — 팝빌이 운영으로 붙어 있어 취소도 발행도
                국세청 신고까지 간다. 어디서 무엇을 해야 하는지만 정확히 적어 둔다. */
+            /* 여기까지 왔다는 것은 **아직 환불하지 않았다**는 뜻이다(위에서 걸렀다).
+               돈이 오간 뒤에는 남은 금액으로 증빙을 다시 낸다 — 손으로 할 일이 아니다. */
             $note = '부분 취소 — 기관 청구 서류는 최종 청구분에 반영합니다. '
-                  . '이미 발행한 세금계산서ㆍ현금영수증은 취소한 뒤 조정 금액으로 다시 '
-                  . '발행해야 합니다(주문 화면의 ［세금계산서］ㆍ［현금영수증］).' . $adj;
+                  . '환불을 처리하면 남은 금액으로 증빙을 다시 냅니다.' . $adj;
 
             $return->forceFill(['credit_issued_at' => now(), 'credit_note' => $note])->save();
 
