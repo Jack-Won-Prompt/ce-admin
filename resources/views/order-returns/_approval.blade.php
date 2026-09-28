@@ -98,9 +98,12 @@
           · {{ number_format($움직임) }}원
         @endif
       </span></div>
-      @if($하자)
+      @if($하자 && $길 === \App\Models\OrderReturn::ROUTE_PARTIAL)
         {{-- 차감 뒤의 금액만 보이면 「무엇에서 얼마를 뺐나」를 알 수 없다. 끝난 뒤에는
-             받은 돈이 이미 줄어 있어 그 셈을 화면에서 되짚을 수도 없다. --}}
+             받은 돈이 이미 줄어 있어 그 셈을 화면에서 되짚을 수도 없다.
+
+             부분 환불에만 세운다. 차액 청구에서는 움직이는 돈이 차감액 그 자체라,
+             더하면 4,500 + 4,500 = 9,000 처럼 뜻 없는 숫자가 선다. --}}
         <div class="rt-kv"><span>차감 전 금액</span><span style="font-weight:400;color:var(--text-muted);">
           {{ number_format($움직임 + (int) $r->inspect_deduct_amount) }}원
         </span></div>
