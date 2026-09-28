@@ -810,7 +810,16 @@
 
                   {{-- 서명 그림 — 무엇을 받았는지는 그림을 보아야 안다 --}}
                   <div style="flex:0 0 240px;">
-                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">본인 서명</div>
+                    {{-- 미성년이면 법정대리인의 서명 하나가 두 자리에 실린다. 서명 화면이
+                         그렇게 받고, 종이에도 「위임인과 법정대리인 각각의 서명란에 동일하게
+                         적용됩니다」라고 적혀 있다. 그 말을 여기에도 적지 않으면 일곱 살
+                         아이가 제 손으로 쓴 것처럼 읽힌다. --}}
+                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">
+                      본인 서명
+                      @if($sg->guardian_name || $sg->guardian_signature_data)
+                        <span style="color:var(--warning,#f0ad4e);">— 미성년이라 법정대리인이 대신 했습니다</span>
+                      @endif
+                    </div>
                     <img src="{{ route('patients.delegationSigns.image', [$patient, $sg]) }}"
                          alt="위임장 서명"
                          style="width:240px;height:110px;object-fit:contain;background:#fff;border:1px solid var(--border-color);border-radius:6px;">
