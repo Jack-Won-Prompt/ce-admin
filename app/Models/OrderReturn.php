@@ -42,6 +42,19 @@ class OrderReturn extends Model
         'withworks_so_no', 'withworks_so_id', 'withworks_so_type',
         'withworks_status', 'withworks_status_label', 'withworks_sent_at', 'withworks_error',
         'adjust_so_no', 'adjusted_at',
+        // 두 걸음 결재 (2026-09-28 지시)
+        'warehouse_inspect_requested_at', 'warehouse_inspect_seen_at',
+        'inspect_result', 'inspect_defect_qty', 'inspect_defect_note',
+        'inspect_deduct_amount', 'inspect_source',
+        'manager_rejected_by', 'manager_rejected_at', 'manager_reject_reason',
+        'final_rejected_by', 'final_rejected_at', 'final_reject_reason',
+        'refund_route', 'refund_stage',
+        'final_sign_token', 'final_sign_target_user_id', 'final_sign_sent_to',
+        'final_sign_sent_at', 'final_sign_expires_at',
+        'final_signed_by', 'final_signed_at', 'final_sign_path',
+        'final_sign_base64', 'final_sign_ip', 'final_sign_user_agent',
+        'refund_attempts', 'refund_last_error',
+        'topup_payment_link_id', 'topup_sent_at',
         // 창고가 지금 무엇을 하고 있는가 — 우리 단계(status)와 다른 것을 잰다
         'pl3_status', 'pl3_status_label', 'pl3_status_at', 'pl3_note', 'pl3_note_at',
         // 환불을 실제로 처리한 자취(요청서 4쪽)
@@ -65,6 +78,14 @@ class OrderReturn extends Model
         'withworks_sent_at'    => 'datetime',
         'adjusted_at'          => 'datetime',
         'is_partial'           => 'boolean',
+        'warehouse_inspect_requested_at' => 'datetime',
+        'warehouse_inspect_seen_at'      => 'datetime',
+        'manager_rejected_at'   => 'datetime',
+        'final_rejected_at'     => 'datetime',
+        'final_sign_sent_at'    => 'datetime',
+        'final_sign_expires_at' => 'datetime',
+        'final_signed_at'       => 'datetime',
+        'topup_sent_at'         => 'datetime',
     ];
 
     public const TYPE_EXCHANGE = 'exchange';
@@ -198,8 +219,39 @@ class OrderReturn extends Model
         self::SC_REFUND_ONLY     => 'Consumer Care manager',
     ];
 
-    /** 권한(approve)으로 잠그는 단계 — 검수 확정과 전자 승인 */
+    /** 권한으로 잠그는 단계 — 검수 확정과 전자 승인 */
     public const APPROVAL_STATUSES = ['inspected', 'approved'];
+
+    /**
+     * 그 단계를 누르려면 어느 권한이 있어야 하는가 (2026-09-28 지시).
+     *
+     * 여태 둘 다 `approve` 하나였다. 그러면 한 사람이 검수도 하고 최종 승인도 할 수
+     * 있어 결재가 뜻을 잃는다 — 서명이 곧 돈이 나가는 일이라 더욱 그렇다.
+     *
+     * 옛 `approve` 는 거두지 않는다(needsApprovalBy 참고). 지금 그것만 가진 사람이
+     * 갑자기 아무것도 못 누르면 안 된다.
+     */
+    public const APPROVAL_PERMS = [
+        'inspected' => 'inspect_approve',   // 책임자 검수 승인
+        'approved'  => 'final_approve',     // 최종승인자 서명
+    ];
+
+    /**
+     * 이 단계를 누를 수 있는가 — 새 권한이 있거나, 옛 approve 가 있으면 된다.
+     *
+     * 권한을 나눠 부여하는 동안에는 두 벌이 함께 산다. 다 나눈 뒤 approve 를 거두면
+     * 저절로 새 잣대만 남는다.
+     */
+    public static function canApproveStep(string $status): bool
+    {
+        $필요 = self::APPROVAL_PERMS[$status] ?? null;
+
+        if (! $필요) {
+            return true;
+        }
+
+        return perm('order-returns', $필요) || perm('order-returns', 'approve');
+    }
 
     /**
      * 승인을 기다리는 건이 서 있을 수 있는 걸음들 — 흐름에서 끌어낸다.
@@ -551,6 +603,146 @@ class OrderReturn extends Model
     public static function needsApproval(string $status): bool
     {
         return in_array($status, self::APPROVAL_STATUSES, true);
+    }
+
+    // ── 두 걸음 결재 (2026-09-28 지시) ───────────────────────
+    //
+    // 창고가 입고 검수를 마치고 승인을 청하면, 책임자가 보고 승인하거나 반려하고,
+    // 승인된 건은 최종승인자가 서명한다. **서명이 곧 실행이다.**
+    //
+    //   반품ㆍ취소 · 이상 없음   토스 전액 환불
+    //   반품ㆍ취소 · 이상 있음   토스 부분 환불 (차감액을 뺀 금액)
+    //   교환      · 이상 있음   차액 결제 링크 (담당자가 전화한 뒤 보낸다)
+    //
+    // 단계는 늘리지 않는다 — inspected 가 책임자 승인이고 approved 가 최종 서명이다.
+
+    public const RESULT_OK     = 'ok';
+    public const RESULT_DEFECT = 'defect';
+
+    public const RESULT_LABELS = [
+        self::RESULT_OK     => '이상 없음',
+        self::RESULT_DEFECT => '하자ㆍ수량 차이',
+    ];
+
+    public const ROUTE_FULL    = 'full';      // 전액 환불
+    public const ROUTE_PARTIAL = 'partial';   // 부분 환불
+    public const ROUTE_TOPUP   = 'topup';     // 차액 청구 (교환)
+    public const ROUTE_NONE    = 'none';      // 돈이 움직이지 않는다
+
+    public const ROUTE_LABELS = [
+        self::ROUTE_FULL    => '전액 환불',
+        self::ROUTE_PARTIAL => '부분 환불',
+        self::ROUTE_TOPUP   => '차액 청구',
+        self::ROUTE_NONE    => '금액 변동 없음',
+    ];
+
+    public const STAGE_LABELS = [
+        'manager_ok'     => '책임자 승인',
+        'sign_sent'      => '서명 대기',
+        'signed'         => '서명 완료',
+        'refunded'       => '환불 완료',
+        'topup_sent'     => '차액 청구 발송',
+        'topup_paid'     => '차액 입금',
+        'refund_failed'  => '환불 실패',
+    ];
+
+    /** 창고가 검수 승인을 청했는데 아직 아무도 보지 않았는가 */
+    public function 창고검수요청중(): bool
+    {
+        return $this->warehouse_inspect_requested_at !== null
+            && $this->warehouse_inspect_seen_at === null
+            && $this->inspect_confirmed_at === null;
+    }
+
+    /**
+     * 어느 길로 가는가.
+     *
+     * 검수 결과가 아직 없으면 정하지 않는다 — 책임자가 고르거나 창고가 알려 준 뒤에
+     * 정해진다. 지어서 정하면 최종승인자가 엉뚱한 금액에 서명한다.
+     */
+    public function refundRoute(): ?string
+    {
+        if (! $this->inspect_result) {
+            return null;
+        }
+
+        $이상있다 = $this->inspect_result === self::RESULT_DEFECT;
+
+        if ($this->type === self::TYPE_EXCHANGE) {
+            /* 교환은 돌려줄 돈이 없다. 하자ㆍ수량 차이가 있으면 고객이 그만큼 더 낸다 —
+               담당자가 전화로 알린 뒤 결제 링크를 보낸다. */
+            return $이상있다 ? self::ROUTE_TOPUP : self::ROUTE_NONE;
+        }
+
+        return $이상있다 ? self::ROUTE_PARTIAL : self::ROUTE_FULL;
+    }
+
+    public function refundRouteLabel(): string
+    {
+        $길 = $this->refundRoute();
+
+        return $길 ? (self::ROUTE_LABELS[$길] ?? $길) : '검수 결과 대기';
+    }
+
+    /**
+     * 최종승인자의 서명이 필요한가.
+     *
+     * 돈이 움직이는 건만 받는다. 이상 없는 교환은 물건만 바꾸므로 책임자 승인으로
+     * 끝난다 — 서명을 받게 하면 아무 일도 하지 않는 결재가 하나 늘 뿐이다.
+     */
+    public function needsFinalSign(): bool
+    {
+        return in_array($this->refundRoute(), [
+            self::ROUTE_FULL, self::ROUTE_PARTIAL, self::ROUTE_TOPUP,
+        ], true);
+    }
+
+    /**
+     * 서명하면 움직일 돈.
+     *
+     *   전액 환불   원 결제에서 받은 돈 전부
+     *   부분 환불   그 돈에서 차감액을 뺀 것
+     *   차액 청구   차감액 (고객이 더 내는 돈)
+     */
+    public function 움직일금액(): int
+    {
+        $길  = $this->refundRoute();
+        $차감 = max(0, (int) $this->inspect_deduct_amount);
+
+        if ($길 === self::ROUTE_TOPUP) {
+            return $차감;
+        }
+
+        $받은것 = (int) ($this->order?->받은금액() ?? 0);
+
+        if ($길 === self::ROUTE_PARTIAL) {
+            return max(0, $받은것 - $차감);
+        }
+
+        return $길 === self::ROUTE_FULL ? $받은것 : 0;
+    }
+
+    /** 서명 링크가 아직 살아 있는가 */
+    public function 서명링크살았나(): bool
+    {
+        return $this->final_sign_token !== null
+            && $this->final_signed_at === null
+            && (! $this->final_sign_expires_at || $this->final_sign_expires_at->isFuture());
+    }
+
+    public function managerRejecter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'manager_rejected_by');
+    }
+
+    public function finalSigner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'final_signed_by');
+    }
+
+    public function finalSignTarget(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'final_sign_target_user_id');
     }
 
     // ── 기한 ────────────────────────────────────────────────

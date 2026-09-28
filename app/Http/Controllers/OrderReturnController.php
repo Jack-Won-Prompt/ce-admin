@@ -586,10 +586,13 @@ class OrderReturnController extends Controller
 
         /* 검수 확정과 전자 승인은 승인 권한이 있어야 누른다. 절차서가 승인자를 따로
            두라고 했는데 아무나 누를 수 있으면 그 줄을 둔 뜻이 없다. */
-        if (OrderReturn::needsApproval($to) && !perm('order-returns', 'approve')) {
+        if (OrderReturn::needsApproval($to) && ! OrderReturn::canApproveStep($to)) {
+            /* 단계마다 다른 권한이다 (2026-09-28) — 검수 확정은 책임자,
+               전자 승인은 최종승인자. 옛 approve 도 아직 통한다. */
             return back()->withErrors(['to_status' =>
-                OrderReturn::STATUS_LABELS[$to] . '은(는) 승인 권한이 필요합니다 ('
-                . $orderReturn->approverRole() . ').']);
+                OrderReturn::STATUS_LABELS[$to] . '은(는) '
+                . (config('permissions.actions.' . (OrderReturn::APPROVAL_PERMS[$to] ?? 'approve')))
+                . ' 권한이 필요합니다 (' . $orderReturn->approverRole() . ').']);
         }
 
         /* 조정 금액을 적지 않고 금액조정으로 넘어가면, 얼마로 조정한 것인지 아무 데도

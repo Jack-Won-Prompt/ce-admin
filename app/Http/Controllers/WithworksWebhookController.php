@@ -142,6 +142,14 @@ class WithworksWebhookController extends Controller
                분명히 실어 보냈는데도 WithworksSync 에는 빈 것이 넘어가, 주문에는 한 줄도
                적히지 않았다(사건 표의 payload 에는 남아 있어 더 찾기 어려웠다). */
             'details'         => 'nullable|array',
+            /* 입고 검수 결과 (2026-09-28 지시) — 두 결재 경로를 가르는 값이다.
+
+               result(ok·defect) · defect_qty · defect_note · received_qty · expected_qty.
+               저쪽이 아직 싣지 않으면 책임자가 화면에서 고른다 — 같은 칸에 담긴다.
+
+               Lot 과 같은 함정이라 규칙에 적어 둔다. 적지 않으면 validated() 가
+               통째로 걷어 내, 저쪽이 분명히 보냈는데도 빈 것이 넘어간다. */
+            'inspection'      => 'nullable|array',
             /* 창고와 판매현황 값 — Lot 과 같은 함정이다. 규칙에 적지 않으면
                validated() 가 통째로 걷어 내, 저쪽이 분명히 실어 보냈는데도
                받는 쪽에는 빈 것이 넘어간다(2026-09-07, 실제로 그렇게 됐다). */
@@ -510,6 +518,54 @@ class WithworksWebhookController extends Controller
                 'pl3_note'    => mb_substr($note, 0, 2000),
                 'pl3_note_at' => \Carbon\Carbon::parse($data['occurred_at'] ?? now()),
             ])->save();
+        }
+
+        /* **창고가 검수 승인을 청했다** (2026-09-28 지시).
+
+           여태 이 사건은 단계를 inspecting 으로 옮기기만 했다. 그러면 「창고가 올린
+           것」과 「담당자가 손으로 옮긴 것」이 한 상태로 섞여, 목록에서 지금 봐야 할
+           건을 가릴 수 없었다. 청한 때를 따로 적어 그것으로 가린다.
+
+           이미 적혀 있으면 덮지 않는다 — 처음 청한 때가 기한을 재는 자리다.
+           다시 청한 것(반려 뒤)은 확인 표시를 지워 다시 눈에 띄게 한다. */
+        if (in_array($data['event'], ['ro.rcpt_completed', 'ro.confirmed'], true)) {
+            $채울것 = [];
+
+            if (! $return->warehouse_inspect_requested_at) {
+                $채울것['warehouse_inspect_requested_at'] = \Carbon\Carbon::parse($data['occurred_at'] ?? now());
+            }
+
+            /* 반려해 되돌린 건이 다시 올라왔다 — 확인 표시를 지운다 */
+            if ($return->manager_rejected_at && $return->warehouse_inspect_seen_at) {
+                $채울것['warehouse_inspect_seen_at'] = null;
+            }
+
+            if ($채울것) {
+                $return->forceFill($채울것)->save();
+            }
+        }
+
+        /* 입고 검수 결과 — 두 결재 경로를 가른다 (2026-09-28 지시).
+
+           저쪽이 실어 보내면 그것이 정본이다(inspect_source=warehouse). 아직 싣지
+           않으면 이 자리는 비고, 책임자가 화면에서 고른다(manual).
+
+           책임자가 이미 손으로 골라 둔 뒤에 저쪽 값이 오면 **덮는다** — 창고가 실물을
+           본 것이 사람이 글을 읽고 짐작한 것보다 정확하다. 다만 책임자가 이미 승인한
+           건은 건드리지 않는다. 승인한 내용이 나중에 바뀌면 안 된다. */
+        $검수 = $data['inspection'] ?? null;
+
+        if ($검수 && ! $return->inspect_confirmed_at) {
+            $결과 = in_array(($검수['result'] ?? ''), ['ok', 'defect'], true) ? $검수['result'] : null;
+
+            if ($결과) {
+                $return->forceFill([
+                    'inspect_result'      => $결과,
+                    'inspect_defect_qty'  => isset($검수['defect_qty']) ? (int) $검수['defect_qty'] : null,
+                    'inspect_defect_note' => mb_substr((string) ($검수['defect_note'] ?? ''), 0, 500) ?: null,
+                    'inspect_source'      => 'warehouse',
+                ])->save();
+            }
         }
 
         /* 실물이 들어온 날. 전에는 사람이 손으로 적었는데, 창고가 알려 주는 것을

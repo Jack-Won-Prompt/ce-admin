@@ -23,6 +23,18 @@ return [
         // 처방전 검수 완료ㆍ반려, 교환·반품의 검수 확정ㆍ전자 승인.
         // 적는 사람(update)과 승인하는 사람을 가르려고 따로 둔다.
         'approve' => '검수 완료 · 전자 승인',
+
+        /* 교환ㆍ반품의 두 걸음 결재 (2026-09-28 지시).
+
+           창고가 입고 검수를 마치고 승인을 청하면 **책임자**가 보고 승인ㆍ반려하고,
+           승인된 건은 **최종승인자**가 서명한다. 서명이 곧 실행이라 — 돈이 나가거나
+           고객에게 청구가 간다 — 두 사람을 갈라야 한다. 여태 approve 하나로 묶여
+           있어 한 사람이 두 걸음을 다 누를 수 있었다.
+
+           쓰는 페이지는 교환/반품/취소 하나뿐이다. 권한 매트릭스는 그 페이지가 쓰지
+           않는 동작을 「—」로 그리므로 다른 페이지는 손댈 것이 없다. */
+        'inspect_approve' => '책임자 검수 승인 · 반려',
+        'final_approve'   => '최종승인자 서명',
     ],
 
     /*
@@ -126,8 +138,17 @@ return [
             'group'   => 'order',
             'routes'  => ['order-returns'],
             // 단계를 옮기는 것은 POST 라 create 로 추론된다 — 아래 overrides 에서 바로잡는다
-            // approve = 「검수 확정」ㆍ「전자 승인」. 절차서가 승인자를 따로 두라고 한다.
-            'actions' => ['view', 'create', 'update', 'delete', 'send', 'approve'],
+            /* approve = 「검수 확정」ㆍ「전자 승인」. 절차서가 승인자를 따로 두라고 한다.
+
+               2026-09-28 부터 그 둘을 두 사람으로 가른다 —
+                 inspect_approve  「검수 확정」 = 책임자 검수 승인ㆍ반려
+                 final_approve    「전자 승인」 = 최종승인자 서명
+
+               approve 는 **거두지 않는다.** 지금 그것만 가진 사람이 갑자기 아무것도
+               누르지 못하면 안 된다. 둘 중 하나라도 있으면 통과하고, 권한을 나눠
+               부여한 뒤에 approve 를 거두면 된다. */
+            'actions' => ['view', 'create', 'update', 'delete', 'send', 'approve',
+                          'inspect_approve', 'final_approve'],
         ],
         'sample-orders' => [
             'label'   => 'CE 샘플주문',
@@ -402,6 +423,15 @@ return [
         // 검수 확정ㆍ전자 승인은 승인자 몫이라 approve 로 가른다
         'order-returns.confirmInspection' => ['order-returns', 'approve'],
         'order-returns.approve'           => ['order-returns', 'approve'],
+        // 두 걸음 결재 (2026-09-28) — 책임자와 최종승인자를 가른다
+        'order-returns.managerApprove'    => ['order-returns', 'inspect_approve'],
+        'order-returns.managerReject'     => ['order-returns', 'inspect_approve'],
+        'order-returns.finalSignSend'     => ['order-returns', 'final_approve'],
+        'order-returns.finalSign'         => ['order-returns', 'final_approve'],
+        'order-returns.finalReject'       => ['order-returns', 'final_approve'],
+        // 실행이 막히면 다시 시도한다 — 돈이 나가는 일이라 send 로 가른다
+        'order-returns.retryRefund'       => ['order-returns', 'send'],
+        'order-returns.sendTopupLink'     => ['order-returns', 'send'],
         // 마이너스 발행은 국세청으로 나간다 — 등록ㆍ수정과 따로 통제한다
         'order-returns.issueCredit'       => ['order-returns', 'send'],
         // 창고 검수 결과를 물어 오는 것은 조회다
