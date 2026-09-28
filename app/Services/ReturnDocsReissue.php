@@ -61,7 +61,15 @@ class ReturnDocsReissue
         $셈   = $this->장수(($order = $order->refresh()));
         $넘친것 = collect($셈)->filter(fn ($n) => $n > 1)->keys()->all();
 
-        $경고 = array_merge($무름['warnings'] ?? [], $냄['skipped'] ?? []);
+        /* 경고와 건너뜀을 가른다 (2026-09-28 무한시험 3회차).
+
+           둘을 섞어 두었더니 「세금계산서를 취소하지 못했습니다」가 「카드결제 건이라
+           현금영수증을 내지 않습니다」와 같은 무게로 보이고, ok 가 참이라 파란 줄로
+           나갔다 — 사람은 성공으로 읽는다. 국세청에 신고된 것을 무르지 못한 것은
+           건너뜀이 아니라 **못 한 것**이다. */
+        $못한것 = $무름['warnings'] ?? [];     // 팝빌이 거절했다 — 사람이 손봐야 한다
+        $건너뜀 = $냄['skipped'] ?? [];        // 낼 까닭이 없어 지나갔다 — 대개 정상
+        $경고   = array_merge($못한것, $건너뜀);
 
         if ($넘친것) {
             $이름 = collect($넘친것)
@@ -79,8 +87,12 @@ class ReturnDocsReissue
             $냄['statement'] ? '재작성' : '해당 없음',
             ($냄['card_slip'] ?? null) ? '재작성' : '해당 없음');
 
-        if ($경고) {
-            $말 .= ' — ' . implode(' / ', array_unique($경고));
+        if ($못한것) {
+            $말 .= ' — **무르지 못한 것** ' . implode(' / ', array_unique($못한것));
+        }
+
+        if ($건너뜀) {
+            $말 .= ' (' . implode(' / ', array_unique($건너뜀)) . ')';
         }
 
         $return->forceFill([
@@ -92,7 +104,9 @@ class ReturnDocsReissue
         activity()->causedBy($사람)->performedOn($order)
             ->log("{$return->receipt_no} 증빙 재발행 — {$말}");
 
-        return ['ok' => $넘친것 === [], 'note' => $말, 'counts' => $셈, 'warnings' => $경고];
+        /* 무르지 못한 것이 하나라도 있으면 성공이 아니다 — 부른 쪽이 붉은 줄로 세운다 */
+        return ['ok' => $넘친것 === [] && $못한것 === [],
+                'note' => $말, 'counts' => $셈, 'warnings' => $경고];
     }
 
     /** 우리가 만든 서류가 지금 몇 장씩 붙어 있나 */
