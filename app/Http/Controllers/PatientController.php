@@ -36,6 +36,31 @@ class PatientController extends Controller
     }
 
     /**
+     * 거래처별 위임장 서명 — 옮겨 담은 것 가운데 가장 나중 것 (2026-09-29 지시).
+     *
+     * 처방 동의(prescription_consents)가 없는 거래처가 있다. 운영에서 옮겨 온
+     * 12,604명이 그렇다 — 처방전을 함께 옮기지 않았기 때문이다. 그런데 그 가운데
+     * 192명은 **위임장 서명을 받아 두었다.** 그것을 보지 않으면 목록의
+     * 「서명여부」ㆍ「미성년」ㆍ「법정대리인」 칸이 모두 빈 채로 서고, 받아 둔 서명이
+     * 없는 것처럼 읽힌다.
+     *
+     * 목록에 걸린 거래처만 읽는다 — 12,604명을 통째로 읽으면 이 화면이 또 무너진다.
+     */
+    private function 위임장서명들($거래처번호들): \Illuminate\Support\Collection
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('patient_delegation_signs')) {
+            return collect();
+        }
+
+        return \App\Models\PatientDelegationSign::query()
+            ->whereIn('patient_id', $거래처번호들)
+            ->orderByDesc('signed_at')->orderByDesc('id')
+            ->get()
+            ->unique('patient_id')          // 내림차순이라 거래처별 첫 줄이 곧 최신이다
+            ->keyBy('patient_id');
+    }
+
+    /**
      * 목록이 한 번에 그리는 줄 수 (2026-09-29).
      *
      * 운영 고객 12,604명을 옮긴 순간 이 화면이 500 오류를 냈다 — 관계까지 딸려
@@ -97,14 +122,30 @@ class PatientController extends Controller
            그래서 「아니오」는 「이어진 동의서가 없다」는 뜻이지 「동의하지 않았다」가 아니다. */
         if ($request->filled('privacy_consent')) {
             $has = $request->privacy_consent === 'y';
-            $query->{$has ? 'whereHas' : 'whereDoesntHave'}('privacyConsents');
+
+            /* 옮겨 담은 위임장 서명도 개인정보 동의의 근거다 (2026-09-29).
+               서명 화면에서 개인정보 동의를 함께 받는다 — 그것을 세지 않으면
+               서명을 받아 둔 192명이 「동의 없음」으로 걸린다. */
+            $동의있나 = fn ($q) => $q->whereHas('privacyConsents')
+                ->orWhereExists(fn ($x) => $x->selectRaw(1)->from('patient_delegation_signs as s')
+                    ->whereColumn('s.patient_id', 'patients.id')->where('s.agree_privacy', 1));
+
+            $has ? $query->where($동의있나)
+                 : $query->whereNot($동의있나);
         }
 
         // 공단 위임장 동의 여부 — 처방전에 딸린 동의가 하나라도 agreed 인가
         if ($request->filled('nhis_consent')) {
             $has = $request->nhis_consent === 'y';
             $fn  = fn ($q) => $q->whereHas('consents', fn ($c) => $c->where('status', 'agreed'));
-            $query->{$has ? 'whereHas' : 'whereDoesntHave'}('prescriptions', $fn);
+
+            /* 위임장 서명도 위임 동의다 — 처방전 없이 서명만 받아 둔 건이 192건 있다 */
+            $동의있나 = fn ($q) => $q->whereHas('prescriptions', $fn)
+                ->orWhereExists(fn ($x) => $x->selectRaw(1)->from('patient_delegation_signs as s')
+                    ->whereColumn('s.patient_id', 'patients.id')->where('s.agree_delegation', 1));
+
+            $has ? $query->where($동의있나)
+                 : $query->whereNot($동의있나);
         }
 
         /* 공단 재등록 임박 (2026-09-18 지시).
@@ -158,7 +199,12 @@ class PatientController extends Controller
         $총 = (clone $query)->count();
 
         // ── wwGrid 데이터 ──────────────────────────────────
-        $gridData = $query->limit(self::목록상한)->get()->map(function ($p) use ($consents, $마케팅) {
+        $그린것 = $query->limit(self::목록상한)->get();
+
+        /* 처방 동의가 없는 거래처는 옮겨 담은 위임장 서명을 본다 */
+        $위임서명 = $this->위임장서명들($그린것->pluck('id'));
+
+        $gridData = $그린것->map(function ($p) use ($consents, $마케팅, $위임서명) {
             // 생년월일 + 나이
             $birth = $p->birth_date
                 ? $p->birth_date->format('Y-m-d') . ' (만 ' . $p->age . '세)'
@@ -185,6 +231,16 @@ class PatientController extends Controller
             $c       = $consents[$p->id] ?? null;
             $agreed  = $c && $c->status === 'agreed';
             $minorRx = $c && $c->is_minor;
+
+            /* 처방 동의가 없으면 옮겨 담은 위임장 서명이 근거다 (2026-09-29).
+               미성년인지는 서명 줄의 생년월일로 센다 — 처방 동의의 is_minor 와 같은
+               뜻이고, 보호자 칸이 채워진 열여섯 건이 모두 만 19세 미만이다. */
+            $sg = $c ? null : ($위임서명[$p->id] ?? null);
+
+            if ($sg) {
+                $agreed  = (bool) $sg->agree_delegation;
+                $minorRx = $sg->birth_date !== null && $sg->birth_date->age < 19;
+            }
 
             $addr = $p->addresses->first();
 
@@ -252,17 +308,24 @@ class PatientController extends Controller
                 'updated'         => $p->updated_at?->format('Y-m-d H:i:s') ?? '',
 
                 // ── 위임 서명 ──
-                'signed'      => $c ? $c->statusLabel() : '',
-                'minor'       => $minorRx ? '미성년' : ($c ? '성년' : ''),
-                'g_relation'  => $minorRx ? ($c->guardian_relation ?? '') : '',
-                'g_name'      => $minorRx ? ($c->guardian_name ?? '') : '',
-                'g_birth'     => $minorRx ? ($c->guardian_birth_date?->format('Y-m-d') ?? '') : '',
-                'g_id'        => $minorRx && $c->guardian_id_path ? '있음' : '',
+                'signed'      => $c ? $c->statusLabel() : ($sg ? '서명 완료' : ''),
+                'minor'       => $minorRx ? '미성년' : (($c || $sg) ? '성년' : ''),
+                'g_relation'  => $minorRx ? (($c ?: $sg)->guardian_relation ?? '') : '',
+                'g_name'      => $minorRx ? (($c ?: $sg)->guardian_name ?? '') : '',
+                'g_birth'     => $minorRx ? (($c ?: $sg)->guardian_birth_date?->format('Y-m-d') ?? '') : '',
+                'g_id'        => $minorRx && ($c ?: $sg)->guardian_id_path ? '있음' : '',
                 // 이미지는 실을 수 없다(한 장에 수십 KB). 볼 때만 권한을 거쳐 부르는 주소를 준다.
-                'sign_url'    => $agreed && $c->signature_data && $c->prescription
-                                   ? route('prescriptions.consentSignature', $c->prescription) : null,
+                'sign_url'    => match (true) {
+                    (bool) ($c && $agreed && $c->signature_data && $c->prescription)
+                        => route('prescriptions.consentSignature', $c->prescription),
+                    /* 옮겨 담은 서명은 거래처를 거쳐 내준다 — 남의 서명이 열리지 않게
+                       그 자리가 거래처 번호를 함께 견준다 */
+                    (bool) ($sg && $sg->sign_base64)
+                        => route('patients.delegationSigns.image', [$p->id, $sg->id]),
+                    default => null,
+                },
                 
-                'g_id_url'    => $minorRx && $c->guardian_id_path
+                'g_id_url'    => $minorRx && $c && $c->guardian_id_path
                                    ? route('files.consent-guardian-id', $c) : null,
 
                 'rx_count'        => (int) $p->prescriptions_count,

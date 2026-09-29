@@ -264,7 +264,8 @@ class MigratePatientsFromWithworksCommand extends Command
             ->pluck('id', 'ww_account_id')->all();
 
         $셈 = ['서명완료' => 0, '이름생년월일' => 0, '이름만' => 0, '새로' => 0, '덧씀' => 0,
-               '거래처없음' => 0, '짝없음' => 0, '생년월일어긋남' => 0, '여럿' => 0, '그림없음' => 0];
+               '거래처없음' => 0, '짝없음' => 0, '생년월일어긋남' => 0, '여럿' => 0, '그림없음' => 0,
+               '마케팅동의' => 0, '보호자' => 0];
         $못한것 = [];
 
         DB::table('delegation_signs')->where('status', 'signed')->orderBy('id')
@@ -379,6 +380,8 @@ class MigratePatientsFromWithworksCommand extends Command
                         'data_origin'        => 'migration',
                         'data_batch'         => $묶음,
                     ])->save();
+
+                    $this->거래처에도적기($거래처번호, $d, $셈);
                 }
             });
 
@@ -392,6 +395,58 @@ class MigratePatientsFromWithworksCommand extends Command
         }
 
         $this->line('  delegation_signs 는 읽기만 했습니다 — 한 칸도 고치지 않았습니다.');
+    }
+
+    /**
+     * 서명에서 받은 것을 **거래처 칸에도** 적는다 (2026-09-29 지시).
+     *
+     * 서명을 옮겨 담기만 하면 「위임장 서명」 탭에만 보인다. 거래처 목록의
+     * 「마케팅 동의」ㆍ「법정대리인」 칸과 상세의 보호자 자리는 patients 의 제 칸을
+     * 읽으므로, 그쪽을 채우지 않으면 192명이 아무 동의도 받지 않은 것처럼 선다.
+     *
+     * **비어 있을 때만 채운다.** 마케팅 동의는 뒤에 전화로 바뀌는 값이고 보호자도
+     * 담당자가 고쳐 둘 수 있다. 다시 옮길 때마다 옛 서명이 그것을 덮으면, 고쳐 둔
+     * 사람은 제가 고친 것이 사라진 줄도 모른다.
+     *
+     * 위임 동의와 개인정보 동의는 patients 에 칸이 없다 — 옮겨 담은 서명 줄이
+     * 그대로 근거이고, 화면이 그것을 읽는다(PatientController::latestConsentByPatient).
+     */
+    private function 거래처에도적기(int $거래처번호, object $d, array &$셈): void
+    {
+        $거래처 = Patient::withTrashed()->find($거래처번호);
+
+        if (! $거래처) {
+            return;
+        }
+
+        $적을것 = [];
+
+        /* 마케팅 동의 — 「동의함 / 동의안함」 두 말만 쓴다(화면 고르개와 같다) */
+        if ($거래처->marketing_consent === null || $거래처->marketing_consent === '') {
+            $적을것['marketing_consent']    = $d->agree_marketing ? '동의함' : '동의안함';
+            $적을것['marketing_consent_at'] = $d->signed_at;
+            $셈['마케팅동의']++;
+        }
+
+        /* 보호자 — 미성년의 위임은 법정대리인이 한다. 네 칸이 함께 움직인다 */
+        if ($d->guardian_name && ! $거래처->guardian_name) {
+            $적을것['guardian_name']       = $d->guardian_name;
+            $적을것['guardian_relation']   = $d->guardian_relation;
+            $적을것['guardian_birth_date'] = $d->guardian_birth_date;
+            $적을것['guardian_phone']      = $d->guardian_phone;
+            $셈['보호자']++;
+        }
+
+        /* 링크를 어느 번호로 보낼지 — 서명 때 정해 둔 것을 그대로 따른다 */
+        if ($d->main_contact && ! $거래처->main_contact) {
+            $적을것['main_contact'] = $d->main_contact;
+        }
+
+        if ($적을것 === []) {
+            return;
+        }
+
+        $거래처->forceFill($적을것)->save();
     }
 
     /**
