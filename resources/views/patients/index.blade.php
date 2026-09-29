@@ -436,6 +436,8 @@ document.addEventListener('keydown', (e) => {
   const grid = new wwGrid({
     el: document.getElementById('patientGrid'),
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
+    /* 쪽으로 넘기므로 줄 번호도 이어서 센다 — 3쪽 첫 줄은 201번이다 (2026-09-29) */
+    rowNumberStart: {{ ($쪽->currentPage() - 1) * $쪽->perPage() }},
     footer: { total: true, selected: false, modified: false },   // 시안에 하단 상태바가 없다. 전체·선택 건수는 상단 결과바로 옮겼다
     columns: [
       { header: '사업부',     name: 'care_type',       width: 70, align: 'center', sortable: true },

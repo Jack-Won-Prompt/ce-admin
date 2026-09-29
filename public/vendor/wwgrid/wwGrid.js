@@ -910,6 +910,9 @@ class wwGrid {
     this.originalData = options.data ? JSON.parse(JSON.stringify(options.data)) : [];
     this.rowCheckbox  = options.rowCheckbox !== false;
     this.rowNumber    = options.rowNumber   !== false;
+    /* 줄 번호를 몇부터 셀까 (2026-09-29). 쪽으로 넘기는 표는 3쪽에서도 1부터
+       세어, 「201~300」이라 적힌 옆에서 번호가 어긋났다. 주지 않으면 예전 그대로다. */
+    this.rowNumberStart = Number(options.rowNumberStart) || 0;
     this.editable     = options.editable    !== false;
     /* 값이 바뀔 때 부르는 자리 — ({rowIndex, colName, value, row, grid}) => void.
        칸 하나가 다른 칸을 정하는 표(수량 × 단가 = 금액)가 여기에 기댄다. */
@@ -1797,7 +1800,7 @@ class wwGrid {
       const inner = document.createElement('div');
       inner.className = 'cg-cell-inner';
       inner.style.justifyContent = 'flex-end';
-      inner.textContent = rowIndex + 1;
+      inner.textContent = rowIndex + 1 + this.rowNumberStart;
       td.appendChild(inner);
       tr.appendChild(td);
     }
@@ -2404,7 +2407,7 @@ class wwGrid {
 
     if (this.rowNumber) {
       const numCell = tr.querySelector('.cg-col-rownum .cg-cell-inner');
-      if (numCell) numCell.textContent = rowIndex + 1;
+      if (numCell) numCell.textContent = rowIndex + 1 + this.rowNumberStart;
     }
   }
 
