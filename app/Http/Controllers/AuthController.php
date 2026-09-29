@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Auth\EntraController;
 use App\Models\LoginOtpToken;
 use App\Models\User;
 use App\Services\InstitutionalNoticeCrawlerService;
@@ -263,9 +264,28 @@ class AuthController extends Controller
     /**
      * 로그아웃
      * POST /logout
+     *
+     * **SSO 로 들어온 사람은 Microsoft 에도 알린다** (2026-09-29 지시).
+     *
+     * 여태 이 자리는 우리 세션만 끊었다. 그래서 로그아웃한 뒤 ［Microsoft 계정으로
+     * 로그인］을 다시 누르면 계정을 묻지 않고 곧바로 들어왔다 — 저쪽 세션이 그대로
+     * 남아 있었기 때문이다. 함께 쓰는 자리에서는 앞사람 계정으로 들어가게 된다.
+     *
+     * 알리는 일은 EntraController::logout 이 이미 하고 있으므로 그것을 그대로
+     * 부른다. 끊는 일이 두 군데로 갈리면 한쪽만 고쳐져 어긋난다.
+     *
+     * 비밀번호로 들어온 사람은 여기서 끝난다. 그 사람까지 Microsoft 로그아웃으로
+     * 보내면 같은 브라우저에서 쓰던 다른 Microsoft 자리까지 함께 끊긴다 —
+     * 우리가 끊을 것이 아니다.
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $에스에스오 = (bool) $request->session()->get(EntraController::SSO_SESSION_KEY);
+
+        if ($에스에스오 && \App\Support\SsoSettings::usable()) {
+            return app(EntraController::class)->logout($request);
+        }
+
         Auth::logout();
 
         $request->session()->invalidate();

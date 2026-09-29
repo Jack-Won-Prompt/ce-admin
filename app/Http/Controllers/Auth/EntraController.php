@@ -37,6 +37,15 @@ class EntraController extends Controller
     private const APP_SESSION_KEY = 'sso.app_nonce';
 
     /**
+     * 이 사람이 SSO 로 들어왔다는 표 (2026-09-29 지시).
+     *
+     * 나갈 때 Microsoft 에도 알려야 하는지는 **어떻게 들어왔는지**로 갈린다.
+     * 비밀번호로 들어온 사람까지 Microsoft 로그아웃으로 보내면, 그 브라우저에서
+     * 쓰던 다른 Microsoft 자리까지 함께 끊긴다 — 우리가 끊을 것이 아니다.
+     */
+    public const SSO_SESSION_KEY = 'sso.signed_in';
+
+    /**
      * 앱으로 되돌아가는 주소의 앞머리. 여기 적힌 것만 받는다.
      *
      * 운영판과 개발판을 한 폰에 같이 두려고 앱을 둘로 찍는데(2026-09-21 지시),
@@ -177,6 +186,11 @@ class EntraController extends Controller
         Auth::login($user, remember: true);
         $request->session()->regenerate();
 
+        /* 나갈 때 Microsoft 에도 알리려면 어떻게 들어왔는지 알아야 한다.
+           regenerate() 뒤에 적는다 — 앞에 적어도 옮겨지기는 하지만, 세션을 새로
+           세운 다음에 적는 편이 읽는 사람에게 또렷하다. */
+        $request->session()->put(self::SSO_SESSION_KEY, true);
+
         $this->남긴다($user, 'sso_login', $email);
 
         return redirect()->intended(route('dashboard'));
@@ -201,7 +215,17 @@ class EntraController extends Controller
         return response('', 200)->header('Content-Type', 'text/plain');
     }
 
-    /** 우리 쪽에서 시작하는 로그아웃 — IdP 에도 알린다 */
+    /**
+     * 우리 쪽에서 시작하는 로그아웃 — IdP 에도 알린다.
+     *
+     * 화면의 ［로그아웃］도 여기로 온다(2026-09-29 지시). AuthController::destroy 가
+     * SSO 로 들어온 사람이면 이 자리를 그대로 부른다 — 끊는 일이 두 군데로 갈리면
+     * 한쪽만 고쳐져 어긋난다.
+     *
+     * **우리 세션을 먼저 끊고 그 다음에 Microsoft 로 보낸다.** 순서를 뒤집으면,
+     * Microsoft 에 닿지 못했을 때 여기 로그인한 채로 남는다 — 나갔다고 믿고 자리를
+     * 뜨는 사람이 생긴다. 저쪽이 끊기지 않는 것보다 여기가 끊기지 않는 것이 나쁘다.
+     */
     public function logout(Request $request): RedirectResponse
     {
         $user = Auth::user();
