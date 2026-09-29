@@ -52,7 +52,6 @@
     padding:5px 12px; border:1px solid var(--gray-200); border-radius:8px;
     font-size:13px; font-weight:400; line-height:20px; font-family:inherit; }
   .ss-field input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
-  .ss-hint { font-size:12px; font-weight:500; color:var(--gray-600); line-height:19px; }
   .ss-note { font-size:12px; font-weight:500; color:var(--gray-600); margin-bottom:12px; line-height:19px; }
   .ss-note > i { font-size:12px; line-height:19px; vertical-align:top; margin-right:4px; }
   .ss-warn { background:var(--alert-50); border:1px solid var(--alert-100); color:var(--alert-500);
@@ -110,7 +109,7 @@
       <h3>
         <i class="bx bx-key"></i> Entra 자격증명
         <span class="badge {{ $usable ? 'badge-on' : 'badge-off' }}">{{ $usable ? '사용 중' : '미사용' }}</span>
-        <span class="ss-envnow">지금 쓰는 것 — <b>{{ $환경들[$고른환경] ?? $고른환경 }}</b></span>
+        <span class="ss-envnow">설정 — <b>{{ $환경들[$고른환경] ?? $고른환경 }}</b></span>
       </h3>
 
       <div class="ss-envtabs">
@@ -136,14 +135,12 @@
               <input type="text" name="tenant_id__{{ $env }}" autocomplete="off"
                      value="{{ old('env') === $env ? old('tenant_id') : $값[$env]['tenant_id'] }}"
                      placeholder="Coloplast HQ 테넌트 ID (GUID)">
-              <span class="ss-hint">HQ 가 App Registration 을 만든 뒤 알려 줍니다.</span>
             </div>
             <div class="ss-field">
               <label>Client ID</label>
               <input type="text" name="client_id__{{ $env }}" autocomplete="off"
                      value="{{ old('env') === $env ? old('client_id') : $값[$env]['client_id'] }}"
                      placeholder="CE Admin 전용 Application (client) ID">
-              <span class="ss-hint">SR App 과 다른 값입니다 — 앱마다 따로 등록합니다.</span>
             </div>
             <div class="ss-field full">
               <label>Client Secret</label>
@@ -151,20 +148,12 @@
                      placeholder="{{ $값[$env]['secretMasked']
                           ? '저장됨 ' . $값[$env]['secretMasked'] . ' — 바꿀 때만 입력하십시오'
                           : 'HQ 가 발급한 Client Secret' }}">
-              <span class="ss-hint">
-                암호화해 담으므로 원문은 화면에 보이지 않습니다. 비워 두고 저장하면
-                <b>기존 값이 그대로 유지</b>됩니다.
-              </span>
             </div>
             <div class="ss-field full">
               <label>Redirect URI</label>
               <input type="url" name="redirect_uri__{{ $env }}" autocomplete="off"
                      value="{{ old('env') === $env ? old('redirect_uri') : ($값[$env]['redirect_uri'] ?: ($env === 'test' ? $suggestRedirect : '')) }}"
                      placeholder="{{ $suggestRedirect }}">
-              <span class="ss-hint">
-                HQ 의 App Registration 에 등록한 것과 <b>한 글자도 다르면 안 됩니다.</b>
-                운영은 운영 서버의 주소라 이 화면의 주소와 다릅니다.
-              </span>
             </div>
           </div>
         </div>
@@ -223,24 +212,10 @@
           <div class="ss-url">{{ $suggestLogout }}</div>
         </div>
       </div>
-      <div class="ss-hint" style="margin-top:8px;">
-        <b>지금 열고 있는 주소를 기준으로 만든 값입니다.</b>
-        이 서버는 <code>ceadmin.co.kr</code> 과 <code>www.ceadmin.co.kr</code> 을 둘 다 받지만,
-        OIDC 의 Redirect URI 는 <b>문자열이 똑같아야</b> 합니다 — <code>www</code> 하나만 달라도
-        Entra 가 거부합니다. <b>이 서버의 정본은 <code>www</code></b> 이므로
-        <code>https://www.ceadmin.co.kr</code> 로 등록합니다(2026-09-09 확정).
-        <b><code>www</code> 를 붙여 들어와 이 값을 집어 가십시오.</b>
-        운영 도메인은 따로 정해진 뒤에 다시 등록합니다.
-      </div>
     </div>
 
     <div class="ss-card fill-rest">
       <div class="ss-actions">
-        <div class="ss-hint ss-actions-note">
-          연동 테스트는 <b>지금 보고 있는 탭에 저장된 Tenant ID</b> 로 Microsoft 의 OIDC
-          설정 문서를 읽어 그 테넌트가 있는지만 봅니다. Client Secret 이 맞는지는 실제로 로그인해 봐야 압니다.
-          값을 변경했다면 먼저 저장하십시오.
-        </div>
         <span id="ssoTestOut"></span>
         <button type="submit" class="ds-btn ds-btn-primary"><i class="bx bx-save"></i> 저장</button>
         <button type="button" class="ds-btn" id="btnSsoTest" onclick="runSsoTest()">
