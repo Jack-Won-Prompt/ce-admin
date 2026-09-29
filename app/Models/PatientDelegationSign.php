@@ -28,6 +28,7 @@ class PatientDelegationSign extends Model
      */
     public const 짝지은법 = [
         'name_birth' => '이름ㆍ생년월일',
+        'part_birth' => '품는 이름ㆍ생년월일',
         'name'       => '이름만',
     ];
 
