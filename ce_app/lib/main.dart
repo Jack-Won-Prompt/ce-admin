@@ -50,7 +50,7 @@ class _CeAdminAppState extends ConsumerState<CeAdminApp>
        직접 나눠 주므로, 스토어가 해 주던 안내를 우리가 한다. */
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      UpdateService.checkAndUpdate(context);
+      UpdateService.checkAndUpdate();
     });
   }
 
@@ -58,7 +58,7 @@ class _CeAdminAppState extends ConsumerState<CeAdminApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // 다시 앞으로 올 때마다 새 판을 다시 묻는다 — 최소 판 미만이면 그때 막힌다
     if (state == AppLifecycleState.resumed) {
-      UpdateService.checkAndUpdate(context);
+      UpdateService.checkAndUpdate();
     }
   }
 

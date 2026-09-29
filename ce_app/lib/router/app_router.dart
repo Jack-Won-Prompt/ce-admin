@@ -1,5 +1,6 @@
 // lib/router/app_router.dart
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
@@ -20,8 +21,13 @@ import '../screens/inquiry_create_screen.dart';
 import '../screens/inquiry_detail_screen.dart';
 import '../screens/settings_screen.dart';
 
+/* 화면 바깥(앱 수명 훅)에서 창을 띄울 때 쓸 뿌리 Navigator.
+   판올림 안내처럼 화면과 무관하게 떠야 하는 것이 있다 (2026-09-29). */
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     redirect: (context, state) async {
       final authState = ref.read(authNotifierProvider);

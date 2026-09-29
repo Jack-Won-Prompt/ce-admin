@@ -3,9 +3,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../router/app_router.dart';
 import '../theme/app_theme.dart';
 import '../utils/constants.dart';
 
@@ -31,14 +33,38 @@ class UpdateService {
   /// 최소 판 미만은 건너뛸 수 없으므로 이 값과 무관하다.
   static bool _snoozed = false;
 
-  static Future<void> checkAndUpdate(BuildContext context) async {
+  static Future<void> checkAndUpdate() async {
     if (kIsWeb) return;
     if (_running) return;
     _running = true;
 
     try {
       final server = await _ask();
-      if (server == null || !context.mounted) return;
+
+      /* 창은 라우터의 뿌리 Navigator 위에 띄운다 — 앱 수명 훅의 context 는
+         Navigator 보다 위에 있어 showDialog 가 설 자리를 찾지 못한다.
+         앱이 열리는 순간에는 Navigator 가 아직 없어, 잠깐 기다려 준다. */
+      BuildContext? context;
+      for (var i = 0; i < 20; i++) {
+        context = rootNavigatorKey.currentContext;
+        if (context != null) break;
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
+
+      if (server == null || context == null || !context.mounted) return;
+
+      /* 스플래시에서 띄우면 로그인 화면으로 넘어갈 때 창까지 함께 사라진다.
+         화면이 자리를 잡은 뒤에 띄운다 (2026-09-29 폰에서 확인). */
+      for (var i = 0; i < 30; i++) {
+        if (!context.mounted) return;
+
+        final path =
+            GoRouter.of(context).routeInformationProvider.value.uri.path;
+        if (path != '/') break;
+
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+      }
+      if (!context.mounted) return;
 
       final info    = await PackageInfo.fromPlatform();
       final current = info.version;                  // 예: 1.3.3
@@ -50,6 +76,7 @@ class UpdateService {
 
       final blocked = min    != null && _older(current, min);
       final newer   = latest != null && _older(current, latest);
+
 
       if (!blocked && (!newer || _snoozed)) return;
       if (!context.mounted) return;
@@ -120,7 +147,7 @@ class UpdateService {
         canPop: !blocked,
         child: AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(blocked ? '업데이트가 필요합니다' : '새 판이 있습니다',
+          title: Text(blocked ? '업데이트가 필요합니다' : '새 버전이 있습니다',
               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -128,8 +155,8 @@ class UpdateService {
             children: [
               Text(
                 blocked
-                    ? '지금 판($current)으로는 사용할 수 없습니다. $target 판으로 업데이트해 주십시오.'
-                    : '$target 판이 나왔습니다. (지금 $current)',
+                    ? '현재 버전($current)으로는 사용할 수 없습니다. $target 버전으로 업데이트해 주십시오.'
+                    : '$target 버전이 나왔습니다. (현재 $current)',
                 style: const TextStyle(fontSize: 14, height: 1.6),
               ),
               if (notice != null && notice.trim().isNotEmpty) ...[

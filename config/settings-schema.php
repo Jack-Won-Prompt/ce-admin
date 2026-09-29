@@ -511,9 +511,9 @@ return [
                chat_visible 로 받는다. 대화방과 기록은 서버에 그대로 남는다. */
             'chat_hidden' => ['label' => '앱 — 하단 채팅 메뉴 숨기기', 'config' => 'mobile.chat_hidden', 'type' => 'bool',
                               'help'  => '켜면 모바일 앱 하단에서 채팅 메뉴가 사라집니다. 대화 내용은 지워지지 않고, 끄면 그대로 다시 보입니다. 1.3.2 이상 앱에 적용되며, 앱을 다시 열거나 탭을 옮길 때 반영됩니다.'],
-            'latest_version' => ['label' => '최신 판', 'config' => 'mobile.latest_version', 'width' => 1,
+            'latest_version' => ['label' => '최신 버전', 'config' => 'mobile.latest_version', 'width' => 1,
                                  'help'  => '스토어에 등록한 버전(예: 1.1.0). 이보다 낮은 버전에 새 버전이 있음을 안내합니다. 비우면 안내하지 않습니다.'],
-            'min_version'    => ['label' => '최소 판', 'config' => 'mobile.min_version', 'width' => 1,
+            'min_version'    => ['label' => '최소 버전', 'config' => 'mobile.min_version', 'width' => 1,
                                  'help'  => '이 버전보다 낮으면 사용할 수 없습니다 — 건너뛸 수 없는 안내가 표시됩니다. 서버와 주고받는 규격이 변경된 경우에만 올립니다.'],
             'store_url'      => ['label' => '스토어 주소', 'config' => 'mobile.store_url', 'width' => 3],
             /* 스토어를 쓰지 않고 APK 를 직접 나눠 주는 동안 받는 길 (2026-09-29 지시).
