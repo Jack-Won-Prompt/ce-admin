@@ -2306,15 +2306,10 @@ $calcDeposit  = $calcCopay;
                      이 고르개에 뜨지 않아, 올릴 방법이 아예 없었다.
                      시스템이 스스로 만드는 것(거래명세서ㆍ세금계산서ㆍ현금영수증ㆍ
                      카드매출ㆍ요양비 지급청구서)은 손으로 올릴 일이 없어 뺀다. --}}
+                {{-- 거르는 잣대는 모델 한 곳에 둔다 (2026-09-29).
+                     여기와 유형 바꾸기가 따로 걸렀더니 한쪽에만 「세금계산서」가 섰다. --}}
                 @php
-                    $adtSkip = ['trade_statement', 'tax_invoice', 'cash_receipt',
-                                'card_sales', 'medical_aid_claim'];
-                    $adtOpts = collect(\App\Models\CommonCode::labels('doc_type'))
-                        ->reject(fn ($label, $code) => in_array($code, $adtSkip, true))
-                        ->values();
-                    if ($adtOpts->isEmpty()) {
-                        $adtOpts = collect(\App\Models\PrescriptionAttachment::DOC_TYPE_LABELS)->values();
-                    }
+                    $adtOpts = collect(\App\Models\PrescriptionAttachment::고를수있는유형())->values();
                 @endphp
                 @foreach($adtOpts as $adtLabel)
                 <div class="_adt-opt" onmousedown="event.preventDefault();_adtPick(@js($adtLabel))"

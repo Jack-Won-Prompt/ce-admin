@@ -26,6 +26,17 @@ class PrescriptionAttachment extends Model
     ];
 
     /**
+     * 사람이 고를 수 없는 유형 — 우리가 만들어 붙이는 서류.
+     *
+     * `만든서류` 의 열쇠와 **이름이 다르다**. 저쪽은 우리가 파일을 만들 때 쓰는 코드고
+     * (`tax_invoice_form`), 이쪽은 공통 코드에 서 있는 코드다(`tax_invoice`). 둘을
+     * 같은 것으로 보고 걸렀더니 고르개에 「세금계산서」ㆍ「현금영수증」이 그대로 섰다
+     * (2026-09-29 시험에서 드러남).
+     */
+    public const 손으로안고름 = ['trade_statement', 'tax_invoice', 'cash_receipt',
+                                 'card_sales', 'medical_aid_claim'];
+
+    /**
      * 서류 유형을 손으로 고를 수 있는 것들.
      *
      * 환경 설정(공통 코드 `doc_type`)이 정본이다. **비어 있으면 박아 둔 것으로 돌아간다** —
@@ -40,7 +51,8 @@ class PrescriptionAttachment extends Model
     public static function 고를수있는유형(): array
     {
         $것 = collect(CommonCode::labels('doc_type'))
-            ->reject(fn ($label, $code) => array_key_exists($code, self::만든서류));
+            ->reject(fn ($label, $code) => in_array($code, self::손으로안고름, true)
+                                        || array_key_exists($code, self::만든서류));
 
         if ($것->isEmpty()) {
             $것 = collect(self::DOC_TYPE_LABELS);
