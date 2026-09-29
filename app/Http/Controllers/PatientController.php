@@ -61,20 +61,20 @@ class PatientController extends Controller
     }
 
     /**
-     * 목록이 한 번에 그리는 줄 수 (2026-09-29).
+     * 한 쪽에 그리는 줄 수 (2026-09-29 지시).
      *
      * 운영 고객 12,604명을 옮긴 순간 이 화면이 500 오류를 냈다 — 관계까지 딸려
      * 모델 12,604개를 세우다 메모리 128MB 를 넘겼다. 시험 자료 90명일 때는
      * 드러나지 않던 자리다.
      *
-     * wwGrid 는 받은 줄을 브라우저에서 모두 그린다. 그래서 서버가 견딘다 해도
-     * 만 줄을 한 번에 보내면 화면이 멈춘다. 처방전 작업 대기 목록이 쓰는 것과
-     * 같은 잣대를 둔다(PrescriptionController::작업대기상한 = 500).
+     * 처음에는 500줄로 자르고 「나머지는 찾아 보십시오」라고 적었는데, 자르기만
+     * 해서는 **뒤에 있는 사람을 볼 길이 없다.** 운영 데이터 화면이 그러하듯
+     * 쪽으로 넘긴다(WithworksDataController — 한 쪽 100줄).
      *
-     * **총 줄 수는 그대로 센다.** 상한에 걸려 500줄만 그리면서 「총 500건」이라고
-     * 적으면 12,104명이 없는 것처럼 읽힌다.
+     * wwGrid 는 받은 줄을 브라우저에서 모두 그리므로 한 쪽이 너무 두꺼우면
+     * 화면이 멈춘다. 백 줄이면 그릴 것도 읽을 것도 알맞다.
      */
-    private const 목록상한 = 500;
+    private const 한쪽줄수 = 100;
 
     public function index(Request $request): View|\Illuminate\Http\JsonResponse
     {
@@ -194,12 +194,12 @@ class PatientController extends Controller
            모르면 지난 주문이 어디로 갔는지 되짚을 수 없다. */
         $query->with(['creator:id,name', 'updater:id,name', 'addresses']);
 
-        /* 몇 명이 걸렸는지 먼저 센다 — 상한을 걸기 **앞에서**. 관계를 딸리지 않는
-           셈이라 줄 수와 상관없이 가볍다. */
-        $총 = (clone $query)->count();
+        /* 쪽으로 끊어 가져온다. 찾는 조건을 쪽 주소에 실어 준다 — 싣지 않으면
+           2쪽으로 넘어가는 순간 거르개가 풀려 엉뚱한 줄이 선다. */
+        $쪽 = $query->paginate(self::한쪽줄수)->withQueryString();
 
-        // ── wwGrid 데이터 ──────────────────────────────────
-        $그린것 = $query->limit(self::목록상한)->get();
+        $총     = $쪽->total();
+        $그린것 = $쪽->getCollection();
 
         /* 처방 동의가 없는 거래처는 옮겨 담은 위임장 서명을 본다 */
         $위임서명 = $this->위임장서명들($그린것->pluck('id'));
@@ -334,10 +334,9 @@ class PatientController extends Controller
             ];
         });
 
-        /* 화면의 「총 N건」은 **걸린 수**다. 그린 줄 수가 아니다. */
+        /* 화면의 「총 N건」은 **걸린 수**다. 이 쪽에 그린 줄 수가 아니다. */
         $total  = $총;
         $그린줄 = $gridData->count();
-        $상한   = self::목록상한;
 
         /* 목록만 다시 달라는 부름(?json=1). 어디선가 거래처를 고치면 열려 있는 목록이
            화면을 다시 열지 않고 그 자리에서 줄을 새로 받는다 — 보던 탭도 체크해 둔 것도
@@ -346,10 +345,12 @@ class PatientController extends Controller
             return response()->json([
                 'rows'  => $gridData,
                 'total' => $total,
-                /* 자리에서 줄을 새로 받는 쪽도 상한을 알아야 한다 — 모르면 500줄을
-                   전부라고 믿고 그린다. */
-                'shown' => $그린줄,
-                'cap'   => $상한,
+                /* 자리에서 줄을 새로 받는 쪽도 지금 몇 쪽인지 알아야 한다 —
+                   모르면 이 쪽의 백 줄을 전부라고 믿고 그린다. */
+                'shown'     => $그린줄,
+                'per_page'  => $쪽->perPage(),
+                'page'      => $쪽->currentPage(),
+                'last_page' => $쪽->lastPage(),
             ]);
         }
 
@@ -364,7 +365,7 @@ class PatientController extends Controller
                 today()->addDays(14)->toDateString(),
             ])->count();
 
-        return view('patients.index', compact('gridData', 'total', '재등록임박', '그린줄', '상한'));
+        return view('patients.index', compact('gridData', 'total', '재등록임박', '그린줄', '쪽'));
     }
 
     // ── 상세/편집 화면 ────────────────────────────────────
