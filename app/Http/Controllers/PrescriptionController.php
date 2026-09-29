@@ -1481,6 +1481,86 @@ class PrescriptionController extends Controller
         ]);
     }
 
+    /**
+     * 이미 붙어 있는 첨부의 **서류 유형을 바꾼다** (2026-09-29 지시).
+     *
+     * 여태 유형은 올릴 때 고른 것이 끝이었다. 지우고 다시 올리지 않고는 고칠 길이 없었다.
+     *
+     * 고칠 길이 있어야 하는 까닭 — 위드웍스에서 옮겨 온 첨부는 유형을 알 수 없다.
+     * 저쪽 표(`account_add_information_details`)의 `udf1~udf10` 은 열 칸 모두 비어 있고
+     * 저쪽 업로드 화면에도 유형을 고르는 자리가 없다. 파일 이름으로 가려 보면 열에 아홉이
+     * 카카오톡 자동 이름이라 짐작이 된다. 그래서 모두 「처방전」으로 담아 두었는데, 그러면
+     * 공단 팩스가 찾는 넷(등록신청서ㆍ결과지ㆍ요양비위임장ㆍ신분증)이 「없다」로 읽혀 막힌다.
+     *
+     * 없는 정보를 짐작으로 채우지 않는다. 담당자가 미리보기로 보고 찍은 것만 쌓는다.
+     *
+     * **우리가 만든 서류는 바꿀 수 없다** — 거래명세서ㆍ세금계산서 따위는 우리가 그려
+     * 붙인 것이라 유형이 곧 그 서류의 정체다. 바꾸면 그것을 찾는 자리가 엉뚱한 그림을
+     * 집는다.
+     */
+    public function updateAttachmentDocType(
+        Request $request,
+        Prescription $prescription,
+        PrescriptionAttachment $attachment
+    ): \Illuminate\Http\JsonResponse {
+        if ($attachment->prescription_id !== $prescription->id) {
+            abort(403);
+        }
+
+        if ($attachment->우리가만든것인가()) {
+            return response()->json([
+                'success' => false,
+                'message' => '우리가 만들어 붙인 서류는 유형을 바꿀 수 없습니다 ('
+                    . $attachment->doc_type_label . ').',
+            ], 422);
+        }
+
+        $고를수있는것 = PrescriptionAttachment::고를수있는유형();
+
+        $request->validate([
+            'doc_type'  => ['required', 'string', Rule::in(array_keys($고를수있는것))],
+            'doc_label' => 'nullable|string|max:50',
+        ]);
+
+        $옛것 = $attachment->doc_type_label;
+        $새유형 = $request->doc_type;
+
+        $attachment->forceFill([
+            'doc_type'  => $새유형,
+            /* 「기타」에만 손으로 적은 이름을 살린다 — 정해진 유형은 지금 쓰는 이름이
+               정본이다(옛 이름이 남으면 같은 종류가 두 이름으로 보인다) */
+            'doc_label' => ($새유형 === 'other' && $request->filled('doc_label'))
+                ? $request->doc_label
+                : PrescriptionAttachment::labelFor($새유형),
+            'doc_type_by' => Auth::id(),
+            'doc_type_at' => now(),
+        ])->save();
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)
+            ->withProperties([
+                '파일명' => $attachment->file_original_name,
+                '이전'   => $옛것,
+                '이후'   => $attachment->doc_type_label,
+            ])
+            ->log('첨부 서류 유형 변경');
+
+        /* 신분증이 이제 갖춰졌으면 공단 팩스를 다시 잰다 — 올릴 때와 같은 걸음이다
+           (storeAttachment 가 부르는 그것). 유형을 고쳐 갖춰지는 길이 새로 생겼으므로
+           여기서도 불러야 한다. */
+        if ($새유형 === 'id_card') {
+            \App\Support\NhisFaxRetry::afterIdCard($prescription->refresh());
+        }
+
+        return response()->json([
+            'success'   => true,
+            'id'        => $attachment->id,
+            'doc_type'  => $attachment->doc_type,
+            'typeLabel' => $attachment->doc_type_label,
+            'confirmed' => true,
+            'message'   => "서류 유형을 「{$옛것}」에서 「{$attachment->doc_type_label}」(으)로 바꿨습니다.",
+        ]);
+    }
+
     public function destroyAttachment(Prescription $prescription, PrescriptionAttachment $attachment): \Illuminate\Http\JsonResponse
     {
         if ($attachment->prescription_id !== $prescription->id) {

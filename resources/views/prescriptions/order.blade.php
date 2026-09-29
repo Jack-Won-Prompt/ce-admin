@@ -1052,7 +1052,21 @@
                       font-size:24px; background:var(--alert-50); color:var(--danger); }
   .attach-type-badge { position:absolute; left:0; right:0; bottom:0; padding:4px; text-align:center;
                        background:rgba(0,0,0,.4); color:var(--gray-0);
-                       font-size:11px; font-weight:500; line-height:1.2; }
+                       font-size:11px; font-weight:500; line-height:1.2; cursor:pointer; }
+  .attach-type-badge:hover { background:rgba(0,0,0,.66); }
+  /* 아직 아무도 확인하지 않은 유형 (2026-09-29) — 옮겨 온 첨부는 유형을 알 수 없어
+     우리가 임시로 「처방전」을 놓았다. 적힌 말을 곧이 믿지 말라는 표시다. */
+  .attach-type-badge.is-unconfirmed { background:rgba(255,159,67,.9); color:#3a2500; }
+  .attach-type-badge.is-unconfirmed:hover { background:rgba(255,159,67,1); }
+  /* 유형 고르개 — 딱지를 누르면 그 자리에 선다 */
+  .dtp-back { position:fixed; inset:0; z-index:10050; display:none; }
+  .dtp-back.show { display:block; }
+  .dtp { position:absolute; min-width:150px; background:var(--gray-0); border:1px solid var(--gray-200);
+         border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.16); padding:4px 0; }
+  .dtp-hd { padding:6px 12px 4px; font-size:11px; color:var(--text-muted); border-bottom:1px solid var(--gray-100); }
+  .dtp-op { padding:7px 12px; font-size:12px; cursor:pointer; white-space:nowrap; }
+  .dtp-op:hover { background:var(--gray-50); }
+  .dtp-op.on { font-weight:700; color:var(--primary); }
   /* 시스템이 만든 서류는 지우지 못한다 — 지우는 X 대신 갱신 단추만 둔다.
      테두리를 주색으로 두어 올린 문서와 한눈에 갈린다. */
   .attach-thumb.is-gen { border-color:var(--primary); }
@@ -2382,7 +2396,19 @@ $calcDeposit  = $calcCopay;
               @else
                 <img class="attach-thumb-img" src="{{ $att->file_url }}" alt="{{ $att->doc_type_label }}" loading="lazy" />
               @endif
-              <div class="attach-type-badge">{{ $att->doc_type_label }}</div>
+              {{-- 딱지를 누르면 유형을 바꾼다 (2026-09-29 지시).
+
+                   옮겨 온 첨부는 유형을 알 수 없어 모두 「처방전」으로 담겼다(저쪽에
+                   유형을 적는 칸이 아예 없다). 그대로 두면 공단 팩스가 찾는 넷이
+                   「없다」로 읽혀 막힌다. 사람이 미리보기로 보고 찍어야 한다.
+
+                   아직 아무도 찍지 않은 것은 딱지에 점을 하나 찍어 둔다 — 「처방전」이라
+                   적혀 있지만 그것은 우리가 임시로 놓은 값이라는 표시다. --}}
+              <div class="attach-type-badge{{ $att->type_confirmed ? '' : ' is-unconfirmed' }}"
+                   onclick="openDocTypePick(event, {{ $att->id }})"
+                   title="{{ $att->type_confirmed ? '서류 유형 — 눌러서 바꿉니다' : '유형 미확인 — 옮겨 온 서류라 유형을 알 수 없습니다. 눌러서 정해 주십시오.' }}">
+                {{ $att->doc_type_label }}@unless($att->type_confirmed)<i class="fa-solid fa-circle-question" style="margin-left:3px;font-size:9px;"></i>@endunless
+              </div>
               <button class="attach-dl-btn" title="내려받기"
                       onclick="downloadDoc(event, @js($att->file_url), @js($att->original_name ?: $att->doc_type_label))">
                 <i class="fa-solid fa-download"></i>
@@ -6422,6 +6448,94 @@ async function downloadDoc(e, url, 이름) {
     showToast('내려받지 못했습니다. 잠시 뒤 다시 시도해 주십시오.', 'danger');
   } finally {
     if (btn) { btn.innerHTML = 본래; btn.disabled = false; }
+  }
+}
+
+/* ── 첨부 서류 유형 바꾸기 (2026-09-29 지시) ─────────────────────────
+
+   옮겨 온 첨부는 유형을 알 수 없어 모두 「처방전」으로 담겼다. 저쪽 표에 유형을 적는
+   칸이 아예 없고, 파일 이름도 열에 아홉이 카카오톡 자동 이름이라 짐작이 된다.
+   그대로 두면 공단 팩스가 찾는 넷(등록신청서ㆍ결과지ㆍ요양비위임장ㆍ신분증)이
+   「없다」로 읽혀 막힌다.
+
+   딱지를 누르면 그 자리에 고르개가 선다 — 미리보기로 보면서 찍을 수 있어야 하므로
+   화면을 옮기지 않는다. */
+const DOC_TYPE_OPTS = @json(\App\Models\PrescriptionAttachment::고를수있는유형());
+let _dtpBack = null, _dtpAttId = null;
+
+function _dtpClose() { if (_dtpBack) _dtpBack.classList.remove('show'); }
+
+function openDocTypePick(e, attId) {
+  e.preventDefault();
+  e.stopPropagation();                 // 썸네일 전체가 눌리면 뷰어가 함께 바뀐다
+  _dtpAttId = attId;
+
+  if (!_dtpBack) {
+    _dtpBack = document.createElement('div');
+    _dtpBack.className = 'dtp-back';
+    _dtpBack.innerHTML = '<div class="dtp"></div>';
+    _dtpBack.onclick = (ev) => { if (ev.target === _dtpBack) _dtpClose(); };
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape') _dtpClose();
+    });
+    document.body.appendChild(_dtpBack);
+  }
+
+  const 지금 = (e.currentTarget.textContent || '').trim();
+  const box  = _dtpBack.querySelector('.dtp');
+
+  box.innerHTML = '<div class="dtp-hd">서류 유형</div>'
+    + Object.entries(DOC_TYPE_OPTS).map(([code, label]) =>
+        `<div class="dtp-op${label === 지금 ? ' on' : ''}" data-code="${code}">${dtpEsc(label)}</div>`
+      ).join('');
+
+  box.querySelectorAll('.dtp-op').forEach(op => {
+    op.onclick = () => saveDocType(attId, op.dataset.code, op.textContent.trim());
+  });
+
+  _dtpBack.classList.add('show');
+
+  /* 누른 딱지 옆에 앉힌다 — 아래가 좁으면 위로 편다 */
+  const r = e.currentTarget.getBoundingClientRect();
+  const h = box.offsetHeight || 220;
+  box.style.left = Math.min(r.left, window.innerWidth - (box.offsetWidth || 160) - 8) + 'px';
+  box.style.top  = (r.bottom + h > window.innerHeight - 8 ? Math.max(8, r.top - h - 4) : r.bottom + 4) + 'px';
+}
+
+function dtpEsc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function saveDocType(attId, code, label) {
+  _dtpClose();
+
+  try {
+    const res = await fetch(`/prescriptions/${RX_NUMBER}/attachments/${attId}/doc-type`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({ doc_type: code }),
+    });
+    const out = await res.json();
+
+    if (!out.success) { showToast(out.message || '유형을 바꾸지 못했습니다.', 'warning', 4000); return; }
+
+    /* 화면을 새로 고치지 않고 그 딱지만 고쳐 쓴다 — 미리보기를 보며 여러 장을
+       잇달아 찍는 걸음이라 화면이 다시 그려지면 자리를 잃는다. */
+    const 딱지 = document.querySelector(`.attach-thumb[data-att-id="${attId}"] .attach-type-badge`);
+    if (딱지) {
+      딱지.textContent = out.typeLabel;
+      딱지.classList.remove('is-unconfirmed');
+      딱지.title = '서류 유형 — 눌러서 바꿉니다';
+    }
+    showToast(out.message || '유형을 바꿨습니다.', 'success');
+  } catch (err) {
+    showToast('유형을 바꾸지 못했습니다 — ' + (err.message || ''), 'danger', 4000);
   }
 }
 

@@ -196,6 +196,10 @@ Route::middleware(['auth'])->group(function () {
         // 첨부 파일 추가 / 삭제
         Route::post('/{prescription}/attachments',                [PrescriptionController::class, 'storeAttachment'])->name('attachments.store');
         Route::delete('/{prescription}/attachments/{attachment}', [PrescriptionController::class, 'destroyAttachment'])->name('attachments.destroy');
+        /* 이미 붙은 첨부의 서류 유형을 바꾼다 (2026-09-29 지시) — 옮겨 온 첨부는 유형을
+           알 수 없어 모두 「처방전」으로 담겼다. 지우고 다시 올리지 않고 고칠 길. */
+        Route::patch('/{prescription}/attachments/{attachment}/doc-type',
+                     [PrescriptionController::class, 'updateAttachmentDocType'])->name('attachments.docType');
         // 문서마다의 밝기ㆍ명암 — 파일은 그대로 두고 숫자만 적어 둔다(2026-09-09)
         Route::post('/{prescription}/image-tune',                 [PrescriptionController::class, 'saveImageTune'])->name('imageTune');
         /* 올려 둔 등록신청서 그림에 ③ 신청인란을 얹는다 (2026-09-17 지시).

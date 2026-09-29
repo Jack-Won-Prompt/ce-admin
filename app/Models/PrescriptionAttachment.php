@@ -16,11 +16,51 @@ class PrescriptionAttachment extends Model
         'img_brightness', 'img_contrast',
         // 등록신청서 신청인란을 얹은 자취 (2026-09-17)
         'overlay_source_path', 'overlay_fields',
+        // 서류 유형을 누가 언제 확인해 찍었나 (2026-09-29)
+        'doc_type_by', 'doc_type_at',
     ];
 
     protected $casts = [
         'overlay_fields' => 'array',
+        'doc_type_at'    => 'datetime',
     ];
+
+    /**
+     * 서류 유형을 손으로 고를 수 있는 것들.
+     *
+     * 환경 설정(공통 코드 `doc_type`)이 정본이다. **비어 있으면 박아 둔 것으로 돌아간다** —
+     * 운영은 이 공통 코드가 한 줄도 없어(2026-09-29 확인), 설정만 믿으면 고르개가 통째로
+     * 비고 유형을 바꿀 길이 사라진다.
+     *
+     * 우리가 만들어 붙이는 서류는 뺀다 — 사람이 그 유형으로 바꿀 일이 없고, 바꾸면
+     * 세금계산서를 찾는 자리가 엉뚱한 그림을 집는다.
+     *
+     * @return array<string,string> 코드 => 이름
+     */
+    public static function 고를수있는유형(): array
+    {
+        $것 = collect(CommonCode::labels('doc_type'))
+            ->reject(fn ($label, $code) => array_key_exists($code, self::만든서류));
+
+        if ($것->isEmpty()) {
+            $것 = collect(self::DOC_TYPE_LABELS);
+        }
+
+        return $것->all();
+    }
+
+    /**
+     * 유형을 사람이 확인했는가.
+     *
+     * 위드웍스에서 옮겨 온 첨부는 유형을 알 수 없어 모두 「처방전」으로 담았다
+     * (저쪽에 유형을 적는 칸이 아예 없다). 그것과 담당자가 보고 찍은 것을 가려야
+     * 「없으면 정말 없는 것」이라고 믿을 수 있다.
+     */
+    public function getTypeConfirmedAttribute(): bool
+    {
+        /* 옮겨 온 것이 아니면 올릴 때 사람이 골랐으므로 확인된 것이다 */
+        return $this->ww_detail_id === null || $this->doc_type_by !== null;
+    }
 
     /**
      * 신청인란을 얹을 수 있는 서류인가 (2026-09-17 지시).
