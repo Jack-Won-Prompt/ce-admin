@@ -1525,6 +1525,42 @@ class PrescriptionController extends Controller
         $옛것 = $attachment->doc_type_label;
         $새유형 = $request->doc_type;
 
+        /* 「처방전」으로 바꾸는데 처방전 칸이 비어 있으면 **그 칸으로 올린다**.
+
+           우리 관례는 처방전 그림은 `prescriptions.image_path`, 그 밖은 첨부다. 주문 등록의
+           첨부 목록도 「처방전」 줄만은 그 칸을 읽으므로, 첨부로만 두면 사진이 있는데도
+           「처방전 이미지가 없습니다」로 선다.
+
+           칸이 이미 차 있으면 그대로 첨부로 둔다 — 처방전이 여러 장인 건이 실제로 있다
+           (저쪽은 앞뒤ㆍ여러 쪽을 여러 장으로 올린다). 두 장을 한 칸에 넣을 수는 없다. */
+        if ($새유형 === 'prescription' && ! $prescription->image_path) {
+            $prescription->forceFill([
+                'image_path'          => $attachment->file_path,
+                'image_original_name' => $attachment->file_original_name,
+                'image_mime_type'     => $attachment->file_mime_type,
+                'image_size'          => $attachment->file_size,
+                'image_type_by'       => Auth::id(),
+                'image_type_at'       => now(),
+            ])->save();
+
+            activity()->causedBy(Auth::user())->performedOn($prescription)
+                ->withProperties(['파일명' => $attachment->file_original_name, '이전' => $옛것])
+                ->log('첨부를 처방전 그림으로 올림');
+
+            /* 첨부 줄만 지운다 — 파일은 처방전 그림이 가리키고 있으니 그대로 둔다 */
+            $attachment->delete();
+
+            return response()->json([
+                'success'   => true,
+                'id'        => $attachment->id,
+                'promoted'  => true,
+                'doc_type'  => 'prescription',
+                'typeLabel' => '처방전',
+                'confirmed' => true,
+                'message'   => "「{$옛것}」을 처방전 그림으로 올렸습니다. 화면을 다시 불러옵니다.",
+            ]);
+        }
+
         $attachment->forceFill([
             'doc_type'  => $새유형,
             /* 「기타」에만 손으로 적은 이름을 살린다 — 정해진 유형은 지금 쓰는 이름이
@@ -1558,6 +1594,102 @@ class PrescriptionController extends Controller
             'typeLabel' => $attachment->doc_type_label,
             'confirmed' => true,
             'message'   => "서류 유형을 「{$옛것}」에서 「{$attachment->doc_type_label}」(으)로 바꿨습니다.",
+        ]);
+    }
+
+    /**
+     * **처방전 그림**의 서류 유형을 바꾼다 (2026-09-29 지시).
+     *
+     * 첫 장은 첨부 줄이 아니라 처방전 제 칸(`image_path`)이라 유형을 바꿀 길이 없었다.
+     * 그런데 옮겨 온 건은 첫 장이 처방전이라는 보장이 없다 — 저쪽에 유형이 없어 원천
+     * 번호가 가장 작은 것을 첫 장으로 놓았을 뿐이다. 신분증이 첫 장인 건이 실제로 있다.
+     *
+     * 처방전이 아닌 것으로 바꾸면 **그 그림을 첨부로 내리고 처방전 칸을 비운다.**
+     * 파일은 옮기지 않는다 — 가리키는 자리만 바뀐다.
+     */
+    public function updateImageDocType(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        if (! $prescription->image_path) {
+            return response()->json([
+                'success' => false,
+                'message' => '이 처방전에는 그림이 없습니다.',
+            ], 422);
+        }
+
+        $고를수있는것 = PrescriptionAttachment::고를수있는유형();
+
+        $request->validate([
+            'doc_type'  => ['required', 'string', Rule::in(array_keys($고를수있는것))],
+            'doc_label' => 'nullable|string|max:50',
+        ]);
+
+        $새유형 = $request->doc_type;
+
+        /* 처방전이 맞다고 찍기만 하는 걸음 — 자리는 그대로 두고 자취만 남긴다 */
+        if ($새유형 === 'prescription') {
+            $prescription->forceFill([
+                'image_type_by' => Auth::id(),
+                'image_type_at' => now(),
+            ])->save();
+
+            activity()->causedBy(Auth::user())->performedOn($prescription)
+                ->log('처방전 그림의 유형을 「처방전」으로 확인');
+
+            return response()->json([
+                'success'   => true,
+                'doc_type'  => 'prescription',
+                'typeLabel' => '처방전',
+                'confirmed' => true,
+                'moved'     => false,
+                'message'   => '처방전이 맞다고 확인했습니다.',
+            ]);
+        }
+
+        /* 처방전이 아니었다 — 첨부로 내리고 처방전 칸을 비운다 */
+        $순서 = (int) ($prescription->attachments()->max('display_order') ?? -1) + 1;
+
+        $att = PrescriptionAttachment::create([
+            'prescription_id'    => $prescription->id,
+            'file_path'          => $prescription->image_path,
+            'file_original_name' => $prescription->image_original_name
+                                    ?: basename($prescription->image_path),
+            'file_mime_type'     => $prescription->image_mime_type,
+            'file_size'          => $prescription->image_size,
+            'doc_type'           => $새유형,
+            'doc_label'          => ($새유형 === 'other' && $request->filled('doc_label'))
+                                    ? $request->doc_label
+                                    : PrescriptionAttachment::labelFor($새유형),
+            'display_order'      => $순서,
+            'uploaded_by'        => null,
+            'doc_type_by'        => Auth::id(),
+            'doc_type_at'        => now(),
+        ]);
+
+        $prescription->forceFill([
+            'image_path'          => null,
+            'image_original_name' => null,
+            'image_mime_type'     => null,
+            'image_size'          => null,
+            'image_type_by'       => null,
+            'image_type_at'       => null,
+        ])->save();
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)
+            ->withProperties(['파일명' => $att->file_original_name, '이후' => $att->doc_type_label])
+            ->log('처방전 그림을 첨부로 내림 — 처방전이 아니었다');
+
+        if ($새유형 === 'id_card') {
+            \App\Support\NhisFaxRetry::afterIdCard($prescription->refresh());
+        }
+
+        return response()->json([
+            'success'   => true,
+            'doc_type'  => $att->doc_type,
+            'typeLabel' => $att->doc_type_label,
+            'confirmed' => true,
+            'moved'     => true,
+            'message'   => "처방전이 아니라 「{$att->doc_type_label}」(으)로 옮겼습니다."
+                . ' 처방전 그림 자리가 비었습니다 — 화면을 다시 불러옵니다.',
         ]);
     }
 

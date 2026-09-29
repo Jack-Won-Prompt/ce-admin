@@ -200,6 +200,10 @@ Route::middleware(['auth'])->group(function () {
            알 수 없어 모두 「처방전」으로 담겼다. 지우고 다시 올리지 않고 고칠 길. */
         Route::patch('/{prescription}/attachments/{attachment}/doc-type',
                      [PrescriptionController::class, 'updateAttachmentDocType'])->name('attachments.docType');
+        /* 처방전 그림도 유형을 바꾼다 (2026-09-29 지시) — 첫 장이 처방전이라는 보장이
+           없다. 처방전이 아닌 것으로 바꾸면 첨부로 내리고 처방전 칸을 비운다. */
+        Route::patch('/{prescription}/image/doc-type',
+                     [PrescriptionController::class, 'updateImageDocType'])->name('image.docType');
         // 문서마다의 밝기ㆍ명암 — 파일은 그대로 두고 숫자만 적어 둔다(2026-09-09)
         Route::post('/{prescription}/image-tune',                 [PrescriptionController::class, 'saveImageTune'])->name('imageTune');
         /* 올려 둔 등록신청서 그림에 ③ 신청인란을 얹는다 (2026-09-17 지시).

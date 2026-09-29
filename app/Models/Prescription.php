@@ -209,6 +209,19 @@ class Prescription extends Model
         return self::STATUS_LABELS[$this->status]['badge'] ?? 'secondary';
     }
 
+    /**
+     * 처방전 그림의 유형을 사람이 확인했는가 (2026-09-29 지시).
+     *
+     * 옮겨 온 건은 첫 장이 처방전이라는 보장이 없다 — 저쪽(위드웍스)에 서류 유형을 적는
+     * 칸이 아예 없어, 원천 번호가 가장 작은 것을 첫 장으로 놓았을 뿐이다.
+     *
+     * 우리가 올린 건은 사람이 처방전이라고 올린 것이므로 확인된 것으로 본다.
+     */
+    public function getImageTypeConfirmedAttribute(): bool
+    {
+        return $this->ww_add_id === null || $this->image_type_by !== null;
+    }
+
     // ── 이미지 URL ────────────────────────────────────────
     public function getImageUrlAttribute(): ?string
     {

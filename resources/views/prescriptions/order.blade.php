@@ -2375,6 +2375,22 @@ $calcDeposit  = $calcCopay;
 
                    첨부와 같은 권한으로 본다 — 서버도 같은 잣대로 한 번 더 본다
                    (destroyImage). 화면만 믿지 않는다. --}}
+              {{-- 처방전 그림도 유형을 바꿀 수 있다 (2026-09-29 지시).
+
+                   이 첫 장은 첨부 줄이 아니라 처방전 제 칸(image_path)이라 여태 딱지도
+                   고르개도 없었다. 그런데 옮겨 온 건은 **첫 장이 처방전이라는 보장이
+                   없다** — 저쪽에 유형이 없어 원천 번호가 가장 작은 것을 첫 장으로
+                   놓았을 뿐이다. 신분증이 첫 장이면 고칠 길이 있어야 한다.
+
+                   처방전 아닌 것으로 바꾸면 이 그림은 첨부로 내려가고 처방전 칸은 빈다
+                   (서버가 그렇게 옮긴다). --}}
+              <div class="attach-type-badge{{ $prescription->ww_add_id && ! $prescription->image_type_confirmed ? ' is-unconfirmed' : '' }}"
+                   onclick="openDocTypePick(event, 0)"
+                   title="{{ $prescription->ww_add_id && ! $prescription->image_type_confirmed
+                            ? '유형 미확인 — 옮겨 온 첫 장이라 처방전이 맞는지 알 수 없습니다. 눌러서 정해 주십시오.'
+                            : '서류 유형 — 눌러서 바꿉니다' }}">
+                처방전@if($prescription->ww_add_id && ! $prescription->image_type_confirmed)<i class="fa-solid fa-circle-question" style="margin-left:3px;font-size:9px;"></i>@endif
+              </div>
               @perm('prescriptions', 'delete')
               <button class="attach-del-btn" onclick="deletePrescriptionImage(event, this)" title="처방전 삭제">
                 <i class="fa-solid fa-xmark"></i>
@@ -6505,8 +6521,16 @@ function dtpEsc(v) {
 async function saveDocType(attId, code, label) {
   _dtpClose();
 
+  /* attId 0 은 **처방전 그림**이다 — 첨부 줄이 아니라 처방전 제 칸(image_path)이라
+     가는 길이 다르다. 처방전이 아닌 것으로 바꾸면 서버가 첨부로 내리고 처방전 칸을
+     비우므로, 그때는 화면을 다시 불러온다(썸네일 차례가 통째로 바뀐다). */
+  const 그림인가 = Number(attId) === 0;
+  const 주소 = 그림인가
+    ? `/prescriptions/${RX_NUMBER}/image/doc-type`
+    : `/prescriptions/${RX_NUMBER}/attachments/${attId}/doc-type`;
+
   try {
-    const res = await fetch(`/prescriptions/${RX_NUMBER}/attachments/${attId}/doc-type`, {
+    const res = await fetch(주소, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -6520,9 +6544,19 @@ async function saveDocType(attId, code, label) {
 
     if (!out.success) { showToast(out.message || '유형을 바꾸지 못했습니다.', 'warning', 4000); return; }
 
-    /* 화면을 새로 고치지 않고 그 딱지만 고쳐 쓴다 — 미리보기를 보며 여러 장을
+    /* 자리가 옮겨졌으면 썸네일 차례가 통째로 바뀐다 — 다시 불러온다.
+       (그림이 첨부로 내려갔거나, 첨부가 처방전 그림으로 올라갔을 때) */
+    if (out.moved || out.promoted) {
+      showToast(out.message, 'success', 3000);
+      setTimeout(() => location.reload(), 900);
+      return;
+    }
+
+    /* 자리는 그대로고 이름만 바뀌었으면 그 딱지만 고쳐 쓴다 — 미리보기를 보며 여러 장을
        잇달아 찍는 걸음이라 화면이 다시 그려지면 자리를 잃는다. */
-    const 딱지 = document.querySelector(`.attach-thumb[data-att-id="${attId}"] .attach-type-badge`);
+    const 딱지 = 그림인가
+      ? document.querySelector('.attach-thumb[data-doc-id="0"] .attach-type-badge')
+      : document.querySelector(`.attach-thumb[data-att-id="${attId}"] .attach-type-badge`);
     if (딱지) {
       딱지.textContent = out.typeLabel;
       딱지.classList.remove('is-unconfirmed');
