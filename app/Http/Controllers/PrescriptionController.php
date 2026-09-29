@@ -1891,12 +1891,93 @@ class PrescriptionController extends Controller
         $총 = (clone $질의)->count();
         $줄 = $this->주문줄들($질의->latest('id')->limit(self::작업대기상한)->get());
 
+        /* **주문이 아직 없는 처방전도 찾는다** (2026-09-29 지시).
+
+           운영 데이터를 옮긴 뒤 처방전이 다섯 만 장 담겼는데 주문은 한 건도 없었다.
+           주문 줄은 담당자가 **유형을 고를 때** 서기 때문이다(2026-09-22 잣대 — 저장
+           한 번에 대외 식별자를 태우지 않는다). 그래서 이름을 쳐도 아무것도 걸리지
+           않았다.
+
+           찾는 뜻은 「이 사람 건이 지금 어떻게 되어 있나」다. 주문이 없는 것이야말로
+           그때 찾아 손대야 할 것이므로 함께 세운다 — 껍데기 주문 줄을 만들지 않고
+           처방전 그대로 세운다. 더블클릭하면 그 처방전이 열려 거기서 유형을 고른다. */
+        $처방전줄 = $this->주문없는처방전줄들($말, $숫자, self::작업대기상한 - count($줄));
+
         return response()->json([
             'success' => true,
-            'rows'    => $줄,
-            'total'   => $총,
+            'rows'    => array_merge($줄->all(), $처방전줄->all()),
+            'total'   => $총 + $처방전줄->count(),
+            'order_total' => $총,
+            'rx_total'    => $처방전줄->count(),
             'limit'   => self::작업대기상한,
         ]);
+    }
+
+    /**
+     * 찾는 말에 걸리는, **주문이 아직 없는 처방전**을 작업 대기 줄 꼴로 세운다.
+     *
+     * 칸은 주문 줄과 똑같이 갖춘다 — 하나라도 빠지면 그 줄만 표에서 칸이 밀린다.
+     * 주문에서 오는 값(주문번호ㆍ판매일ㆍ되돌림)은 빈 채로 두고, 진행 상태에는
+     * 「주문 없음」이라 적는다. 「대기」라 적으면 주문이 서 있는 것으로 읽힌다.
+     */
+    private function 주문없는처방전줄들(string $말, string $숫자, int $남은자리)
+    {
+        if ($남은자리 <= 0 || $말 === '') {
+            return collect();
+        }
+
+        $것들 = Prescription::with(['patient', 'assignedUser', 'creator', 'updater', 'billingOffice'])
+            ->whereDoesntHave('orders')
+            ->where('is_blank_draft', false)
+            ->where(function ($w) use ($말, $숫자) {
+                $w->where('rx_number', 'like', "%{$말}%")
+                    ->orWhere('patient_name_ocr', 'like', "%{$말}%")
+                    ->orWhere('hospital_name', 'like', "%{$말}%")
+                    ->orWhere('hospital_code', 'like', "%{$말}%")
+                    ->orWhereHas('patient', fn ($p) => $p->where('name', 'like', "%{$말}%"));
+
+                if ($숫자 !== '' && $숫자 !== $말) {
+                    $w->orWhere('hospital_code', 'like', "%{$숫자}%");
+                }
+            })
+            ->latest('id')->limit($남은자리)->get();
+
+        if ($것들->isEmpty()) {
+            return collect();
+        }
+
+        $extras = \App\Support\OrderGridExtras::forPatients($것들->pluck('patient_id'));
+
+        return $것들->map(function ($rx) use ($extras) {
+            return [
+                /* 주문이 없으므로 주문 번호가 없다 — 표는 처방번호로 가린다 */
+                'id'             => null,
+                'order_no'       => '',
+                'rx_number'      => $rx->rx_number ?? '',
+                'patient'        => $rx->patient?->name ?? ($rx->patient_name_ocr ?? ''),
+                'manager'        => $rx->assignedUser?->name ?? '',
+                'review_manager' => $rx->assignedUser?->name ?? '',
+                'order_manager'  => $rx->order_manager ?? '',
+                'manager_id'     => $rx->assigned_user_id,
+                'status'         => '주문 없음',
+                'deal'           => '',
+                'deal_state'     => '',
+                /* 판매일은 주문이 선 날이다 — 아직 없으므로 비운다.
+                   처방전이 언제 담겼는지는 처방 정보 칸(rx)이 들고 있다. */
+                'sold_at'        => '',
+                'url'            => route('prescriptions.show', [
+                    'prescription' => $rx,
+                    'claim'        => 1,
+                ]),
+                'resident_no'    => $rx->resident_no_ocr_masked ?? $rx->patient?->masked_resident_no ?? '',
+                'remitter'       => $rx->patient?->remitter_name ?? '',
+                'creator'        => $rx->creator?->name ?? '',
+                'updater'        => $rx->updater?->name ?? '',
+            ]
+            + $extras->rx($rx, $rx->patient)
+            + $extras->ww(null, $rx, $rx->patient)
+            + $extras->of(null, $rx->patient_id);
+        })->values();
     }
 
 
