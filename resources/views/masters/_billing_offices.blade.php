@@ -272,7 +272,12 @@ async function boLoad() {
     boGrid = new wwGrid({
       el: document.getElementById('boGrid'),
       columns: cols, data: rows,
-      height: 'auto', editable: false, rowNumber: true, rowCheckbox: false,
+      /* 뷰포트 하단까지 채우고 **표 안에서** 스크롤한다 (2026-09-29 확인).
+
+         'auto' 였더니 167줄이 그대로 늘어나 표가 7,149 높이가 되고 페이지째
+         스크롤됐다 — 내려가는 순간 머리줄이 따라 올라가 사라져, 어느 칸을 보고
+         있는지 알 수 없었다. 다른 목록 화면이 모두 쓰는 'fit' 로 맞춘다. */
+      height: 'fit', editable: false, rowNumber: true, rowCheckbox: false,
       toolbar: false, footer: { total: true, selected: false, modified: false },
     });
     document.getElementById('boGrid').addEventListener('dblclick', ev => {
