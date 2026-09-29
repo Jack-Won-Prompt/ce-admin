@@ -21,6 +21,20 @@ use Illuminate\Support\Facades\DB;
  * 않는다. 시험을 다시 하려면 test-data:purge 로 묶음째 지우고 다시 돌리면 된다.
  *
  * 먼저 세어 보이고 그 다음에 옮긴다 — --force 가 없으면 아무것도 쓰지 않는다.
+ *
+ * **옮기는 범위는 둘뿐이다** (2026-09-29 지시).
+ *
+ *   거래처       ww_customers 의 (E) 환자 계정
+ *   위임장 서명  delegation_signs 가운데 서명까지 받은 줄 (--with-signs)
+ *
+ * 주소는 `address_id` 가 가리키는 **대표 주소 한 벌**만 담는다. 주소 표 전체
+ * (ww_customer_addresses 30,359줄)와 처방전 정보(ww_prescription_infos 100,023줄)는
+ * **옮기지 않고, 향후 이관 여부를 따로 정한다.**
+ *
+ * 한 사람에 주소가 평균 1.75개ㆍ많게는 2,916개(기관)라 전부 옮기면 거래처 주소 이력이
+ * 뒤덮인다. 처방전 정보는 주문ㆍ증빙과 물려 있어 옮기는 순간 정산과 발행이 함께
+ * 움직인다 — 범위를 정하지 않고 옮길 수 없다. 그러니 거래처에 주소가 하나뿐이거나
+ * 처방 이력이 비어 있는 것은 **결함이 아니다.**
  */
 class MigratePatientsFromWithworksCommand extends Command
 {
