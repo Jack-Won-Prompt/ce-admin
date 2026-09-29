@@ -965,8 +965,46 @@ class ConsentController extends Controller
         $delegationSigned = \App\Support\DelegationGate::signed($prescription);
 
         if (!$latest) {
-            return response()->json(['exists' => false, 'privacy' => $privacy,
-                                     'delegation_signed' => $delegationSigned]);
+            /* 이 처방전에 동의 줄이 없어도 **쓸 수 있는 서명이 있을 수 있다**
+               (2026-09-29 지시).
+
+                 · 지난 서명 — 같은 사람의 지난 건에서 받아 위임기간 안이다
+                 · 옮겨 온 서명 — 운영 데이터(위드웍스 위임장 서명)에서 온 것
+
+               여태 이 자리는 「없음」만 돌려주었고, 화면은 그것을 보고 배지를 아예
+               그리지 않았다. 그래서 위임장에 서명한 사람인데도 「서명 동의」 단추가
+               그대로 서서, 담당자는 이미 받은 서명을 또 받으러 갔다.
+
+               어디서 온 서명인지(`sign_source`)와 언제 받았는지를 함께 준다 — 배지에
+               적어 주어야 「왜 완료로 보이는가」를 사람이 되짚을 수 있다. */
+            $옮긴서명 = \App\Support\DelegationGate::옮겨온서명($prescription);
+            $지난서명 = $옮긴서명 ? null : \App\Support\DelegationGate::지난서명($prescription);
+
+            $쓸것 = $옮긴서명 ? \App\Support\DelegationGate::옮겨온서명동의($prescription) : $지난서명;
+
+            return response()->json([
+                'exists'            => false,
+                'privacy'           => $privacy,
+                'delegation_signed' => $delegationSigned,
+                /* 화면이 배지를 세울 때 쓰는 값 — exists 는 그대로 false 다.
+                   이 처방전에 동의 줄이 **없는 것은 사실**이라 그 값을 속이지 않는다. */
+                'reused_sign'       => $쓸것 ? [
+                    'source'      => $옮긴서명 ? 'migrated' : 'prev',
+                    'label'       => $옮긴서명 ? '운영 데이터의 서명' : '지난 서명',
+                    'signed_at'   => $쓸것->responded_at?->format('Y-m-d'),
+                    'rx_number'   => $지난서명?->prescription?->rx_number,
+                    'valid_until' => \App\Support\DelegationGate::유효기간($쓸것, $prescription->patient)
+                                        ?->format('Y-m-d'),
+                    'matched_by'  => $옮긴서명?->matched_by,
+
+                    /* 「서명확인」 창이 채우는 칸 — 이름ㆍ연락처ㆍ서명한 때ㆍ서명 그림.
+                       이것을 주지 않으면 그 창이 서명 보내기 창으로 새 나간다. */
+                    'patient_name'   => $쓸것->patient_name,
+                    'patient_mobile' => $옮긴서명?->phone ?? $쓸것->patient_mobile,
+                    'responded_at'   => $쓸것->responded_at?->format('Y-m-d H:i:s'),
+                    'signature_data' => $쓸것->signature_data,
+                ] : null,
+            ]);
         }
 
         // pending 이면 실시간으로 만료 여부 체크

@@ -15594,25 +15594,33 @@ window.HELP_TOUR_STEPS = [
       });
       const data = await res.json();
 
-      if (!data.exists || data.status !== 'agreed') {
+      /* 이 처방전에 동의 줄이 없어도 쓸 수 있는 서명이 있으면 **그것을 보여 준다**
+         (2026-09-29 지시). 여태 여기서 서명 보내기 창으로 새 나가, 이미 서명한
+         사람에게 서명을 또 받으러 가게 했다. */
+      /* data 는 const 라 다시 담을 수 없다 — 볼 것을 따로 쥔다 */
+      let 볼것 = data;
+
+      if (!data.exists && data.reused_sign) {
+        볼것 = Object.assign({ exists: true, status: 'agreed' }, data.reused_sign);
+      } else if (!data.exists || data.status !== 'agreed') {
         pop.style.display = 'none';
         openConsentModal();
         return;
       }
 
       // 정보 채우기
-      document.getElementById('csignName').textContent   = data.patient_name   || '-';
-      document.getElementById('csignMobile').textContent = data.patient_mobile  || '-';
-      document.getElementById('csignTime').textContent   = data.responded_at
-        ? data.responded_at.replace('T', ' ').slice(0, 19)
+      document.getElementById('csignName').textContent   = 볼것.patient_name   || '-';
+      document.getElementById('csignMobile').textContent = 볼것.patient_mobile  || '-';
+      document.getElementById('csignTime').textContent   = 볼것.responded_at
+        ? 볼것.responded_at.replace('T', ' ').slice(0, 19)
         : '-';
 
       // 서명 이미지
       const imgWrap = document.getElementById('csignImgWrap');
       const noSig   = document.getElementById('csignNoSig');
       const pngBtn  = document.getElementById('csignPngBtn');
-      if (data.signature_data) {
-        document.getElementById('csignImg').src = data.signature_data;
+      if (볼것.signature_data) {
+        document.getElementById('csignImg').src = 볼것.signature_data;
         imgWrap.style.display = 'block';
         noSig.style.display   = 'none';
         if (pngBtn) pngBtn.style.display = 'inline-flex';
@@ -15624,8 +15632,8 @@ window.HELP_TOUR_STEPS = [
 
       // PDF 다운로드 버튼
       const pdfBtn = document.getElementById('csignPdfBtn');
-      if (data.pdf_url) {
-        pdfBtn.href = data.pdf_url;
+      if (볼것.pdf_url) {
+        pdfBtn.href = 볼것.pdf_url;
         pdfBtn.style.display = 'inline-flex';
       } else {
         pdfBtn.style.display = 'none';
@@ -15634,7 +15642,7 @@ window.HELP_TOUR_STEPS = [
       // 요양비 지급청구 위임장 PDF + 재생성 (서명이 있을 때만)
       const delegBtn = document.getElementById('csignDelegationBtn');
       const regenBtn = document.getElementById('csignRegenBtn');
-      const hasSig = !!data.signature_data;
+      const hasSig = !!볼것.signature_data;
       if (delegBtn) delegBtn.style.display = hasSig ? 'inline-flex' : 'none';
       if (regenBtn) regenBtn.style.display = hasSig ? 'inline-flex' : 'none';
       const nhisBtn = document.getElementById('csignNhisBtn');
@@ -16046,7 +16054,14 @@ window.HELP_TOUR_STEPS = [
      잣대는 서버와 같은 한 곳에 있다(DelegationGate::signed). */
   window.DELEGATION_SIGNED = @json(\App\Support\DelegationGate::signed($prescription));
 
-  function _applyConsentBtn(status) {
+  /**
+   * 배지를 세운다.
+   *
+   * `다시쓰는것` 이 오면 **이 처방전에 동의 줄이 없는데도** 서명이 있는 건이다
+   * (지난 서명ㆍ운영 데이터에서 옮겨 온 서명). 그때는 어디서 온 서명인지 배지에
+   * 적어 준다 — 「완료」만 적으면 담당자가 「여기서 받은 적이 없는데?」로 읽는다.
+   */
+  function _applyConsentBtn(status, 다시쓰는것 = null) {
     window.CONSENT_STATUS = status;
     /* 받아 두면 「위임 해당 없음」은 물러난다 — 배지와 나란히 서면 서로 어긋난다 */
     if (typeof renderDelegationNeed === 'function') renderDelegationNeed();
@@ -16078,7 +16093,16 @@ window.HELP_TOUR_STEPS = [
     rb.style.borderRadius = 'var(--radius)';
     rb.style.fontSize = '11px';
     rb.style.whiteSpace = 'nowrap';
-    rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span><button onclick="event.stopPropagation();${cfg.action}" style="height:16px;padding:0 5px;font-size:10px;background:${cfg.btnBg ?? 'none'};border:1px solid ${cfg.btnBorder};color:${cfg.btnColor};border-radius:6px;cursor:pointer;margin-left:4px;font-weight:600;">${cfg.btnLabel}</button>`;
+    /* 다시 쓰는 서명이면 어디서 온 것인지ㆍ언제까지 쓰는지 한 줄 더 적는다 */
+    const 꼬리 = 다시쓰는것
+      ? `<span style="font-size:10px;color:var(--text-muted);margin-left:4px;">${dtpEsc(다시쓰는것.label)}`
+        + (다시쓰는것.signed_at ? ` · ${dtpEsc(다시쓰는것.signed_at)} 서명` : '')
+        + (다시쓰는것.valid_until ? ` — ${dtpEsc(다시쓰는것.valid_until)} 까지` : '')
+        + (다시쓰는것.matched_by === 'name' ? ' · 이름만으로 이은 줄' : '')
+        + '</span>'
+      : '';
+
+    rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span>${꼬리}<button onclick="event.stopPropagation();${cfg.action}" style="height:16px;padding:0 5px;font-size:10px;background:${cfg.btnBg ?? 'none'};border:1px solid ${cfg.btnBorder};color:${cfg.btnColor};border-radius:6px;cursor:pointer;margin-left:4px;font-weight:600;">${cfg.btnLabel}</button>`;
   }
   // 이름 조회로 다른 사람을 고르면 그 사람의 동의 상태로 다시 그린다
   window._applyConsentBtn = _applyConsentBtn;
@@ -16304,7 +16328,15 @@ window.HELP_TOUR_STEPS = [
       }
       // 주문 앞문이 보는 값 — 배지와 따로 받는다(DelegationGate)
       if ('delegation_signed' in data) window.DELEGATION_SIGNED = !!data.delegation_signed;
-      if (!data.exists) return;
+
+      /* 이 처방전에 동의 줄이 없어도 **쓸 수 있는 서명이 있을 수 있다**
+         (2026-09-29 지시) — 지난 서명이거나, 운영 데이터에서 옮겨 온 서명이다.
+         여태 여기서 그냥 돌아섰고, 그래서 위임장에 서명한 사람인데도 「서명 동의」
+         단추가 그대로 서서 담당자가 이미 받은 서명을 또 받으러 갔다. */
+      if (!data.exists) {
+        if (data.reused_sign) _applyConsentBtn('agreed', data.reused_sign);
+        return;
+      }
 
       // 상태 배지부터 세운다. 아래에서 무엇이 잘못돼도 이건 이미 그려져 있어야 한다.
       _applyConsentBtn(data.status);
