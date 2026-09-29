@@ -115,7 +115,9 @@ class MigrateAddressesFromWithworksCommand extends Command
                 $담을것[] = [
                     'patient_id'     => $번호,
                     'ww_address_id'  => $a->ww_id,
-                    'postcode'       => preg_replace('/\D/', '', (string) $a->zipcode) ?: null,
+                    /* 우편번호는 열 자 칸이다. 원천에 「12345-678」처럼 더 긴 것이 있어
+                       숫자만 뽑아도 넘치는 줄이 있었다 — 잘라 담는다. */
+                    'postcode'       => mb_substr(preg_replace('/\D/', '', (string) $a->zipcode), 0, 10) ?: null,
                     'address'        => mb_substr($한줄, 0, 300),
                     'address_detail' => mb_substr((string) $a->address_line_2, 0, 200) ?: null,
                     'created_by'     => null,
