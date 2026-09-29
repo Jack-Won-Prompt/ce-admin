@@ -1328,7 +1328,8 @@ $calcDeposit  = $calcCopay;
           <span id="prevSignNote" style="display:none;align-self:center;flex-direction:column;gap:1px;font-size:11px;color:var(--success);white-space:nowrap;"
                 title="운영 데이터(위임장 서명)에서 옮겨 온 서명입니다.&#10;서명 그림이 함께 옮겨져 위임장에 그대로 찍힙니다.&#10;위임기간이 지나면 다시 받아야 합니다.">
             <span style="font-weight:600;">운영 데이터의 서명을 사용합니다</span>
-            <span style="font-size:10px;color:var(--text-muted);">{{ $_옮긴서명->signed_at?->format('Y-m-d') }} 서명@if($_서명만료) — {{ $_서명만료->format('Y-m-d') }} 까지 사용@endif@if($_옮긴서명->matched_by === 'name') · 이름만으로 이은 줄@endif</span>
+            <span style="font-size:10px;color:var(--text-muted);">{{ $_옮긴서명->signed_at?->format('Y-m-d') }} 서명@if($_서명만료) — {{ $_서명만료->format('Y-m-d') }} 까지 사용@endif
+            @if($_옮긴서명->matched_by === 'name') · 이름만으로 이은 줄@endif</span>
           </span>
         @endif
         {{-- 산재ㆍ자동차보험ㆍ처방외는 환자가 직접 청구한다 — 위임을 받을 일이 없다.
