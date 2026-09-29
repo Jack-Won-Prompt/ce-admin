@@ -48,7 +48,8 @@ class MigratePrescriptionsFromWithworksCommand extends Command
                             {--force : 실제로 옮긴다. 없으면 세어 보이기만 한다}
                             {--years=3 : 최근 몇 년치}
                             {--처방외 : 원천 갈래 20(처방외)도 함께 옮긴다}
-                            {--limit= : 몇 줄만 시험 삼아}';
+                            {--limit= : 몇 줄만 시험 삼아}
+                            {--유형채우기 : 이미 옮긴 줄의 처방 유형을 원천에서 채운다 (한 번만 쓰는 손질)}';
 
     protected $description = '위드웍스 처방전을 우리 처방전으로 옮깁니다 (거울 표에서 읽습니다)';
 
@@ -66,6 +67,10 @@ class MigratePrescriptionsFromWithworksCommand extends Command
             $this->error('prescriptions.ww_add_id 가 없습니다 — 마이그레이션을 먼저 돌려 주십시오.');
 
             return self::FAILURE;
+        }
+
+        if ($this->option('유형채우기')) {
+            return $this->유형채우기($정말);
         }
 
         $해수 = max(1, (int) $this->option('years'));
@@ -183,6 +188,15 @@ class MigratePrescriptionsFromWithworksCommand extends Command
 
                 $담을것[] = [
                     'ww_add_id'        => $p->ww_id,
+
+                    /* 처방 유형 — 원천 `type` 이 곧 우리 코드다 (10 원외ㆍ20 처방외ㆍ
+                       30 원내). `Prescription::ACC_TYPES` 가 같은 코드를 쓴다.
+
+                       처음에 이 칸을 비워 두었더니 **청구전략이 서지 않았다**. 전략은
+                       유형×자격으로 정해지는데 유형이 비어 화면이 「유형ㆍ자격 미선택」에
+                       머물렀고, 그 바람에 위임 서명 안내도 금액 셈도 서지 못했다
+                       (2026-09-29 (E)박민우 건에서 드러남). */
+                    'counsel_acc_add_type' => $p->type,
                     'rx_number'        => $번호,
                     'patient_id'       => $환자,
                     'status'           => self::상태[$p->status] ?? 'pending',
@@ -290,6 +304,58 @@ class MigratePrescriptionsFromWithworksCommand extends Command
     public static function 주민번호가린다(string $글): string
     {
         return preg_replace('/(\d{6})-(\d)\d{6}/', '$1-$2******', $글);
+    }
+
+    /**
+     * 이미 옮긴 줄의 처방 유형을 채운다 — 한 번만 쓰는 손질.
+     *
+     * 첫 판에서 이 칸을 비워 두었다. 그러면 청구전략이 서지 않아(전략은 유형×자격으로
+     * 정해진다) 화면이 「유형ㆍ자격 미선택」에 머물고, 위임 서명 안내도 금액 셈도 서지
+     * 못한다. 원천 `type` 이 곧 우리 코드라 거울 표에서 그대로 옮겨 담는다.
+     *
+     * **이미 값이 있는 줄은 건드리지 않는다** — 담당자가 고쳐 둔 것을 덮으면 안 된다.
+     */
+    private function 유형채우기(bool $정말): int
+    {
+        $this->line('');
+        $this->info('── 이미 옮긴 줄의 처방 유형을 채웁니다 '
+            . ($정말 ? '(실제로 채웁니다)' : '(세어 보이기만 합니다)'));
+
+        $빈것 = DB::table('prescriptions as p')
+            ->join('ww_prescription_infos as w', 'w.ww_id', '=', 'p.ww_add_id')
+            ->whereNotNull('p.ww_add_id')
+            ->where(fn ($q) => $q->whereNull('p.counsel_acc_add_type')->orWhere('p.counsel_acc_add_type', ''))
+            ->whereNotNull('w.type')->where('w.type', '<>', '');
+
+        $몇 = (clone $빈것)->count();
+        $this->line('  유형이 빈 줄 ' . number_format($몇) . '장');
+
+        foreach ((clone $빈것)->selectRaw('w.type v, COUNT(*) n')->groupBy('v')->get() as $r) {
+            $this->line(sprintf('    %-4s %-14s %s장', $r->v,
+                self::갈래[$r->v] ?? '(모르는 코드)', number_format($r->n)));
+        }
+
+        if (! $정말) {
+            $this->line('');
+            $this->warn('  세어 보이기만 했습니다. 실제로 채우려면 --force 를 적어 주십시오.');
+
+            return self::SUCCESS;
+        }
+
+        $채움 = 0;
+
+        foreach (self::갈래 as $코드 => $말) {
+            $채움 += DB::table('prescriptions')
+                ->whereIn('id', (clone $빈것)->where('w.type', $코드)->pluck('p.id'))
+                ->update(['counsel_acc_add_type' => $코드]);
+        }
+
+        $this->line('');
+        $this->info('  채웠습니다 ' . number_format($채움) . '장.');
+        $this->line('  아직 빈 줄 ' . number_format((clone $빈것)->count()) . '장');
+        $this->line('');
+
+        return self::SUCCESS;
     }
 
     /** 글자 칸 — 비면 null, 넘치면 자른다 */
