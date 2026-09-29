@@ -12,9 +12,12 @@ use Illuminate\Support\Facades\Schema;
  * delegation-signs:export 가 낸 JSON Lines 를 읽는다. 짝은 **원본의 id** 다 —
  * 그 번호가 위임장 서명 화면의 줄 번호이고, 다시 받아도 두 줄로 서지 않게 한다.
  *
- * **주민등록번호 암호문은 오지 않는다.** 두 서버의 암호화 열쇠가 달라 풀리지 않을
- * 값이라 내보내는 쪽에서 뺐다. 가린 값과 생년월일은 그대로 오고, 화면과 나이ㆍ성년
- * 판정은 그것만 본다.
+ * **주민등록번호는 평문으로 온다**(내보내는 쪽에 --with-rrn 을 주었을 때).
+ * 두 서버의 암호화 열쇠가 달라 암호문은 옮길 수 없다 — 저쪽에서 풀고 여기서 **이 서버
+ * 열쇠로 다시 잠근다**. 평문은 담기 직전까지만 메모리에 있고 표에는 암호문만 눕는다.
+ *
+ * 주지 않았으면 가린 값과 생년월일만 온다. 그것만으로도 이 표의 화면과 나이ㆍ성년
+ * 판정은 그대로 선다 — 복호화하는 자리가 한 군데도 없기 때문이다.
  *
  * 받는 표에 없는 칸은 버린다 — 두 서버의 마이그레이션이 한 걸음 어긋나 있어도
  * 받다가 멈추지 않게. 무엇을 버렸는지는 세어 보인다.
@@ -40,7 +43,7 @@ class DelegationSignsImportCommand extends Command
 
         $있는칸 = Schema::getColumnListing('delegation_signs');
         $버린칸 = [];
-        $셈     = ['읽음' => 0, '새로' => 0, '덧씀' => 0, '건너뜀' => 0];
+        $셈     = ['읽음' => 0, '새로' => 0, '덧씀' => 0, '건너뜀' => 0, '주민번호' => 0];
         $담을것 = [];
 
         while (($줄 = fgets($손)) !== false) {
@@ -59,6 +62,19 @@ class DelegationSignsImportCommand extends Command
             }
 
             $셈['읽음']++;
+
+            /* 평문으로 온 주민번호를 **이 서버 열쇠로** 잠근다. 가린 값은 저쪽 것을
+               그대로 쓰지 않고 여기서 다시 만든다 — 둘이 어긋나면 화면과 판정이
+               서로 다른 말을 한다. */
+            if (! empty($것['resident_no_plain'])) {
+                $평문 = (string) $것['resident_no_plain'];
+
+                $것['resident_no']        = \App\Support\ResidentNo::encrypt($평문);
+                $것['resident_no_masked'] = \App\Support\ResidentNo::mask($평문);
+                $셈['주민번호']++;
+            }
+
+            unset($것['resident_no_plain']);
 
             foreach (array_keys($것) as $칸) {
                 if (! in_array($칸, $있는칸, true)) {
