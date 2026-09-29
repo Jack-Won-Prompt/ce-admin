@@ -49,6 +49,7 @@ class MigratePrescriptionsFromWithworksCommand extends Command
                             {--years=3 : 최근 몇 년치}
                             {--처방외 : 원천 갈래 20(처방외)도 함께 옮긴다}
                             {--limit= : 몇 줄만 시험 삼아}
+                            {--거래처= : 이 거래처 번호들만 (쉼표로 잇는다). 한 사람 것만 다시 옮길 때}
                             {--유형채우기 : 이미 옮긴 줄의 처방 유형을 원천에서 채운다 (한 번만 쓰는 손질)}';
 
     protected $description = '위드웍스 처방전을 우리 처방전으로 옮깁니다 (거울 표에서 읽습니다)';
@@ -116,6 +117,16 @@ class MigratePrescriptionsFromWithworksCommand extends Command
             ->whereDate('p.reg_date', '>=', $기준)
             ->orderBy('p.ww_id')
             ->select('p.*');
+
+        /* 거래처를 집어 주면 그 사람 것만 본다 (2026-09-29).
+           한 사람 건을 다시 옮기거나, 시험 삼아 한 줄만 세워 볼 때 쓴다. */
+        if ($골라 = trim((string) $this->option('거래처'))) {
+            $번호들 = array_filter(array_map('intval', explode(',', $골라)));
+            $ww = DB::table('patients')->whereIn('id', $번호들)
+                ->whereNotNull('ww_account_id')->pluck('ww_account_id');
+            $질의->whereIn('p.to_account_id', $ww);
+            $this->line('  고른 거래처 ' . count($번호들) . '명 (원천 계정 ' . $ww->count() . '개)');
+        }
 
         if ($한도 = $this->option('limit')) {
             $질의->limit((int) $한도);
