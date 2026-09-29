@@ -119,11 +119,18 @@ class FetchWithworksAttachmentsCommand extends Command
         $this->line('  이미 받아 둔 첨부파일 ' . number_format($이미->count()) . '장');
 
         /* 그림 칸이 이미 찬 처방전 — 첫 장을 두 번 담지 않으려면 알고 있어야 한다.
-           우리가 담은 것뿐 아니라 사람이 올린 것도 함께 본다. */
-        $그림있나 = DB::table('prescriptions')->whereNotNull('ww_add_id')
+           우리가 담은 것뿐 아니라 사람이 올린 것도 함께 본다.
+
+           **파일 이름까지 쥔다.** 번호만 쥐었다가 한 번 크게 어긋났다(2026-09-29) —
+           첫 장을 그림으로 올릴 때 첨부 줄을 지우니 원천 번호 표시가 사라지고, 이어받기가
+           그 파일을 다시 받아 첨부로 한 번 더 세웠다(2,042장). 담긴 자리는 원천 이름으로
+           끝나므로 그것으로 가린다. */
+        $그림이름 = DB::table('prescriptions')->whereNotNull('ww_add_id')
             ->whereNotNull('image_path')->where('image_path', '<>', '')
-            ->pluck('id')->flip()->all();
-        $this->line('  처방전 그림이 이미 있는 것 ' . number_format(count($그림있나)) . '장');
+            ->pluck('image_path', 'id')
+            ->map(fn ($자리) => basename((string) $자리))
+            ->all();
+        $this->line('  처방전 그림이 이미 있는 것 ' . number_format(count($그림이름)) . '장');
 
         /* 이미 받아 둔 첨부의 첫 장을 처방전 그림으로 올린다 — 한 번만 쓰는 손질 */
         if ($this->option('첫장올리기')) {
@@ -179,6 +186,15 @@ class FetchWithworksAttachmentsCommand extends Command
                 continue;
             }
 
+            /* 이 파일이 이미 처방전 그림으로 담겨 있나 — 첨부 줄이 없어도 담긴 것이다 */
+            $처방전번호 = $우리처방전[$d->add_id];
+
+            if (($그림이름[$처방전번호] ?? null) === $d->refile_name) {
+                $셈['이미있음']++;
+
+                continue;
+            }
+
             $꼴 = strtolower(pathinfo((string) $d->refile_name, PATHINFO_EXTENSION));
 
             if (! isset(self::받는꼴[$꼴])) {
@@ -223,20 +239,20 @@ class FetchWithworksAttachmentsCommand extends Command
 
                 Storage::disk($디스크)->put($자리, $몸);
 
-                $처방전 = $우리처방전[$d->add_id];
+                $처방전 = $처방전번호;
                 $이름 = mb_substr((string) ($d->file_name ?: $d->refile_name), 0, 255);
 
                 /* 첫 장은 처방전 그림으로 올린다 — 주문 등록의 「첨부」 목록에서 「처방전」
                    줄이 읽는 칸이 그것이다. 그 칸이 이미 차 있으면(사람이 올린 것이거나
                    앞 판에서 담은 것) 손대지 않고 첨부로 담는다. */
-                if (! isset($그림있나[$처방전])) {
+                if (! isset($그림이름[$처방전])) {
                     DB::table('prescriptions')->where('id', $처방전)->update([
                         'image_path'          => $자리,
                         'image_original_name' => $이름,
                         'image_mime_type'     => self::받는꼴[$꼴],
                         'image_size'          => strlen($몸),
                     ]);
-                    $그림있나[$처방전] = true;
+                    $그림이름[$처방전] = $d->refile_name;
                     $셈['처방전그림']++;
                 } else {
                     DB::table('prescription_attachments')->insert([
@@ -362,8 +378,27 @@ class FetchWithworksAttachmentsCommand extends Command
             }
         });
 
+        /* 그림으로 올린 파일이 첨부로도 서 있는 줄을 치운다.
+           첫 판에서 첨부 줄을 지워 원천 번호 표시가 사라지자, 이어받기가 같은 파일을
+           다시 받아 첨부로 한 번 더 세웠다(2,042장). 그 줄만 지운다 — 파일은 그림이
+           가리키고 있으니 그대로 둔다. */
+        $겹친줄 = DB::table('prescription_attachments as a')
+            ->join('prescriptions as p', 'p.id', '=', 'a.prescription_id')
+            ->whereNotNull('a.ww_detail_id')
+            ->whereColumn('a.file_path', 'p.image_path')
+            ->pluck('a.id');
+
+        $치움 = 0;
+
+        if ($겹친줄->isNotEmpty()) {
+            foreach ($겹친줄->chunk(1000) as $묶음) {
+                $치움 += DB::table('prescription_attachments')->whereIn('id', $묶음->all())->delete();
+            }
+        }
+
         $this->line('');
         $this->info('  올렸습니다 ' . number_format($올림) . '장.');
+        $this->line('  그림과 같은 파일을 가리켜 겹친 첨부 줄 ' . number_format($치움) . '개를 치웠습니다.');
         $this->line('  처방전 그림이 있는 것 ' . number_format(
             DB::table('prescriptions')->whereNotNull('ww_add_id')
                 ->whereNotNull('image_path')->where('image_path', '<>', '')->count()) . '장');
