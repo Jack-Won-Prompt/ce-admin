@@ -1041,7 +1041,6 @@
   /* ── 문서 타일 (시안 137:806) — 3열, 타일 높이 80 ── */
   .attach-strip { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; padding:12px 16px; }
   /* 미리보기 줄 아래 내려받기 단추 (2026-09-28 지시) — 썸네일과 붙지 않게 위에만 선을 둔다 */
-  .doc-dl-foot { display:flex; flex-wrap:wrap; gap:6px; padding:0 16px 12px; }
   /* 시안 148:1605 — 고르지 않은 타일에는 테두리가 없다. 고른 타일만 2px 주색이고,
      선이 안쪽에 그려져(strokeAlign INSIDE) 타일 바깥 크기는 93×80 로 같다.
      box-sizing:border-box 라 테두리가 굵어져도 자리가 밀리지 않는다. */
@@ -2400,13 +2399,11 @@ $calcDeposit  = $calcCopay;
                생기면 refreshGeneratedDocs() 가 이 자리를 다시 그린다. --}}
           <span id="genThumbs" style="display:contents"></span>
         </div>
-        {{-- 미리보기 바로 아래에도 같은 두 단추를 둔다 (2026-09-28 지시).
+        {{-- 여기에도 같은 두 단추를 두었다가 걷었다 (2026-09-29 지시).
 
-             서류가 여럿이면 썸네일 줄이 길어져 카드 머리가 화면 위로 밀려난다.
-             보고 있던 자리에서 손을 떼지 않고 누를 수 있어야 한다. --}}
-        <div class="doc-dl-foot">
-          @include('prescriptions._docs_dl_btns', ['자리' => 'foot'])
-        </div>
+             썸네일 줄이 길어져도 카드 머리에서 누를 수 있게 하려던 것인데, 같은 단추가
+             한 화면에 두 벌 서서 어느 것이 무엇인지 묻게 되었다. 카드 머리의 한 벌만
+             남긴다 — `_docs_dl_btns` 의 '자리' 는 'head' 하나뿐이다. --}}
       </div>
 
       {{-- 유형 선택과 첨부 추가는 문서 카드 머리로 올라갔다 (시안 137:797) --}}
