@@ -919,8 +919,9 @@ class _LookupSheetState extends State<_LookupSheet> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             const Text(
-              '이름과 생년월일이 모두 일치해야 조회됩니다. '
-              '다른 담당자가 등록한 처방전에도 서류를 추가할 수 있습니다.',
+              '이름과 생년월일이 모두 일치해야 조회됩니다. 생년월일은 숫자 8자리나 '
+              '주민등록번호 앞자리로도 됩니다. 다른 담당자가 등록한 처방전에도 '
+              '서류를 추가할 수 있습니다.',
               style: TextStyle(fontSize: 12.5, color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 14),
@@ -934,13 +935,15 @@ class _LookupSheetState extends State<_LookupSheet> {
             ),
             const SizedBox(height: 10),
             /* 손으로 적어도 되고 달력에서 골라도 된다 — 아는 날짜를 적는 편이
-               빠른 사람이 있고, 달력이 편한 사람이 있다. */
+               빠른 사람이 있고, 달력이 편한 사람이 있다.
+               붙임표 없이 숫자만 적어도 되고, 주민등록번호 앞자리도 받는다
+               (2026-09-29 지시) — 읽는 것은 서버가 한다. */
             TextField(
               controller: widget.birthCtrl,
               keyboardType: TextInputType.datetime,
               decoration: InputDecoration(
                 labelText: '생년월일',
-                hintText: 'YYYY-MM-DD',
+                hintText: '19900505 또는 1990-05-05',
                 prefixIcon: const Icon(Icons.cake_outlined),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.calendar_month_outlined),

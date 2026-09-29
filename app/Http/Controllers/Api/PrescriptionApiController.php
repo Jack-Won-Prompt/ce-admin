@@ -482,15 +482,23 @@ class PrescriptionApiController extends Controller
     {
         $request->validate([
             'name'  => ['required', 'string', 'max:50'],
-            'birth' => ['required', 'date_format:Y-m-d'],
+            'birth' => ['required', 'string', 'max:20'],
         ], [
-            'name.required'     => '환자 이름을 입력해 주십시오.',
-            'birth.required'    => '생년월일을 입력해 주십시오.',
-            'birth.date_format' => '생년월일은 YYYY-MM-DD 로 입력해 주십시오.',
+            'name.required'  => '환자 이름을 입력해 주십시오.',
+            'birth.required' => '생년월일을 입력해 주십시오.',
         ]);
 
         $이름 = trim($request->input('name'));
-        $생일 = $request->input('birth');
+        $생일 = $this->생년월일로($request->input('birth'));
+
+        /* 숫자로 적어도 받는다 (2026-09-29 지시) — 붙임표를 넣게 하면 손이 느리다.
+           읽을 수 없는 값이면 여기서 돌려보낸다. */
+        if ($생일 === null) {
+            return response()->json([
+                'success' => false,
+                'message' => '생년월일을 YYYY-MM-DD 또는 숫자 8자리(19900505)로 입력해 주십시오. 주민등록번호 앞자리도 됩니다.',
+            ], 422);
+        }
 
         /* 이름과 생년월일을 **무르게** 견준다 (2026-09-26 지시).
 
@@ -545,6 +553,67 @@ class PrescriptionApiController extends Controller
                 'created_at'   => $p->created_at->format('Y-m-d H:i'),
             ])->values(),
         ]);
+    }
+
+    /**
+     * 적어 넣은 생년월일을 Y-m-d 로 읽는다 (2026-09-29 지시).
+     *
+     * 붙임표를 넣게 하면 손이 느리다. 그래서 숫자만 적어도 받는다 —
+     *
+     *   1990-05-05      그대로
+     *   19900505        여덟 자리 생년월일
+     *   900505          주민등록번호 앞 여섯 자리. 100년을 넘지 않게 세기를 고른다
+     *   9005051         앞 일곱 자리. **성별 숫자로 세기가 갈린다** — 1ㆍ2 는 19xx,
+     *                   3ㆍ4 는 20xx, 9ㆍ0 은 18xx. 이것이 가장 확실하다
+     *   900505-1234567  열세 자리(붙임표는 떼고 앞 일곱 자리만 본다)
+     *
+     * 읽을 수 없으면 null 을 돌려준다.
+     */
+    private function 생년월일로(?string $적은값): ?string
+    {
+        $값 = trim((string) $적은값);
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $값)) {
+            return $this->날짜인가($값) ? $값 : null;
+        }
+
+        $숫자 = preg_replace('/\D/', '', $값);
+
+        // 여덟 자리 — 1990 05 05
+        if (strlen($숫자) === 8) {
+            $후보 = substr($숫자, 0, 4) . '-' . substr($숫자, 4, 2) . '-' . substr($숫자, 6, 2);
+
+            return $this->날짜인가($후보) ? $후보 : null;
+        }
+
+        // 주민등록번호 앞자리 — 여섯 자리(세기 짐작) 또는 일곱 자리 이상(성별 숫자로 확정)
+        if (strlen($숫자) >= 6) {
+            $두자리 = (int) substr($숫자, 0, 2);
+            $월     = substr($숫자, 2, 2);
+            $일     = substr($숫자, 4, 2);
+
+            $세기 = match (strlen($숫자) >= 7 ? substr($숫자, 6, 1) : '') {
+                '1', '2', '5', '6' => 1900,
+                '3', '4', '7', '8' => 2000,
+                '9', '0'           => 1800,
+                // 성별 숫자가 없으면 앞으로 넘어가지 않게 고른다(오늘보다 미래면 19xx)
+                default => (2000 + $두자리) > (int) date('Y') ? 1900 : 2000,
+            };
+
+            $후보 = ($세기 + $두자리) . '-' . $월 . '-' . $일;
+
+            return $this->날짜인가($후보) ? $후보 : null;
+        }
+
+        return null;
+    }
+
+    /** 있는 날짜인가 — 2026-02-31 같은 값을 걸러낸다 */
+    private function 날짜인가(string $값): bool
+    {
+        [$y, $m, $d] = array_map('intval', explode('-', $값));
+
+        return checkdate($m, $d, $y);
     }
 
     /**
