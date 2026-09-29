@@ -102,6 +102,18 @@
   .pl-head-k { color:var(--text-muted); margin-right:6px; }
 
   .pl-diff     { border:1px solid var(--gray-200); border-radius:12px; overflow:hidden; }
+
+  /* 변경 이력 판은 넘치면 스크롤이 선다 (2026-09-29 확인).
+
+     한 번에 여러 칸을 고친 기록을 열면 아래가 그냥 잘렸다. 판은 435 넘쳤는데
+     넘침이 visible 이라 막대가 서지 않았고, 이 화면은 액자(상세 내용 탭) 안에서
+     열려 문서째 스크롤되지도 않는다 — 마지막 줄이 액자 밖 1045 에 있어 **닿을
+     길이 없었다.** 무엇이 무엇으로 바뀌었는지 보러 연 자리에서 그 값을 못 본다.
+
+     min-height:0 을 함께 두는 까닭은, 세로 flex 안의 칸은 기본으로 제 내용보다
+     작아지지 않아 overflow 를 주어도 줄지 않기 때문이다. */
+  #tab-log.tab-pane.active { min-height:0; }
+  #plList, #plDetail       { min-height:0; overflow-y:auto; }
   .pl-row      { display:grid; grid-template-columns:1fr 180px 1fr; align-items:stretch;
                  border-top:1px solid var(--gray-200); }
   .pl-row:first-child { border-top:0; }
