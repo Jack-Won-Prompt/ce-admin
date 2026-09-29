@@ -88,8 +88,8 @@ class MigratePrescriptionItemsFromWithworksCommand extends Command
         $this->line('  옮겨 둔 처방전 ' . number_format($우리처방전->count()) . '장');
 
         $이미 = DB::table('prescription_items')->whereNotNull('ww_sod_id')
-            ->pluck('ww_sod_id')->flip();
-        $this->line('  이미 옮긴 품목 ' . number_format($이미->count()) . '줄');
+            ->pluck('ww_sod_id')->flip()->all();
+        $this->line('  이미 옮긴 품목 ' . number_format(count($이미)) . '줄');
 
         $창고 = WithworksSource::연결(WithworksSource::창고);
 
@@ -103,8 +103,13 @@ class MigratePrescriptionItemsFromWithworksCommand extends Command
         foreach (array_chunk($우리처방전->keys()->all(), 1000) as $묶음) {
             $줄들 = $창고->table('account_add_informations as p')
                 /* 상담을 먼저 묶는다 — 한 처방전에 상담이 여러 줄이면 품목이 부푼다 */
+                /* **so_id > 0 이어야 한다.**
+
+                   판매주문이 없는 상담은 그 칸이 NULL 이 아니라 **0** 이다. `IS NOT NULL`
+                   로만 거르면 0번끼리 모두 이어져, 남의 품목이 224장에 붙고 같은 품목
+                   줄이 여러 번 담겨 유일 색인에 걸린다(2026-09-29 운영에서 드러남). */
                 ->join(DB::raw('(SELECT DISTINCT add_id, so_id FROM counsellings
-                                 WHERE deleted_at IS NULL AND so_id IS NOT NULL) cs'),
+                                 WHERE deleted_at IS NULL AND so_id IS NOT NULL AND so_id > 0) cs'),
                        'cs.add_id', '=', 'p.id')
                 ->join('sales_order_details as sod', function ($j) {
                     $j->on('sod.so_id', '=', 'cs.so_id')->whereNull('sod.deleted_at');
@@ -127,6 +132,10 @@ class MigratePrescriptionItemsFromWithworksCommand extends Command
 
                     continue;
                 }
+
+                /* 같은 판을 도는 동안에도 한 번만 담는다 — $이미 는 시작할 때 한 번만
+                   읽으므로, 이 판에서 방금 담은 것은 그 안에 없다 */
+                $이미[$r->sod_id] = true;
 
                 $처방전 = $우리처방전[$r->add_id] ?? null;
 
