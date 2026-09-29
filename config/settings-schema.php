@@ -516,6 +516,10 @@ return [
             'min_version'    => ['label' => '최소 판', 'config' => 'mobile.min_version', 'width' => 1,
                                  'help'  => '이 버전보다 낮으면 사용할 수 없습니다 — 건너뛸 수 없는 안내가 표시됩니다. 서버와 주고받는 규격이 변경된 경우에만 올립니다.'],
             'store_url'      => ['label' => '스토어 주소', 'config' => 'mobile.store_url', 'width' => 3],
+            /* 스토어를 쓰지 않고 APK 를 직접 나눠 주는 동안 받는 길 (2026-09-29 지시).
+               스토어 주소가 채워져 있으면 앱은 그쪽을 먼저 쓴다. */
+            'apk_url'        => ['label' => 'APK 받는 주소', 'config' => 'mobile.apk_url', 'width' => 3,
+                                 'help'  => '스토어를 쓰지 않을 때 앱이 새 판을 받는 주소입니다. 예: https://…/CE_Admin_1.3.4.apk · 스토어 주소가 있으면 그쪽을 먼저 씁니다.'],
             'notice'         => ['label' => '안내 문구', 'config' => 'mobile.notice', 'type' => 'textarea', 'width' => 3,
                                  'help'  => '새 판에서 무엇이 달라졌는지 한두 줄. 비우면 기본 문구가 나갑니다.'],
         ],

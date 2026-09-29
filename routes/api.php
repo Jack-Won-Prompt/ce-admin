@@ -57,6 +57,10 @@ Route::get('/shop-badge', function () {
 
 // ── 인증 불필요 ───────────────────────────────────────────
 
+/* 앱이 「내가 낡았는지」를 묻는다 (2026-09-29 지시) — 스토어를 쓰지 않고 APK 를
+   직접 나눠 주므로, 새 판 안내를 서버가 해야 한다. 로그인 앞이라 토큰을 묻지 않는다. */
+Route::get('/app/version', [\App\Http\Controllers\Api\AppVersionApiController::class, 'show']);
+
 Route::prefix('auth')->group(function () {
     Route::get( '/options',     [AuthApiController::class, 'options']);     // 로그인 화면이 무엇을 보일지
     Route::post('/login',       [AuthApiController::class, 'login']);       // 1단계: 이메일/비밀번호 → OTP 발송

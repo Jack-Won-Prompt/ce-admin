@@ -46,18 +46,19 @@ class _CeAdminAppState extends ConsumerState<CeAdminApp>
   @override
   void initState() {
     super.initState();
-    // Play 스토어 인앱 업데이트 (강제 + 상시). 앱 시작 시 확인.
+    /* 새 판이 나왔는지 서버에 묻는다 (2026-09-29 지시) — 스토어를 쓰지 않고 APK 를
+       직접 나눠 주므로, 스토어가 해 주던 안내를 우리가 한다. */
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      UpdateService.checkAndUpdate();
+      UpdateService.checkAndUpdate(context);
     });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // 포그라운드 복귀(resume)마다 새 버전 재확인 → 강제 업데이트 상시 적용
+    // 다시 앞으로 올 때마다 새 판을 다시 묻는다 — 최소 판 미만이면 그때 막힌다
     if (state == AppLifecycleState.resumed) {
-      UpdateService.checkAndUpdate();
+      UpdateService.checkAndUpdate(context);
     }
   }
 
