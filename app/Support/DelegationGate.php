@@ -143,7 +143,85 @@ final class DelegationGate
      */
     public static function 쓸서명(Prescription $prescription): ?PrescriptionConsent
     {
-        return self::이건서명($prescription) ?? self::지난서명($prescription);
+        return self::이건서명($prescription)
+            ?? self::지난서명($prescription)
+            ?? self::옮겨온서명동의($prescription);
+    }
+
+    /**
+     * 운영 데이터에서 옮겨 온 위임 서명 (2026-09-29 지시).
+     *
+     * 위드웍스에서 위임장에 서명한 사람은 `patient_delegation_signs` 에 그 서명 그림째
+     * 담겨 있다(2026-09-29 이관, 192명). 그런데 이 문은 우리 동의 줄
+     * (`prescription_consents`)만 보고 있어, 이미 서명한 사람에게도 「서명이 없다」고 했다 —
+     * 주문 등록 화면의 「서명 동의」 단추가 아무 표시도 하지 않았고, 주문 생성ㆍ결제 안내가
+     * 막혔다.
+     *
+     * 받을 조건은 우리 서명과 같다 — **위임에 동의했고, 서명 그림이 남아 있어야** 한다.
+     * 그림이 없으면 받지 않는다. 그것을 받아 주면 위임장이 빈 서명란으로 공단에 나간다.
+     */
+    public static function 옮겨온서명(Prescription $prescription): ?\App\Models\PatientDelegationSign
+    {
+        if (! $prescription->patient_id) {
+            return null;
+        }
+
+        $서명 = \App\Models\PatientDelegationSign::where('patient_id', $prescription->patient_id)
+            ->where('agree_delegation', true)
+            ->whereNotNull('sign_base64')->where('sign_base64', '!=', '')
+            ->orderByDesc('signed_at')->orderByDesc('id')
+            ->first();
+
+        if (! $서명) {
+            return null;
+        }
+
+        /* 위임기간이 지났으면 다시 받아야 한다 — 우리 서명과 같은 잣대다 */
+        $끝 = self::유효기간(self::서명을동의로($서명, $prescription), $prescription->patient);
+
+        return ($끝 && $끝->gte(now())) ? $서명 : null;
+    }
+
+    /** 옮겨 온 서명을 동의 줄 꼴로 감싼다 — 없으면 null */
+    public static function 옮겨온서명동의(Prescription $prescription): ?PrescriptionConsent
+    {
+        $서명 = self::옮겨온서명($prescription);
+
+        return $서명 ? self::서명을동의로($서명, $prescription) : null;
+    }
+
+    /**
+     * 옮겨 온 서명을 동의 줄 **꼴로만** 만든다 — **담지 않는다**.
+     *
+     * 위임장을 그리는 자리ㆍ서명 그림을 내려 주는 자리ㆍ문서 목록이 모두 동의 줄을 받아
+     * `status`ㆍ`signature_data`ㆍ`patient_name`ㆍ`responded_at` 넷만 읽는다. 그래서 그 넷을
+     * 채운 줄 하나를 만들어 건네면 그 자리들을 하나도 고치지 않아도 된다.
+     *
+     * `exists` 를 false 로 두어 `save()` 가 새 줄을 만들게 하지 않는다 — 실수로 저장하면
+     * 옮겨 온 서명이 우리 동의 줄로 한 벌 더 생겨, 어느 것이 원본인지 알 수 없게 된다.
+     */
+    private static function 서명을동의로(
+        \App\Models\PatientDelegationSign $서명,
+        Prescription $prescription
+    ): PrescriptionConsent {
+        $그림 = (string) $서명->sign_base64;
+
+        /* 원본이 data URI 로 담긴 것도, 알맹이만 담긴 것도 있다 — 받는 쪽은 data URI 를
+           그대로 <img src> 에 넣으므로 꼴을 맞춰 준다 */
+        if ($그림 !== '' && ! str_starts_with($그림, 'data:')) {
+            $그림 = 'data:image/png;base64,' . $그림;
+        }
+
+        /* 칸은 하나씩 놓는다 — 생성자에 배열로 주면 $fillable 에 없는 칸이 조용히 빠진다 */
+        $동의 = new PrescriptionConsent();
+        $동의->prescription_id = $prescription->id;
+        $동의->patient_name    = $서명->customer_name;
+        $동의->status         = 'agreed';
+        $동의->signature_data = $그림;
+        $동의->responded_at   = $서명->signed_at;
+        $동의->exists         = false;
+
+        return $동의;
     }
 
     /**

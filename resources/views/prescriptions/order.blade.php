@@ -1301,18 +1301,34 @@ $calcDeposit  = $calcCopay;
              이제 서버는 **쓸 수 있는 지난 서명이 있는가**만 가리고, 보일지 말지는
              옆 배지와 같은 잣대(renderDelegationNeed)로 화면이 정한다. --}}
         @php
-            $_지난서명 = ! \App\Support\DelegationGate::이건서명($prescription)
+            $_이건서명 = \App\Support\DelegationGate::이건서명($prescription);
+            $_지난서명 = ! $_이건서명
                 ? \App\Support\DelegationGate::지난서명($prescription)
+                : null;
+            /* 운영 데이터에서 옮겨 온 서명 (2026-09-29 지시).
+               위드웍스에서 위임장에 서명한 사람은 우리 동의 줄이 없다 — 그 서명을
+               쓴다는 것을 화면이 말하지 않으면 담당자는 이미 받은 서명을 또 받으러 간다. */
+            $_옮긴서명 = (! $_이건서명 && ! $_지난서명)
+                ? \App\Support\DelegationGate::옮겨온서명($prescription)
                 : null;
             $_서명만료 = $_지난서명
                 ? \App\Support\DelegationGate::유효기간($_지난서명, $prescription->patient)
-                : null;
+                : ($_옮긴서명
+                    ? \App\Support\DelegationGate::유효기간(
+                        \App\Support\DelegationGate::옮겨온서명동의($prescription), $prescription->patient)
+                    : null);
         @endphp
         @if($_지난서명)
           <span id="prevSignNote" style="display:none;align-self:center;flex-direction:column;gap:1px;font-size:11px;color:var(--success);white-space:nowrap;"
                 title="서명은 한 번 받으면 위임기간(최장 5년) 안에서 다시 사용합니다.&#10;위임장은 공단에 한 번 등록하고 그 기간 동안 그 한 장을 사용합니다.&#10;기간이 지나면 다시 받아야 합니다.">
             <span style="font-weight:600;">지난 서명을 사용합니다</span>
             <span style="font-size:10px;color:var(--text-muted);">{{ $_지난서명->prescription?->rx_number }} · {{ $_지난서명->responded_at?->format('Y-m-d') }} 서명@if($_서명만료) — {{ $_서명만료->format('Y-m-d') }} 까지 사용@endif</span>
+          </span>
+        @elseif($_옮긴서명)
+          <span id="prevSignNote" style="display:none;align-self:center;flex-direction:column;gap:1px;font-size:11px;color:var(--success);white-space:nowrap;"
+                title="운영 데이터(위임장 서명)에서 옮겨 온 서명입니다.&#10;서명 그림이 함께 옮겨져 위임장에 그대로 찍힙니다.&#10;위임기간이 지나면 다시 받아야 합니다.">
+            <span style="font-weight:600;">운영 데이터의 서명을 사용합니다</span>
+            <span style="font-size:10px;color:var(--text-muted);">{{ $_옮긴서명->signed_at?->format('Y-m-d') }} 서명@if($_서명만료) — {{ $_서명만료->format('Y-m-d') }} 까지 사용@endif@if($_옮긴서명->matched_by === 'name') · 이름만으로 이은 줄@endif</span>
           </span>
         @endif
         {{-- 산재ㆍ자동차보험ㆍ처방외는 환자가 직접 청구한다 — 위임을 받을 일이 없다.
