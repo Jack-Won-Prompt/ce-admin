@@ -2335,10 +2335,13 @@ $calcDeposit  = $calcCopay;
             <input type="file" id="attachUploadInput" accept=".jpg,.jpeg,.png,.pdf,.heic" style="display:none" onchange="handleAttachUpload(this)">
           </div>
         </div>
-        {{-- 아무것도 없을 때 — 「첨부문서 추가」를 누르라고 한 줄 적어 둔다.
-             빈 칸만 있으면 여기가 무엇을 하는 자리인지 알 수 없다. --}}
+        {{-- 아무것도 없을 때 (2026-09-29 지시로 한마디로 줄였다).
+
+             여기가 무엇을 하는 자리인지 알려 주려고 「유형을 고르고 첨부문서 추가를
+             누르십시오」까지 적었는데, 바로 위에 그 두 칸이 서 있어 시키는 말이 군더더기가
+             됐다. 없다는 사실만 적는다. --}}
         <div id="docEmpty" style="display:none;padding:14px 12px;font-size:12px;color:var(--text-muted);">
-          올린 문서가 없습니다. 유형을 고르고 「첨부문서 추가」를 누르십시오.
+          첨부문서 없음
         </div>
         <div class="attach-strip" id="docStrip">
           {{-- 처방전 — 지울 권한이 있으면 지울 수 있다 (2026-09-28 지시) --}}
