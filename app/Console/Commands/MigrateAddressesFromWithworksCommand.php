@@ -71,7 +71,8 @@ class MigrateAddressesFromWithworksCommand extends Command
             $질의->limit((int) $한도);
         }
 
-        $셈 = ['모두' => 0, '새로' => 0, '이미있음' => 0, '거래처없음' => 0, '주소빔' => 0];
+        $셈 = ['모두' => 0, '새로' => 0, '이미있음' => 0, '거래처없음' => 0, '주소빔' => 0,
+            '우편번호버림' => 0];
         $보기 = [];
         $담을것 = [];
 
@@ -103,6 +104,18 @@ class MigrateAddressesFromWithworksCommand extends Command
 
                 $셈['새로']++;
 
+                /* 우편번호 칸에 주소를 적어 둔 줄이 있다 — 원천 #97426 은 「서울 노원구
+                   월계로42길 97 꿈의 숲 SK VIEW 101동 1203호」가 우편번호 칸에 들어
+                   있었다. 숫자만 뽑으면 열한 자가 되어 칸(열 자)을 넘치고, 잘라 담으면
+                   「4297101120」이라는 없는 번호가 남는다. 우편번호꼴(다섯 자ㆍ여섯 자)
+                   이 아니면 비워 둔다 — 없는 것이 틀린 것보다 낫다. */
+                $숫자만 = preg_replace('/\D/', '', (string) $a->zipcode);
+                $이우편번호 = in_array(strlen($숫자만), [5, 6], true) ? $숫자만 : null;
+
+                if ($숫자만 !== '' && $이우편번호 === null) {
+                    $셈['우편번호버림']++;
+                }
+
                 if (count($보기) < 5) {
                     $보기[] = [$a->ww_id, $번호, mb_substr($한줄, 0, 34),
                         mb_substr((string) $a->address_line_2, 0, 18)];
@@ -115,9 +128,7 @@ class MigrateAddressesFromWithworksCommand extends Command
                 $담을것[] = [
                     'patient_id'     => $번호,
                     'ww_address_id'  => $a->ww_id,
-                    /* 우편번호는 열 자 칸이다. 원천에 「12345-678」처럼 더 긴 것이 있어
-                       숫자만 뽑아도 넘치는 줄이 있었다 — 잘라 담는다. */
-                    'postcode'       => mb_substr(preg_replace('/\D/', '', (string) $a->zipcode), 0, 10) ?: null,
+                    'postcode'       => $이우편번호,
                     'address'        => mb_substr($한줄, 0, 300),
                     'address_detail' => mb_substr((string) $a->address_line_2, 0, 200) ?: null,
                     'created_by'     => null,
