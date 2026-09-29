@@ -5,8 +5,14 @@
      처럼 **묶음으로 끊어 주지** 못한다. 쪽이 천 개면 지금이 몇 번째 묶음인지가 더
      중요하다.
 
-     $쪽   : LengthAwarePaginator
-     $이름 : 줄을 세는 낱말 (「줄」·「명」)  --}}
+     $쪽     : LengthAwarePaginator
+     $이름   : 줄을 세는 낱말 (「줄」·「명」)
+     $요약   : 왼쪽에 「N명 가운데 1~100 · 1/127쪽」을 적을까 (기본 적는다)
+     $가운데 : 쪽 번호를 화면 가운데에 둘까 (기본 오른쪽)
+
+     뒤의 둘은 2026-09-29 에 더했다. 거래처 관리는 셈을 빼고 가운데에 두라는
+     지시가 있었는데, 이 판을 그대로 고치면 운영 데이터 화면 둘도 함께 바뀐다 —
+     값으로 고르게 두어 부르지 않은 화면은 예전 그대로다. --}}
 @php
   $한묶음 = 10;
   $지금   = $쪽->currentPage();
@@ -17,12 +23,14 @@
 @endphp
 
 @if ($쪽->total() > 0)
-  <div class="pg-wrap">
-    <div class="pg-sum">
-      {{ number_format($쪽->total()) }}{{ $이름 ?? '줄' }} 가운데
-      <b>{{ number_format($쪽->firstItem() ?? 0) }}~{{ number_format($쪽->lastItem() ?? 0) }}</b>
-      · {{ number_format($지금) }} / {{ number_format($끝) }}쪽
-    </div>
+  <div class="pg-wrap {{ ($가운데 ?? false) ? 'pg-mid' : '' }}">
+    @if ($요약 ?? true)
+      <div class="pg-sum">
+        {{ number_format($쪽->total()) }}{{ $이름 ?? '줄' }} 가운데
+        <b>{{ number_format($쪽->firstItem() ?? 0) }}~{{ number_format($쪽->lastItem() ?? 0) }}</b>
+        · {{ number_format($지금) }} / {{ number_format($끝) }}쪽
+      </div>
+    @endif
 
     @if ($끝 > 1)
       <nav class="pg">
@@ -54,6 +62,9 @@
     .pg-sum  { font-size:12px; color:var(--text-muted); }
     .pg-sum b { color:var(--text-primary); font-variant-numeric:tabular-nums; }
     .pg      { display:flex; gap:4px; margin-left:auto; flex-wrap:wrap; }
+    /* 가운데에 두는 판 — 왼쪽 셈을 빼면 홀로 남으므로 밀지 않고 가운데로 */
+    .pg-wrap.pg-mid     { justify-content:center; }
+    .pg-wrap.pg-mid .pg { margin-left:0; }
     .pg-b    { min-width:30px; height:30px; padding:0 8px; display:inline-flex;
                align-items:center; justify-content:center; font-size:12px;
                border:1px solid var(--border); border-radius:var(--radius);
