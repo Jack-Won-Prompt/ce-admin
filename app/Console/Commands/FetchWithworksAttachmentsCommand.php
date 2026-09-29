@@ -31,10 +31,23 @@ use Illuminate\Support\Facades\Storage;
  * 남은 자리를 먼저 재고, 모자라면 시작하지 않는다. 열 만 장을 받다가 디스크가 차면
  * 웹서버가 함께 멈춘다.
  *
+ * ## 첫 장은 처방전 그림이 된다
+ *
+ * 우리 관례는 **올린 처방전 그림은 `prescriptions.image_path`**, 그 밖의 서류(신분증ㆍ
+ * 결과지…)는 `prescription_attachments` 다(`PrescriptionController` 업로드 자리).
+ *
+ * 주문 등록 화면의 「첨부」 목록(`OrderController::faxDocs`)은 그 둘을 함께 세우는데,
+ * 「처방전」 줄만은 `image_path` 를 읽는다. 받은 것을 모두 첨부로만 담으면 그 줄이
+ * 「처방전 이미지가 없습니다」로 서서, 사진이 있는데 없다고 보인다.
+ *
+ * 그래서 한 처방전의 **첫 장**(원천 번호가 가장 작은 것)은 `image_path` 로 담고 첨부 줄은
+ * 만들지 않는다. 둘째 장부터 첨부다 — 저쪽은 앞뒤ㆍ여러 쪽을 여러 장으로 올린다.
+ *
  * ## 이어받기
  *
  * 한 장씩 남의 웹서버에서 받으므로 중간에 끊긴다. `ww_detail_id` 로 이미 받은 것을 가려
- * 건너뛴다 — 다시 돌리면 못 받은 것만 받는다.
+ * 건너뛴다 — 다시 돌리면 못 받은 것만 받는다. 첫 장은 `image_path` 에 담긴 파일 이름으로
+ * 가린다.
  *
  * ## 조심할 것
  *
@@ -52,7 +65,8 @@ class FetchWithworksAttachmentsCommand extends Command
                             {--disk=public : 어느 디스크에 담을까 (우리 처방전 사진이 쓰는 그 디스크)}
                             {--base=https://www.withworks.co.kr : 저쪽 웹서버}
                             {--limit= : 몇 장만 시험 삼아}
-                            {--sleep=0 : 한 장마다 몇 밀리초 쉴까 (저쪽에 짐을 덜 지운다)}';
+                            {--sleep=0 : 한 장마다 몇 밀리초 쉴까 (저쪽에 짐을 덜 지운다)}
+                            {--첫장올리기 : 이미 받아 둔 첨부의 첫 장을 처방전 그림으로 올린다 (한 번만 쓰는 손질)}';
 
     protected $description = '위드웍스 처방전 첨부파일을 받아 우리 처방전에 붙입니다';
 
@@ -104,6 +118,18 @@ class FetchWithworksAttachmentsCommand extends Command
             ->pluck('ww_detail_id')->flip();
         $this->line('  이미 받아 둔 첨부파일 ' . number_format($이미->count()) . '장');
 
+        /* 그림 칸이 이미 찬 처방전 — 첫 장을 두 번 담지 않으려면 알고 있어야 한다.
+           우리가 담은 것뿐 아니라 사람이 올린 것도 함께 본다. */
+        $그림있나 = DB::table('prescriptions')->whereNotNull('ww_add_id')
+            ->whereNotNull('image_path')->where('image_path', '<>', '')
+            ->pluck('id')->flip()->all();
+        $this->line('  처방전 그림이 이미 있는 것 ' . number_format(count($그림있나)) . '장');
+
+        /* 이미 받아 둔 첨부의 첫 장을 처방전 그림으로 올린다 — 한 번만 쓰는 손질 */
+        if ($this->option('첫장올리기')) {
+            return $this->첫장올리기($정말);
+        }
+
         $창고 = WithworksSource::연결(WithworksSource::창고);
 
         /* 저쪽 표를 한 번에 다 쥐면 메모리가 버겁다 — 처방전 번호를 나눠 묶음으로 묻는다 */
@@ -138,7 +164,7 @@ class FetchWithworksAttachmentsCommand extends Command
         }
 
         $셈 = ['모두' => 0, '받을것' => 0, '이미있음' => 0, '꼴아님' => 0,
-               '받음' => 0, '못받음' => 0, '바이트' => 0];
+               '받음' => 0, '처방전그림' => 0, '첨부' => 0, '못받음' => 0, '바이트' => 0];
         $못받은것 = [];
         $막대 = $정말 ? $this->output->createProgressBar($줄들->count()) : null;
         $막대?->start();
@@ -197,20 +223,38 @@ class FetchWithworksAttachmentsCommand extends Command
 
                 Storage::disk($디스크)->put($자리, $몸);
 
-                DB::table('prescription_attachments')->insert([
-                    'ww_detail_id'       => $d->id,
-                    'prescription_id'    => $우리처방전[$d->add_id],
-                    'file_path'          => $자리,
-                    'file_original_name' => mb_substr((string) ($d->file_name ?: $d->refile_name), 0, 255),
-                    'file_mime_type'     => self::받는꼴[$꼴],
-                    'file_size'          => strlen($몸),
-                    'doc_type'           => 'prescription',
-                    'doc_label'          => '처방전',
-                    'display_order'      => 0,
-                    'uploaded_by'        => null,
-                    'created_at'         => $d->created_at ?: now(),
-                    'updated_at'         => $d->created_at ?: now(),
-                ]);
+                $처방전 = $우리처방전[$d->add_id];
+                $이름 = mb_substr((string) ($d->file_name ?: $d->refile_name), 0, 255);
+
+                /* 첫 장은 처방전 그림으로 올린다 — 주문 등록의 「첨부」 목록에서 「처방전」
+                   줄이 읽는 칸이 그것이다. 그 칸이 이미 차 있으면(사람이 올린 것이거나
+                   앞 판에서 담은 것) 손대지 않고 첨부로 담는다. */
+                if (! isset($그림있나[$처방전])) {
+                    DB::table('prescriptions')->where('id', $처방전)->update([
+                        'image_path'          => $자리,
+                        'image_original_name' => $이름,
+                        'image_mime_type'     => self::받는꼴[$꼴],
+                        'image_size'          => strlen($몸),
+                    ]);
+                    $그림있나[$처방전] = true;
+                    $셈['처방전그림']++;
+                } else {
+                    DB::table('prescription_attachments')->insert([
+                        'ww_detail_id'       => $d->id,
+                        'prescription_id'    => $처방전,
+                        'file_path'          => $자리,
+                        'file_original_name' => $이름,
+                        'file_mime_type'     => self::받는꼴[$꼴],
+                        'file_size'          => strlen($몸),
+                        'doc_type'           => 'prescription',
+                        'doc_label'          => '처방전',
+                        'display_order'      => 0,
+                        'uploaded_by'        => null,
+                        'created_at'         => $d->created_at ?: now(),
+                        'updated_at'         => $d->created_at ?: now(),
+                    ]);
+                    $셈['첨부']++;
+                }
 
                 $셈['받음']++;
                 $셈['바이트'] += strlen($몸);
@@ -253,6 +297,78 @@ class FetchWithworksAttachmentsCommand extends Command
                 . number_format(DB::table('prescription_attachments')->count()) . '장입니다.');
         }
 
+        $this->line('');
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * 이미 받아 둔 첨부의 첫 장을 처방전 그림으로 올린다 — 한 번만 쓰는 손질.
+     *
+     * 첫 판에서는 받은 것을 모두 첨부로 담았다(4,902장). 그러면 주문 등록의 「첨부」
+     * 목록에서 「처방전」 줄이 `image_path` 를 읽어 「처방전 이미지가 없습니다」로 선다.
+     *
+     * **파일은 그대로 둔다** — 자리만 옮긴다. 다시 받으면 3.7GB 를 또 내려받아야 하고,
+     * 저쪽 웹서버에도 그만큼 짐을 지운다.
+     */
+    private function 첫장올리기(bool $정말): int
+    {
+        $this->line('');
+        $this->info('── 이미 받아 둔 첨부의 첫 장을 처방전 그림으로 올립니다 '
+            . ($정말 ? '(실제로 옮깁니다)' : '(세어 보이기만 합니다)'));
+
+        /* 그림 칸이 빈 처방전마다, 원천 번호가 가장 작은 첨부 한 장을 고른다 */
+        $첫장들 = DB::table('prescription_attachments as a')
+            ->join('prescriptions as p', 'p.id', '=', 'a.prescription_id')
+            ->whereNotNull('a.ww_detail_id')
+            ->where(fn ($q) => $q->whereNull('p.image_path')->orWhere('p.image_path', ''))
+            ->orderBy('a.prescription_id')->orderBy('a.ww_detail_id')
+            ->get(['a.id', 'a.prescription_id', 'a.ww_detail_id', 'a.file_path',
+                   'a.file_original_name', 'a.file_mime_type', 'a.file_size'])
+            ->groupBy('prescription_id')
+            ->map(fn ($것들) => $것들->first());
+
+        $this->line('  그림 칸이 빈 처방전 ' . number_format($첫장들->count()) . '장');
+        $this->line('  그 가운데 첨부가 있어 올릴 수 있는 것 ' . number_format($첫장들->count()) . '장');
+        $this->line('');
+
+        foreach ($첫장들->take(5) as $a) {
+            $this->line(sprintf('    처방전#%-7s ← 첨부#%-6s %s', $a->prescription_id, $a->id, $a->file_path));
+        }
+
+        if (! $정말) {
+            $this->line('');
+            $this->warn('  세어 보이기만 했습니다. 실제로 옮기려면 --force 를 적어 주십시오.');
+
+            return self::SUCCESS;
+        }
+
+        $올림 = 0;
+
+        DB::transaction(function () use ($첫장들, &$올림) {
+            foreach ($첫장들->chunk(500) as $묶음) {
+                foreach ($묶음 as $a) {
+                    DB::table('prescriptions')->where('id', $a->prescription_id)->update([
+                        'image_path'          => $a->file_path,
+                        'image_original_name' => $a->file_original_name,
+                        'image_mime_type'     => $a->file_mime_type,
+                        'image_size'          => $a->file_size,
+                    ]);
+
+                    /* 첨부 줄만 지운다 — 파일은 처방전 그림이 되어 그대로 쓰인다 */
+                    DB::table('prescription_attachments')->where('id', $a->id)->delete();
+                    $올림++;
+                }
+            }
+        });
+
+        $this->line('');
+        $this->info('  올렸습니다 ' . number_format($올림) . '장.');
+        $this->line('  처방전 그림이 있는 것 ' . number_format(
+            DB::table('prescriptions')->whereNotNull('ww_add_id')
+                ->whereNotNull('image_path')->where('image_path', '<>', '')->count()) . '장');
+        $this->line('  남은 첨부 ' . number_format(
+            DB::table('prescription_attachments')->whereNotNull('ww_detail_id')->count()) . '장');
         $this->line('');
 
         return self::SUCCESS;
