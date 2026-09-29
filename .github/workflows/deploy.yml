@@ -24,6 +24,18 @@ jobs:
             echo "===== GIT PULL ====="
             git pull origin main
 
+            # 표를 먼저 맞춘다 (2026-09-29 지시).
+            #
+            # 여태 이 절차는 코드만 옮기고 마이그레이션은 사람이 따로 돌렸다. 그래서
+            # 칸을 새로 쓰는 판이 올라가면 **코드는 갔는데 표가 안 간 사이**가 생겼다 —
+            # 첨부 서류 유형 바꾸기가 운영에서 500 으로 죽은 것이 그 까닭이다
+            # (doc_type_by·image_type_by 가 없는데 거기에 쓰려 했다).
+            #
+            # 캐시를 비우기 전에 돌린다. 마이그레이션이 죽으면 set -e 가 여기서 배포를
+            # 멈추므로, 표가 어긋난 채 새 코드가 서는 일은 없다.
+            echo "===== MIGRATE ====="
+            sudo -u www-data php artisan migrate --force
+
             echo "===== LARAVEL CACHE CLEAR ====="
             sudo -u www-data php artisan optimize:clear
 
