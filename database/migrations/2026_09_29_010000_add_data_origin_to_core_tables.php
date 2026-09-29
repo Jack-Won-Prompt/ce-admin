@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -60,20 +59,15 @@ return new class extends Migration
             });
         }
 
-        /* 지금 있는 줄은 **모두 시험이다** (2026-09-29 지시).
+        /* **딱지는 여기서 붙이지 않는다** (2026-09-29 확인).
 
-           딱지가 없는 줄은 지우지 않는 것이 규칙이므로, 여기서 붙여 두지 않으면
-           지금 자료는 영영 지울 수 없다. 이 자리가 곧 「되돌릴 지점」이다. */
-        $묶음 = 'test-2026-09-29';
+           처음에는 「지금 있는 줄은 모두 시험이다」라며 여기서 test 를 적었다.
+           시험 서버에서는 맞는 말이었지만, 같은 마이그레이션이 **운영에서 돌면
+           실제 환자ㆍ주문ㆍ처방전에 시험 딱지가 붙는다** — 그러면 test-data:purge
+           의 지울 대상이 된다. 마이그레이션은 어디서 돌아도 안전해야 한다.
 
-        foreach (self::표들 as $t) {
-            if (! Schema::hasTable($t)) {
-                continue;
-            }
-
-            DB::table($t)->whereNull('data_origin')
-                ->update(['data_origin' => 'test', 'data_batch' => $묶음]);
-        }
+           딱지는 사람이 일부러 부르는 명령으로 붙인다 — test-data:mark.
+           칸만 만들어 두는 이 자리는 운영에서 돌아도 아무것도 지우지 않는다. */
     }
 
     public function down(): void
