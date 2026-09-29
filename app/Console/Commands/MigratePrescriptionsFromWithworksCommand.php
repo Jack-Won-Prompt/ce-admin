@@ -276,6 +276,22 @@ class MigratePrescriptionsFromWithworksCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * 메모에서 주민번호를 가린다.
+     *
+     * 원천 `descr` 은 담당자가 손으로 적는 메모다. 「CMS 주민번호 오기재하여
+     * 691108-1234567 → 420516-1234567 로 수정」처럼 **평문 주민번호가 적힌 줄이 있다**
+     * (최근 3년 · 갈래 10ㆍ30 에서 13장). 그대로 옮기면 우리 처방전 표에 평문 주민번호가
+     * 들어앉는다 — 거래처는 암호화해 담아 두었는데 여기서 새는 것이다.
+     *
+     * 뒤 여섯 자리만 가린다(`ResidentNo::mask` 와 같은 꼴). 메모의 뜻이 「번호를 이렇게
+     * 바꿨다」이므로 앞자리를 남겨야 읽을 수 있다.
+     */
+    public static function 주민번호가린다(string $글): string
+    {
+        return preg_replace('/(\d{6})-(\d)\d{6}/', '$1-$2******', $글);
+    }
+
     /** 글자 칸 — 비면 null, 넘치면 자른다 */
     private function 글(mixed $값, int $길이): ?string
     {
@@ -403,7 +419,7 @@ class MigratePrescriptionsFromWithworksCommand extends Command
                . ' · 등록일 ' . ($p->reg_date ?: '-')];
 
         if (($비고 = trim((string) $p->descr)) !== '') {
-            $줄[] = $비고;
+            $줄[] = self::주민번호가린다($비고);
         }
 
         return implode("\n", $줄);
