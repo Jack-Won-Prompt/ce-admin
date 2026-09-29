@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notice_provider.dart';
+import '../services/update_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/constants.dart';
 import '../widgets/common_widgets.dart';
@@ -176,26 +177,46 @@ class SettingsScreen extends ConsumerWidget {
                               color: Colors.white, size: 22),
                         ),
                         const SizedBox(width: 14),
-                        const Column(
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'Coloplast CE Admin',
                               style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                   color: AppTheme.textPrimary),
                             ),
-                            SizedBox(height: 2),
-                            Text(
-                              'v1.3.2',
-                              style: TextStyle(
-                                  fontSize: 12, color: AppTheme.textMuted),
+                            const SizedBox(height: 2),
+                            /* 깔린 버전을 그대로 읽어 보인다 — 예전에는 글을 박아
+                               두어 앱을 올려도 옛 번호가 남아 있었다. */
+                            FutureBuilder<String>(
+                              future: UpdateService.myVersion(),
+                              builder: (ctx, snap) => Text(
+                                snap.hasData ? 'v${snap.data}' : '버전 확인 중',
+                                style: const TextStyle(
+                                    fontSize: 12, color: AppTheme.textMuted),
+                              ),
                             ),
                           ],
                         ),
                       ],
                     ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                /* 스토어를 쓰지 않으므로 스스로 받을 자리가 있어야 한다
+                   (2026-09-29 지시). 안내 창을 닫았거나 아직 받지 못했을 때
+                   여기서 확인해 받는다. */
+                Container(
+                  decoration: AppTheme.cardDecoration(radius: 16),
+                  child: _MenuItem(
+                    icon: Icons.system_update_rounded,
+                    iconGradient: AppTheme.primaryGradient,
+                    title: '업데이트 확인',
+                    onTap: () => UpdateService.checkNow(context),
                   ),
                 ),
 
