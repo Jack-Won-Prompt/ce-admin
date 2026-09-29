@@ -26,6 +26,19 @@ return [
         'jit_role' => env('SSO_WEB_JIT_ROLE', 'manager'),
 
         /*
+         * 만들어 줄 때 어떤 권한 그룹에 넣을 것인가 (2026-09-29 지시).
+         *
+         * **넣지 않으면 대시보드만 보인다.** 권한은 역할이 아니라 권한 그룹이 정하고
+         * (`PermissionService::allows`), 그룹이 없는 사람에게는 대시보드 보기만 내준다.
+         * 그래서 SSO 로 들어온 사람이 메뉴가 하나뿐이라고 물어 왔다(2026-09-29).
+         *
+         * 'full' 이면 전권 그룹(is_full_access)을 찾아 넣는다 — 지시가 「SSO 로 등록된
+         * 사용자는 모든 메뉴가 보여야 함」이다. 숫자를 적으면 그 그룹에 넣는다.
+         * 빈 값이면 넣지 않는다(옛 동작).
+         */
+        'jit_permission_group' => env('SSO_WEB_JIT_PERMISSION_GROUP', 'full'),
+
+        /*
          * Entra App Roles(roles claim) → 우리 역할.
          *
          * **아직 정해지지 않았다**(지시서 §5-3 · §9-5). 비어 있으면 역할을 손대지

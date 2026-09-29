@@ -140,6 +140,15 @@ class EntraController extends Controller
                 'is_active' => true,
             ]);
 
+            /* 권한 그룹을 함께 넣는다 (2026-09-29 지시).
+
+               권한은 역할이 아니라 **권한 그룹**이 정한다(`PermissionService::allows`).
+               그룹이 없는 사람에게는 대시보드 보기만 내주므로, 여태 SSO 로 들어온 사람은
+               메뉴가 대시보드 하나뿐이었다. */
+            if ($그룹 = $this->들어갈권한그룹()) {
+                $user->forceFill(['permission_group_id' => $그룹])->save();
+            }
+
             activity()->performedOn($user)->log("SSO 첫 로그인으로 사용자를 생성했습니다 ({$email})");
         }
 
@@ -156,6 +165,16 @@ class EntraController extends Controller
            groups claim 은 쓰지 않는다 — 150개가 넘으면 빠지고 온다.
            매핑이 아직 정해지지 않아, 짝이 없으면 지금 역할을 그대로 둔다. */
         $this->역할을맞춘다($user, (array) ($entra->user['roles'] ?? []));
+
+        /* 이미 만들어져 있던 사람도 그룹이 비어 있으면 채운다 (2026-09-29 지시).
+
+           JIT 는 처음 들어올 때만 돈다. 그 앞에 들어온 사람(운영의 DerekㆍMayㆍStella)은
+           그룹 없이 남아 대시보드 하나만 보였다. 로그인할 때마다 한 번 보아 채운다.
+           **이미 그룹이 있는 사람은 건드리지 않는다** — 담당자가 좁혀 둔 것을 덮으면 안 된다. */
+        if (! $user->permission_group_id && ($그룹 = $this->들어갈권한그룹())) {
+            $user->forceFill(['permission_group_id' => $그룹])->save();
+            activity()->performedOn($user)->log('SSO 로그인 — 권한 그룹이 없어 채웠습니다');
+        }
 
         /* 앱에서 시작한 로그인이면 웹 세션을 만들지 않는다 (2026-09-21 지시).
            브라우저에 로그인 상태를 남기지 않고, 앱이 한 번만 쓸 수 있는 코드를
@@ -304,6 +323,46 @@ class EntraController extends Controller
            User.Read 까지 함께 간다. HQ 에 등록하는 권한은 넷뿐이라(지시서 §8)
            setScopes 로 그 넷만 남긴다. */
         return $provider->setScopes(['openid', 'profile', 'email', 'offline_access']);
+    }
+
+    /**
+     * SSO 로 만든 사람을 어느 권한 그룹에 넣을 것인가 (2026-09-29 지시).
+     *
+     * 설정이 'full' 이면 전권 그룹(`is_full_access`)을 쓴다 — 「SSO 로 등록된 사용자는
+     * 모든 메뉴가 보여야 함」이 지시다. 그런 그룹이 아직 없으면 **만들어 둔다**:
+     * 운영에는 마이그레이션이 만든 「전체 권한」 그룹이 사라져 있었고(2026-09-29 확인),
+     * 없다고 그냥 두면 들어온 사람마다 대시보드 하나만 보게 된다.
+     *
+     * 숫자를 적어 두면 그 그룹에 넣는다. 빈 값이면 넣지 않는다.
+     */
+    private function 들어갈권한그룹(): ?int
+    {
+        $값 = trim((string) config('sso.web.jit_permission_group', ''));
+
+        if ($값 === '') {
+            return null;
+        }
+
+        if (ctype_digit($값)) {
+            return \App\Models\PermissionGroup::whereKey((int) $값)->value('id');
+        }
+
+        if ($값 !== 'full') {
+            return null;
+        }
+
+        $전권 = \App\Models\PermissionGroup::where('is_full_access', true)->value('id');
+
+        if ($전권) {
+            return (int) $전권;
+        }
+
+        /* 없으면 만든다 — 마이그레이션이 만드는 그것과 같은 이름ㆍ같은 뜻이다 */
+        return \App\Models\PermissionGroup::create([
+            'name'           => '전체 권한',
+            'description'    => '모든 페이지와 모든 동작을 사용할 수 있는 기본 그룹입니다.',
+            'is_full_access' => true,
+        ])->id;
     }
 
     /**
