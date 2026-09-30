@@ -37,6 +37,57 @@ class PrescriptionAttachment extends Model
                                  'card_sales', 'medical_aid_claim'];
 
     /**
+     * 처방전마다 **한 장뿐**이어야 하는 갈래 — 시스템이 만드는 증빙이다.
+     *
+     * 표에도 같은 목록으로 유일 잣대가 걸려 있다
+     * (`uk_attach_single_doc`, 2026_09_30_100000 마이그레이션).
+     * 여기를 고치면 그쪽도 함께 고쳐야 한다.
+     */
+    public const 한장뿐 = ['card_sales', 'trade_statement', 'tax_invoice_form',
+                          'cash_receipt_form', 'medical_aid_claim'];
+
+    /**
+     * 한 장뿐인 증빙을 만든다 — **겹치면 오류가 아니라 있는 줄을 돌려준다.**
+     *
+     * 만드는 자리마다 「먼저 조회해 보고 없으면 만든다」로 막고 있었는데, 두 길이 거의
+     * 동시에 부르면 둘 다 조회에서 아무것도 못 보고 둘 다 만들었다 — 2026-09-30 결제
+     * 뒤에 카드매출전표와 거래명세서가 각각 두 장씩 생겼다.
+     *
+     * 이제 표가 막는다. 막힌 쪽은 **먼저 만든 줄을 그대로 쓰면 되므로** 오류로 올리지
+     * 않는다 — 결제가 끝난 뒤의 일이라 화면에 오류를 띄우면 사람은 결제가 잘못된 줄
+     * 안다. 다만 그때 이미 써 둔 파일은 주인이 없으므로 지운다.
+     *
+     * @param  string|null  $쓴파일  이번에 저장해 둔 파일 경로(겹치면 지운다)
+     */
+    public static function 한장만만들기(array $값들, ?string $쓴파일 = null): ?self
+    {
+        try {
+            return static::create($값들);
+        } catch (\Illuminate\Database\QueryException $e) {
+            /* 1062 = 유일 잣대에 걸림. 그 밖의 잘못은 그대로 올린다 */
+            if ((int) ($e->errorInfo[1] ?? 0) !== 1062) {
+                throw $e;
+            }
+
+            if ($쓴파일) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($쓴파일);
+            }
+
+            $있는것 = static::where('prescription_id', $값들['prescription_id'] ?? null)
+                ->where('doc_type', $값들['doc_type'] ?? null)
+                ->first();
+
+            \Illuminate\Support\Facades\Log::info('[첨부] 같은 증빙을 두 곳에서 만들려 했다 — 먼저 만든 것을 쓴다', [
+                'prescription' => $값들['prescription_id'] ?? null,
+                'doc_type'     => $값들['doc_type'] ?? null,
+                'already'      => $있는것?->id,
+            ]);
+
+            return $있는것;
+        }
+    }
+
+    /**
      * 서류 유형을 손으로 고를 수 있는 것들.
      *
      * 환경 설정(공통 코드 `doc_type`)이 정본이다. **비어 있으면 박아 둔 것으로 돌아간다** —

@@ -108,14 +108,14 @@ final class MedicalAidClaimForm
                 $existing->delete();
             }
 
-            return PrescriptionAttachment::create([
+            return PrescriptionAttachment::한장만만들기([
                 'prescription_id'    => $order->prescription_id,
                 'file_path'          => $path,
                 'file_original_name' => $name,
                 'file_mime_type'     => 'application/pdf',
                 'file_size'          => strlen($pdf),
                 'doc_type'           => 'medical_aid_claim',
-            ]);
+            ], $path);
         } catch (\Throwable $e) {
             Log::warning('[요양비 지급청구서] 만들지 못했습니다', [
                 'order' => $order->order_number, 'error' => $e->getMessage(),

@@ -60,7 +60,7 @@ final class TransactionStatement
             /* 종이에 찍은 날을 주문에도 굳힌다. 창고에 보낼 때 이 값을 쓴다. */
             self::stamp($order);
 
-            return PrescriptionAttachment::create([
+            return PrescriptionAttachment::한장만만들기([
                 'prescription_id'    => $order->prescription_id,
                 'file_path'          => $path,
                 'file_original_name' => $name,
@@ -69,7 +69,7 @@ final class TransactionStatement
                 'doc_type'           => 'trade_statement',
                 'doc_label'          => '거래명세서',
                 'display_order'      => 99,
-            ]);
+            ], $path);
         } catch (\Throwable $e) {
             Log::warning('[거래명세서] 만들지 못했다', [
                 'order' => $order->order_number, 'error' => $e->getMessage(),

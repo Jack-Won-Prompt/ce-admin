@@ -67,7 +67,7 @@ final class CashReceiptForm
 
             Storage::disk('public')->put($길, $pdf);
 
-            return PrescriptionAttachment::create([
+            return PrescriptionAttachment::한장만만들기([
                 'prescription_id'    => $order->prescription_id,
                 'file_path'          => $길,
                 'file_original_name' => $이름,
@@ -76,7 +76,7 @@ final class CashReceiptForm
                 'doc_type'           => self::DOC_TYPE,
                 'doc_label'          => self::LABEL,
                 'display_order'      => 99,
-            ]);
+            ], $길);
         } catch (\Throwable $e) {
             Log::warning('[' . self::LABEL . '] 양식을 만들지 못했다', [
                 'order' => $order->order_number, 'error' => $e->getMessage(),

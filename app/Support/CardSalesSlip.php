@@ -88,7 +88,7 @@ final class CardSalesSlip
 
             \Illuminate\Support\Facades\Storage::disk('public')->put($path, $pdf);
 
-            return \App\Models\PrescriptionAttachment::create([
+            return \App\Models\PrescriptionAttachment::한장만만들기([
                 'prescription_id'    => $order->prescription_id,
                 'file_path'          => $path,
                 'file_original_name' => $name,
@@ -97,7 +97,7 @@ final class CardSalesSlip
                 'doc_type'           => 'card_sales',
                 'doc_label'          => '카드매출전표',
                 'display_order'      => 98,
-            ]);
+            ], $path);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('[카드매출전표] 만들지 못했다', [
                 'order' => $order->order_number, 'error' => $e->getMessage(),
