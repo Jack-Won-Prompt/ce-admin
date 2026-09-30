@@ -56,10 +56,15 @@ class MessageSender
 
         $ok = 0; $failed = []; $receipts = []; $err = null;
 
+        /* 알림톡은 승인 본문으로 나간다 — 부르는 쪽이 준 $content 와 다르다.
+           발송 내역에 빈 글이 남으면 무엇이 나갔는지 알 수 없어, 실제로 지어진
+           글을 받아 와 내역에 적는다 (2026-09-30). */
+        $나간글 = null;
+
         foreach (array_chunk($receivers, self::CHUNK) as $chunk) {
             try {
                 $receipts[] = $channel === 'alimtalk'
-                    ? $this->sendAlimtalkChunk($chunk, $templateCode, $label ?? '', $값들)
+                    ? $this->sendAlimtalkChunk($chunk, $templateCode, $label ?? '', $값들, $나간글)
                     : $this->sendSmsChunk($chunk, $content, (bool) ($meta['업무발송'] ?? false));
                 $ok += count($chunk);
             } catch (\Throwable $e) {
@@ -75,7 +80,7 @@ class MessageSender
             'channel'         => $channel,
             'template_code'   => $templateCode,
             'template_label'  => $label,
-            'content'         => $content,
+            'content'         => $나간글 ?? $content,
             'total'           => count($receivers),
             'success_count'   => $ok,
             'fail_count'      => count($failed),
@@ -154,7 +159,8 @@ class MessageSender
      *
      * 팝빌이 거절할 뿐 아니라, 새어 나가면 환자가 「#{이름}님」을 읽는다.
      */
-    private function sendAlimtalkChunk(array $chunk, ?string $templateCode, string $label, array $값들): string
+    private function sendAlimtalkChunk(array $chunk, ?string $templateCode, string $label,
+                                       array $값들, ?string &$나간글 = null): string
     {
         $틀 = MessageTemplate::channel('alimtalk')->active()
             ->where('code', $templateCode)->first();
@@ -194,6 +200,7 @@ class MessageSender
 
             $받을이들[] = $받을이;
             $첫글 = $첫글 ?: $글;
+            $나간글 = $나간글 ?? $글;
         }
 
         return $this->kakao->sendAts(
