@@ -379,6 +379,15 @@ return [
             'local_rest_key' => ['label' => '로컬 REST 키', 'config' => 'services.kakao_local.rest_key',
                                  'type' => 'password', 'width' => 3,
                                  'help' => '관할 청구처 찾기의 행정복지센터 조회에 쓴다(카카오 개발자센터 REST API 키).'],
+            'send_policy'  => ['label' => '알림톡·문자 발송 방식', 'config' => 'kakao.send_policy',
+                               'type' => 'select', 'width' => 2,
+                               'options' => [
+                                   'alimtalk_first' => '알림톡 우선 (실패 시 문자)',
+                                   'all'            => '켜 둔 채널 모두 보냄',
+                               ],
+                               'help' => '「알림톡 우선」은 알림톡이 나가면 문자를 보내지 않습니다. '
+                                       . '알림톡이 막힌 경우에만 문자로 이어 보냅니다. '
+                                       . '「모두 보냄」은 같은 안내를 두 통 받게 됩니다.'],
             'test_mode'    => ['label' => '테스트 모드', 'config' => 'kakao.test_mode', 'type' => 'bool',
                                'help'  => '켜면 실제로 보내지 않습니다.'],
         ],

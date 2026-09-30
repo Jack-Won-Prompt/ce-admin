@@ -94,20 +94,24 @@ class PaymentDoneNotice
             '#{처방번호}' => (string) ($order->prescription?->rx_number ?? ''),
         ]);
 
-        try {
-            $res = $this->sender->sendBulk(
-                'sms',
-                [['rcv' => $mobile, 'rcvnm' => $name, 'patient_id' => $order->patient_id]],
-                $text,
-                self::TEMPLATE,
-                ['source' => self::SOURCE, 'prescription_id' => $order->prescription_id],
-            );
-        } catch (\Throwable $e) {
-            Log::warning('[결제 완료 안내] 보내지 못했다', [
-                'order' => $order->order_number, 'error' => $e->getMessage(),
-            ]);
+        /* 발송 방식은 채널마다 한 곳이 정한다 — 알림톡 우선ㆍ실패 시 문자가 기본이고,
+           설정에서 「모두 보냄」으로 바꿀 수 있다 (2026-09-30 지시).
+           알림톡 유형이 이 코드로 서 있지 않으면 예전처럼 문자만 나간다. */
+        ['보낸채널' => $보낸채널, '못보낸말' => $못보낸말] =
+            \App\Models\MessageTemplate::채널마다(self::TEMPLATE,
+                fn (string $채널, ?string $틀코드) => $this->sender->sendBulk(
+                    $채널, [['rcv' => $mobile, 'rcvnm' => $name, 'patient_id' => $order->patient_id]], $text, $틀코드 ?: self::TEMPLATE,
+                    ['source' => self::SOURCE, 'prescription_id' => $order->prescription_id]),
+                문자는틀없이도: true);
 
-            return ['sent' => false, 'message' => '보내지 못했습니다 — ' . $e->getMessage()];
+        $res = $보낸채널
+            ? ['success' => true]
+            : ['success' => false, 'message' => implode(' / ', $못보낸말) ?: '보내지 못했습니다.'];
+
+        if (! $보낸채널) {
+            Log::warning('[결제 완료 안내] 보내지 못했다', [
+                'order' => $order->order_number, 'error' => $res['message'],
+            ]);
         }
 
         if ($res['success'] ?? false) {

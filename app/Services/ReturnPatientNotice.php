@@ -64,41 +64,23 @@ class ReturnPatientNotice
             return ['sent' => false, 'message' => '환자 연락처가 없어 보내지 못했습니다.'];
         }
 
-        /* 메시지 유형에서 켜 둔 채널로 **모두** 보낸다 (2026-09-19 지시).
-           여태는 알림톡이 되면 거기서 멈춰, 둘 다 켜 두어도 한쪽만 나갔다. */
-        $보낸채널 = [];
-        $못보낸말 = [];
-
-        foreach (MessageTemplate::보낼채널들($code) as [$channel, $templateCode]) {
-            $text = $this->compose($return, $channel, $extra, $code);
-
-            try {
-                $res = $this->sender->sendBulk(
-                    $channel,
-                    [[
-                        'rcv'        => $mobile,
-                        'rcvnm'      => \App\Models\Patient::bare($return->order?->patient?->name),
-                        'patient_id' => $return->order?->patient_id,
-                    ]],
-                    $text,
-                    $templateCode,
-                    ['source' => self::SOURCE, 'prescription_id' => $return->order?->prescription_id],
-                );
-            } catch (\Throwable $e) {
-                Log::warning('[반품] 환자 안내 발송 실패', [
-                    'receipt' => $return->receipt_no, 'channel' => $channel, 'error' => $e->getMessage(),
-                ]);
-
-                $res = ['success' => false, 'message' => $e->getMessage()];
-            }
-
-            if ($res['success'] ?? false) {
-                $보낸채널[] = $channel;
-            } else {
-                $못보낸말[] = \App\Services\PaymentLinkService::채널이름($channel)
-                            . ': ' . ($res['message'] ?? '발송하지 못했습니다.');
-            }
-        }
+        /* 발송 방식은 채널마다 한 곳이 정한다 — 알림톡 우선ㆍ실패 시 문자가 기본이고,
+           설정에서 「모두 보냄」으로 바꿀 수 있다 (2026-09-30 지시). */
+        ['보낸채널' => $보낸채널, '못보낸말' => $못보낸말] =
+            MessageTemplate::채널마다($code, function (string $channel, ?string $templateCode)
+                use ($return, $extra, $code, $mobile) {
+                    return $this->sender->sendBulk(
+                        $channel,
+                        [[
+                            'rcv'        => $mobile,
+                            'rcvnm'      => \App\Models\Patient::bare($return->order?->patient?->name),
+                            'patient_id' => $return->order?->patient_id,
+                        ]],
+                        $this->compose($return, $channel, $extra, $code),
+                        $templateCode,
+                        ['source' => self::SOURCE, 'prescription_id' => $return->order?->prescription_id],
+                    );
+                });
 
         if (! $보낸채널) {
             return ['sent' => false, 'message' => implode(' / ', $못보낸말) ?: '발송하지 못했습니다.'];

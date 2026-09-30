@@ -764,40 +764,26 @@ class DelegationSignController extends Controller
         $길   = self::링크($토큰);
         $글   = self::문자글($이름, $길, $분);
 
-        /* 켜 둔 채널로 모두 보낸다 — 알림톡이 서 있으면 알림톡도 함께 나간다
+        /* 발송 방식은 채널마다 한 곳이 정한다 — 알림톡 우선ㆍ실패 시 문자가 기본이다
            (2026-09-30 지시). 알림톡은 승인받은 본문으로만 나가므로 위 $글 을 쓰지
            못한다 — 변수만 건네고 본문은 MessageSender 가 유형에서 읽는다. */
-        $보낼것 = \App\Models\MessageTemplate::보낼채널들('delegation_sign', 문자는틀없이도: true);
-        $나간것 = [];
-        $탈     = null;
-
         try {
             /* 발송 내역에 쌓이는 길로 보낸다 — 팝빌을 곧바로 부르면 나갔는지 알 수 없다 */
-            foreach ($보낼것 as [$채널, $틀코드]) {
-            $res = $this->sender->sendBulk($채널,
-                [['rcv' => $번호, 'rcvnm' => $이름]],
-                $글, $틀코드 ?: 'delegation_sign',
-                ['source' => 'delegation-sign',
-                 /* 이 화면은 시험 화면이 아니라 업무 화면이다 (2026-09-16 지시).
-
-                    명단에서 온 줄이든 손으로 적은 줄이든 **적힌 번호로 실제로 나간다.**
-                    여태 명단 줄은 「우리에게만」에 걸려 시험 번호로 돌아갔는데, 화면과
-                    발송 내역에는 환자 번호로 「발송 완료」라 적혀 아무도 알아채지
-                    못했다 — 담당자는 보냈다고 알고, 환자는 받지 못했다. */
-                 '업무발송' => true],
-                ['#{링크}' => $길, '#{유효분}' => (string) $분]);
-
-                if ($res['success'] ?? false) {
-                    $나간것[] = $채널 === 'alimtalk' ? '알림톡' : '문자';
-                } else {
-                    /* 한쪽이 못 나가도 다른 쪽은 살린다 */
-                    $탈 = $res['message'] ?? '보내지 못했습니다.';
-                    Log::warning('[위임장 서명] 한 채널 실패', ['채널' => $채널, 'error' => $탈]);
-                }
-            }
+            ['보낸채널' => $나간것, '못보낸말' => $탈들] =
+                \App\Models\MessageTemplate::채널마다('delegation_sign',
+                    fn (string $채널, ?string $틀코드) => $this->sender->sendBulk(
+                        $채널, [['rcv' => $번호, 'rcvnm' => $이름]], $글,
+                        $틀코드 ?: 'delegation_sign',
+                        ['source' => 'delegation-sign',
+                         /* 이 화면은 시험 화면이 아니라 업무 화면이다 (2026-09-16 지시).
+                            적힌 번호로 실제로 나간다 — 명단 줄이 시험 번호로 돌아가면
+                            화면에는 「발송 완료」인데 환자는 받지 못한다. */
+                         '업무발송' => true],
+                        ['#{링크}' => $길, '#{유효분}' => (string) $분]),
+                    문자는틀없이도: true);
 
             if ($나간것 === []) {
-                throw new \RuntimeException($탈 ?? '문자를 보내지 못했습니다.');
+                throw new \RuntimeException(implode(' / ', $탈들) ?: '보내지 못했습니다.');
             }
         } catch (\Throwable $e) {
             Log::error('[위임장 서명] 발송 실패', ['id' => $줄->id, 'error' => $e->getMessage()]);

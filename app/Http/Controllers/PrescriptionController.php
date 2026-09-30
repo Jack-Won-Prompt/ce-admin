@@ -4932,35 +4932,26 @@ class PrescriptionController extends Controller
             '#{고객명}' => $patientName, '#{유효분}' => $유효분, '#{링크}' => $url,
         ], "[콜로플라스트] {$patientName}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크({$유효분}분 유효):\n{$url}");
 
-        /* 켜 둔 채널로 모두 보낸다 — 알림톡이 서 있으면 알림톡도 함께 나간다
+        /* 발송 방식은 채널마다 한 곳이 정한다 — 알림톡 우선ㆍ실패 시 문자가 기본이다
            (2026-09-30 지시). 알림톡 본문은 승인받은 글이라 위 $message 를 쓰지
            못한다 — 변수만 건네고 본문은 MessageSender 가 유형에서 읽는다. */
-        $보낼것 = \App\Models\MessageTemplate::보낼채널들('id_card_request', 문자는틀없이도: true);
-        $받을이  = [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]];
-        $나간것  = [];
-        $탈      = null;
+        $받을이 = [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]];
 
         try {
-            foreach ($보낼것 as [$채널, $틀코드]) {
-                $res = $this->sender->sendBulk($채널, $받을이, $message,
-                    $틀코드 ?: 'id_card_request',
-                    ['source' => 'consent', 'prescription_id' => $prescription->id],
-                    ['#{링크}' => $url, '#{유효분}' => (string) $유효분]);
-
-                if ($res['success'] ?? false) {
-                    $나간것[] = $채널 === 'alimtalk' ? '알림톡' : '문자';
-                } else {
-                    /* 한쪽이 못 나가도 다른 쪽은 살린다 — 둘 다 못 나갔을 때만 실패다 */
-                    $탈 = $res['message'] ?? '보내지 못했습니다.';
-                    Log::warning('[신분증] 한 채널 실패', ['채널' => $채널, 'error' => $탈]);
-                }
-            }
+            ['보낸채널' => $나간것, '못보낸말' => $탈들] =
+                \App\Models\MessageTemplate::채널마다('id_card_request',
+                    fn (string $채널, ?string $틀코드) => $this->sender->sendBulk(
+                        $채널, $받을이, $message, $틀코드 ?: 'id_card_request',
+                        ['source' => 'consent', 'prescription_id' => $prescription->id],
+                        ['#{링크}' => $url, '#{유효분}' => (string) $유효분]),
+                    문자는틀없이도: true);
 
             if ($나간것 === []) {
-                throw new \RuntimeException($탈 ?? '문자를 보내지 못했습니다.');
+                throw new \RuntimeException(implode(' / ', $탈들) ?: '보내지 못했습니다.');
             }
 
-            $무엇 = implode('ㆍ', $나간것);
+            $무엇 = implode('ㆍ', array_map(
+                [\App\Models\MessageTemplate::class, '채널이름'], $나간것));
 
             activity()->causedBy(auth()->user())->performedOn($prescription)
                 ->log("신분증 제출 {$무엇} 발송 → {$patientName} {$mobile}");
@@ -4973,9 +4964,9 @@ class PrescriptionController extends Controller
             ]);
         } catch (\Throwable $e) {
             $consent->delete();
-            Log::error('[신분증] SMS 발송 실패', ['error' => $e->getMessage(), 'rx' => $prescription->id]);
+            Log::error('[신분증] 발송 실패', ['error' => $e->getMessage(), 'rx' => $prescription->id]);
 
-            return response()->json(['success' => false, 'message' => 'SMS 발송 실패: ' . $e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => '발송 실패: ' . $e->getMessage()], 500);
         }
     }
 

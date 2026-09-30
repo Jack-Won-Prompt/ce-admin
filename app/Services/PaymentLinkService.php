@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Log;
  *
  * 보내는 길은 알림톡을 먼저 쓰고 막히면 문자로 잇는다. 카카오는 채널을 막아 둔 사람에게
  * 닿지 않는데, 결제 안내는 못 받으면 그대로 멈추는 종류의 말이다.
+ * 그 규칙은 `MessageTemplate::채널마다` 한 곳에 있다 — 설정에서 「모두 보냄」으로
+ * 바꿀 수도 있다 (2026-09-30 지시).
  */
 class PaymentLinkService
 {
@@ -82,21 +84,12 @@ class PaymentLinkService
            여태는 알림톡이 성공하면 거기서 멈췄다. 둘 다 켜 두어도 한쪽만 나갔고,
            알림톡을 읽지 않는 고객은 결제 안내를 받지 못했다. 채널을 고르는 기준은
            MessageTemplate::보낼채널들 한 곳에 있다. */
-        $보낼것 = \App\Models\MessageTemplate::보낼채널들(self::알림톡코드, 문자는틀없이도: true);
-
-        $보낸채널 = [];
-        $못보낸말 = [];
-
-        foreach ($보낼것 as [$channel, $templateCode]) {
-            $res = $this->send($channel, $order, $mobile, $text,
-                $channel === 'sms' ? self::문자유형($link) : $templateCode);
-
-            if ($res['success'] ?? false) {
-                $보낸채널[] = $channel;
-            } else {
-                $못보낸말[] = self::채널이름($channel) . ': ' . ($res['message'] ?? '발송하지 못했습니다.');
-            }
-        }
+        ['보낸채널' => $보낸채널, '못보낸말' => $못보낸말] =
+            \App\Models\MessageTemplate::채널마다(self::알림톡코드,
+                fn (string $channel, ?string $templateCode) => $this->send(
+                    $channel, $order, $mobile, $text,
+                    $channel === 'sms' ? self::문자유형($link) : $templateCode),
+                문자는틀없이도: true);
 
         if (! $보낸채널) {
             $link->update(['status' => 'failed', 'error' => implode(' / ', $못보낸말) ?: null]);
@@ -204,21 +197,13 @@ class PaymentLinkService
 
         $text = $this->composeVirtualAccount($link, $va);
 
-        /* 결제 안내와 같은 자리다 — 켜 둔 채널로 모두 보낸다 (2026-09-19 지시) */
-        $보낸채널 = [];
-        $못보낸말 = [];
-
-        foreach (\App\Models\MessageTemplate::보낼채널들(self::알림톡코드, 문자는틀없이도: true)
-                 as [$channel, $templateCode]) {
-            $res = $this->send($channel, $order, $mobile, $text,
-                $channel === 'sms' ? self::유형_가상계좌 : $templateCode);
-
-            if ($res['success'] ?? false) {
-                $보낸채널[] = $channel;
-            } else {
-                $못보낸말[] = self::채널이름($channel) . ': ' . ($res['message'] ?? '발송하지 못했습니다.');
-            }
-        }
+        /* 결제 안내와 같은 자리다 — 발송 방식은 채널마다 한 곳이 정한다 (2026-09-30) */
+        ['보낸채널' => $보낸채널, '못보낸말' => $못보낸말] =
+            \App\Models\MessageTemplate::채널마다(self::알림톡코드,
+                fn (string $channel, ?string $templateCode) => $this->send(
+                    $channel, $order, $mobile, $text,
+                    $channel === 'sms' ? self::유형_가상계좌 : $templateCode),
+                문자는틀없이도: true);
 
         if ($보낸채널) {
             return ['sent' => true, 'channel' => $보낸채널[0],

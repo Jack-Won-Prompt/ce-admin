@@ -68,6 +68,8 @@ class MessageTemplate extends Model
                 return [['sms', null]];
             }
 
+            /* **알림톡을 먼저 담는다.** 「알림톡 우선」이 이 차례를 그대로 쓴다
+               (채널마다 가 첫 성공에서 멈춘다) — 차례를 바꾸면 문자가 먼저 나간다. */
             $채널들 = [];
 
             $알림톡 = static::channel('alimtalk')->active()
@@ -92,6 +94,63 @@ class MessageTemplate extends Model
 
             return [['sms', null]];
         }
+    }
+
+    /**
+     * 알림톡이 나가면 문자를 보내지 않는가 (2026-09-30 지시).
+     *
+     * 설정 › 서비스 연동 설정 › 카카오 알림톡 › 발송 방식에서 고른다.
+     * 2026-09-19 에는 「모두 보냄」이었다 — 그때는 알림톡이 되면 멈춰 한쪽만 나가는
+     * 것이 문제였다. 지금은 같은 말을 두 통 받는 쪽이 더 번거롭다고 본다.
+     */
+    public static function 알림톡우선인가(): bool
+    {
+        return (string) config('kakao.send_policy', 'alimtalk_first') !== 'all';
+    }
+
+    /**
+     * 채널마다 보내고 결과를 모은다 — **발송 방식이 여기 한 곳에만 있다**.
+     *
+     * 여태 부르는 곳마다 제가끔 `보낼채널들` 을 돌며 결과를 모았다(다섯 자리).
+     * 그래서 「알림톡 우선」으로 바꾸려면 다섯 곳을 모두 고쳐야 했고, 한 곳이라도
+     * 빠지면 그 자리만 조용히 두 통을 보낸다.
+     *
+     * @param  callable(string $채널, ?string $틀코드): array{success: bool, message?: string} $보내기
+     * @return array{보낸채널: list<string>, 못보낸말: list<string>}
+     */
+    public static function 채널마다(string|array $codes, callable $보내기,
+                                    bool $문자는틀없이도 = false): array
+    {
+        $보낸채널 = [];
+        $못보낸말 = [];
+        $우선     = static::알림톡우선인가();
+
+        foreach (static::보낼채널들($codes, $문자는틀없이도) as [$채널, $틀코드]) {
+            /* 알림톡이 이미 나갔으면 문자는 보내지 않는다 */
+            if ($우선 && $보낸채널 !== []) {
+                break;
+            }
+
+            try {
+                $답 = $보내기($채널, $틀코드);
+            } catch (\Throwable $e) {
+                $답 = ['success' => false, 'message' => $e->getMessage()];
+            }
+
+            if ($답['success'] ?? false) {
+                $보낸채널[] = $채널;
+            } else {
+                $못보낸말[] = static::채널이름($채널) . ': ' . ($답['message'] ?? '보내지 못했습니다.');
+            }
+        }
+
+        return ['보낸채널' => $보낸채널, '못보낸말' => $못보낸말];
+    }
+
+    /** 사람에게 보일 채널 이름 */
+    public static function 채널이름(string $채널): string
+    {
+        return static::CHANNELS[$채널] ?? $채널;
     }
 
     /**
