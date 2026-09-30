@@ -71,22 +71,41 @@
   .tbl-outer { border: 0.7mm solid #1a1a1a; }
   th { background: #f1f2f4; font-weight: 700; text-align: center; letter-spacing: .06em; }
 
-  /* ── 거래 당사자 ─────────────────────────── */
   /* ── 거래 당사자 ─────────────────────────────
      원본은 공급받는자ㆍ공급자를 **서로 다른 표 둘**로 나누고 flex 로 나란히 세운다
-     (줄 수가 셋ㆍ넷으로 달라도 되게). dompdf 는 flex 를 모르므로 칸 둘짜리 표로
-     같은 자리를 만든다 — 가운데 3mm 는 원본의 gap 이다. */
-  .parties { margin-top: 5mm; position: relative; }
-  .party-wrap { width: 100%; }
-  .party-wrap > tbody > tr > td { border: 0; padding: 0; vertical-align: top; width: 50%; }
-  .party-wrap .left  { padding-right: 1.5mm; }
-  .party-wrap .right { padding-left: 1.5mm; }
+     (줄 수가 셋ㆍ넷으로 달라도 되게). flex 는 `align-items:stretch` 가 기본이라
+     짧은 쪽이 저절로 늘어나 **두 표의 아래가 늘 같은 줄에서 끝난다.**
 
-  /* 폭은 몫으로 적는다. dompdf 에 mm 로 적으면 안쪽 여백만큼 부풀어 값 칸이 좁아진다.
-     표 하나가 91.5mm 이므로 7mm → 7.65%, 22mm → 24.04% 다. */
-  .party-band  { width: 7.65%; background: #f1f2f4; font-weight: 700; font-size: 8pt;
+     dompdf 는 flex 를 모른다. 그래서 여태 표 둘을 나란히 두고 **줄 여백(3.1mm)으로
+     높이를 맞춰** 두었는데, 그 값은 「받는 분 주소가 한 줄일 때」 맞춰 잰 것이었다.
+     주소가 두 줄로 접히면 왼쪽만 길어져 좌우가 어긋난다 — 2026-09-30 실전 시험의
+     거래명세서가 그랬다(왼쪽이 11px 더 길었다).
+
+     **표 하나로 합친다.** 한 표 안에서는 두 편이 같은 줄판을 나눠 쓰므로 아래가
+     어긋날 수가 없다. 줄 수가 셋ㆍ넷으로 다른 것은 받는 분 주소 칸을 두 줄에
+     걸치게(rowspan) 하여 맞춘다 — 주소는 원래 가장 긴 값이라 자리를 더 주는 것이
+     보기에도 맞다.
+
+     칸 폭(186mm 기준) — 표 하나 91.5mm · 가운데 틈 3mm
+       띠 7mm = 3.7634%  ·  이름표 22mm = 11.8280%  ·  값 62.5mm = 33.6022%
+       틈 3mm = 1.6129%   (3.7634+11.8280+33.6022)×2 + 1.6129 = 100% */
+  .parties { margin-top: 5mm; position: relative; }
+  .parties-tbl { width: 100%; }
+  .parties-tbl td { border: 0.4mm solid #5b5b5b; }
+
+  /* 가운데 틈 — 테두리도 배경도 없다 */
+  .parties-tbl .gap { border: 0; padding: 0; }
+
+  /* 바깥 테두리 0.7mm 를 칸마다 나눠 준다. 표가 하나라 `.tbl-outer` 로는
+     두 편을 따로 두를 수 없다. */
+  .parties-tbl .ot { border-top: 0.7mm solid #1a1a1a; }
+  .parties-tbl .ob { border-bottom: 0.7mm solid #1a1a1a; }
+  .parties-tbl .ol { border-left: 0.7mm solid #1a1a1a; }
+  .parties-tbl .or { border-right: 0.7mm solid #1a1a1a; }
+
+  .party-band  { background: #f1f2f4; font-weight: 700; font-size: 8pt;
                  text-align: center; padding: 0; line-height: 1.18; }
-  .party-label { width: 24.04%; background: #f1f2f4; font-weight: 700; text-align: center;
+  .party-label { background: #f1f2f4; font-weight: 700; text-align: center;
                  padding-left: 0; padding-right: 0; }
   /* 원본은 낱자를 15mm 폭에 고루 편다(flex space-between). dompdf 는 flex 를
      모르므로 낱자마다 칸 하나인 표로 같은 모양을 만든다. */
@@ -94,20 +113,6 @@
   .lbl td    { border: 0; padding: 0; text-align: center; font-size: 9pt;
                font-weight: 700; line-height: 1.35; }
   .party-value { text-align: left; }
-  /* 공급받는자(세 줄)와 공급자(네 줄)는 **아래가 같은 줄에서 끝나야 한다** (2026-09-17 지시).
-     원본은 둘을 flex 로 나란히 세워 짧은 쪽이 저절로 늘어난다(align-items:stretch).
-     dompdf 는 flex 도 height:100% 도 쓸 수 없어(둘 다 넣어 보니 장이 넷으로 벌어졌다)
-     줄 여백으로 높이를 맞춘다 — 만든 PDF 에서 두 표를 재어 3.1mm 로 잡았다
-     (공급받는자 41.06mm · 공급자 41.11mm).
-
-     여백은 **바로 아래 칸에만 건다.** 그냥 `td` 로 걸면 이름표 안에 든 낱자 표(.lbl)의
-     칸까지 걸려(순위가 같아 뒤에 적은 이 줄이 이긴다) 한 줄이 17mm 로 부풀었다 —
-     공급받는자 표만 10.8mm 길어져 있었다.
-
-     공급자 쪽은 늘 같은 글(등록번호ㆍ상호ㆍ주소ㆍ대표번호)이라 높이가 정해져 있다.
-     받는 분 주소가 길어 두 줄로 접히면 왼쪽이 그만큼 길어진다 — 원본은 flex 가
-     오른쪽을 늘려 맞추지만 여기서는 맞출 길이 없다. */
-  .party-recipient > tbody > tr > td { padding-top: 3.1mm; padding-bottom: 3.1mm; }
 
   /* 사용인감 — 상호ㆍ주소 칸 위에 겹쳐 찍는다.
      원본과 같은 자리ㆍ같은 크기다(right:-6mm · top:10mm · 19.5mm 네모). 오른쪽으로
@@ -181,51 +186,40 @@
          **공급받는자에 주민등록번호 칸은 없다** — 원본에도 없고, 종이에 실려 나가서도
          안 되는 값이다(P0-1). --}}
     <div class="parties">
-      <table class="party-wrap">
+      {{-- 두 편을 **한 표**로 묶는다. 표 하나 안에서는 같은 줄판을 나눠 쓰므로
+           아래가 어긋날 수 없다 — 받는 분 주소가 두 줄로 접혀도 같은 줄에서 끝난다.
+           받는 분은 세 줄, 공급자는 네 줄이라 주소 칸을 두 줄에 걸친다. --}}
+      <table class="parties-tbl">
+        <colgroup>
+          <col style="width:3.7634%"><col style="width:11.8280%"><col style="width:33.6022%">
+          <col style="width:1.6129%">
+          <col style="width:3.7634%"><col style="width:11.8280%"><col style="width:33.6022%">
+        </colgroup>
         <tbody>
           <tr>
-            <td class="left">
-              <table class="tbl-outer party-recipient">
-                <tbody>
-                  <tr>
-                    <td class="party-band" rowspan="3">공<br>급<br>받<br>는<br>자</td>
-                    <td class="party-label"><table class="lbl"><tr><td>성</td><td>명</td></tr></table></td>
-                    <td class="party-value">{{ $recipient['name'] }}</td>
-                  </tr>
-                  <tr>
-                    <td class="party-label"><table class="lbl"><tr><td>주</td><td>소</td></tr></table></td>
-                    <td class="party-value">{{ $recipient['address'] }}</td>
-                  </tr>
-                  <tr>
-                    <td class="party-label"><table class="lbl"><tr><td>연</td><td>락</td><td>처</td></tr></table></td>
-                    <td class="party-value">{{ $recipient['phone'] }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </td>
-            <td class="right">
-              <table class="tbl-outer party-supplier">
-                <tbody>
-                  <tr>
-                    <td class="party-band" rowspan="4">공<br>급<br>자</td>
-                    <td class="party-label"><table class="lbl"><tr><td>등</td><td>록</td><td>번</td><td>호</td></tr></table></td>
-                    <td class="party-value">{{ $supplier['regNo'] }}</td>
-                  </tr>
-                  <tr>
-                    <td class="party-label"><table class="lbl"><tr><td>상</td><td>호</td></tr></table></td>
-                    <td class="party-value">{{ $supplier['company'] }}</td>
-                  </tr>
-                  <tr>
-                    <td class="party-label"><table class="lbl"><tr><td>주</td><td>소</td></tr></table></td>
-                    <td class="party-value">{{ $supplier['address'] }}</td>
-                  </tr>
-                  <tr>
-                    <td class="party-label"><table class="lbl"><tr><td>연</td><td>락</td><td>처</td></tr></table></td>
-                    <td class="party-value">{{ $supplier['phone'] }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </td>
+            <td class="party-band ol ot ob" rowspan="4">공<br>급<br>받<br>는<br>자</td>
+            <td class="party-label ot"><table class="lbl"><tr><td>성</td><td>명</td></tr></table></td>
+            <td class="party-value or ot">{{ $recipient['name'] }}</td>
+            <td class="gap" rowspan="4"></td>
+            <td class="party-band ol ot ob" rowspan="4">공<br>급<br>자</td>
+            <td class="party-label ot"><table class="lbl"><tr><td>등</td><td>록</td><td>번</td><td>호</td></tr></table></td>
+            <td class="party-value or ot">{{ $supplier['regNo'] }}</td>
+          </tr>
+          <tr>
+            <td class="party-label" rowspan="2"><table class="lbl"><tr><td>주</td><td>소</td></tr></table></td>
+            <td class="party-value or" rowspan="2">{{ $recipient['address'] }}</td>
+            <td class="party-label"><table class="lbl"><tr><td>상</td><td>호</td></tr></table></td>
+            <td class="party-value or">{{ $supplier['company'] }}</td>
+          </tr>
+          <tr>
+            <td class="party-label"><table class="lbl"><tr><td>주</td><td>소</td></tr></table></td>
+            <td class="party-value or">{{ $supplier['address'] }}</td>
+          </tr>
+          <tr>
+            <td class="party-label ob"><table class="lbl"><tr><td>연</td><td>락</td><td>처</td></tr></table></td>
+            <td class="party-value or ob">{{ $recipient['phone'] }}</td>
+            <td class="party-label ob"><table class="lbl"><tr><td>연</td><td>락</td><td>처</td></tr></table></td>
+            <td class="party-value or ob">{{ $supplier['phone'] }}</td>
           </tr>
         </tbody>
       </table>
