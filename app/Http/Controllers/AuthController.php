@@ -295,12 +295,18 @@ class AuthController extends Controller
             return app(EntraController::class)->logout($request);
         }
 
+        /* 모바일 웹에서 나갔으면 모바일 로그인으로 돌려보낸다 (2026-09-30 지시).
+           SSO 길은 EntraController::logout 이 같은 일을 한다 — 두 길이 갈리면
+           한쪽만 고쳐져 어긋난다. */
+        $모바일 = $request->session()->get('login_from') === 'm'
+            || str_starts_with((string) $request->headers->get('referer'), url('/m'));
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route($모바일 ? 'm.login' : 'login');
     }
 
     // ──────────────────────────────────────────────────────────
