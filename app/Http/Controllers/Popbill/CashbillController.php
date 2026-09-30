@@ -412,18 +412,33 @@ class CashbillController extends Controller
             ->when($이름 !== '', fn ($q) => $this->이름거르개($q, $이름))
             ->where(fn ($q) => $q->whereNull('cash_receipt_status')
                                  ->orWhere('cash_receipt_status', '!=', 'issued'))
-            /* 카드로 받은 건은 대기에 세우지 않는다 (2026-09-26 지시).
+            /* 카드로 받는 건은 대기에 세우지 않는다 (2026-09-26 지시 · 2026-09-30 고침).
 
                현금영수증은 **가상계좌ㆍ무통장입금일 때만** 낸다 — 카드는 카드사가
                국세청에 신고하고, 우리 증빙은 카드매출전표다(DepositAutoIssue 주석).
-               자동 발행은 그 갈래를 옳게 지나가는데 **이 대기 목록만 결제수단을 보지
-               않아** 카드 건이 「발행 대기」로 서 있었다. 담당자가 그 줄을 눌러 발행하면
-               카드전표와 현금영수증이 겹쳐 **국세청에 두 번 신고**된다.
+               담당자가 카드 건의 대기 줄을 눌러 발행하면 카드전표와 현금영수증이 겹쳐
+               **국세청에 두 번 신고**된다.
 
-               토스 승인이 남아 있는 건을 카드로 본다. 결제수단 칸(pay_method)은 「무엇으로
-               안내할 것인가」이기도 해서 받기 전에도 「링크페이」로 적혀 있다 — 그것만
-               보고 빼면 아직 받지 않은 건까지 대기에서 사라진다. */
-            ->whereDoesntHave('tossPayment', fn ($q) => $q->where('status', 'DONE'))
+               여태 「토스 승인(DONE)이 남아 있는가」로 가렸다. 그런데 주문을 정정하면
+               앞 결제를 물러 토스 줄이 CANCELED 가 되고, 그 순간 카드 건이 이 관문을
+               빠져나와 대기에 다시 섰다 (2026-09-30 EUD202609302047541).
+
+               가리는 잣대를 **마지막 결제 요청의 수단**으로 바꾼다 — 그 건을 무엇으로
+               받기로 했는지는 그 줄이 말한다. 정정으로 링크를 다시 보내도 새 링크의
+               수단이 그대로 카드이므로 관문이 흔들리지 않는다.
+
+               결제수단 칸(pay_method)은 쓰지 않는다 — 「무엇으로 안내할 것인가」이기도
+               해서 받기 전에도 「링크페이」로 적혀 있다. 링크가 아예 없는 건(본인부담이
+               0원이라 청구하지 않은 건)은 가리지 않는다. */
+            ->whereNotExists(function ($q) {
+                $q->selectRaw('1')
+                  ->from('payment_links as pl')
+                  ->whereColumn('pl.order_id', 'orders.id')
+                  ->whereNull('pl.deleted_at')
+                  ->where('pl.method', 'card')
+                  ->whereRaw('pl.id = (select max(id) from payment_links
+                                        where order_id = orders.id and deleted_at is null)');
+            })
             /* 언제 것인가 — 나간 날이 있으면 그 날, 없으면 받은 날이다. */
             ->where(fn ($q) => $q->whereBetween('delivered_at', [$start, $end])
                                  ->orWhere(fn ($x) => $x->whereNull('delivered_at')
