@@ -2394,9 +2394,18 @@ document.addEventListener('click', (e) => {
 
          환자에게 받을 돈은 옆의 「본인 부담금」이 이미 말하고, 기관에 청구할 돈은
          「기관 부담금」이 말한다. 이 칸은 그 둘을 더한 것이므로 값대로 부른다. */
+      /* 돈은 셋으로 갈라 세운다 (2026-09-30 지시) —
+
+           주문 금액   본인＋기관. 이 건이 얼마짜리인가.
+           청구 금액   기관(공단ㆍ지자체)에 청구할 몫.
+           본인 부담금 환자에게 받을 몫.
+
+         「기관 부담금」이라 부르던 칸을 「청구 금액」으로 적는다. 그 돈은 우리가
+         기관에 **청구해서 받을** 돈이고, 청구 관리ㆍ정산/회계가 다루는 것이 바로
+         그 청구다 — 부담의 주체보다 무엇을 하는 돈인지가 읽혀야 한다. */
       { header: '주문 금액',    name: 'total_amount',    width: 100, align: 'right',  sortable: true, renderer: money },
+      { header: '청구 금액',    name: 'nhis_amount',     width: 110, align: 'right',  sortable: true, renderer: money },
       { header: '본인 부담금',  name: 'copay',           width: 110, align: 'right',  sortable: true, renderer: money },
-      { header: '기관 부담금',  name: 'nhis_amount',     width: 110, align: 'right',  sortable: true, renderer: money },
     ];
   };
 
