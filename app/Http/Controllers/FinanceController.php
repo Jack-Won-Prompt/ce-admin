@@ -153,9 +153,8 @@ class FinanceController extends Controller
            청구 관리ㆍ정산/회계와 같은 잣대다 — 먼저 얼마였고, 그것을 물렀고, 그래서
            지금 얼마인가가 위에서 아래로 흘러야 돈의 움직임이 읽힌다. 여태 지금 값이
            맨 위에 서서 거꾸로 읽혔다. */
-        $data = $rows->flatMap(fn (Order $o) => array_merge(
-            $정정[$o->id] ?? [],
-            [[
+        $data = $rows->flatMap(function (Order $o) use ($정정, $extras) {
+            $줄 = [
                 // 정정한 적이 있으면 이 줄이 「정정 후」다 — 무엇을 보고 있는지 밝힌다
                 'kind'   => isset($정정[$o->id]) ? '정정 후' : '주문',
                 'reason' => '',
@@ -163,8 +162,18 @@ class FinanceController extends Controller
             + $this->orderRow($o)
             + $extras->rx($o->prescription, $o->patient)
             + $extras->ww($o, $o->prescription, $o->patient)
-            + $extras->of($o)],
-        ))->values();
+            + $extras->of($o);
+
+            /* 정정을 거쳤는데 지금 계산서가 「취소됨」이면, 그 취소된 것은 물러난 줄의
+               계산서다. 이 줄이 낼 새 계산서는 아직 나가지 않았다 — 「미발행」이 맞다
+               (2026-09-30 지시. 다른 세 화면과 같은 잣대). */
+            if (isset($정정[$o->id])) {
+                if (($줄['tax_invoice'] ?? '') === '취소됨')  { $줄['tax_invoice']  = '미발행'; }
+                if (($줄['cash_receipt'] ?? '') === '취소됨') { $줄['cash_receipt'] = '미발행'; }
+            }
+
+            return array_merge($정정[$o->id] ?? [], [$줄]);
+        })->values();
 
         /* 통합주문내역은 갈래를 가리지 않고 모두 담는다 (2026-09-11 확인요청 8쪽).
            환자 결제ㆍ정산ㆍ미정산은 주문 줄에서 이미 보이는데 반품환불만 제 탭에
@@ -419,6 +428,10 @@ class FinanceController extends Controller
                 'cancel_at'  => '',
                 'paid_at'    => '',
                 'paid'       => 0,
+                /* 증빙은 **그때 낸 것**이다 — 어느 계산서가 물러난 것인지 이 줄에서
+                   읽힌다 (2026-09-30 지시. 다른 세 화면과 같은 잣대) */
+                'tax_invoice'  => $a->tax_invoice_no ? '취소됨' : '',
+                'cash_receipt' => $a->cash_receipt_no ? '취소됨' : '',
             ];
 
             $out[$a->order_id][] = $바탕 + [
@@ -435,6 +448,8 @@ class FinanceController extends Controller
                 'cancel_at'  => $날,
                 'paid_at'    => '',
                 'paid'       => 0,
+                'tax_invoice'  => $a->tax_invoice_no ? '취소됨' : '',
+                'cash_receipt' => $a->cash_receipt_no ? '취소됨' : '',
             ];
         }
 
