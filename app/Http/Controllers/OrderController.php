@@ -193,8 +193,10 @@ class OrderController extends Controller
                     'qty'            => (int) $a->quantity,
                     'ww_so_no'       => $a->withworks_so_no ?? '',
                     /* 증빙은 그때 낸 것이다 — 어느 계산서가 물러난 것인지 이 줄에서 읽힌다 */
-                    'tax_invoice'    => $a->tax_invoice_no ? '취소됨' : '',
-                    'cash_receipt'   => $a->cash_receipt_no ? '취소됨' : '',
+                    /* 그때 낸 것이 있으면 「취소됨」, 없었으면 「미발행」이다.
+                       빈칸으로 두면 값이 빠진 것으로 읽힌다 (2026-09-30). */
+                    'tax_invoice'    => $a->tax_invoice_no ? '취소됨' : '미발행',
+                    'cash_receipt'   => $a->cash_receipt_no ? '취소됨' : '미발행',
                 ];
 
                 $폄[] = ['status'        => '주문 정정',

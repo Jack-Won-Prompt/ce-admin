@@ -311,9 +311,12 @@ class SettlementController extends Controller
 
                        물러난 줄에 그대로 실으면 그때 받은 것처럼 읽힌다 — 실제로는
                        그 돈을 물러 주었다. 비워 둔다. */
-                    'deposit_amount' => '',
+                    'deposit_amount' => 0,
                     'paid_at'        => '',
                     'deposit_at'     => '',
+                    /* 증빙은 그때 낸 것이다 — 낸 적 없으면 「미발행」 (2026-09-30) */
+                    'tax_invoice'    => $a->tax_invoice_no ? '취소됨' : '미발행',
+                    'cash_receipt'   => $a->cash_receipt_no ? '취소됨' : '미발행',
                     /* 「입금일시」는 돈이 들어온 때다 — 물러난 줄에는 그런 것이 없다.
                        여태 정정한 시각을 적어 두어, 21:29 에 입금된 것처럼 읽혔다.
                        정정한 때는 「정산 사유」와 청구 상태가 이미 말한다. */

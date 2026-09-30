@@ -436,8 +436,8 @@ class FinanceController extends Controller
                 'paid'       => 0,
                 /* 증빙은 **그때 낸 것**이다 — 어느 계산서가 물러난 것인지 이 줄에서
                    읽힌다 (2026-09-30 지시. 다른 세 화면과 같은 잣대) */
-                'tax_invoice'  => $a->tax_invoice_no ? '취소됨' : '',
-                'cash_receipt' => $a->cash_receipt_no ? '취소됨' : '',
+                'tax_invoice'  => $a->tax_invoice_no ? '취소됨' : '미발행',
+                'cash_receipt' => $a->cash_receipt_no ? '취소됨' : '미발행',
             ];
 
             $out[$a->order_id][] = $바탕 + [
@@ -454,8 +454,8 @@ class FinanceController extends Controller
                 'cancel_at'  => $날,
                 'paid_at'    => '',
                 'paid'       => 0,
-                'tax_invoice'  => $a->tax_invoice_no ? '취소됨' : '',
-                'cash_receipt' => $a->cash_receipt_no ? '취소됨' : '',
+                'tax_invoice'  => $a->tax_invoice_no ? '취소됨' : '미발행',
+                'cash_receipt' => $a->cash_receipt_no ? '취소됨' : '미발행',
             ];
         }
 

@@ -267,8 +267,8 @@ class NhisController extends Controller
                        정정으로 물러난 계산서는 이 줄의 것이다. 지금 줄에 「취소됨」이
                        서면 아직 내지도 않은 새 계산서가 취소된 것처럼 읽힌다 —
                        아래에서 지금 줄을 「미발행」으로 되돌린다. */
-                    'tax_invoice'   => $a->tax_invoice_no ? '취소됨' : '',
-                    'cash_receipt'  => $a->cash_receipt_no ? '취소됨' : '',
+                    'tax_invoice'   => $a->tax_invoice_no ? '취소됨' : '미발행',
+                    'cash_receipt'  => $a->cash_receipt_no ? '취소됨' : '미발행',
                     'ww_so_no'      => $a->withworks_so_no ?? '',
                 ];
 
