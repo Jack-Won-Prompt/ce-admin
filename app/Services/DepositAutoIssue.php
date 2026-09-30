@@ -113,6 +113,38 @@ class DepositAutoIssue
      */
     public function run(Order $order, string $cause = ''): array
     {
+        /* **한 주문에 한 번씩만 돈다** (2026-09-30 실전 시험에서 드러남).
+
+           결제가 끝나면 두 길이 거의 동시에 이 자리를 부른다 — 결제 화면의 승인과
+           토스의 PAYMENT_STATUS_CHANGED 웹훅이다. 실제로 1초 사이에 둘 다 돌아
+           세금계산서를 두 번 냈고, 팝빌이
+           「[-11001038] 동일한 공급자 문서번호가 사용 중입니다」로 막아 준 덕에
+           이중 발행만 면했다. 막아 주는 저쪽이 없는 일은 그대로 두 번 일어난다.
+
+           부르는 자리가 열한 곳이라 밖에서 막으면 반드시 빠뜨린다 — 여기 한 곳에서
+           잠근다. 먼저 든 쪽이 끝날 때까지 기다렸다가 들어가므로, 뒤에 든 쪽은
+           「이미 발행됨」을 제대로 보고 지나간다. */
+        $빗장 = \Illuminate\Support\Facades\Cache::lock('deposit-auto-issue:' . $order->id, 120);
+
+        try {
+            $빗장->block(20);
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException) {
+            /* 20초를 기다려도 안 풀리면 앞선 처리가 아직 진행 중이다. 같은 일을
+               겹쳐 하지 않고 넘긴다 — 못 한 일은 담당자가 정산/회계에서 처리한다. */
+            return ['cash' => null, 'tax' => null, 'statement' => null, 'confirm' => null,
+                    'skipped' => ['다른 곳에서 같은 주문을 처리하는 중입니다']];
+        }
+
+        try {
+            return $this->돌기($order, $cause);
+        } finally {
+            $빗장->release();
+        }
+    }
+
+    /** 실제로 하는 일 — 빗장 안에서만 부른다 */
+    private function 돌기(Order $order, string $cause = ''): array
+    {
         $out = ['cash' => null, 'tax' => null, 'statement' => null, 'confirm' => null, 'skipped' => []];
 
         $order->loadMissing(['patient', 'prescription', 'items', 'tossPayment']);

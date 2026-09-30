@@ -49,6 +49,34 @@ class PaymentDoneNotice
             return ['sent' => false, 'message' => '결제 완료 안내가 비활성 상태입니다.'];
         }
 
+        /* **확인과 발송을 한 덩어리로 묶는다** (2026-09-30 실전 시험에서 드러남).
+
+           아래의 「이미 알린 건은 지나간다」 는 발송 이력을 조회해 가린다. 그런데
+           결제가 끝나면 두 길이 거의 동시에 이 자리를 부른다 — 결제 화면의 승인과
+           토스의 PAYMENT_STATUS_CHANGED 웹훅이다. 둘 다 조회 시점에는 아직 아무
+           이력이 없어 둘 다 「없다」로 읽고 **둘 다 보냈다.** 환자가 같은 안내를 두 통
+           받았다(17:41:00 알림톡 2통).
+
+           조회와 발송 사이에 다른 쪽이 끼어들지 못하게 잠근다. 먼저 든 쪽이 끝난
+           뒤에 들어가므로, 뒤에 든 쪽은 남은 이력을 보고 제대로 지나간다. */
+        $빗장 = \Illuminate\Support\Facades\Cache::lock('payment-done-notice:' . $order->id, 60);
+
+        try {
+            $빗장->block(15);
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException) {
+            return ['sent' => false, 'message' => '다른 곳에서 안내를 보내는 중입니다.'];
+        }
+
+        try {
+            return $this->보내기($order);
+        } finally {
+            $빗장->release();
+        }
+    }
+
+    /** 실제로 보내는 일 — 빗장 안에서만 부른다 */
+    private function 보내기(Order $order): array
+    {
         $order->loadMissing('patient', 'prescription', 'tossPayment');
 
         /* 이미 알린 건은 지나간다 — 웹훅이 두 번 와도 문자는 한 번이다.
