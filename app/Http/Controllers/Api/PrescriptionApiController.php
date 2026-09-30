@@ -327,9 +327,26 @@ class PrescriptionApiController extends Controller
     /** 내 처방전 목록 (모바일 앱 — 로그인 사용자 본인 업로드만) */
     public function index(Request $request): JsonResponse
     {
-        $query = Prescription::where('created_by', auth()->id())
-            ->with('patient')
-            ->latest();
+        /* 이름으로 찾을 때는 **남이 올린 건도 보인다** (2026-09-30 지시).
+
+           서류를 나누어 올리는 자리가 있다 — 한 사람이 처방전ㆍ결과지를 올리고
+           다른 사람이 등록신청서를 보탠다. 그런데 목록이 「본인 것만」이라 보탤
+           사람이 그 건을 찾지 못했고, 업로드 화면에서 같은 환자로 올리면 **처방전이
+           하나 더 서서** 서류가 갈렸다.
+
+           상세 화면은 이미 남의 건에도 보탤 수 있게 되어 있다(2026-09-23 지시 ·
+           `보탤수있나`). 닿을 길만 없었던 셈이다.
+
+           **이름을 적었을 때만** 넓힌다 — 아무것도 적지 않은 기본 목록은 예전대로
+           본인 것만이다. 남의 건이 그냥 섞이면 「내가 올린 것」을 훑는 자리가 아니게
+           된다. */
+        $이름찾기 = trim((string) $request->input('name', '')) !== '';
+
+        $query = Prescription::with(['patient', 'creator:id,name'])->latest();
+
+        if (! $이름찾기) {
+            $query->where('created_by', auth()->id());
+        }
 
         /* 웹 목록과 **같은 것을 감춘다** (2026-09-27 확인요청 1쪽).
 
@@ -393,6 +410,10 @@ class PrescriptionApiController extends Controller
                 'created_at'     => $p->created_at->format('Y-m-d H:i'),
                 // 다시 올려야 할 서류가 몇 건 남았는가 — 0 이면 표시하지 않는다
                 'reupload_open'  => (int) ($p->reupload_open ?? 0),
+                /* 이름으로 찾으면 남의 건도 섞인다 — 누구 것인지 보여야 한다
+                   (2026-09-30 지시) */
+                'is_mine'        => $p->created_by === auth()->id(),
+                'owner_name'     => $p->creator?->name,
             ]),
             'meta' => [
                 'current_page' => $prescriptions->currentPage(),
