@@ -36,8 +36,20 @@ jobs:
             echo "===== MIGRATE ====="
             sudo -u www-data php artisan migrate --force
 
+            # 설정·경로·화면 캐시만 비운다 (2026-09-30).
+            #
+            # 여태 `optimize:clear` 를 썼는데 그 안에는 `cache:clear` 가 들어 있다 —
+            # **응용 캐시를 통째로 지운다.** NICE 본인확인은 표준창을 오가는 동안
+            # 복호화 열쇠를 캐시에 들고 있는데, 그 사이에 배포가 돌면 열쇠가 사라져
+            # 돌아온 사람이 「본인확인 세션이 만료되었습니다」를 만난다. 실제로
+            # 2026-09-30 16:04 에 그 일이 있었다.
+            #
+            # 배포가 비워야 하는 것은 코드를 따라 바뀌는 것들뿐이다.
             echo "===== LARAVEL CACHE CLEAR ====="
-            sudo -u www-data php artisan optimize:clear
+            sudo -u www-data php artisan config:clear
+            sudo -u www-data php artisan route:clear
+            sudo -u www-data php artisan view:clear
+            sudo -u www-data php artisan event:clear
 
             echo "===== STORAGE PERMISSION ====="
             sudo chown -R www-data:www-data storage bootstrap/cache

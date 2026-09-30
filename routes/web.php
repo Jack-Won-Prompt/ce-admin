@@ -772,6 +772,12 @@ Route::prefix('consent')->name('consent.')->group(function () {
     // NICE 본인확인: 표준창 파라미터 발급(자기 페이지 fetch) / NICE returnurl 콜백(외부)
     Route::post('/{token}/nice/start', [ConsentController::class, 'niceStart'])->name('nice.start');
     Route::match(['get', 'post'], '/{token}/nice/callback', [ConsentController::class, 'niceCallback'])->name('nice.callback');
+    /* 본인확인이 끝났는지 화면이 스스로 묻는 자리 (2026-09-30).
+
+       표준창을 팝업으로 열고 결과는 `window.opener.postMessage` 로 받아 왔는데,
+       PASS 는 앱으로 나갔다 돌아오느라 그 부모-자식 관계가 끊긴다 — 서버에는
+       본인확인이 남는데 화면만 그대로였다. 화면이 직접 물어보게 한다. */
+    Route::get('/{token}/nice/status', [ConsentController::class, 'niceStatus'])->name('nice.status');
 });
 
 /* 운영 데이터 › 위임장 서명 — 공개 페이지 (로그인 불필요 — 문자 링크).
@@ -784,6 +790,9 @@ Route::prefix('delegation')->name('delegation.')->group(function () {
     Route::post('/{token}/nice/start', [\App\Http\Controllers\DelegationSignPublicController::class, 'niceStart'])->name('nice.start');
     Route::match(['get', 'post'], '/{token}/nice/callback',
         [\App\Http\Controllers\DelegationSignPublicController::class, 'niceCallback'])->name('nice.callback');
+    /* 본인확인이 끝났는지 화면이 스스로 묻는 자리 — 위와 같은 까닭이다 (2026-09-30) */
+    Route::get('/{token}/nice/status',
+        [\App\Http\Controllers\DelegationSignPublicController::class, 'niceStatus'])->name('nice.status');
 });
 
 // 개인정보 수집·이용 동의서 (mcoloplast) 공개 페이지 (로그인 불필요 — 환자 직접 작성)

@@ -69,6 +69,29 @@ class ConsentController extends Controller
         ));
     }
 
+
+    /**
+     * 본인확인이 끝났는가 — 화면이 직접 묻는다 (2026-09-30 지시).
+     *
+     * 표준창은 팝업으로 열고 결과는 `window.opener.postMessage` 로 받아 왔다.
+     * 그런데 **PASS 인증은 앱으로 나갔다 돌아온다.** 모바일에서 그렇게 돌아오면
+     * 브라우저가 부모-자식(opener) 관계를 잃는 일이 잦아, 콜백은 제대로 돌고
+     * 서버에는 본인확인이 남는데 **화면만 그대로**였다. 사람은 「PASS 는 안 된다」로
+     * 읽는다. 문자 인증은 표준창 안에서 끝나 opener 가 살아 있어 동작했다.
+     *
+     * 실제로 위임 서명 #3668 은 본인확인(2026-09-28 11:42)이 남았는데 서명이
+     * 끝나지 않은 채 멈춰 있었다.
+     *
+     * 남의 건을 엿볼 수 없다 — 링크의 토큰을 가진 사람만 자기 건을 묻는다.
+     * 돌려주는 것도 「끝났는가」 하나뿐이고 이름ㆍ생년월일 따위는 담지 않는다.
+     */
+    public function niceStatus(string $token): JsonResponse
+    {
+        $consent = PrescriptionConsent::where('token', $token)->firstOrFail();
+
+        return response()->json(['verified' => $consent->nice_verified_at !== null]);
+    }
+
     /** 이 사람의 개인정보 동의를 이미 받아 두었는가 — 서명 화면과 제출이 같은 눈으로 본다. */
     private function privacyAlreadyDone(PrescriptionConsent $consent): bool
     {

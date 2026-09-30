@@ -85,6 +85,9 @@ return [
         'require_birth' => (bool) env('NICE_MATCH_BIRTH', true),
     ],
 
-    // 암호화 자료(key/iv/hmac)의 캐시 보관 시간(분) — 표준창 왕복 동안만 유지
-    'crypto_ttl_minutes' => (int) env('NICE_CRYPTO_TTL', 10),
+    /* 암호화 자료(key/iv/hmac)의 캐시 보관 시간(분) — 표준창 왕복 동안만 유지.
+       10분이었는데 **PASS 인증에는 빠듯하다**(2026-09-30). 문자 인증은 표준창 안에서
+       1분이면 끝나지만, PASS 는 앱으로 나갔다 돌아오고 앱이 없으면 설치 안내까지
+       거친다. 넘기면 돌아와서 「본인확인 세션이 만료되었습니다」를 만난다. */
+    'crypto_ttl_minutes' => (int) env('NICE_CRYPTO_TTL', 20),
 ];

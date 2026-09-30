@@ -302,6 +302,7 @@
 const TOKEN      = @json($sign->token);
 const 보낼곳     = @json(route('delegation.submit', ['token' => $sign->token]));
 const 인증시작   = @json(route('delegation.nice.start', ['token' => $sign->token]));
+const 인증확인   = @json(route('delegation.nice.status', ['token' => $sign->token]));
 const NICE쓰나   = @json((bool) $niceEnabled);
 const NICE강제   = @json((bool) $niceEnforce);
 let   확인됨     = @json((bool) $verified);
@@ -586,8 +587,10 @@ async function 본인확인() {
 
     if (out.simulated) { 인증됨(); return; }
 
-    /* 표준창은 팝업으로 연다 — 돌아오면 스스로 닫으며 부모에게 알린다 */
+    /* 표준창은 팝업으로 연다. 돌아오면 스스로 닫으며 부모에게 알리지만,
+       **그 알림에만 기대지 않는다** — 아래 물어보기를 함께 켠다. */
     window.open(out.auth_url, 'nice_delegation', 'width=500,height=620,scrollbars=yes');
+    물어보기시작();
     btn.disabled = false;
     btn.textContent = '본인확인';
   } catch (e) {
@@ -598,7 +601,9 @@ async function 본인확인() {
 }
 
 function 인증됨() {
+  if (확인됨) return;              // 알림과 물어보기가 겹쳐도 한 번만 처리한다
   확인됨 = true;
+  물어보기끝();
   const btn = document.getElementById('btnVerify');
   if (btn) btn.outerHTML = '<span class="ok-tag">확인됨</span>';
   const note = document.getElementById('verifyNote');
@@ -609,6 +614,48 @@ function 인증됨() {
 window.addEventListener('message', (e) => {
   if (e.data === 'nice-done') 인증됨();
 });
+
+/* ── 본인확인이 끝났는지 화면이 스스로 묻는다 (2026-09-30 지시) ──────────────
+
+   여태 결과를 `window.opener.postMessage` 로만 받았다. 그런데 **PASS 인증은 PASS
+   앱으로 나갔다 돌아온다.** 모바일에서 그렇게 돌아오면 브라우저가 부모-자식(opener)
+   관계를 잃는 일이 잦아, 콜백은 제대로 돌고 서버에는 본인확인이 남는데 **화면만
+   그대로**였다 — 사람은 「PASS 는 안 된다」로 읽는다. 문자 인증은 표준창 안에서
+   끝나 opener 가 살아 있어 동작했다.
+
+   두 길을 함께 둔다. 알림이 오면 그 자리에서 끝나고(빠른 길), 오지 않아도 물어보기가
+   찾아낸다. 화면이 다시 보이는 순간(앱에서 돌아온 때)에는 곧바로 한 번 묻는다. */
+let 묻는시계 = null;
+
+async function 한번묻기() {
+  if (확인됨) return true;
+  try {
+    const r = await fetch(인증확인, { headers: { 'Accept': 'application/json' } });
+    const j = await r.json();
+    if (j.verified) { 인증됨(); 물어보기끝(); return true; }
+  } catch (e) { /* 잠깐 끊긴 것은 다음 차례에 다시 묻는다 */ }
+  return false;
+}
+
+function 물어보기시작() {
+  물어보기끝();
+  /* 10분이면 넉넉하다 — 표준창 자체가 그보다 오래 살지 않는다 */
+  let 남은횟수 = 200;
+  묻는시계 = setInterval(() => {
+    if (--남은횟수 <= 0) { 물어보기끝(); return; }
+    한번묻기();
+  }, 3000);
+}
+
+function 물어보기끝() {
+  if (묻는시계) { clearInterval(묻는시계); 묻는시계 = null; }
+}
+
+/* 앱에서 돌아와 이 화면이 다시 보이는 순간 — 3초를 기다리지 않고 바로 묻는다 */
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && 묻는시계) 한번묻기();
+});
+window.addEventListener('focus', () => { if (묻는시계) 한번묻기(); });
 
 /* ── 보내기 ──────────────────────────────────────────────── */
 async function 보내기(짓) {

@@ -994,6 +994,7 @@ const SUBMIT_URL    = '{{ route('consent.submit', $consent->token) }}';
 const NICE_ENABLED  = @json($niceEnabled);
 const NICE_ENFORCE  = @json($niceEnforce);
 const NICE_START_URL = '{{ route('consent.nice.start', $consent->token) }}';
+const NICE_STATUS_URL = '{{ route('consent.nice.status', $consent->token) }}';
 let   identityVerified = @json($verified);
 
 /* ── 카운트다운 ───────────────────────────────────────── */
@@ -1537,6 +1538,7 @@ async function startNice() {
 
     if (btn) btn.textContent = '인증 진행 중...';
     watchNicePopup();
+    niceAskStart();
   } catch (e) {
     if (nicePopup) nicePopup.close();
     ceAlert('본인확인 요청 중 네트워크 오류가 발생했습니다.', { tone: 'danger' });
@@ -1549,6 +1551,68 @@ function resetVerifyBtn() {
   if (btn) { btn.disabled = false; btn.textContent = '본인확인'; }
 }
 
+/* ── 본인확인이 끝났는지 화면이 스스로 묻는다 (2026-09-30 지시) ──────────────
+
+   여태 결과를 팝업의 `window.opener.postMessage` 로만 받았다. 그런데 **PASS 인증은
+   PASS 앱으로 나갔다 돌아온다.** 모바일에서 그렇게 돌아오면 브라우저가 부모-자식
+   (opener) 관계를 잃는 일이 잦아, 콜백은 제대로 돌고 서버에는 본인확인이 남는데
+   **화면만 그대로**였다 — 사람은 「PASS 는 안 된다」로 읽는다. 문자 인증은 표준창
+   안에서 끝나 opener 가 살아 있어 동작했다.
+
+   두 길을 함께 둔다. 알림이 오면 그 자리에서 끝나고, 오지 않아도 물어보기가
+   찾아낸다. 화면이 다시 보이는 순간(앱에서 돌아온 때)에는 곧바로 한 번 묻는다. */
+let niceAskTimer = null;
+
+async function niceAskOnce() {
+  if (identityVerified) return true;
+  try {
+    const r = await fetch(NICE_STATUS_URL, { headers: { 'Accept': 'application/json' } });
+    const j = await r.json();
+    if (j.verified) { niceMarkVerified(); return true; }
+  } catch (e) { /* 잠깐 끊긴 것은 다음 차례에 다시 묻는다 */ }
+  return false;
+}
+
+function niceAskStart() {
+  niceAskStop();
+  let left = 200;                       // 3초마다 · 10분이면 표준창이 먼저 끝난다
+  niceAskTimer = setInterval(() => {
+    if (--left <= 0) { niceAskStop(); return; }
+    niceAskOnce();
+  }, 3000);
+}
+
+function niceAskStop() {
+  if (niceAskTimer) { clearInterval(niceAskTimer); niceAskTimer = null; }
+}
+
+/* 알림으로 왔든 물어봐서 알았든 **화면을 바꾸는 자리는 하나다.**
+   둘로 갈라 두면 어느 한쪽만 고쳐져 또 어긋난다. */
+function niceMarkVerified() {
+  if (identityVerified) return;
+  identityVerified = true;
+  niceAskStop();
+  clearInterval(nicePopupWatch);
+  nicePopupWatch = null;
+
+  const box = document.getElementById('verifyBox');
+  if (box) box.classList.add('verified');
+  const t = document.getElementById('verifyTitle');
+  if (t) t.textContent = '본인확인 완료';
+  const desc = document.getElementById('verifyDesc');
+  if (desc) desc.textContent = '본인확인이 완료되었습니다. 서명해 주십시오.';
+  const btn = document.getElementById('btnVerify');
+  if (btn) btn.outerHTML = '<span class="verify-badge">✅</span>';
+
+  refreshAgree();
+}
+
+/* 앱에서 돌아와 이 화면이 다시 보이는 순간 — 3초를 기다리지 않고 바로 묻는다 */
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && niceAskTimer) niceAskOnce();
+});
+window.addEventListener('focus', () => { if (niceAskTimer) niceAskOnce(); });
+
 /* 팝업(콜백 뷰)에서 결과 수신 */
 window.addEventListener('message', function (e) {
   if (e.origin !== window.location.origin) return;
@@ -1556,18 +1620,7 @@ window.addEventListener('message', function (e) {
   if (!d || d.source !== 'nice-identity') return;
 
   if (d.ok) {
-    identityVerified = true;
-    clearInterval(nicePopupWatch);
-    nicePopupWatch = null;
-    const box = document.getElementById('verifyBox');
-    if (box) box.classList.add('verified');
-    const t = document.getElementById('verifyTitle');
-    if (t) t.textContent = '본인확인 완료';
-    const desc = document.getElementById('verifyDesc');
-    if (desc) desc.textContent = '본인확인이 완료되었습니다. 서명해 주십시오.';
-    const btn = document.getElementById('btnVerify');
-    if (btn) btn.outerHTML = '<span class="verify-badge">✅</span>';
-    refreshAgree();
+    niceMarkVerified();
   } else {
     clearInterval(nicePopupWatch);
     nicePopupWatch = null;
