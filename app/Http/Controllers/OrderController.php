@@ -1285,6 +1285,24 @@ class OrderController extends Controller
             return response()->json(['success' => false, 'message' => '이미 발행된 현금영수증입니다.'], 409);
         }
 
+        /* **돈을 받기 전에는 내지 않는다** (2026-09-30 지시 2-ⓐ).
+
+           현금영수증은 「현금을 받았다」는 신고다. 받기 전에 내면 받지 않은 돈이
+           국세청에 올라간다 — 무르려면 취소 신고를 다시 내야 한다.
+
+           자동 발행(DepositAutoIssue)은 입금을 기다렸다가 내는데, 담당자가 손으로
+           내는 이 자리에는 그 관문이 없었다. 현금/카드영수증 화면의 「발행 대기」
+           줄이 결제 전 건도 세우므로, 그 줄을 보고 들어와 누르면 그대로 나갔다.
+
+           본인부담이 0원인 건(차상위ㆍ기초처럼 기관이 전액을 내는 건)은 환자에게
+           받을 돈이 애초에 없다 — 기다릴 입금이 없으므로 막지 않는다. */
+        if ((int) $order->expectedDeposit() > 0 && ! $order->isDepositConfirmed()) {
+            return response()->json([
+                'success' => false,
+                'message' => '입금이 확인되지 않았습니다 — 현금영수증은 돈을 받은 뒤에 발행합니다.',
+            ], 422);
+        }
+
         $data = $request->validate([
             'cash_receipt_type'       => 'required|in:income_deduction,business_expense',
             'cash_receipt_identifier' => 'required|string|max:30',

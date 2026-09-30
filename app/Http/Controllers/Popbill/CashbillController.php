@@ -284,48 +284,49 @@ class CashbillController extends Controller
         $from = $날짜($request->query('start_date'));
         $to   = $날짜($request->query('end_date'));
 
-        $q = \App\Models\PaymentLink::with(['order.patient', 'order.prescription'])
+        /* 자취는 payment_events 에서 읽는다 (2026-09-30 지시).
+
+           예전에는 payment_links 를 그대로 세웠다. 그런데 그 표는 **한 요청에 한 줄**
+           이라 승인 → 환불이 같은 줄의 상태만 바꾼다 — 받았다는 사실이 사라지고
+           환불 줄 하나만 남아, 합을 세면 맞지 않았다.
+
+             21:22  81,000원 승인           ← 이 줄이
+             21:29  정정으로 81,000원 환불   ← 같은 줄이 되어 −81,000 만 남았다
+             21:29  67,500원 재청구
+
+           payment_events 는 걸음마다 한 줄이라 세 줄이 그대로 선다. */
+        $q = \App\Models\PaymentEvent::with(['order.patient', 'order.prescription', 'link'])
             ->where('method', 'card');
 
-        if ($from) { $q->whereDate('created_at', '>=', $from); }
-        if ($to)   { $q->whereDate('created_at', '<=', $to); }
+        if ($from) { $q->whereDate('occurred_at', '>=', $from); }
+        if ($to)   { $q->whereDate('occurred_at', '<=', $to); }
 
         /* 이름으로도 거른다 (2026-09-30 지시).
 
            이 화면은 세 갈래를 한 표에 섞어 세운다 — 팝빌에서 받아 온 줄, 처방전에서
            낸 줄, 그리고 카드로 받은 줄이다. 앞의 둘에는 이름 거르개가 있었는데 카드
            줄에만 없어, 이름을 쳐도 카드 줄은 모두 남았다. 한 사람을 찾았는데 남의
-           이름이 함께 서면 담당자는 이름 검색이 아예 안 듣는 것으로 읽는다.
-
-           거르는 잣대는 앞의 둘과 같다 — 거래처 이름 또는 처방전에서 읽은 이름. */
+           이름이 함께 서면 담당자는 이름 검색이 아예 안 듣는 것으로 읽는다. */
         $이름 = trim((string) $request->query('name'));
 
         if ($이름 !== '') {
             $q->whereHas('order', fn ($o) => $this->이름거르개($o, $이름));
         }
 
-        /* 환불은 승인과 갈라 적는다 (2026-09-28 지시) — 받았다가 돌려준 것이라
-           취소(받기 전에 거둔 링크)와도 다르다. */
-        $상태글 = ['sent' => '발송', 'paid' => '승인', 'refunded' => '환불',
-                   'cancelled' => '취소', 'failed' => '실패'];
-
-        $rows = $q->orderByDesc('id')->limit(500)->get()->map(fn ($l) => [
+        $rows = $q->orderByDesc('occurred_at')->orderByDesc('id')->limit(500)->get()->map(fn ($e) => [
             'record_type' => 'card',
-            'id'          => $l->id,
-            'date'        => $l->created_at?->format('Y-m-d'),
-            'datetime'    => ($l->paid_at ?? $l->sent_at ?? $l->created_at)?->format('Y-m-d H:i'),
-            'order_no'    => $l->order?->order_number ?? '',
-            'rx_number'   => $l->order?->prescription?->rx_number ?? '',
-            'patient'     => $l->order?->patient?->name ?? '',
-            /* 취소ㆍ환불은 뺀 금액으로 적는다 — 승인과 나란히 놓았을 때 합이 맞아야
-               읽힌다. 환불을 승인으로 두어 합계가 부풀던 것을 여기서 바로잡는다. */
-            'amount'      => in_array($l->status, ['cancelled', 'refunded'], true)
-                ? -(int) $l->amount
-                : (int) $l->amount,
-            'status'      => $상태글[$l->status] ?? $l->status,
+            'id'          => $e->id,
+            'date'        => $e->occurred_at?->format('Y-m-d'),
+            'datetime'    => $e->occurred_at?->format('Y-m-d H:i'),
+            'order_no'    => $e->order?->order_number ?? '',
+            'rx_number'   => $e->order?->prescription?->rx_number ?? '',
+            'patient'     => \App\Models\Patient::bare($e->order?->patient?->name),
+            /* 부호는 적을 때 이미 담겼다 — 승인 +, 환불ㆍ취소 −. 그대로 더하면 남은 돈이다. */
+            'amount'      => (int) $e->amount,
+            'status'      => $e->kind_label,
             'method'      => '카드',
-            'payment_key' => $l->payment_key ?? '',
-            'receiver'    => $l->receiver ?? '',
+            'payment_key' => $e->payment_key ?? '',
+            'receiver'    => $e->link?->receiver ?? '',
         ]);
 
         return response()->json(['success' => true, 'rows' => $rows]);
@@ -449,8 +450,18 @@ class CashbillController extends Controller
                 'orderId'          => $o->id,
                 'orderNumber'      => $o->order_number,
                 'rxNumber'         => $rx?->rx_number,
-                'patientName'      => $o->patient?->name ?? $rx?->patient_name_ocr ?? '—',
+                'patientName'      => \App\Models\Patient::bare($o->patient?->name)
+                                        ?: ($rx?->patient_name_ocr ?? '—'),
                 'receiptNo'        => null,
+                /* 아직 돈을 받지 않은 건인가 (2026-09-30 지시 2-ⓐ).
+
+                   대기 목록은 「무엇이 남았는가」를 보는 자리라 결제 전 건도 세운다.
+                   그런데 그 줄의 발행 단추가 그대로 살아 있어, 누르면 **받지 않은 돈으로
+                   현금영수증이 국세청에 신고**된다. 줄은 세우되 단추를 잠근다.
+
+                   본인부담이 0원인 건(차상위ㆍ기초처럼 기관이 전액을 내는 건)은 환자에게
+                   받을 돈이 애초에 없다 — 입금을 기다릴 까닭이 없으므로 잠그지 않는다. */
+                'payReady'         => (int) $o->expectedDeposit() <= 0 || $o->isDepositConfirmed(),
                 /* 발행 구분은 거래처에 적어 둔 것을 따른다 (2026-09-22 확인요청 4쪽) —
                    자동 발행(DepositAutoIssue::cashReceipt)이 보는 것과 같은 잣대다.
                    여기만 소득공제로 박아 두면 대기 줄과 실제로 나가는 것이 어긋난다. */

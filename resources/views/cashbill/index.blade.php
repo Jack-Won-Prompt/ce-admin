@@ -581,6 +581,15 @@
   window.dsBindSelCount(window.__cbGrid, 'cb-sel-count');  // 결과바 '선택 N건' 표시를 연결한다
   function cbOpenRow(r) {
     if (r.status === 'pending') {
+      /* 아직 돈을 받지 않은 건은 그 사실을 먼저 알린다 (2026-09-30 지시 2-ⓐ).
+
+         줄은 세운다 — 「무엇이 남았는가」는 보여야 한다. 다만 열어서 누르면
+         받지 않은 돈이 국세청에 올라가므로, 들어가기 전에 적어 준다.
+         서버도 같은 잣대로 막는다(OrderController::issueCashReceipt). */
+      if (r.payReady === false) {
+        showToast('입금이 확인되지 않은 건입니다 — 현금영수증은 돈을 받은 뒤에 발행합니다.',
+                  'warning', 5000);
+      }
       /* 발행은 주문 상세에서 한다 — 금액과 식별번호를 확인하고 누르는 자리다. */
       ceOpenTab(BASE_URL + '/orders/' + encodeURIComponent(r.orderId),
                 '주문 - ' + (r.orderNumber || ''), 'file-edit-02');
@@ -942,7 +951,8 @@ function renderHistPage(page) {
       confirmNum:  r.confirmNum ?? r.receiptNo ?? '',
       orgConfirmNum: r.orgConfirmNum ?? '',
       orgTradeDate:  ymd(r.orgTradeDate ?? ''),
-      stateLabel:  r.status === 'pending' ? '발행 대기'
+      /* 입금 전이면 그렇게 적는다 — 「발행 대기」만 보면 눌러도 되는 줄로 읽힌다 */
+      stateLabel:  r.status === 'pending' ? (r.payReady === false ? '입금 대기' : '발행 대기')
                    : (STATE[Number(r.stateCode)] ?? (r._source === 'order' ? (isCancel ? '발행취소' : '발행완료') : '')),
       stateMemo:   r.stateMemo ?? '',
       ntsMessage:  r.ntsresultMessage ?? '',

@@ -55,6 +55,10 @@ class AppServiceProvider extends ServiceProvider
         Blade::directive('dsicon', fn (string $expr) =>
             "<?php echo \\App\\Support\\DsIcon::svg({$expr}); ?>");
 
+        /* 결제가 지나간 걸음을 한 줄씩 쌓는다 (2026-09-30 지시).
+           상태를 바꾸는 자리가 열한 군데라, 바뀌는 길목 하나에서 적는다. */
+        \App\Models\PaymentLink::observe(\App\Observers\PaymentLinkObserver::class);
+
         $this->bootPermissions();
 
         // 로그인 이벤트 → 사용자 활동 로그 기록
