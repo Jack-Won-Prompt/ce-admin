@@ -163,6 +163,12 @@ class AuthApiController extends Controller
             /* SSO 로 들어올 수 있는가 — 켜져 있고 설정이 다 찼을 때만(SsoSettings).
                앱은 이 값을 보고 「Microsoft 계정으로 로그인」 단추를 세운다. */
             'sso_login'      => \App\Support\SsoSettings::usable(),
+            /* 로그인 뒤 인증번호를 받는가 (2026-09-30 지시).
+
+               앱 로그인 화면이 「로그인 후 SMS 인증번호가 발송됩니다」를 늘 적어
+               두었는데, 이 값이 꺼져 있으면 문자가 오지 않는다 — 사람은 오지 않을
+               번호를 기다린다. 서버가 알려 주어 화면이 그때만 적게 한다. */
+            'otp_login'      => (bool) config('auth.otp_enabled', false),
             'chat_visible'   => ! (bool) config('mobile.chat_hidden', false),
         ]);
     }

@@ -339,6 +339,21 @@ class _PrescriptionUploadScreenState
     }
   }
 
+  /// 지금 올릴 수 없는 까닭 — 없으면 null.
+  ///
+  /// 단추의 안내와 실제로 막는 잣대가 **같은 자리**를 본다. 두 벌로 두면
+  /// 「모자란 것이 없다고 적혀 있는데 눌러도 안 되는」 자리가 생긴다.
+  /* Dart 는 한글 이름을 못 쓴다 — PHP 쪽과 달리 여기서는 ASCII 로 짓는다 */
+  String? _blockedReason() {
+    if (_selectedPatient == null) {
+      return '환자를 먼저 골라 주십시오 — 이름을 적고 「검색」을 누릅니다.';
+    }
+    if (_queue.isEmpty) {
+      return '올릴 서류를 먼저 담아 주십시오 — 「카메라」 또는 「갤러리」를 누릅니다.';
+    }
+    return null;
+  }
+
   Future<void> _openCamera() async {
     final file = await PrescriptionCameraScreen.show(context);
     if (file == null) return;
@@ -429,7 +444,17 @@ class _PrescriptionUploadScreenState
   }
 
   Future<void> _uploadAll() async {
-    if (_queue.isEmpty || _selectedPatient == null) return;
+    /* 못 올리는 까닭이 있으면 그것을 말하고 멈춘다 (2026-09-30 지시).
+       조용히 돌아서면 사람은 무엇을 해야 할지 알 수 없다. */
+    final blocked = _blockedReason();
+    if (blocked != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(blocked)),
+        );
+      }
+      return;
+    }
 
     /* 처방전을 맨 앞에 세운다. 첫 장이 새 처방전 번호를 열고 나머지는 그 번호에
        붙는다 — 처방전이 먼저 들어가야 그 건의 본 그림이 처방전이 된다. */
@@ -845,12 +870,36 @@ class _PrescriptionUploadScreenState
                                 ? '처방전 업로드'
                                 : '처방전 업로드 (${_queue.length}건)',
                             icon: Icons.cloud_upload_outlined,
-                            onPressed: (_queue.isEmpty || _selectedPatient == null)
-                                ? null
-                                : _uploadAll,
+                            /* **왜 못 누르는지 말해 준다** (2026-09-30 지시).
+
+                               여태 조건이 맞지 않으면 onPressed 를 null 로 두었다.
+                               단추는 활성처럼 보이고 눌러도 아무 일이 없어,
+                               사람은 「고장났나」로 읽었다. 이제 눌리기는 하되
+                               무엇이 모자란지 적어 준다. */
+                            onPressed: _uploadAll,
                             gradient: AppTheme.secondaryGradient,
                           ),
                   ),
+
+                  // 무엇이 모자란지 단추 **바로 위**에 적는다 — 토스트는 스쳐 간다
+                  if (!_uploading && _blockedReason() != null) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline,
+                            size: 15, color: AppTheme.danger),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _blockedReason()!,
+                            style: const TextStyle(
+                                fontSize: 12, color: AppTheme.danger),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
 
                   // Result message
                   if (_resultMsg != null) ...[

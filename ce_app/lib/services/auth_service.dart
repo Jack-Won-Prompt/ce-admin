@@ -73,6 +73,21 @@ class AuthService {
     return true;
   }
 
+  /// 로그인 뒤 인증번호(SMS)를 받는가 (2026-09-30 지시).
+  ///
+  /// 못 물어보면 **없는 것으로 본다** — 오지 않을 번호를 기다리게 하는 쪽이,
+  /// 안내를 빠뜨리는 쪽보다 나쁘다. 번호가 정말 오면 그 화면이 스스로 뜬다.
+  Future<bool> otpLoginEnabled() async {
+    try {
+      final res  = await _dio.get('/auth/options');
+      final data = res.data;
+      if (data is Map && data['otp_login'] is bool) {
+        return data['otp_login'] as bool;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   /// 하단 채팅 메뉴를 보일지(환경 설정 › 모바일 앱 › 채팅 메뉴 숨기기).
   /// 못 물어보면 보인다고 본다 — 여태 늘 보였다.
   Future<bool> chatVisible() async {

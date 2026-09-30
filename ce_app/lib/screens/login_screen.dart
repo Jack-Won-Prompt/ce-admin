@@ -26,6 +26,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   /// 아이디·비밀번호 자리를 보일지. 서버 설정을 받기 전까지는 보인다 —
   /// 없다가 생기는 것보다 있다가 사라지는 편이 덜 놀랍다.
   bool _passwordLogin = true;
+  /* 인증번호가 실제로 오는가 — 서버가 알려 준다 (2026-09-30 지시).
+     여태 늘 「발송됩니다」라 적어 두어, 꺼져 있는 서버에서는 사람이 오지 않을
+     번호를 기다렸다. */
+  bool _otpLogin = false;
 
   /// Microsoft 계정 길이 열려 있는가. 서버가 알려 주기 전까지는 닫힌 것으로 둔다 —
   /// 눌러도 되지 않는 단추를 먼저 보이는 것보다 낫다.
@@ -62,11 +66,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       final opts = await Future.wait([
         svc.passwordLoginEnabled(),
         svc.ssoLoginEnabled(),
+        svc.otpLoginEnabled(),
       ]);
       if (!mounted) return;
       setState(() {
         _passwordLogin = opts[0];
         _ssoEnabled    = opts[1];
+        _otpLogin      = opts[2];
       });
     });
   }
@@ -447,8 +453,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   ),
                                   const SizedBox(height: 14),
 
-                                  // 2FA 안내 뱃지
-                                  Container(
+                                  // 2FA 안내 뱃지 — **인증번호가 실제로 올 때만**
+                                  // 적는다 (2026-09-30 지시). 꺼져 있는 서버에서
+                                  // 이 글을 두면 오지 않을 번호를 기다리게 된다.
+                                  if (_otpLogin) Container(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12, vertical: 8),
                                     decoration: BoxDecoration(
