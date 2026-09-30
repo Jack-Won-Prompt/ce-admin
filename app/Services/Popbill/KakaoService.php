@@ -2,7 +2,6 @@
 
 namespace App\Services\Popbill;
 
-use Linkhub\Popbill\KakaoReceiver;
 use Linkhub\Popbill\PopbillException;
 use Linkhub\Popbill\PopbillKakao;
 
@@ -222,7 +221,11 @@ class KakaoService extends PopbillBaseService
     }
 
     /**
-     * 새 KakaoReceiver 객체 생성 헬퍼
+     * 새 전송정보 한 줄.
+     *
+     * 팝빌 문서는 `Linkhub\Popbill\KakaoReceiver` 를 가리키는데 설치된 SDK 1.65.0 에는
+     * 그 클래스가 없다 — 그래서 여기 같은 이름으로 우리 것을 두었다
+     * (App\Services\Popbill\KakaoReceiver).
      */
     public function newReceiver(): KakaoReceiver
     {
