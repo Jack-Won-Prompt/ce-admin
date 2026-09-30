@@ -94,7 +94,7 @@
   .parties-tbl td { border: 0.4mm solid #5b5b5b; }
 
   /* 가운데 틈 — 테두리도 배경도 없다 */
-  .parties-tbl .gap { border: 0; padding: 0; }
+  .parties-tbl .gap { width: 1.6129%; border: 0; padding: 0; }
 
   /* 바깥 테두리 0.7mm 를 칸마다 나눠 준다. 표가 하나라 `.tbl-outer` 로는
      두 편을 따로 두를 수 없다. */
@@ -103,15 +103,22 @@
   .parties-tbl .ol { border-left: 0.7mm solid #1a1a1a; }
   .parties-tbl .or { border-right: 0.7mm solid #1a1a1a; }
 
-  .party-band  { background: #f1f2f4; font-weight: 700; font-size: 8pt;
+  /* 폭은 칸에도 적는다. colgroup 만으로는 dompdf 가 auto 배치에서 이름표 칸을
+     찌그러뜨린다 — 값 칸의 글이 길면 그쪽으로 폭을 몰아주기 때문이다. 실제로
+     「성 명」이 값 칸을 덮어 「성명최연아」로 겹쳐 나왔다. */
+  .party-band  { width: 3.7634%; background: #f1f2f4; font-weight: 700; font-size: 8pt;
                  text-align: center; padding: 0; line-height: 1.18; }
-  .party-label { background: #f1f2f4; font-weight: 700; text-align: center;
-                 padding-left: 0; padding-right: 0; }
-  /* 원본은 낱자를 15mm 폭에 고루 편다(flex space-between). dompdf 는 flex 를
-     모르므로 낱자마다 칸 하나인 표로 같은 모양을 만든다. */
-  .lbl       { width: 15mm; margin: 0 auto; }
-  .lbl td    { border: 0; padding: 0; text-align: center; font-size: 9pt;
-               font-weight: 700; line-height: 1.35; }
+  .party-label { width: 11.8280%; background: #f1f2f4; font-weight: 700; text-align: center;
+                 padding-left: 0; padding-right: 0; white-space: nowrap; }
+
+  /* 원본은 낱자를 15mm 폭에 고루 편다(flex space-between). dompdf 는 flex 를 모른다.
+     여태 낱자마다 칸 하나인 표를 넣어 흉내 냈는데, **그 표의 폭(15mm)을 dompdf 가
+     지키지 않아** 이름표 칸이 글자보다 좁게 줄어들 수 있었다.
+
+     이제 낱자 사이에 빈칸을 넣고 줄을 접지 않게 한다(white-space:nowrap). 그러면
+     칸이 글자보다 좁아질 수 없어 겹칠 일이 없다. 빈칸 수는 글자 수에 맞춰
+     두 글자는 넷, 세 글자는 둘, 네 글자는 하나다 — 원본의 양끝정렬과 같은 폭이 된다. */
+  .lbl { font-size: 9pt; font-weight: 700; line-height: 1.35; }
   .party-value { text-align: left; }
 
   /* 사용인감 — 상호ㆍ주소 칸 위에 겹쳐 찍는다.
@@ -198,27 +205,27 @@
         <tbody>
           <tr>
             <td class="party-band ol ot ob" rowspan="4">공<br>급<br>받<br>는<br>자</td>
-            <td class="party-label ot"><table class="lbl"><tr><td>성</td><td>명</td></tr></table></td>
+            <td class="party-label ot"><span class="lbl">성&nbsp;&nbsp;&nbsp;&nbsp;명</span></td>
             <td class="party-value or ot">{{ $recipient['name'] }}</td>
             <td class="gap" rowspan="4"></td>
             <td class="party-band ol ot ob" rowspan="4">공<br>급<br>자</td>
-            <td class="party-label ot"><table class="lbl"><tr><td>등</td><td>록</td><td>번</td><td>호</td></tr></table></td>
+            <td class="party-label ot"><span class="lbl">등&nbsp;록&nbsp;번&nbsp;호</span></td>
             <td class="party-value or ot">{{ $supplier['regNo'] }}</td>
           </tr>
           <tr>
-            <td class="party-label" rowspan="2"><table class="lbl"><tr><td>주</td><td>소</td></tr></table></td>
+            <td class="party-label" rowspan="2"><span class="lbl">주&nbsp;&nbsp;&nbsp;&nbsp;소</span></td>
             <td class="party-value or" rowspan="2">{{ $recipient['address'] }}</td>
-            <td class="party-label"><table class="lbl"><tr><td>상</td><td>호</td></tr></table></td>
+            <td class="party-label"><span class="lbl">상&nbsp;&nbsp;&nbsp;&nbsp;호</span></td>
             <td class="party-value or">{{ $supplier['company'] }}</td>
           </tr>
           <tr>
-            <td class="party-label"><table class="lbl"><tr><td>주</td><td>소</td></tr></table></td>
+            <td class="party-label"><span class="lbl">주&nbsp;&nbsp;&nbsp;&nbsp;소</span></td>
             <td class="party-value or">{{ $supplier['address'] }}</td>
           </tr>
           <tr>
-            <td class="party-label ob"><table class="lbl"><tr><td>연</td><td>락</td><td>처</td></tr></table></td>
+            <td class="party-label ob"><span class="lbl">연&nbsp;&nbsp;락&nbsp;&nbsp;처</span></td>
             <td class="party-value or ob">{{ $recipient['phone'] }}</td>
-            <td class="party-label ob"><table class="lbl"><tr><td>연</td><td>락</td><td>처</td></tr></table></td>
+            <td class="party-label ob"><span class="lbl">연&nbsp;&nbsp;락&nbsp;&nbsp;처</span></td>
             <td class="party-value or ob">{{ $supplier['phone'] }}</td>
           </tr>
         </tbody>
