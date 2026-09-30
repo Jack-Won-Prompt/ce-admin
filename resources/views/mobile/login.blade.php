@@ -93,16 +93,6 @@
     .toast.on { transform:translate(-50%, 0); }
 
     .foot { text-align:center; font-size:11.5px; color:rgba(255,255,255,.45); padding-top:20px; }
-
-    /* 신규 신설 자리 — 계정이 없는 사람이 들어오는 길 (2026-10-01 지시) */
-    .newbox { margin-top:22px; padding-top:20px; border-top:1px solid rgba(255,255,255,.18);
-              text-align:center; }
-    .newbox p { margin:0 0 11px; font-size:13px; color:rgba(255,255,255,.66); }
-    .newbox a { display:flex; align-items:center; justify-content:center; gap:8px;
-                width:100%; padding:14px; border-radius:13px; text-decoration:none;
-                border:1px solid rgba(255,255,255,.34); background:rgba(255,255,255,.12);
-                color:#fff; font-size:15px; font-weight:700; }
-    .newbox a:active { background:rgba(255,255,255,.2); }
   </style>
 </head>
 <body>
@@ -172,15 +162,6 @@
         </button>
       </form>
     </div>
-  </div>
-
-  {{-- 신규 신설 — 아직 계정이 없는 신청자가 들어오는 길 (2026-10-01 지시).
-       로그인 길과 섞이지 않게 선을 그어 아래에 따로 둔다. --}}
-  <div class="newbox">
-    <p>처음 이용하십니까?</p>
-    <a href="{{ route('m.register') }}">
-      <i class="bx bx-user-plus" style="font-size:19px;"></i> 신규 신청
-    </a>
   </div>
 
   <div class="foot">모바일 웹 · 문의 1588-7866</div>

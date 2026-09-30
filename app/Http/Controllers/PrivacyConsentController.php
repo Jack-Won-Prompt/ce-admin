@@ -67,8 +67,6 @@ class PrivacyConsentController extends Controller
             'birth.required'         => '생년월일을 입력해 주십시오.',
         ]);
 
-        $모바일 = $request->input('from') === 'm';
-
         $consent = PrivacyConsent::create(array_merge(
             $request->only([
                 'name', 'phone', 'phone2', 'email', 'zip', 'addr1', 'addr2',
@@ -80,10 +78,6 @@ class PrivacyConsentController extends Controller
             ]),
             [
                 'type'         => $type,
-                /* 어디서 들어온 것인지 적는다 (2026-10-01). 여태 비워 두었고 화면이
-                   빈 값을 「모바일 동의」로 읽어 주었다 — 서면ㆍ유선으로 받은 건이
-                   섞이면 그 추정이 틀린다. 모바일 신규 신설은 스스로 밝힌다. */
-                'source'       => $모바일 ? 'mobile' : null,
                 'extra'        => $request->except(['_token']),
                 'ip'           => $request->ip(),
                 'user_agent'   => substr((string) $request->userAgent(), 0, 300),
@@ -91,11 +85,7 @@ class PrivacyConsentController extends Controller
             ]
         ));
 
-        /* 모바일 신규 신설에서 왔으면 완료 화면도 모바일 것으로 돌려보낸다 —
-           /m/login 이 쓰는 표와 같은 이름이다(AuthController::모바일인가). */
-        return $모바일
-            ? redirect()->route('m.register.done')
-            : redirect()->route('privacy.done', ['type' => $type]);
+        return redirect()->route('privacy.done', ['type' => $type]);
     }
 
     /** 제출 완료 */
