@@ -111,7 +111,13 @@
   </div>
   <div class="m-field">
     <label class="m-label" for="nwRn">주민등록번호</label>
-    <input class="m-input" id="nwRn" placeholder="XXXXXX-XXXXXXX" inputmode="numeric" maxlength="14">
+    {{-- 치는 동안 붙임표를 넣어 준다 — 앱의 _ResidentNoFormatter 와 같은 잣대다
+         (2026-10-01 지시). 여태 처리기가 없어 940407… 이 그대로 남았다.
+         maxlength 는 14 다 — 숫자 13 에 붙임표 하나. --}}
+    <input class="m-input" id="nwRn" placeholder="XXXXXX-XXXXXXX" inputmode="numeric"
+           maxlength="14" autocomplete="off" oninput="nwRnFormat(this)">
+    {{-- 앱은 보내기 전에 칸 아래에 알린다 — 알림으로 띄우면 칸을 보고 있는 사람이 놓친다 --}}
+    <div class="m-err" id="nwRnErr"></div>
   </div>
   <div style="display:flex; gap:8px;">
     <button class="m-btn ghost" onclick="mSheetClose()">취소</button>
@@ -120,6 +126,8 @@
 </div>
 
 <style>
+  /* 칸 아래 오류말 — 앱의 InputDecoration errorText 자리다 */
+  .m-err { display:none; margin-top:6px; font-size:12.5px; color:var(--m-danger); line-height:1.5; }
   .up-h { font-size:13px; font-weight:700; color:#546E7A; margin-bottom:8px; }
   .up-row { display:flex; align-items:center; gap:10px; padding:11px 0; border-top:1px solid var(--m-line); }
   .up-row:first-child { border-top:0; }
@@ -243,7 +251,26 @@
   function upNewOpen() {
     document.getElementById('nwName').value = document.getElementById('upName').value.trim();
     document.getElementById('nwRn').value = '';
+    nwRnErr('');
     mSheetOpen('upNew');
+  }
+
+  /** 치는 동안 붙임표를 넣는다 — 앱의 _ResidentNoFormatter 와 같다.
+   *  숫자만 남기고 13자리에서 끊고, 여섯 자리를 넘으면 붙임표를 넣는다.
+   *  글쇠 자리는 끝으로 보낸다 — 앱도 그렇게 하고, 그러지 않으면 붙임표가
+   *  끼어드는 순간 글쇠가 앞으로 튀어 다음 숫자가 가운데 박힌다. */
+  function nwRnFormat(칸) {
+    const 숫자 = 칸.value.replace(/\D/g, '').slice(0, 13);
+    칸.value = 숫자.length > 6 ? 숫자.slice(0, 6) + '-' + 숫자.slice(6) : 숫자;
+    칸.setSelectionRange(칸.value.length, 칸.value.length);
+    if (숫자.length === 13) nwRnErr('');
+  }
+
+  /** 오류말을 칸 아래에 적는다 — 비우면 자리도 사라진다 */
+  function nwRnErr(글) {
+    const 자리 = document.getElementById('nwRnErr');
+    자리.textContent = 글 || '';
+    자리.style.display = 글 ? 'block' : 'none';
   }
 
   async function upNewSave() {
@@ -251,12 +278,18 @@
     const 주민 = document.getElementById('nwRn').value.replace(/\D/g, '');
     if (!이름) { mTell('이름을 입력해 주십시오.'); return; }
 
+    /* 앱과 같은 잣대로 보내기 전에 본다 (prescription_upload_screen 295~305행).
+       서버도 같은 규칙으로 막지만, 그때는 알림으로만 보여 칸을 보던 사람이 놓친다. */
+    if (!주민)            { nwRnErr('주민등록번호를 입력해 주십시오.'); return; }
+    if (주민.length !== 13) { nwRnErr('주민등록번호 13자리를 모두 입력해 주십시오.'); return; }
+    nwRnErr('');
+
     const 단추 = document.getElementById('nwBtn');
     단추.disabled = true;
     try {
       const d = await mApi('/patients', {
         method: 'POST',
-        body: 주민 ? { name: 이름, resident_no: 주민 } : { name: 이름 },
+        body: { name: 이름, resident_no: 주민 },
       });
       const p = d.patient || {};
       mSheetClose();
