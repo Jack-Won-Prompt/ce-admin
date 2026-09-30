@@ -356,8 +356,19 @@ class OrderGridExtras
             'rx_office'      => $p?->billingOffice?->office_name ?? '',
             'rx_pay_date'    => $d($p?->pay_date),
             'rx_buy_date'    => $d($p?->buy_date),
-            'rx_agree_start' => $d($pt?->nhis_agree_start),
-            'rx_agree_end'   => $d($pt?->nhis_agree_end),
+            /* 사용 시작일ㆍ급여 종료일 — **처방전의 값**이다 (2026-09-30 지시).
+
+               여태 환자의 건보위임동의 기간(nhis_agree_start·nhis_agree_end)을
+               읽었다. 이름이 비슷해 헷갈리기 쉬운데 둘은 아주 다른 것이다 —
+
+                 건보위임동의  시작일 + 5년 − 1일. 거래처(사람)에 붙는다.
+                 급여 기간      사용 개시일 + 총 처방일수 − 1. 처방전에 붙는다.
+
+               그래서 목록의 「급여 종료일」에 **5년 뒤 날짜**가 서 있었다
+               (박경진 2031-09-29). 주문 등록 화면이 보여 주는 값ㆍ서버가 세는 값
+               (App\Support\BenefitDates)과도 어긋났다. */
+            'rx_agree_start' => $d($p?->use_start_date),
+            'rx_agree_end'   => $d($p?->benefit_end_date),
             'rx_created'     => $p?->created_at?->format('Y-m-d') ?? '',
             'rx_next_repur'  => $d($p?->next_repurchase ?: $p?->repurchase_date),
             'rx_local_gov'   => $p?->local_gov ?? '',

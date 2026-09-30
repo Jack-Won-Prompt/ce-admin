@@ -224,7 +224,12 @@ class NhisController extends Controller
                (「원주문-정정」). 물러난 두 줄이 쓸 바탕말만 여기서 쥔다. */
             $바탕구분 = $o->orderKindLabel();
 
-            $폄 = [$줄];
+            /* 차례는 **원 주문 → 취소 → 지금 값** 이다 (2026-09-30 지시).
+
+               여태 지금 값 줄을 먼저 세웠다(청구 전 → 원주문 → 취소). 그러면 돈이
+               어떻게 움직였는지가 거꾸로 읽힌다 — 먼저 얼마였고, 그것을 물렀고,
+               그래서 지금 얼마인가가 위에서 아래로 흘러야 한다. */
+            $폄 = [];
 
             /* 물러난 줄에는 **id 를 싣지 않는다.** 겹쳐 누르면 이미 지난 금액으로
                청구가 나간다 — 화면의 두 번 누르기(dblclick)도 `row.id` 가 없으면
@@ -251,6 +256,13 @@ class NhisController extends Controller
                     'result'        => '-',
                     'tax_no'        => (string) ($a->tax_invoice_no ?? ''),
                     'cash_no'       => (string) ($a->cash_receipt_no ?? ''),
+                    /* 증빙 칸도 **그때의 것**이다 (2026-09-30 지시).
+
+                       정정으로 물러난 계산서는 이 줄의 것이다. 지금 줄에 「취소됨」이
+                       서면 아직 내지도 않은 새 계산서가 취소된 것처럼 읽힌다 —
+                       아래에서 지금 줄을 「미발행」으로 되돌린다. */
+                    'tax_invoice'   => $a->tax_invoice_no ? '취소됨' : '',
+                    'cash_receipt'  => $a->cash_receipt_no ? '취소됨' : '',
                     'ww_so_no'      => $a->withworks_so_no ?? '',
                 ];
 
@@ -265,7 +277,15 @@ class NhisController extends Controller
                    한쪽만 맞춰 두면 다음에 또 갈린다. */
                 /* 「원/추가」 칸도 줄마다 갈라 적는다 (2026-09-27 확인요청 5쪽).
                    바탕말은 지금 주문의 것을 쓴다 — 추가 주문이면 「추가주문-취소」다. */
+                /* 「주문상태」도 줄마다 갈라 적는다 (2026-09-30 지시).
+
+                   물러난 두 줄은 지금 줄의 값을 그대로 물려받아 셋 다 「주문 확정」으로
+                   섰다. 그 칸만 보면 무엇이 정정이고 무엇이 취소인지 알 수 없다.
+
+                     원 주문 줄  주문 정정 — 이 내용이 정정으로 물러났다
+                     취소 줄     주문 취소 — 그 금액을 무른 줄이다 */
                 $폄[] = ['nhis_status'   => \App\Support\OrderAmendLines::원주문말($a),
+                         'status'        => '주문 정정',
                          'order_kind'    => \App\Support\OrderAmendLines::원줄말($바탕구분),
                          'nhis_amount'   => (int) $a->nhis_amount,
                          'copay'         => (int) $a->patient_copay,
@@ -274,6 +294,7 @@ class NhisController extends Controller
                       + $물러난값 + $줄;
 
                 $폄[] = ['nhis_status'   => \App\Support\OrderAmendLines::취소말($a),
+                         'status'        => '주문 취소',
                          'order_kind'    => \App\Support\OrderAmendLines::취소줄말($바탕구분),
                          'nhis_amount'   => -(int) $a->nhis_amount,
                          'copay'         => -(int) $a->patient_copay,
@@ -281,6 +302,22 @@ class NhisController extends Controller
                          'total_amount'  => -((int) $a->patient_copay + (int) $a->nhis_amount)]
                       + $물러난값 + $줄;
             }
+
+            /* 지금 값 줄은 맨 아래다 — 물러난 줄들을 지나 온 결과이기 때문이다.
+
+               정정을 거쳤는데 지금 계산서가 「취소됨」이면, 그 취소된 것은 **물러난
+               줄의 계산서**다. 이 줄이 낼 새 계산서는 아직 나가지 않았다 — 「미발행」이
+               맞다. 그대로 두면 청구 전 건이 취소된 것처럼 읽힌다 (2026-09-30 지시). */
+            if ($정정->has($o->id)) {
+                if (($줄['tax_invoice'] ?? '') === '취소됨') {
+                    $줄['tax_invoice'] = '미발행';
+                }
+                if (($줄['cash_receipt'] ?? '') === '취소됨') {
+                    $줄['cash_receipt'] = '미발행';
+                }
+            }
+
+            $폄[] = $줄;
 
             return $폄;
         })->values();
