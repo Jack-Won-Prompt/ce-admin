@@ -276,7 +276,7 @@
      올린 것을 한자리에서 내리읽고, 다 보았으면 그 자리에서 검수를 마친다.
      여태 검수하려면 주문 등록 화면을 열어 뷰어에서 한 장씩 넘겨야 했다.
 
-     아래 단추 줄은 창에 붙여 둔다 — 그림이 스무 장이어도 「검수 확인」이 늘
+     아래 단추 줄은 창에 붙여 둔다 — 그림이 스무 장이어도 「주문등록 이동」이 늘
      같은 자리에 있어야 한다. --}}
 <div id="rvBackdrop" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1190;"
      onclick="rvClose()"></div>
@@ -299,7 +299,7 @@
               padding:11px 14px;display:flex;align-items:center;gap:8px;">
     <span id="rvNote" style="font-size:12px;color:var(--text-muted);flex:1;"></span>
     <button type="button" class="ds-btn" onclick="rvClose()">닫기</button>
-    <button type="button" class="ds-btn ds-btn-primary" id="rvApprove" onclick="rvApprove(this)">검수 확인</button>
+    <button type="button" class="ds-btn ds-btn-primary" id="rvApprove" onclick="rvApprove(this)">주문등록 이동</button>
   </div>
 </div>
 
@@ -517,10 +517,13 @@ window.HELP_TOUR_STEPS = [
 
       const 단추 = document.getElementById('rvApprove');
       단추.disabled    = _rv.마쳤나;
-      단추.textContent = _rv.마쳤나 ? '검수 완료' : '검수 확인';
+      /* 창 아래 단추는 「주문등록 이동」이다 (2026-09-30 지시) — 누르면 그 건이
+         주문 등록의 주문 목록에 표시된다. 열 이름(파일 검수)은 **여는 자리**의
+         이름이고, 이 단추는 **마치는 자리**의 이름이다. */
+      단추.textContent = _rv.마쳤나 ? '이동 완료' : '주문등록 이동';
       document.getElementById('rvNote').textContent = _rv.마쳤나
         ? '이미 검수를 마쳐 주문 등록으로 이동한 처방전입니다.'
-        : '서류를 모두 확인하셨으면 [검수 확인]을 누르십시오. 주문 등록의 주문 목록에 표시됩니다.';
+        : '서류를 모두 확인하셨으면 [주문등록 이동]을 누르십시오. 주문 등록의 주문 목록에 표시됩니다.';
 
       _rv.사유 = d.reasons ?? {};
 
