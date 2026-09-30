@@ -14224,6 +14224,21 @@ window.HELP_TOUR_STEPS = [
 
       const hits = ALL_DOCS.filter(d => d.id > 0 && d.type === req.type);
       hits.forEach(h => { used.add(h.id); rows.push({ label: req.label, att: h, state: 'ok' }); });
+
+      /* 신분증 링크로 받아 둔 것도 「있다」로 세운다 (2026-09-30 지시).
+
+         그 사진은 첨부가 아니라 동의 기록에 담겨 첨부번호가 없다(ALL_DOCS 에서
+         id 가 음수다). 그래서 위의 hits 에 걸리지 않아, 받아 두었는데도 「등록 안 됨」
+         으로 서서 팩스를 보낼 수 없었다 — 법정대리인 신분증과 같은 길로 싣는다. */
+      if (!hits.length && req.type === 'id_card') {
+        const 링크로받은것 = ALL_DOCS.find(d => d.id < 0 && d.doc === 'patient_id');
+        if (링크로받은것) {
+          rows.push({ label: req.label, att: null, state: 'doc', doc: 'patient_id' });
+
+          return;
+        }
+      }
+
       if (!hits.length && toNhis) {
         /* 요양비위임장은 서명하면 시스템이 만들어 「생성 서류」에 담긴다. 이제 팩스가
            그쪽에서도 집어 보내므로 「보낼 수 있다」로 센다 — 예전에는 첨부가 아니라
@@ -14266,8 +14281,15 @@ window.HELP_TOUR_STEPS = [
         </div>`;
     }
 
-    /* 첨부가 아닌 서류 — 고르면 documents 로 나간다(법정대리인 신분증) */
+    /* 첨부가 아닌 서류 — 고르면 documents 로 나간다(법정대리인 신분증ㆍ신분증 링크) */
     if (r.state === 'doc') {
+      /* 어디서 받아 둔 것인지 적는다 — 담당자가 이 줄만 보고 「첨부에 없는데 왜 나가나」
+         를 묻지 않게 한다. 신분증 링크로 받은 것과 개인정보동의에 딸린 것이 다르다. */
+      const 온곳  = r.doc === 'patient_id' ? '신분증 링크' : '동의 첨부';
+      const 설명 = r.doc === 'patient_id'
+        ? '신분증 링크로 받아 둔 파일이 그대로 나갑니다'
+        : '개인정보동의에 받아 둔 파일이 그대로 나갑니다';
+
       return `
         <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);
                       border-radius:var(--radius);cursor:pointer;font-size:12px;margin-bottom:3px;">
@@ -14275,9 +14297,9 @@ window.HELP_TOUR_STEPS = [
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:6px;">
               <span style="font-weight:500;">${esc(r.label)}</span>
-              <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:6px;padding:1px 5px;">동의 첨부</span>
+              <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:6px;padding:1px 5px;">${esc(온곳)}</span>
             </div>
-            <div style="font-size:10px;color:var(--text-muted);">개인정보동의에 받아 둔 파일이 그대로 나갑니다</div>
+            <div style="font-size:10px;color:var(--text-muted);">${esc(설명)}</div>
           </div>
           <i class="fa-regular fa-id-card" style="color:var(--text-muted);font-size:18px;flex-shrink:0;"></i>
         </label>`;

@@ -2961,8 +2961,14 @@ class PrescriptionController extends Controller
             $signDocs[] = [
                 'id'        => -3,
                 'url'       => route('files.consent-patient-id', $idCard),
-                'type'      => 'patient_id',
-                'typeLabel' => '본인 신분증',
+                /* 갈래는 등록된 서류 유형(`id_card` 「신분증」)과 같게 둔다.
+                   팩스 창이 이 갈래로 「신분증이 있는가」를 가리므로, 다른 이름을
+                   쓰면 받아 두었는데도 「등록 안 됨」으로 서서 보낼 수 없다.
+                   링크로 받은 것임은 `doc` 로 가린다 — 첨부가 아니라서 첨부번호로
+                   실을 수 없고 `documents[]=patient_id` 로 실어야 한다. */
+                'type'      => 'id_card',
+                'typeLabel' => '신분증',
+                'doc'       => 'patient_id',
                 'name'      => '신분증 ' . ($idCard->patient_name ?? ''),
                 'isPdf'     => false,
                 'isRx'      => false,
@@ -5130,7 +5136,10 @@ class PrescriptionController extends Controller
             /* 미성년자 건에만 함께 나간다. 첨부가 아니라 개인정보동의에 딸린 파일이라
                attachment_ids 로는 고를 수 없다 — 여기서 이름을 붙인다. */
             'guardian_id'      => '법정대리인 신분증',
-            'patient_id'       => '본인 신분증',
+            /* 「신분증」이라고 적는다. 서류 유형에 있는 이름이 그것이고, 공단이 찾는
+               것도 그것이다 — 「본인 신분증」은 어디에도 없는 이름이라 담당자가
+               팩스 창에서 「신분증 없음」으로 읽었다 (2026-09-30 지시). */
+            'patient_id'       => '신분증',
         ];
         /* 심평원은 우리 팩스를 받지 않는다. 고를 수 있게 두면 잘못 보낸다.
 
