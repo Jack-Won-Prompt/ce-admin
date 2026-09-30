@@ -9853,10 +9853,13 @@ window.HELP_TOUR_STEPS = [
      서버도 같은 셈을 한다(App\Support\BenefitDates) — 화면은 미리 보여 줄 뿐이고
      정본은 저장할 때 선다. */
   window.calcBenefitEnd = function () {
-    const base = document.getElementById('f-buy-date')?.value
-              || document.getElementById('f-pay-date')?.value;
+    /* 관문은 **사용 개시일과 총 처방일수** 둘이다.
+
+       예전에는 구입일(또는 결제일)이 없으면 여기서 돌아섰다. 그때는 구입일이
+       기준이었기 때문인데, 기준이 사용 개시일로 바뀐 뒤로는 그 관문이 남아
+       개시일을 적어도 아무것도 서지 않았다. 기준이 아닌 값으로 막지 않는다. */
     const days = parseInt(document.getElementById('f-days')?.value ?? '', 10);
-    if (!base || !Number.isFinite(days) || days < 1) return;
+    if (!Number.isFinite(days) || days < 1) return;
 
     const fmt = x => `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
 
