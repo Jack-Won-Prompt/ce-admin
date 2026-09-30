@@ -4335,6 +4335,11 @@ class PrescriptionController extends Controller
             /* 처방전등록안내_환자용 — 「재구매 가능일 #{날짜} 이전에 연락드리겠습니다」 */
             '026090002148' => ['#{날짜}' => self::날짜글($prescription->repurchase_date
                                               ?: $prescription->next_repurchase)],
+
+            /* 재등록 신청 안내 — 「재등록 기한: #{날짜}」.
+               최초 등록신청서 팩스 전송일 + 2년이다 (2026-09-30 지시).
+               보낸 적이 없으면 비어 있고, 그러면 아래 잣대가 막는다. */
+            '026090001920' => ['#{날짜}' => self::날짜글($prescription->재등록기한())],
         ];
 
         $params += array_filter($템플릿별[$atsCode] ?? [],

@@ -246,6 +246,50 @@ class Prescription extends Model
         return 'rx_number';
     }
 
+    /**
+     * 건강보험공단 재등록 기한 — **최초 등록신청서 팩스 전송일로부터 2년**
+     * (2026-09-30 지시).
+     *
+     * 공단은 환자 등록일로부터 2년이 지나기 전에 재등록 신청을 받는다. 그 「등록일」이
+     * 우리에게는 등록신청서를 공단에 팩스로 처음 보낸 날이다.
+     *
+     * ## 처방전이 아니라 사람으로 센다
+     *
+     * 한 사람이 처방전을 여러 장 낸다. 등록은 사람 단위로 한 번이므로, 같은 환자의
+     * 처방전 전부를 훑어 **가장 이른** 전송을 찾는다. 이 처방전만 보면 두 번째
+     * 처방전부터는 기한이 뒤로 밀려 잘못된 날이 나온다.
+     *
+     * ## 전송완료만 센다
+     *
+     * 접수만 되고 실패한 팩스는 공단에 닿지 않았다. `popbill_state` 가 2(전송완료)인
+     * 것만 본다.
+     *
+     * 보낸 적이 없으면 null 이다 — **짐작해 지어내지 않는다.** 그 자리를 채울 근거가
+     * 우리에게 없다(이관해 온 환자는 최초 등록이 위드웍스에서 일어났는데, 저쪽에서
+     * 그 날짜를 담은 칸을 확정하지 못했다).
+     */
+    public function 재등록기한(): ?\Carbon\Carbon
+    {
+        $처방전들 = $this->patient_id
+            ? static::where('patient_id', $this->patient_id)->pluck('id')
+            : collect([$this->id]);
+
+        $후보 = FaxHistory::whereIn('prescription_id', $처방전들)
+            ->where('popbill_state', FaxHistory::STATE_OK)
+            ->where('documents', 'like', '%registration_form%')
+            ->orderBy('created_at')
+            ->get(['created_at', 'documents']);
+
+        /* LIKE 는 거르기만 한 것이다 — 담긴 목록을 실제로 펴서 확인한다 */
+        foreach ($후보 as $줄) {
+            if (in_array('registration_form', (array) $줄->documents, true)) {
+                return \Carbon\Carbon::parse($줄->created_at)->addYears(2);
+            }
+        }
+
+        return null;
+    }
+
     // ── 관계 ─────────────────────────────────────────────
     public function patient(): BelongsTo
     {
