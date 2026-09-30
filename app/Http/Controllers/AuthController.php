@@ -53,13 +53,31 @@ class AuthController extends Controller
         return $request->session()->get('login_from') === 'm';
     }
 
-    /** 로그인이 끝나면 어디로 — 모바일에서 왔으면 모바일로 */
-    private function 끝난뒤(Request $request): string
+    /**
+     * 로그인이 끝나면 어디로 — 모바일에서 왔으면 모바일로.
+     *
+     * **가려던 곳(url.intended)까지 여기서 가린다 (2026-09-30 지시).**
+     * 여태 부르는 쪽이 `redirect()->intended($this->끝난뒤())` 였다. intended 는
+     * 세션에 남은 주소를 먼저 쓰므로, 관리자 화면을 열려다 튕긴 자취가 남아 있으면
+     * 폰으로 들어온 사람이 그 자취에 밀려 **관리자 대시보드에 떨어졌다** — 모바일
+     * 로그인으로 들어와도 웹 화면이 나오는 것이 그것이다(2026-09-30 확인).
+     *
+     * 모바일에서 왔으면 가려던 곳이 /m 아래일 때만 그쪽으로 가고, 아니면 버린다.
+     */
+    private function 끝난뒤(Request $request): RedirectResponse
     {
         $모바일 = $this->모바일인가($request);
         $request->session()->forget('login_from');
 
-        return $모바일 ? route('m.home') : route('workspace');
+        if (! $모바일) {
+            return redirect()->intended(route('workspace'));
+        }
+
+        $가려던곳 = (string) $request->session()->pull('url.intended', '');
+
+        return redirect()->to(
+            str_starts_with($가려던곳, url('/m')) ? $가려던곳 : route('m.home')
+        );
     }
 
     /**
@@ -109,7 +127,7 @@ class AuthController extends Controller
             Auth::loginUsingId($user->id, $request->boolean('remember'));
             $request->session()->regenerate();
             $this->dispatchCrawlIfNeeded();
-            return redirect()->intended($this->끝난뒤($request));
+            return $this->끝난뒤($request);
         }
 
         if (empty($user->phone)) {
@@ -213,7 +231,7 @@ class AuthController extends Controller
 
         $this->dispatchCrawlIfNeeded();
 
-        return redirect()->intended($this->끝난뒤($request));
+        return $this->끝난뒤($request);
     }
 
     /**

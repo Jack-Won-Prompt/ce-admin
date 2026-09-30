@@ -227,11 +227,20 @@ class EntraController extends Controller
         $this->남긴다($user, 'sso_login', $email);
 
         /* 모바일 웹에서 시작했으면 모바일 화면으로 돌려보낸다 (2026-09-30 지시).
-           가려던 자리가 있으면 그쪽이 먼저다 — /m/prescriptions/RX-… 를 열다가
-           세션이 끊긴 사람은 로그인을 마치고 그 건으로 되돌아가야 한다. */
+           가려던 자리가 **모바일 화면일 때만** 그쪽으로 간다 — 관리자 화면을
+           열려다 튕긴 자취가 세션에 남아 있으면 intended 가 그것을 먼저 써,
+           폰으로 들어온 사람이 관리자 대시보드에 떨어진다(2026-09-30 확인). */
         $모바일 = $request->session()->pull('login_from') === 'm';
 
-        return redirect()->intended($모바일 ? route('m.home') : route('dashboard'));
+        if (! $모바일) {
+            return redirect()->intended(route('dashboard'));
+        }
+
+        $가려던곳 = (string) $request->session()->pull('url.intended', '');
+
+        return redirect()->to(
+            str_starts_with($가려던곳, url('/m')) ? $가려던곳 : route('m.home')
+        );
     }
 
     /**
