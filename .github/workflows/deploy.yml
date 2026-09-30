@@ -42,6 +42,26 @@ jobs:
             echo "===== STORAGE PERMISSION ====="
             sudo chown -R www-data:www-data storage bootstrap/cache
 
+            # 올린 파일을 웹에서 열 수 있게 잇는다 (2026-09-30 실전 시험에서 드러남).
+            #
+            # 팩스 합본 PDF 는 storage/app/public 에 저장하고 /storage/... 주소로
+            # 내려받는다. 그 연결이 운영에 없어서 「PDF 다운로드 (전송 서류 통합본)」이
+            # 404 였다 — 공단에 무엇이 나갔는지 확인할 길이 없었다.
+            #
+            # artisan storage:link 를 쓰지 않는다. www-data 로 돌면 public 에 쓸
+            # 권한이 없어 symlink() 가 죽고, set -e 때문에 배포가 그 자리에서 멈춘다.
+            # root 로 돌리면 이번엔 로그·캐시 파일이 root 것으로 생겨 뒤가 막힌다.
+            echo "===== STORAGE LINK ====="
+            if [ -L public/storage ]; then
+              echo "public/storage 이미 있음 -> $(readlink public/storage)"
+            elif [ -e public/storage ]; then
+              echo "!! public/storage 가 링크가 아니다 — 사람이 확인해야 한다" >&2
+            else
+              sudo ln -sfn /opt/ce-admin/storage/app/public public/storage
+              sudo chown -h www-data:www-data public/storage
+              echo "public/storage 를 새로 만들었다"
+            fi
+
             echo "===== PHP-FPM RESTART ====="
             sudo systemctl reload php8.3-fpm
 
