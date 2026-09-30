@@ -4842,24 +4842,40 @@ class PrescriptionController extends Controller
             '#{고객명}' => $patientName, '#{유효분}' => $유효분, '#{링크}' => $url,
         ], "[콜로플라스트] {$patientName}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크({$유효분}분 유효):\n{$url}");
 
-        try {
-            /* 발송 내역을 쌓는 길로 보낸다. 팝빌을 곧바로 부르면 문자는 나가지만
-               「발송ㆍ내역」에는 아무것도 남지 않아, 나갔는지 담당자가 알 길이 없었다. */
-            $res = $this->sender->sendBulk('sms',
-                [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]],
-                $message, 'consent_sign',
-                ['source' => 'consent', 'prescription_id' => $prescription->id]);
+        /* 알림톡을 먼저, 막히면 문자로 잇는다 (2026-09-30 지시).
 
-            if (! ($res['success'] ?? false)) {
-                throw new \RuntimeException($res['message'] ?? '문자를 보내지 못했습니다.');
+           **코드를 둘 다 본다.** 같은 「전자서명 요청」인데 보내는 자리가 둘이다 —
+           이 화면(consent_sign)과 위임장 서명 명단 화면(delegation_sign)이다.
+           승인받은 알림톡 문구는 하나뿐이므로(`026090001915`), 두 코드 가운데
+           어느 것으로 담겨 있든 찾도록 함께 넘긴다. 문구를 두 벌로 만들면 한쪽만
+           재승인되는 날이 온다.
+
+           발송 내역을 쌓는 길로 보낸다. 팝빌을 곧바로 부르면 문자는 나가지만
+           「발송ㆍ내역」에는 아무것도 남지 않아, 나갔는지 담당자가 알 길이 없었다. */
+        $받을이 = [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]];
+
+        try {
+            ['보낸채널' => $나간것, '못보낸말' => $탈들] =
+                \App\Models\MessageTemplate::채널마다(['consent_sign', 'delegation_sign'],
+                    fn (string $채널, ?string $틀코드) => $this->sender->sendBulk(
+                        $채널, $받을이, $message, $틀코드 ?: 'consent_sign',
+                        ['source' => 'consent', 'prescription_id' => $prescription->id],
+                        ['#{링크}' => $url, '#{유효분}' => (string) $유효분]),
+                    문자는틀없이도: true);
+
+            if ($나간것 === []) {
+                throw new \RuntimeException(implode(' / ', $탈들) ?: '보내지 못했습니다.');
             }
 
+            $무엇 = implode('ㆍ', array_map(
+                [\App\Models\MessageTemplate::class, '채널이름'], $나간것));
+
             activity()->causedBy(auth()->user())->performedOn($prescription)
-                ->log("위임동의 SMS 발송 → {$patientName} {$mobile}");
+                ->log("위임동의 {$무엇} 발송 → {$patientName} {$mobile}");
 
             return response()->json([
                 'success'    => true,
-                'message'    => 'SMS가 발송되었습니다.',
+                'message'    => "{$무엇}가 발송되었습니다.",
                 'expires_at' => $expiresAt->format('H:i'),
                 'consent_id' => $consent->id,
             ]);
