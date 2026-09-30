@@ -269,7 +269,10 @@ class TaxinvoiceController extends Controller
                 }
 
                 return array_merge($줄, [
-                    'total_amount'   => (int) $옛->patient_copay,
+                    /* 「받을 금액」 칸은 다섯 화면에서 **본인＋기관**(주문 총액)을
+                       담는다(OrderGridExtras::of). 그때 값도 같은 잣대로 센다 —
+                       이 줄만 다른 셈을 쓰면 화면끼리 말이 갈린다. */
+                    'total_amount'   => (int) $옛->patient_copay + (int) $옛->nhis_amount,
                     'copay'          => (int) $옛->patient_copay,
                     'patient_copay'  => (int) $옛->patient_copay,
                     'nhis_amount'    => (int) $옛->nhis_amount,
