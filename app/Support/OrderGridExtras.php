@@ -337,9 +337,16 @@ class OrderGridExtras
             'rx_memo'        => $p?->review_memo ?? '',
             'rx_req_memo'    => (\Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')
                                     ? ($p?->review_request_memo ?? '') : ''),
+            /* 유형은 **처방전ㆍ처방외 둘뿐**이다 (2026-09-30 지시).
+
+               원천 자료에는 10 처방전-원외 · 30 처방전-원내로 갈려 있지만, 그 갈래는
+               **어디서 처방했는가**일 뿐 우리 업무에서 다르게 다루는 것이 아니다.
+               청구전략도 둘을 가르지 않는다(App\Support\BillingStrategy). 화면에
+               「처방전 - 원내」라 적으면 없는 유형이 있는 것처럼 읽힌다. */
             'rx_acc_type'    => match ((string) ($p?->counsel_acc_add_type ?? '')) {
-                                    '10' => '처방전', '20' => '처방외', '30' => '처방전 - 원내',
-                                    default => '',
+                                    '10', '30' => '처방전',
+                                    '20'       => '처방외',
+                                    default    => '',
                                 },
             'rx_hospital'    => $p?->hospital_name ?? '',
             'rx_hosp_code'   => $p?->hospital_code ?? '',

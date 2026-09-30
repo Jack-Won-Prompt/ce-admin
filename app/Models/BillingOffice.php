@@ -54,9 +54,17 @@ class BillingOffice extends Model
     }
 
     /** 화면에 한 줄로 적을 이름 — 「마포지사 · 보험급여부」 */
+    /**
+     * 목록에 적는 관할 이름 — **지사 이름만** 적는다 (2026-09-30 지시).
+     *
+     * 여태 부서를 붙여 「중구지사 · 보험급여팀」으로 적었고, 목록 화면은 그 뒤에
+     * 담당자 이름까지 이어 붙여 「중구지사 · 보험급여팀 · Zoon」이 되었다. 훑으면서
+     * 가리는 값은 **어느 지사인가** 하나다 — 부서와 담당자는 그 지사를 열었을 때
+     * 볼 것이고, 목록에서는 칸만 넘치게 한다.
+     */
     public function displayName(): string
     {
-        return trim($this->office_name . ($this->dept ? ' · ' . $this->dept : ''));
+        return trim((string) $this->office_name);
     }
 
     /**

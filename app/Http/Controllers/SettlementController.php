@@ -72,7 +72,13 @@ class SettlementController extends Controller
         }
         // 원내·원외·처방외를 나눠 본다
         if ($request->filled('acc_type')) {
-            $query->whereHas('prescription', fn ($p) => $p->where('counsel_acc_add_type', $request->acc_type));
+            /* 「처방전」을 고르면 원내(30)도 함께 걸린다 (2026-09-30 지시) —
+               화면에 서는 유형은 둘뿐인데 원천 코드는 셋이다. */
+            $같은것 = array_keys(\App\Models\Prescription::ACC_TYPES,
+                \App\Models\Prescription::ACC_TYPES[(string) $request->acc_type] ?? '', true)
+                ?: [$request->acc_type];
+
+            $query->whereHas('prescription', fn ($p) => $p->whereIn('counsel_acc_add_type', $같은것));
         }
         if ($request->filled('search')) {
             $kw = $request->search;

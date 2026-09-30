@@ -51,7 +51,13 @@ class OrderController extends Controller
         /* 처방 유형 — 원내·원외·처방외. 정산 방식과 필요한 서류가 달라
            거래 이력에서도 나눠 봐야 한다. */
         if ($request->filled('acc_type')) {
-            $query->whereHas('prescription', fn ($p) => $p->where('counsel_acc_add_type', $request->acc_type));
+            /* 「처방전」을 고르면 원내(30)도 함께 걸린다 (2026-09-30 지시) —
+               화면에 서는 유형은 둘뿐인데 원천 코드는 셋이다. */
+            $같은것 = array_keys(\App\Models\Prescription::ACC_TYPES,
+                \App\Models\Prescription::ACC_TYPES[(string) $request->acc_type] ?? '', true)
+                ?: [$request->acc_type];
+
+            $query->whereHas('prescription', fn ($p) => $p->whereIn('counsel_acc_add_type', $같은것));
         }
         if ($request->filled('q')) {
             $q = $request->q;

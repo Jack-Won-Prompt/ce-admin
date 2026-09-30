@@ -207,7 +207,7 @@
           <label class="ds-field-label">처방유형</label>
           <select name="acc_type" class="form-control form-select">
             <option value="">전체 유형</option>
-            @foreach(\App\Models\Prescription::ACC_TYPES as $v => $label)
+            @foreach(\App\Models\Prescription::ACC_TYPE_CHOICES as $v => $label)
               {{-- 배열 키가 정수로 바뀌므로 문자열로 되돌려 견준다 — 그냥 두면 고른 값이 표시되지 않는다 --}}
               <option value="{{ $v }}" @selected(request('acc_type') === (string) $v)>{{ $label }}</option>
             @endforeach

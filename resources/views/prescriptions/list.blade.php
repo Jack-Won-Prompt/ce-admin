@@ -165,7 +165,7 @@
         <label class="ds-field-label">처방유형</label>
         <select name="acc_type" class="form-control form-select" onchange="this.form.submit()">
           <option value="">전체</option>
-          @foreach(\App\Models\Prescription::ACC_TYPES as $code => $label)
+          @foreach(\App\Models\Prescription::ACC_TYPE_CHOICES as $code => $label)
             {{-- 배열 키가 정수로 바뀌므로 문자열로 되돌려 견준다 --}}
             <option value="{{ $code }}" {{ $curAcc === (string) $code ? 'selected' : '' }}>
               {{ $label }}@if(($accCounts[$code] ?? 0) > 0) ({{ $accCounts[$code] }})@endif

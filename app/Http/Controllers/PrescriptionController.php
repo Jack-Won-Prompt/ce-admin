@@ -110,7 +110,13 @@ class PrescriptionController extends Controller
         /* 처방 유형 — 원내·원외·처방외는 정산 방식과 필요한 서류가 달라 나눠 봐야 한다.
            정산 화면에만 있던 구분을 처방전 목록에서도 고를 수 있게 한다. */
         if ($request->filled('acc_type')) {
-            $query->where('counsel_acc_add_type', $request->acc_type);
+            /* 「처방전」을 고르면 원내(30)도 함께 걸린다 (2026-09-30 지시).
+               화면에 서는 유형은 둘뿐인데 원천 코드는 셋이라, 고른 이름과 같은
+               이름을 가진 코드를 모두 본다. */
+            $query->whereIn('counsel_acc_add_type',
+                array_keys(Prescription::ACC_TYPES,
+                    Prescription::ACC_TYPES[(string) $request->acc_type] ?? '', true)
+                ?: [$request->acc_type]);
         }
         $dateFrom = $request->input('date_from') ?: now()->subDays(6)->format('Y-m-d');
         $dateTo   = $request->input('date_to')   ?: now()->format('Y-m-d');
@@ -216,10 +222,16 @@ class PrescriptionController extends Controller
             'rejected'       => Prescription::where('status', 'rejected')->count(),
         ];
 
-        // 유형별 건수 — 목록의 유형 칩에 붙는다
+        /* 유형별 건수 — 목록의 유형 칩에 붙는다.
+
+           유형은 처방전ㆍ처방외 둘뿐이다(2026-09-30 지시). 원천 코드는 셋이라
+           (10 원외 · 30 원내 · 20 처방외) **같은 이름을 가진 코드를 함께 센다** —
+           따로 세면 「처방전 3건 · 처방전 1건」처럼 칩이 둘로 갈린다. */
         $accCounts = [];
-        foreach (Prescription::ACC_TYPES as $code => $label) {
-            $accCounts[$code] = Prescription::where('counsel_acc_add_type', $code)->count();
+        foreach (Prescription::ACC_TYPE_CHOICES as $code => $label) {
+            $같은것 = array_keys(Prescription::ACC_TYPES, $label, true);
+
+            $accCounts[$code] = Prescription::whereIn('counsel_acc_add_type', $같은것)->count();
         }
 
         $managers = User::whereIn('role', ['admin', 'manager'])->orderBy('name')->get();

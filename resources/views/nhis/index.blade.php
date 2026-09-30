@@ -412,8 +412,13 @@
           sub.style.cssText = 'font-size:11px;color:var(--text-muted);overflow:hidden;'
                             + 'text-overflow:ellipsis;white-space:nowrap;';
           if (row?.office) {
-            sub.textContent = row.office + (row.office_who ? ' · ' + row.office_who : '');
-            if (row.office_tel) sub.title = row.office_tel + (row.office_fax ? ' / FAX ' + row.office_fax : '');
+            /* 지사 이름만 적는다 (2026-09-30 지시) — 담당자까지 이어 붙여
+               「중구지사 · 보험급여팀 · Zoon」이 되면 칸이 넘치고, 훑으면서 가리는
+               값은 어느 지사인가 하나다. 담당자ㆍ전화는 마우스를 올려 본다. */
+            sub.textContent = row.office;
+            const 귀띔 = [row.office_who, row.office_tel, row.office_fax ? 'FAX ' + row.office_fax : '']
+                          .filter(Boolean).join(' · ');
+            if (귀띔) sub.title = 귀띔;
           } else {
             sub.textContent = '관할 미지정';
             sub.style.color = 'var(--warning,#b45309)';
