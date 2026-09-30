@@ -4301,8 +4301,69 @@ class PrescriptionController extends Controller
             '#{배송지}'    => $order?->shipping_address ?? '-',
         ];
 
+        /* 팝빌에 승인된 문구가 쓰는 변수 이름은 우리가 쓰던 이름과 다르다
+           (2026-09-30 확인). 승인 본문은 한 글자도 고칠 수 없으므로 — 고치면
+           팝빌이 거절한다 — 우리 쪽이 저쪽 이름에 맞춘다.
+
+           같은 이름이 템플릿마다 다른 것을 가리키는 자리가 있어(#{날짜} 가 어떤
+           글에서는 재구매 가능일이고 다른 글에서는 재등록 기한이다) 그런 자리는
+           아래 $템플릿별 에서 따로 정한다. */
+        $params += [
+            '#{이름}'          => $params['#{고객명}'],
+            '#{병원명}'        => $prescription->hospital_name ?: '-',
+            '#{발행일}'        => self::날짜글($prescription->issued_date),
+            '#{처방전 종료일}' => self::날짜글($prescription->rx_end_date),
+            '#{재구매 가능일}' => self::날짜글($prescription->repurchase_date),
+            '#{송장번호}'      => $order?->tracking_number ?: '',
+            '#{주소}'          => $order?->shipping_address ?: '',
+            '#{제품번호}'      => $order?->product_code ?: ($prescription->product_code ?: ''),
+            '#{주문수량}'      => (string) ($order?->quantity ?: $prescription->quantity ?: ''),
+        ];
+
+        /* 뜻이 템플릿마다 갈리는 변수 — 팝빌 템플릿 코드로 정한다.
+           여기에 없는 템플릿의 #{날짜} 는 채우지 않는다. 엉뚱한 날짜가 환자에게
+           가느니 아래 잣대에 걸려 못 나가는 편이 낫다. */
+        $템플릿별 = [
+            /* 처방전등록안내_환자용 — 「재구매 가능일 #{날짜} 이전에 연락드리겠습니다」 */
+            '026090002148' => ['#{날짜}' => self::날짜글($prescription->repurchase_date)],
+        ];
+
+        $params += $템플릿별[$atsCode] ?? [];
+
+        /* 변수는 다 채워지는데 **뜻이 맞지 않는** 자리 — 채워 놓고 막는다.
+           아래 잣대(#{...} 가 남았나)로는 걸리지 않으므로 여기서 이름을 대고 막는다. */
+        $못보내는것 = [
+            /* 구매 내용 안내 — 「#{제품번호},#{제품명}, #{주문수량}개」 가 다섯 번
+               되풀이되는데 다섯 자리의 변수 이름이 모두 같다. 팝빌은 같은 이름에
+               같은 값을 넣으므로, 품목이 여럿이어도 첫 품목이 다섯 번 찍힌다.
+               템플릿을 고쳐 다시 승인받아야 한다. */
+            '026090001917' => '한 품목이 다섯 번 찍힙니다 — 템플릿의 변수 이름이 다섯 자리 모두 같습니다',
+        ];
+
+        if (isset($못보내는것[$atsCode])) {
+            return response()->json([
+                'success' => false,
+                'message' => "「{$tpl->label}」은 아직 보낼 수 없습니다 — {$못보내는것[$atsCode]}.",
+            ], 422);
+        }
+
         $content = trim(strtr((string) $tpl->body, $params));
         $mobile  = preg_replace('/\D/', '', $request->mobile);
+
+        /* 채우지 못한 변수가 남아 있으면 보내지 않는다 (2026-09-30).
+
+           팝빌은 승인 본문과 견주어 받으므로 #{...} 가 그대로 남으면 거절당하고,
+           설령 나간다 해도 환자는 「#{이름}님」을 읽게 된다. 어떤 변수가 비었는지
+           담당자에게 그대로 알린다. */
+        if (preg_match_all('/#\{[^}]*\}/u', $content, $남은것)) {
+            $빈것 = implode(', ', array_unique($남은것[0]));
+
+            return response()->json([
+                'success' => false,
+                'message' => "「{$tpl->label}」에 채우지 못한 값이 있습니다 — {$빈것}. "
+                           . '이 유형은 아직 보낼 수 없습니다.',
+            ], 422);
+        }
 
         /* 본문이 곧 나가는 글이다. 비어 있으면 팝빌이 거절하기 전에 여기서 멈춘다 —
            승인받은 문구를 메시지 관리의 본문 칸에 옮겨 적어야 한다. */
@@ -4347,6 +4408,31 @@ class PrescriptionController extends Controller
             'message'     => '알림톡이 발송되었습니다.',
             'receipt_num' => $receiptNum,
         ]);
+    }
+
+    /**
+     * 알림톡 본문에 들어갈 날짜 글 — 비었으면 빈 글자를 준다.
+     *
+     * 「-」 를 넣지 않는다. 비어 있으면 위의 잣대가 걸러 못 나가게 하는데,
+     * 「-」 를 채워 두면 걸리지 않고 「처방전 종료일:-」 이 환자에게 간다.
+     */
+    private static function 날짜글($값): string
+    {
+        if ($값 instanceof \DateTimeInterface) {
+            return $값->format('Y-m-d');
+        }
+
+        $글 = trim((string) $값);
+
+        if ($글 === '') {
+            return '';
+        }
+
+        try {
+            return \Carbon\Carbon::parse($글)->format('Y-m-d');
+        } catch (\Throwable) {
+            return $글;
+        }
     }
 
     // ── 카카오 알림톡 미리보기 ──────────────────────────────
