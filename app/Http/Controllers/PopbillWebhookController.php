@@ -89,12 +89,28 @@ class PopbillWebhookController extends Controller
 
             /* 실패로 답하면 팝빌이 다시 보낸다. 우리 쪽 사정으로 되풀이시키지 않는다 —
                못 맞춘 건은 폴링이 다시 잡는다. */
-            return response()->json(['ok' => true]);
+            return $this->받았다고답한다();
         }
 
         WebhookLogger::finish($기록, ok: $됐나, status: 200, error: $됐나 ? null : $말, ref: $무엇);
 
-        return response()->json(['ok' => true]);
+        return $this->받았다고답한다();
+    }
+
+    /**
+     * 팝빌에 「받았다」고 답하는 꼴 (2026-09-30 지시로 고침).
+     *
+     * **팝빌은 상태코드만 보지 않는다.** 200 으로 답해도 **본문이 규격과 다르면 실패**로
+     * 보고 5분 간격으로 네 번 다시 보내며, 마지막까지 실패하면 지원센터가 전화ㆍ메일로
+     * 연락한다(팝빌 개발자센터 「웹훅 개요」).
+     *
+     * 규격은 두 가지다 — 글자 `OK` 또는 `{"result":"OK"}`. 우리는 `{"ok":true}` 로 답해
+     * 왔고, 그래서 제대로 받은 건이 저쪽 화면에 **「실패 - 200」** 으로 찍혔다
+     * (2026-09-30 운영 문자 연동 확인에서 드러남).
+     */
+    private function 받았다고답한다(): \Illuminate\Http\JsonResponse
+    {
+        return response()->json(['result' => 'OK']);
     }
 
     /**
