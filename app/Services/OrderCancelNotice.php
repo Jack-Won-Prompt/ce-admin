@@ -73,7 +73,10 @@ class OrderCancelNotice
                   ?: (int) ($order->deposit_amount ?: $order->expectedDeposit());
 
         $text = strtr($body, [
+            /* 승인 문구가 쓰는 이름도 함께 본다 — 문자 문구를 팝빌 승인 문구에
+               맞춘 뒤로 이 글이 `#{이름}` 을 쓸 수 있다 (2026-09-30 지시) */
             '#{고객명}'   => $name,
+            '#{이름}'     => $name,
             '#{주문번호}' => (string) $order->order_number,
             '#{취소금액}' => number_format($취소금액),
             '#{처방번호}' => (string) ($order->prescription?->rx_number ?? ''),
