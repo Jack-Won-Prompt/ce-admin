@@ -13522,7 +13522,7 @@ window.HELP_TOUR_STEPS = [
       const 빈것 = data.missing ?? [];
       안내.style.display = 빈것.length ? 'block' : 'none';
       안내.textContent = 빈것.length
-        ? `채우지 못한 값이 있어 보낼 수 없습니다 — ${빈것.join(', ')}`
+        ? `입력되지 않은 항목이 있어 발송할 수 없습니다 : ${빈것.join(', ')}`
         : '';
 
       const btn = document.getElementById('btnKakaoSend');
@@ -13543,7 +13543,7 @@ window.HELP_TOUR_STEPS = [
     const docName = document.getElementById('kakaoDocName')?.value ?? '';
     if (!tpl)    { showToast('메시지 유형을 선택해 주십시오.', 'warning'); return; }
     if (!mobile) { showToast('수신 번호를 입력해 주십시오.', 'warning');  return; }
-    if (서류명묻나(tpl) && !docName) { showToast('서류 이름을 골라 주십시오.', 'warning'); return; }
+    if (서류명묻나(tpl) && !docName) { showToast('서류 이름을 선택해 주십시오.', 'warning'); return; }
 
     const btn = document.getElementById('btnKakaoSend');
     BtnState.loading(btn, '발송 중...');

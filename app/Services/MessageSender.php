@@ -189,7 +189,7 @@ class MessageSender
 
             if (preg_match_all('/#\{[^}]*\}/u', $글, $남은것)) {
                 throw new \RuntimeException(
-                    "「{$label}」에 채우지 못한 값이 있습니다 — "
+                    "「{$label}」에 입력되지 않은 항목이 있습니다 : "
                     . implode(', ', array_unique($남은것[0])));
             }
 

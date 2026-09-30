@@ -346,10 +346,10 @@ class _PrescriptionUploadScreenState
   /* Dart 는 한글 이름을 못 쓴다 — PHP 쪽과 달리 여기서는 ASCII 로 짓는다 */
   String? _blockedReason() {
     if (_selectedPatient == null) {
-      return '환자를 먼저 골라 주십시오 — 이름을 적고 「검색」을 누릅니다.';
+      return '환자를 먼저 선택해 주십시오. 이름을 입력한 후 [검색]을 누르십시오.';
     }
     if (_queue.isEmpty) {
-      return '올릴 서류를 먼저 담아 주십시오 — 「카메라」 또는 「갤러리」를 누릅니다.';
+      return '업로드할 서류를 먼저 추가해 주십시오. [카메라] 또는 [갤러리]를 누르십시오.';
     }
     return null;
   }

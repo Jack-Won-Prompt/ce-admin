@@ -4391,14 +4391,15 @@ class PrescriptionController extends Controller
 
                **템플릿을 고쳐 다시 승인받아야 한다** — 「1. 주문사항: #{주문사항}」
                처럼 변수 하나로 두면 우리가 품목 수에 맞춰 지어 넣을 수 있다. */
-            '026090001917' => '품목 자리가 다섯 개로 굳어 있어 품목이 다섯이 아니면 빈 자리가 보입니다'
-                            . ' — 「1. 주문사항: #{주문사항}」 꼴로 템플릿을 다시 승인받아야 합니다',
+            '026090001917' => '승인된 문구의 품목 항목이 5개로 고정되어 있어,'
+                            . ' 품목이 5개가 아닌 경우 빈 항목이 표시됩니다.'
+                            . ' 「1. 주문사항: #{주문사항}」 형태로 템플릿을 재승인받아야 합니다',
         ];
 
         if (isset($못보내는것[$atsCode])) {
             return response()->json([
                 'success' => false,
-                'message' => "「{$tpl->label}」은 아직 보낼 수 없습니다 — {$못보내는것[$atsCode]}.",
+                'message' => "「{$tpl->label}」은(는) 발송할 수 없습니다. {$못보내는것[$atsCode]}.",
             ], 422);
         }
 
@@ -4415,8 +4416,8 @@ class PrescriptionController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => "「{$tpl->label}」에 채우지 못한 값이 있습니다 — {$빈것}. "
-                           . '이 유형은 아직 보낼 수 없습니다.',
+                'message' => "「{$tpl->label}」에 입력되지 않은 항목이 있습니다 : {$빈것}. "
+                           . '해당 항목을 입력한 후 다시 발송해 주십시오.',
             ], 422);
         }
 
@@ -4515,7 +4516,7 @@ class PrescriptionController extends Controller
 
         if (! $틀 || trim((string) $틀->body) === '') {
             return response()->json([
-                'preview'  => '(승인된 문구가 없습니다 — 메시지 관리에서 알림톡 템플릿 코드와 본문을 채워 주십시오.)',
+                'preview'  => '(승인된 문구가 없습니다. 메시지 관리에서 알림톡 템플릿 코드와 본문을 입력해 주십시오.)',
                 'mobile'   => $mobile,
                 'missing'  => [],
             ]);
