@@ -36,6 +36,20 @@
       <button type="button" class="ds-btn ds-btn-primary" onclick="boFindNew()">등록하기</button>
     </div>
 
+    {{-- 이름으로 직접 찾는다 (2026-09-30 지시).
+
+         관할 시군구로 찾는 것이 첫째 길이지만, 지사에 관할이 등록돼 있지 않으면
+         한 건도 걸리지 않는다. 그때도 **이미 등록된 지사**는 표에 있으므로 이름으로
+         찾아 고를 수 있어야 한다 — 없으면 같은 지사를 또 등록하게 되고 표에 같은
+         이름이 둘씩 선다. --}}
+    <div style="display:flex;gap:6px;align-items:center;">
+      <input type="text" id="boFindQ" class="form-control"
+             style="flex:1;height:30px;font-size:12px;"
+             placeholder="등록된 청구처를 이름으로 찾습니다 (예: 중구지사)"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();boFindByName();}">
+      <button type="button" class="ds-btn" style="height:30px;" onclick="boFindByName()">이름으로 찾기</button>
+    </div>
+
     {{-- 무엇으로 찾았는지ㆍ찾은 것이 있는지는 여기로 알린다 --}}
     <div id="boFindNote" style="font-size:11px;color:var(--text-muted);line-height:1.6;"></div>
 

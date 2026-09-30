@@ -12474,6 +12474,9 @@ window.HELP_TOUR_STEPS = [
   window.__boReady = true;
 
   const BO_LOOKUP_URL = @json(route('billing-offices.lookup'));
+  /* 이름으로 찾을 때 쓴다 (2026-09-30 지시) — 관할이 등록돼 있지 않아도 표에
+     있는 지사는 고를 수 있어야 한다 */
+  const BO_LIST_URL   = @json(route('billing-offices.list'));
   const BO_STORE_URL  = @json(route('billing-offices.store'));
   const BO_RESOLVE_URL = @json(route('billing-offices.resolve'));
   const BO_NHIS_URL   = 'https://www.nhis.or.kr/nhis/about/retrieveBranchList.do';
@@ -12795,8 +12798,18 @@ window.HELP_TOUR_STEPS = [
           + (d.narrowed ? '' : ' <span style="color:var(--warning);">(시군구로는 가리지 못해 읍ㆍ면ㆍ동만으로 찾았습니다)</span>');
 
       _boLastRows = rows;
-      const cur = document.getElementById('f-billing-office').value;
-      list.innerHTML = rows.map(r => `
+      boFindDraw(rows);
+    } catch (e) {
+      note.textContent = '찾는 중 오류가 발생했습니다.';
+    }
+  }
+
+  /* 찾은 청구처를 고를 수 있게 그린다 — 관할로 찾든 이름으로 찾든 같은 모양이다
+     (2026-09-30 지시). 두 벌로 그리면 한쪽만 고쳐지는 날이 온다. */
+  function boFindDraw(rows) {
+    const list = document.getElementById('boFindList');
+    const cur  = document.getElementById('f-billing-office').value;
+    list.innerHTML = rows.map(r => `
         <label style="display:flex;align-items:flex-start;gap:8px;padding:7px 9px;border:1px solid ${String(r.id) === cur ? 'var(--primary)' : 'var(--border)'};
                border-radius:var(--radius);cursor:pointer;font-size:12px;background:${String(r.id) === cur ? 'var(--primary-light)' : 'var(--bg-card)'};">
           <input type="radio" name="bo_pick" value="${r.id}" ${String(r.id) === cur ? 'checked' : ''}
@@ -12813,6 +12826,48 @@ window.HELP_TOUR_STEPS = [
           </span>
           <span style="font-size:10px;color:var(--text-muted);flex-shrink:0;">${_faxEsc(r.kind_label)}</span>
         </label>`).join('');
+    boFindPlace();
+  }
+
+  /* ── 이름으로 등록된 청구처를 찾는다 (2026-09-30 지시) ──────────────
+
+     관할 시군구로 찾는 것이 첫째 길이지만, 지사에 관할이 등록돼 있지 않으면 한 건도
+     걸리지 않는다(운영에서 공단 지사 167곳 가운데 164곳이 그랬다). 그때도 **이미
+     등록된 지사**는 표에 있으므로 이름으로 찾아 고를 수 있어야 한다 — 그 길이 없으면
+     같은 지사를 또 등록하게 되고 표에 같은 이름이 둘씩 선다. */
+  async function boFindByName() {
+    const q    = document.getElementById('boFindQ').value.trim();
+    const note = document.getElementById('boFindNote');
+    const list = document.getElementById('boFindList');
+
+    if (q.length < 2) {
+      note.textContent = '두 글자 이상 입력해 주십시오.';
+      return;
+    }
+
+    note.textContent = '찾는 중…';
+    list.innerHTML   = '';
+    boOuterHide();
+
+    try {
+      const qs = new URLSearchParams({ q });
+      /* 자격이 정한 갈래만 부른다 — 관할로 찾을 때와 같은 잣대다 */
+      const 갈래 = boKindOfBenefit();
+      if (갈래) qs.set('kind', 갈래);
+
+      const res  = await fetch(BO_LIST_URL + '?' + qs, { headers: { Accept: 'application/json' } });
+      const d    = await res.json();
+      const rows = d.rows ?? [];
+
+      if (!rows.length) {
+        note.innerHTML = `<b>${_faxEsc(q)}</b> 로 등록된 청구처가 없습니다. `
+                       + `「공단 지사찾기」로 확인한 뒤 [등록하기]로 넣어 주십시오.`;
+        return;
+      }
+
+      _boLastRows = rows;
+      note.innerHTML = `<b>${_faxEsc(q)}</b> 로 찾은 ${rows.length}건`;
+      boFindDraw(rows);
     } catch (e) {
       note.textContent = '찾는 중 오류가 발생했습니다.';
     }
