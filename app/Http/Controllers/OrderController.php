@@ -81,87 +81,14 @@ class OrderController extends Controller
         $orders = $query->get();
         $extras = \App\Support\OrderGridExtras::forPatients($orders->pluck('patient_id'));
 
-        /* 파일이 몇 장인지 — 목록의 「파일」 칸이 그 수를 세우고, 누르면 골라 팩스로
-           보낸다. 건마다 세면 줄 수만큼 질의가 나가므로 처방전별로 한 번에 센다.
+        /* 파일이 몇 장인지, 그리고 그 몇 장이 무엇인지 — 「파일」ㆍ「파일 상세」 칸이다.
 
-           **올린 것과 만든 것을 함께 센다** (2026-09-16 지시). 거래명세서ㆍ세금계산서처럼
-           우리가 만들어 붙이는 서류도 같은 표에 담기므로 이미 한 수에 들어 있다.
+           셈은 OrderGridExtras::파일칸() 한 곳에 있다. 주문 등록 화면의 「주문 목록」
+           탭도 같은 칸을 세우므로, 여기에 따로 적어 두면 한쪽만 고쳐지는 날이 온다. */
+        $파일 = \App\Support\OrderGridExtras::파일칸($orders->pluck('prescription_id'));
 
-           처방전 그림은 첨부가 아니라 처방전 제 칸에 담기는데, 파일 창은 그것을 첫 줄로
-           보여 준다. 세는 쪽이 빼 버리면 「3장」이라 적힌 줄을 열었더니 넷이 나온다. */
-        $처방번호들 = $orders->pluck('prescription_id')->filter()->unique();
-
-        $attCounts = \App\Models\PrescriptionAttachment::selectRaw('prescription_id, count(*) as cnt')
-            ->whereIn('prescription_id', $처방번호들)
-            ->whereNotNull('file_path')
-            ->groupBy('prescription_id')
-            ->pluck('cnt', 'prescription_id');
-
-        /* 처방전 그림이 있는 건 — 한 장으로 더한다 */
-        $그림있는건 = \App\Models\Prescription::whereIn('id', $처방번호들)
-            ->whereNotNull('image_path')
-            ->pluck('id');
-
-        foreach ($그림있는건 as $pid) {
-            $attCounts[$pid] = (int) ($attCounts[$pid] ?? 0) + 1;
-        }
-
-        /* 생성 서류도 함께 센다 (2026-09-17 시험에서 드러남).
-
-           요양비위임장ㆍ위임동의서ㆍ팩스통합본은 첨부 표가 아니라 제 표
-           (prescription_documents)에 담긴다. 그것을 빼고 세었더니 목록에는 「7」인데
-           주문 등록의 문서 창에는 아홉이 섰다 — 같은 건을 두 수로 보게 되어
-           담당자가 어느 쪽이 맞는지 되물었다. 문서 창이 보여 주는 것과 같은 것을 센다. */
-        $docCounts = \App\Models\PrescriptionDocument::selectRaw('prescription_id, count(*) as cnt')
-            ->whereIn('prescription_id', $처방번호들)
-            ->whereNotNull('file_path')
-            ->groupBy('prescription_id')
-            ->pluck('cnt', 'prescription_id');
-
-        foreach ($docCounts as $pid => $cnt) {
-            $attCounts[$pid] = (int) ($attCounts[$pid] ?? 0) + (int) $cnt;
-        }
-
-        /* **무슨 서류가 붙어 있는가** — 옆의 「파일」 칸은 수만 세운다 (2026-09-28 지시).
-
-           「7」이라 적힌 줄을 보고도 그 일곱이 무엇인지 알 수 없어, 담당자는 팩스 창을
-           열어 목록을 읽고 닫기를 되풀이했다. 공단에 낼 것이 다 모였는지 훑으면서
-           가리려면 이름이 보여야 한다.
-
-           같은 이름은 한 번만 적는다 — 신분증이 앞뒤 두 장이면 「신분증」 하나다.
-           장수는 옆 칸이 이미 말한다. */
-        $서류이름 = [];
-
-        $이름담기 = function (int $pid, ?string $label) use (&$서류이름): void {
-            $label = trim((string) $label);
-
-            if ($label === '') {
-                return;
-            }
-
-            $서류이름[$pid][$label] = true;
-        };
-
-        /* 처방전 그림이 먼저다 — 문서 창에서도 첫 줄이다 */
-        foreach ($그림있는건 as $pid) {
-            $이름담기((int) $pid, '처방전');
-        }
-
-        foreach (\App\Models\PrescriptionAttachment::whereIn('prescription_id', $처방번호들)
-                    ->whereNotNull('file_path')
-                    ->orderBy('id')
-                    ->get(['id', 'prescription_id', 'doc_type', 'doc_label']) as $att) {
-            $이름담기((int) $att->prescription_id, $att->doc_type_label);
-        }
-
-        foreach (\App\Models\PrescriptionDocument::whereIn('prescription_id', $처방번호들)
-                    ->whereNotNull('file_path')
-                    ->orderBy('id')
-                    ->get(['id', 'prescription_id', 'type']) as $doc) {
-            $이름담기((int) $doc->prescription_id, $doc->typeLabel());
-        }
-
-        $서류이름 = array_map(fn (array $m) => implode(' · ', array_keys($m)), $서류이름);
+        $attCounts = $파일['count'];
+        $서류이름  = $파일['names'];
 
         $gridData = $orders->map(function ($o) use ($extras, $attCounts, $서류이름) {
             /* 유형 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류.

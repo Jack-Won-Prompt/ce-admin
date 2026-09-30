@@ -912,4 +912,91 @@ class OrderGridExtras
 
         return is_array($카드) && isset($카드[$키]) ? (string) $카드[$키] : '';
     }
+
+    /**
+     * 「파일」ㆍ「파일 상세」 두 칸의 값 — 처방전마다 한 번에 센다 (2026-09-30 지시).
+     *
+     * 주문 관리 목록에만 있던 셈이다. 주문 등록 화면의 「주문 목록」 탭에도 같은 칸을
+     * 세우게 되어 이리로 옮겼다 — 같은 일을 하는 길이 둘이 되면 한쪽만 고쳐지는 날이
+     * 온다(첨부 표에 갈래가 더해지는 따위).
+     *
+     * **올린 것과 우리가 만든 것을 함께 센다.** 거래명세서ㆍ세금계산서처럼 만들어
+     * 붙이는 서류는 첨부 표에 담겨 이미 한 수에 들어 있고, 요양비위임장ㆍ위임동의서ㆍ
+     * 팩스통합본은 제 표(prescription_documents)에 담겨 따로 더한다. 처방전 그림은
+     * 처방전 제 칸에 담기는데 파일 창이 첫 줄로 보여 주므로 한 장으로 센다.
+     *
+     * 이름은 같은 것을 한 번만 적는다 — 신분증이 앞뒤 두 장이면 「신분증」 하나다.
+     * 장수는 옆 칸이 말한다.
+     *
+     * @param  iterable  $처방번호들
+     * @return array{count: array<int,int>, names: array<int,string>}
+     */
+    public static function 파일칸($처방번호들): array
+    {
+        $ids = collect($처방번호들)->filter()->unique()->values();
+
+        if ($ids->isEmpty()) {
+            return ['count' => [], 'names' => []];
+        }
+
+        $수 = [];
+
+        foreach (\App\Models\PrescriptionAttachment::selectRaw('prescription_id, count(*) as cnt')
+                    ->whereIn('prescription_id', $ids)
+                    ->whereNotNull('file_path')
+                    ->groupBy('prescription_id')
+                    ->pluck('cnt', 'prescription_id') as $pid => $cnt) {
+            $수[(int) $pid] = (int) ($수[(int) $pid] ?? 0) + (int) $cnt;
+        }
+
+        foreach (\App\Models\PrescriptionDocument::selectRaw('prescription_id, count(*) as cnt')
+                    ->whereIn('prescription_id', $ids)
+                    ->whereNotNull('file_path')
+                    ->groupBy('prescription_id')
+                    ->pluck('cnt', 'prescription_id') as $pid => $cnt) {
+            $수[(int) $pid] = (int) ($수[(int) $pid] ?? 0) + (int) $cnt;
+        }
+
+        $그림있는건 = \App\Models\Prescription::whereIn('id', $ids)
+            ->whereNotNull('image_path')
+            ->pluck('id');
+
+        foreach ($그림있는건 as $pid) {
+            $수[(int) $pid] = (int) ($수[(int) $pid] ?? 0) + 1;
+        }
+
+        $이름 = [];
+
+        $담기 = function (int $pid, ?string $label) use (&$이름): void {
+            $label = trim((string) $label);
+            if ($label !== '') {
+                $이름[$pid][$label] = true;
+            }
+        };
+
+        /* 처방전 그림이 먼저다 — 문서 창에서도 첫 줄이다 */
+        foreach ($그림있는건 as $pid) {
+            $담기((int) $pid, '처방전');
+        }
+
+        foreach (\App\Models\PrescriptionAttachment::whereIn('prescription_id', $ids)
+                    ->whereNotNull('file_path')
+                    ->orderBy('id')
+                    ->get(['id', 'prescription_id', 'doc_type', 'doc_label']) as $att) {
+            $담기((int) $att->prescription_id, $att->doc_type_label);
+        }
+
+        foreach (\App\Models\PrescriptionDocument::whereIn('prescription_id', $ids)
+                    ->whereNotNull('file_path')
+                    ->orderBy('id')
+                    ->get(['id', 'prescription_id', 'type']) as $doc) {
+            $담기((int) $doc->prescription_id, $doc->typeLabel());
+        }
+
+        return [
+            'count' => $수,
+            'names' => array_map(fn (array $m) => implode(' · ', array_keys($m)), $이름),
+        ];
+    }
+
 }

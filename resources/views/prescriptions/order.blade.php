@@ -4858,6 +4858,10 @@ $calcDeposit  = $calcCopay;
 {{-- 거래처 등록ㆍ수정 창 — 처방전을 보면서 고칠 수 있게 화면 탭이 아니라 창으로 연다 --}}
 @include('patients._editor-modal')
 
+{{-- 「주문 목록」 탭의 「청구 진행」 단추 (2026-09-30 지시).
+     주문 관리 목록과 같은 조각을 쓴다 — 같은 일을 하는 길을 둘로 만들지 않는다. --}}
+@include('nhis.assist._button')
+
 
 {{-- ══════════ 병원 조회ㆍ등록 ══════════════════════════════
      처방전마다 손으로 치던 병원명ㆍ요양기관번호를 한자리에서 고른다.
@@ -9856,10 +9860,23 @@ window.HELP_TOUR_STEPS = [
 
     const fmt = x => `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
 
-    /* 적어 둔 사용 개시일이 있으면 그것이 기준이다 — 구입일과 다를 수 있다 */
+    /* 기준은 **사람이 적은 사용 개시일**이다 — 구입일과 다를 수 있다.
+
+       여태 비어 있으면 구입일을 그 칸에 몰래 적어 넣고(`s.value = 개시`) 급여
+       종료일ㆍ다음 재구매까지 세웠다. 그래서 처방 서류 정보를 새로 입력하러 들어가면
+       **사용 개시일은 비어 있는데 다음 재구매 가능일에만 날짜가 보였다**
+       (2026-09-30 지시). 사람이 적지 않은 값이 화면에 서면, 그것을 확인한 값으로
+       읽고 그대로 저장한다.
+
+       적기 전에는 세지 않는다 — 다만 **지우지도 않는다.** 예전에 저장해 둔 건은
+       이 칸이 비어 있어도 급여 종료일이 적혀 있을 수 있는데, 화면을 열었다는 이유로
+       그것을 비우면 저장할 때 멀쩡한 값이 날아간다.
+
+       비워 둔 채로 저장하면 서버가 결제일을 개시일로 삼는다(App\Support\BenefitDates)
+       — 그 규칙은 그대로다. 화면이 미리 보여 주지 않을 뿐이다. */
     const s = document.getElementById('f-use-start');
-    const 개시 = (s?.value || '').trim() || base;
-    if (s && !s.value) s.value = 개시;
+    const 개시 = (s?.value || '').trim();
+    if (!개시) return;
 
     const end = new Date(개시);
     end.setDate(end.getDate() + days - 1);
@@ -9914,10 +9931,26 @@ window.HELP_TOUR_STEPS = [
     endDate.setDate(endDate.getDate() + periodVal - 1);
     document.getElementById('f-rx-end-date').value = fmt(endDate);
 
-    // 다음재구매일 = 처방전발행일 + 처방기간 + 1
+    /* 이 값은 「다음 재구매 가능일 **(발행일 기준)**」 칸의 것이다 (2026-09-30 지시).
+
+       화면에는 같은 이름의 칸이 둘이고 셈이 서로 다르다 —
+
+         다음 재구매 가능일            사용 개시일 + 총 처방일수   (#f-next-repurchase)
+         다음 재구매 가능일(발행일 기준)  처방전 발행일 + 처방기간 + 1 (#f-repurchase-date)
+
+       그런데 여태 이 함수가 **위쪽 칸**에 적었다. 처방전 발행일이나 처방 기간만
+       넣어도, 화면을 열기만 해도(초기 자동 계산) 사용 개시일과 아무 상관 없는 날짜가
+       위쪽 칸에 서서, 사용 개시일이 비어 있는데 다음 재구매 가능일만 보였다.
+       아래쪽 읽기 전용 칸은 「처방전 발행일과 처방 기간으로 자동 계산됩니다」라
+       적어 두고 늘 비어 있었다 — 값이 제자리를 벗어나 있었던 것이다. */
     const nextDate = new Date(dateVal);
     nextDate.setDate(nextDate.getDate() + periodVal + 1);
-    document.getElementById('f-next-repurchase').value = fmt(nextDate);
+
+    const 발행일기준 = document.getElementById('f-repurchase-date');
+    if (발행일기준) 발행일기준.value = fmt(nextDate);
+
+    const 보임 = document.getElementById('disp-renew-date');
+    if (보임) 보임.textContent = fmt(nextDate);
   }
 
   // ── OCR 저장 ─────────────────────────────────────────
@@ -15067,10 +15100,68 @@ window.HELP_TOUR_STEPS = [
            왔나」(접수ㆍ수거중ㆍ검수중ㆍ환불완료ㆍ완료)를 적는다. 떨어뜨려 두면 「반품」이라
            적힌 줄을 보고 수거중인지 환불까지 끝났는지 알려고 가로로 한참 밀어야 했다. */
         { header: '교환·반품·취소 상태', name: 'deal_state', width: 128, align: 'center', sortable: true },
+        /* 어느 접수인지 번호로 — 누르면 그 접수로 간다 (2026-09-30 지시).
+           여태 「교환」ㆍ「반품」이라는 종류만 있어, 그 주문에 붙은 접수가 무엇인지
+           알려면 교환/반품 화면으로 가 주문번호로 다시 찾아야 했다. */
+        { header: '교환/반품 접수번호', name: 'return_no', width: 160, sortable: true,
+          renderer: (v, row) => {
+            const s = document.createElement('span');
+            s.textContent = v || '';
+            if (v && row.return_id) {
+              s.style.cssText = 'color:var(--primary);font-weight:600;cursor:pointer;text-decoration:underline;';
+              s.onclick = (ev) => { ev.stopPropagation(); window.open('/order-returns?id=' + row.return_id, '_blank'); };
+            }
+            return s;
+          } },
+        { header: '판매유형',   name: 'so_type',   width: 110, align: 'center' },
         // 요청서 8쪽 «등록일(접수일이 등록일이면 명칭만 변경)»
         // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
         ...ceMoneyCols(),
         { header: '등록일',    name: 'sold_at',   width: 100, align: 'center', sortable: true },
+        /* 언제 되돌아왔나 — 등록일과 벌어진 건은 눈에 띄어야 한다 */
+        { header: '교환/반품/취소일자', name: 'deal_at', width: 130, align: 'center', sortable: true },
+        /* 청구 진행 — 낼 것이 다 모였는지 보고 공단에 부치는 자리.
+           단추는 나눠 쓰는 조각(nhis.assist._button)이 만든다. */
+        { header: '청구 진행', name: 'nhis_assist', width: 100, sortable: false, exportable: false,
+          renderer: (v, row) => (typeof nhisAssistBtn === 'function')
+            ? nhisAssistBtn(row.id, { agency: row.agency_code,
+                                      ready: row.claim_ready_flag, missing: row.claim_missing,
+                                      name: row.patient, mobile: row.send_mobile, email: row.send_email })
+            : document.createTextNode('') },
+        /* 냈는가 안 냈는가만 본다 — 상태 일곱 가지는 옆의 「청구」 칸이 따로 말한다 */
+        { header: '청구 여부', name: 'claim_done', width: 90, align: 'center', sortable: true,
+          renderer: (v) => {
+            const s = document.createElement('span');
+            s.textContent = v || '';
+            if (v === '청구 완료') s.style.color = 'var(--primary)';
+            else if (v === '미청구') s.style.color = 'var(--danger)';
+            else s.style.color = 'var(--gray-400)';
+            s.style.fontWeight = '600';
+            return s;
+          } },
+        /* 파일 — 올린 것과 우리가 만든 것을 함께 센 수다.
+           주문 관리에서는 누르면 팩스 창이 열리는데, 이 화면에는 위쪽에 제 팩스
+           자리가 따로 있어 수만 적는다. 무엇이 붙어 있는지는 옆 칸이 적는다. */
+        { header: '파일', name: 'att_count', width: 70, align: 'center', sortable: true,
+          renderer: (v) => {
+            const s = document.createElement('span');
+            const n = Number(v || 0);
+            s.textContent = n ? String(n) : '-';
+            if (!n) s.style.color = 'var(--text-muted)';
+            return s;
+          } },
+        /* 파일 상세 — 옆 칸이 세운 수가 무엇인지 적는다. 같은 이름은 한 번만 선다 */
+        { header: '파일 상세', name: 'doc_types', width: 260, sortable: true,
+          renderer: (v) => {
+            const s = document.createElement('span');
+            s.textContent = v || '';
+            s.title = v || '';
+            s.style.cssText = 'display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'
+                            + 'font-size:12px;color:var(--text-secondary);';
+            return s;
+          } },
+        /* 어디로 가는지는 훑으면서 가리는 값이다 */
+        { header: '배송지',   name: 'address',  width: 240 },
         /* 담당자 — 아직 아무도 집어 들지 않은 건은 비어 있다. 그 빈칸이 곧
            「이건 아직 아무도 맡지 않았다」는 말이라, 빈 채로 두지 않고 그렇게 적는다. */
         { header: '담당자',    name: 'manager',   width: 90,  sortable: true,

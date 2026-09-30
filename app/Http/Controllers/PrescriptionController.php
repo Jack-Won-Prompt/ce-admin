@@ -1996,8 +1996,12 @@ class PrescriptionController extends Controller
            목록을 만들기 전에 한 번에 모아 둔다. */
         $extras = \App\Support\OrderGridExtras::forPatients($orders->pluck('patient_id'));
 
+        /* 「파일」ㆍ「파일 상세」 — 주문 관리 목록과 같은 셈이다 (2026-09-30 지시).
+           두 목록이 같은 항목을 세워야 하므로 셈도 한 곳에서 한다. */
+        $파일 = \App\Support\OrderGridExtras::파일칸($orders->pluck('prescription_id'));
+
         return $orders
-        ->map(function ($o) use ($extras) {
+        ->map(function ($o) use ($extras, $파일) {
             $rx = $o->prescription;
             $d  = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
 
@@ -2030,6 +2034,31 @@ class PrescriptionController extends Controller
             'deal_state' => $rt
                 ? (\App\Models\OrderReturn::STATUS_LABELS[$rt->status] ?? $rt->status) : '',
             'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
+
+            /* ── 주문 관리 목록에만 있던 칸들 (2026-09-30 지시) ────────────────
+               두 목록이 같은 항목을 세운다. 여기 없던 탓에 담당자가 같은 것을 보려고
+               화면을 옮겨 다녔다. 값의 뜻과 셈은 주문 관리와 똑같이 둔다. */
+
+            /* 어느 접수인지 번호로 싣는다 — 누르면 그 접수로 간다 */
+            'return_no'  => $rt
+                ? $rt->receipt_no . ($o->returns->count() > 1
+                    ? ' 외 ' . ($o->returns->count() - 1) . '건' : '')
+                : '',
+            'return_id'  => $rt?->id,
+            /* 되돌린 날 — 판매일과 벌어진 건은 눈에 띄어야 한다 */
+            'deal_at'    => $rt?->created_at?->format('Y-m-d') ?? '',
+            'so_type'    => \App\Models\Order::SO_TYPE_LABELS[$o->so_type][0] ?? '',
+            'address'    => $o->shipping_address ?? '',
+            'att_count'  => (int) ($파일['count'][$o->prescription_id] ?? 0),
+            'doc_types'  => $파일['names'][$o->prescription_id] ?? '',
+            /* 냈는가 안 냈는가만 본다. 낼 곳이 없는 건은 「미청구」가 아니다 —
+               그 말은 아직 안 냈다는 뜻이라 담당자가 찾아 나서게 된다. */
+            'claim_done' => (($rx?->claim_agency ?? '') === 'none')
+                ? '해당 없음'
+                : (in_array($o->nhis_claim_status, ['submitted', 'approved'], true) ? '청구 완료' : '미청구'),
+            /* 「청구 진행」 단추가 증빙을 어디로 보낼지 정하는 값이다 */
+            'send_mobile' => \App\Support\PhoneNo::format($o->patient?->mobile),
+            'send_email'  => $o->patient?->email ?? '',
             /* 고르면 이 주소로 간다. claim=1 은 「임자 없으면 내가 맡는다」는 표시다.
 
                처방전이 없는 주문은 주문 번호로 연다 — 처방전 없이도 사고, 잘못 올린
