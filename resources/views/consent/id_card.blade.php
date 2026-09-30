@@ -81,7 +81,8 @@
 
 <div class="card" id="mainCard">
   <div class="card-header">
-    <div class="logo">CE ADMIN</div>
+    {{-- 환자가 보는 화면이다 — 회사 이름을 적는다 (2026-09-30 지시) --}}
+    <div class="logo">콜로플라스트 코리아</div>
     <h1>신분증 제출</h1>
     <p>건강보험공단 등록에 필요한 신분증을 올려 주십시오.</p>
   </div>

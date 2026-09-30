@@ -89,7 +89,10 @@
 @else
 
   <div class="card">
-    <div class="brand">CE ADMIN</div>
+    {{-- 환자가 보는 화면이다 — 우리 시스템 이름이 아니라 회사 이름을 적는다
+         (2026-09-30 지시). 「CE ADMIN」은 담당자만 아는 말이라, 받는 사람은
+         어디서 온 링크인지 알 수 없다. --}}
+    <div class="brand">콜로플라스트 코리아</div>
     <div style="font-weight:800;font-size:17px;margin-top:4px;">요양비 청구 위임 동의</div>
     <div class="lead">
       아래 내용을 확인하신 뒤 전자서명을 해 주십시오.

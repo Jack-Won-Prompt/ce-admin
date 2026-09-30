@@ -66,6 +66,15 @@
   .agree-table th,.agree-table td{border:1px solid var(--line);padding:7px 8px;font-size:11.5px;
     line-height:1.6;vertical-align:top;text-align:left;}
   .agree-table th{background:#f3f6fa;color:var(--brand);font-weight:800;}
+  /* 칸이 둘뿐인 표는 가로로 밀리지 않게 한다 — 최소폭 560px 은 다섯 칸짜리 기준이다 */
+  .agree-table.narrow{min-width:0;}
+
+  /* 개인정보 처리위탁 안내 (2026-09-30 지시).
+     제목은 「개인정보 수집·이용 동의」와 같은 크기ㆍ글꼴이어야 한다 — .card h2 와 같다. */
+  .entrust{margin-top:18px;padding-top:4px;}
+  .entrust-title{margin:0 0 14px;font-size:15px;font-weight:800;color:var(--brand);
+    display:flex;align-items:center;gap:7px;padding-bottom:10px;border-bottom:2px solid var(--line);}
+  .entrust-intro{font-size:12.5px;line-height:1.7;color:var(--text);}
   .checkall{display:flex;align-items:center;gap:9px;padding:13px;background:#eaf3fd;border:1px solid #cfe4fb;
     border-radius:10px;margin-bottom:14px;font-weight:800;color:var(--brand);font-size:14px;cursor:pointer;}
   .checkall input{width:20px;height:20px;accent-color:var(--accent);}

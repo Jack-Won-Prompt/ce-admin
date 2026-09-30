@@ -247,6 +247,17 @@
       line-height: 1.6; vertical-align: top; text-align: left;
     }
     .agree-table th { background: #f3f6fa; color: #1f6274; font-weight: 800; }
+    /* 칸이 둘뿐인 표는 가로로 밀리지 않게 한다 — 최소폭 560px 은 다섯 칸짜리 기준이다 */
+    .agree-table.narrow { min-width: 0; }
+
+    /* 개인정보 처리위탁 안내 (2026-09-30 지시).
+       제목은 「개인정보 수집·이용 동의」와 같은 크기ㆍ글꼴이어야 한다 — .agree-title 과 같다. */
+    .entrust { margin-top: 16px; }
+    .entrust-title {
+      font-size: 13px; font-weight: 700; color: #374151; margin: 0 0 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .entrust-intro { font-size: 12px; line-height: 1.7; color: #4b5563; }
 
     /* 신청자 정보 — 개인정보동의 페이지의 「신청자 정보」 카드와 같은 칸들이다 */
     .pv-card { border: 1px solid #e5e7eb; border-radius: 9px; padding: 13px; margin-bottom: 12px; background: #fff; }
@@ -423,7 +434,8 @@
 
 <div class="card" id="mainCard">
   <div class="card-header">
-    <div class="logo">CE ADMIN</div>
+    {{-- 환자가 보는 화면이다 — 회사 이름을 적는다 (2026-09-30 지시) --}}
+    <div class="logo">콜로플라스트 코리아</div>
     <h1>서류 확인 및 전자서명</h1>
     <p>안녕하세요. 요양비 청구 및 환자 지원 서비스 제공을 위해 아래 서류의 내용을 확인해 주시기 바랍니다.<br>
        각 문서를 펼쳐 내용을 확인하신 후 전자서명해 주시기 바랍니다.<br>
