@@ -296,7 +296,18 @@ class CashbillController extends Controller
 
            payment_events 는 걸음마다 한 줄이라 세 줄이 그대로 선다. */
         $q = \App\Models\PaymentEvent::with(['order.patient', 'order.prescription', 'link'])
-            ->where('method', 'card');
+            ->where('method', 'card')
+            /* **돈이 오간 걸음만 세운다** (2026-09-30 지시).
+
+               payment_events 에는 걸음이 모두 담긴다 — 발송ㆍ승인ㆍ환불ㆍ취소ㆍ실패ㆍ
+               기한지남. 그런데 이 화면은 「현금/카드**영수증**」, 돈이 오간 증빙을 보는
+               자리다. 링크를 보낸 것은 아직 오간 돈이 없는 걸음이라 0원으로 서서,
+               열한 줄 가운데 여섯 줄이 0원이 되고 목록만 두 배로 길어졌다.
+
+               금액이 0이 아닌 줄만 남긴다 — 승인(＋)과 환불ㆍ받은 뒤의 취소(−)다.
+               보낸 자취는 payment_events 에 그대로 남는다. 아직 내지 않은 건은
+               정산/회계의 「입금 대기」와 주문 화면이 말한다. */
+            ->where('amount', '!=', 0);
 
         if ($from) { $q->whereDate('occurred_at', '>=', $from); }
         if ($to)   { $q->whereDate('occurred_at', '<=', $to); }
