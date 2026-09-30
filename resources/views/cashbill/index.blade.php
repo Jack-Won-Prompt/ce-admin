@@ -851,7 +851,17 @@ async function loadHistory(page = 1) {
          처럼 숫자만 쓰는데 카드만 '2026-09-23 16:22' 로 두면 문자 비교에서 뒤로
          밀려, 오늘 결제가 지난달 줄보다 아래에 선다. */
       _sortKey:    String(r.datetime ?? r.date ?? '').replace(/[^0-9]/g, ''),
-      tradeType:   r.status === '취소' ? '취소거래' : '승인거래',
+      /* 거래구분은 거르는 칸이 가진 두 값(승인거래ㆍ취소거래)에 맞춘다.
+
+         카드 줄의 status 는 이제 결제 걸음의 이름이다 — 발송ㆍ승인ㆍ환불ㆍ취소ㆍ
+         실패ㆍ기한지남. 여태 「취소」만 가려 내 **환불도 발송도 모두 승인거래**로
+         섰다(2026-09-30 지시). 돈이 나간 걸음은 취소 쪽이다.
+
+         걸음 이름 자체는 옆의 「상태」 칸에 그대로 세운다 — 환불과 취소는 다른
+         것이라 한 칸에 묶으면 무엇이 있었는지 가릴 수 없다. */
+      tradeType:   (r.status === '환불' || r.status === '취소') ? '취소거래'
+                 : (r.status === '승인' ? '승인거래' : r.status),
+      stateLabel:  r.status ?? '',
       tradeUsage:  '카드결제',
       totalAmount: r.amount,
       customerName: r.patient,
@@ -911,7 +921,12 @@ function renderHistPage(page) {
     /* 취소는 금액을 마이너스로 세운다(요청서 6쪽). 팝빌은 취소 건도 양수로 주므로
        여기서 부호를 뒤집는다 — 그래야 합계가 이 기간에 남은 금액이 된다. */
     const isCancel = String(r.tradeType ?? '').includes('취소') || r.status === 'cancelled';
-    const amount   = (isCancel ? -1 : 1) * parseInt(r.totalAmount ?? r.amount ?? 0);
+    /* 카드 줄은 **서버가 이미 부호를 담아** 보낸다(payment_events 의 amount 는 승인 +,
+       환불ㆍ취소 −). 여기서 또 뒤집으면 환불이 양수가 되어 합계가 부풀었다. 팝빌은
+       취소 건도 양수로 주므로 그쪽만 뒤집는다. */
+    const amount   = r._source === 'card'
+      ? parseInt(r.amount ?? 0)
+      : (isCancel ? -1 : 1) * parseInt(r.totalAmount ?? r.amount ?? 0);
     /* 열 이름이 「주문번호」이므로 주문번호만 세운다 (2026-09-28 지시) —
        처방번호를 뒤에 붙이면 열 이름과 값이 어긋난다. 처방번호는 줄을 열면 나온다.
 
@@ -951,9 +966,11 @@ function renderHistPage(page) {
       confirmNum:  r.confirmNum ?? r.receiptNo ?? '',
       orgConfirmNum: r.orgConfirmNum ?? '',
       orgTradeDate:  ymd(r.orgTradeDate ?? ''),
-      /* 입금 전이면 그렇게 적는다 — 「발행 대기」만 보면 눌러도 되는 줄로 읽힌다 */
+      /* 입금 전이면 그렇게 적는다 — 「발행 대기」만 보면 눌러도 되는 줄로 읽힌다.
+         카드 줄은 제 걸음 이름(발송ㆍ승인ㆍ환불ㆍ취소)을 그대로 세운다. */
       stateLabel:  r.status === 'pending' ? (r.payReady === false ? '입금 대기' : '발행 대기')
-                   : (STATE[Number(r.stateCode)] ?? (r._source === 'order' ? (isCancel ? '발행취소' : '발행완료') : '')),
+                   : (r._source === 'card' ? (r.stateLabel ?? r.status ?? '')
+                   : (STATE[Number(r.stateCode)] ?? (r._source === 'order' ? (isCancel ? '발행취소' : '발행완료') : ''))),
       stateMemo:   r.stateMemo ?? '',
       ntsMessage:  r.ntsresultMessage ?? '',
       ntsSendDt:   ymdt(r.ntsSendDT ?? ''),
