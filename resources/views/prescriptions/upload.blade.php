@@ -196,6 +196,9 @@
   /* calc 는 연산자 둘레에 공백이 없으면 통째로 무효가 된다 — 드롭다운이 제자리에 붙지 않았다 */
   .patient-search-drop { position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--gray-0); border:1px solid var(--primary); border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.13); z-index:500; max-height:240px; overflow-y:auto; display:none; }
   .patient-search-drop.open { display:block; }
+  /* 담당자는 몇 사람뿐이라 한눈에 다 보이는 편이 낫다 (2026-09-30 지시).
+     환자 상자는 수천 명이라 그대로 240px 에 둔다. */
+  #sideAssignedDrop { max-height:420px; }
   .ps-item { padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--border); font-size:12px; line-height:19px; display:flex; align-items:center; gap:8px; transition:background .1s; }
   .ps-item:last-child { border-bottom:none; }
   .ps-item:hover, .ps-item.active { background:var(--primary-light); }
@@ -591,18 +594,18 @@ window.mgPick = function (id, name) {
 
 /* 손으로 고쳐 쓰면 고른 사람과 어긋난다 — 이어 둔 것을 푼다. 그러면 담당자 없이
    저장되지, 엉뚱한 사람에게 붙지 않는다. */
+/* 담당자는 **모두** 보인다 (2026-09-30 지시). 환자와 달리 몇 사람뿐이라 자를 까닭이
+   없는데 열 명에서 끊고 있었다 — 열한째 사람은 이름을 정확히 쳐야만 나왔다. */
 mgInput?.addEventListener('input', function () {
   mgHid.value = '';
   const q = this.value.trim().toLowerCase();
-  mgRender(q ? MANAGERS.filter(m => m.name.toLowerCase().includes(q)).slice(0, 10)
-             : MANAGERS.slice(0, 10));
+  mgRender(q ? MANAGERS.filter(m => m.name.toLowerCase().includes(q)) : MANAGERS);
 });
 
 /* 빈 칸을 눌러도 누가 있는지 보인다 — 이름을 모를 때 굴려 보던 것이 그 자리다 */
 mgInput?.addEventListener('focus', function () {
   const q = this.value.trim().toLowerCase();
-  mgRender(q ? MANAGERS.filter(m => m.name.toLowerCase().includes(q)).slice(0, 10)
-             : MANAGERS.slice(0, 10));
+  mgRender(q ? MANAGERS.filter(m => m.name.toLowerCase().includes(q)) : MANAGERS);
 });
 
 document.addEventListener('click', e => {
