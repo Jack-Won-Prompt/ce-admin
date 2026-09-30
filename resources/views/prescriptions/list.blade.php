@@ -287,7 +287,7 @@
 
   <div style="background:var(--primary);padding:11px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;">
     <i class="fa-solid fa-file-magnifying-glass" style="color:#fff;font-size:14px;"></i>
-    <span id="rvTitle" style="font-size:13px;font-weight:700;color:#fff;flex:1;">주문등록 이동</span>
+    <span id="rvTitle" style="font-size:13px;font-weight:700;color:#fff;flex:1;">파일 검수</span>
     <span id="rvCount" style="font-size:11.5px;color:rgba(255,255,255,.85);"></span>
     <button onclick="rvClose()" style="border:none;background:none;color:#fff;font-size:17px;line-height:1;cursor:pointer;">&#215;</button>
   </div>
@@ -299,7 +299,7 @@
               padding:11px 14px;display:flex;align-items:center;gap:8px;">
     <span id="rvNote" style="font-size:12px;color:var(--text-muted);flex:1;"></span>
     <button type="button" class="ds-btn" onclick="rvClose()">닫기</button>
-    <button type="button" class="ds-btn ds-btn-primary" id="rvApprove" onclick="rvApprove(this)">주문등록 이동</button>
+    <button type="button" class="ds-btn ds-btn-primary" id="rvApprove" onclick="rvApprove(this)">검수 확인</button>
   </div>
 </div>
 
@@ -355,11 +355,17 @@ window.HELP_TOUR_STEPS = [
     return s;
   };
 
-  /* 「주문등록 이동」 단추 — 이미 마친 건은 눌러도 다시 보내지 않는다 (2026-09-23 지시).
+  /* 「파일 검수」 단추 — 이미 마친 건은 눌러도 다시 보내지 않는다.
 
-     이 단추가 하는 일은 서류를 확인하고 **그 건을 주문등록으로 넘기는 것**이다.
-     「파일 검수」라는 이름은 확인만 하는 자리처럼 읽혀, 눌러야 주문 목록에 선다는
-     것을 알기 어려웠다. */
+     열 이름은 **파일 검수**로 되돌린다 (2026-09-30 지시). 2026-09-23 에 열 이름과
+     단추를 모두 「주문등록 이동」으로 바꾸었더니 —
+
+       · 격자의 단추와 팝오버의 확인 단추가 **같은 이름**이 되어 무엇을 누르는지
+         가릴 수 없었다
+       · 「업로드 파일을 확인하는 자리」라는 것이 이름에서 사라졌다
+
+     이 단추가 여는 것은 **올린 파일을 내리읽는 창**이다. 마치면 그 건이 주문등록으로
+     넘어가므로, **마친 뒤의 글만** 「주문등록 이동」으로 둔다. */
   const 검수칸 = (v, row) => {
     const 마쳤나 = v === 'approved' || v === 'ordered';
     const b = document.createElement('button');
@@ -369,7 +375,7 @@ window.HELP_TOUR_STEPS = [
     b.style.minWidth = '0';
     b.style.padding = '0 10px';
     b.style.fontSize = '11.5px';
-    b.textContent = 마쳤나 ? '이동 완료' : '주문등록 이동';
+    b.textContent = 마쳤나 ? '주문등록 이동' : '파일 검수';
     b.onclick = (e) => { e.stopPropagation(); rvOpen(row.rx_number, row.id); };
     return b;
   };
@@ -410,7 +416,7 @@ window.HELP_TOUR_STEPS = [
       { header: '처방전',     name: 'doc_rx',   width: 76, align: 'center', renderer: 서류칸 },
       { header: '등록신청서', name: 'doc_reg',  width: 92, align: 'center', renderer: 서류칸 },
       { header: '결과지',     name: 'doc_test', width: 76, align: 'center', renderer: 서류칸 },
-      { header: '주문등록 이동',  name: 'review',     width: 120, align: 'center',
+      { header: '파일 검수',     name: 'review',     width: 120, align: 'center',
         exportable: false, renderer: 검수칸 },
       /* 검수 바로 옆 — 「검수했나」와 「되물었나」는 잇대어 읽는 값이다 (2026-09-12 지시) */
       { header: '요청 여부',     name: 'reupload',   width: 100, align: 'center',
@@ -511,10 +517,10 @@ window.HELP_TOUR_STEPS = [
 
       const 단추 = document.getElementById('rvApprove');
       단추.disabled    = _rv.마쳤나;
-      단추.textContent = _rv.마쳤나 ? '이동 완료' : '주문등록 이동';
+      단추.textContent = _rv.마쳤나 ? '검수 완료' : '검수 확인';
       document.getElementById('rvNote').textContent = _rv.마쳤나
-        ? '이미 주문등록으로 이동한 처방전입니다.'
-        : '서류를 모두 확인하셨으면 「주문등록 이동」을 누르십시오 — 주문 등록의 주문 목록에 표시됩니다.';
+        ? '이미 검수를 마쳐 주문 등록으로 이동한 처방전입니다.'
+        : '서류를 모두 확인하셨으면 [검수 확인]을 누르십시오. 주문 등록의 주문 목록에 표시됩니다.';
 
       _rv.사유 = d.reasons ?? {};
 
