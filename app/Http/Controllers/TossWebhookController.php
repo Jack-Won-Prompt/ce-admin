@@ -121,6 +121,24 @@ class TossWebhookController extends Controller
     }
 
     /**
+     * 다시 물어도 소용없는 실패인가 (2026-09-30).
+     *
+     * `TossClient` 는 `[코드] 메시지` 꼴로 던지고 예외 코드에 HTTP 상태를 담는다.
+     * 없는 결제(404 · NOT_FOUND_PAYMENT)와 열쇠가 틀린 것(401)은 다시 보내도 같다.
+     * 그 밖(연결 끊김ㆍ저쪽 5xx)은 잠깐 그런 것일 수 있으니 다시 받는다.
+     */
+    private function 영영없는결제인가(\Throwable $e): bool
+    {
+        $http = (int) $e->getCode();
+
+        if ($http === 404 || $http === 401) {
+            return true;
+        }
+
+        return (bool) preg_match('/\[(NOT_FOUND_PAYMENT|UNAUTHORIZED_KEY|INVALID_API_KEY)\]/', $e->getMessage());
+    }
+
+    /**
      * 결제 상태가 바뀌었다는 알림 — 카드 결제가 여기로 온다.
      *
      * 페이로드의 status 를 믿지 않는다. 서명이 없는 웹훅이라, paymentKey 로 토스에
@@ -138,6 +156,19 @@ class TossWebhookController extends Controller
             $res = $this->vaService->fetchByPaymentKey($key);
         } catch (\Throwable $e) {
             Log::warning('[Toss] 결제 재조회 실패', ['key' => substr($key, 0, 12), 'error' => $e->getMessage()]);
+
+            /* **영영 못 찾을 것은 200 으로 접는다** (2026-09-30 지시).
+
+               토스는 2xx 가 아니면 다시 보낸다. 잠깐 안 되는 것(연결 끊김ㆍ5xx)은 다시
+               받아야 하므로 500 이 맞다 — 그러라고 이 자리를 두었다.
+
+               그런데 **없는 결제**는 몇 번을 물어도 없다. 그것까지 500 으로 돌려주면
+               토스가 끝없이 다시 보낸다. 토스 개발자센터의 「웹훅 테스트 발송」이 바로
+               그 꼴이라(가짜 paymentKey), 연동을 확인하려고 누른 단추가 무한 재시도로
+               남는다(2026-09-30 운영 등록 뒤 확인). */
+            if ($this->영영없는결제인가($e)) {
+                return response()->json(['ok' => true, 'skipped' => '없는 결제 — 다시 보내지 마십시오']);
+            }
 
             return response()->json(['message' => '재조회 실패'], 500);
         }
