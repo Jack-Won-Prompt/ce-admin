@@ -83,6 +83,11 @@ class EntraController extends Controller
            같은 표(login_from)를 쓰고 있어 그것을 그대로 쓴다. */
         if ($request->query('from') === 'm') {
             $request->session()->put('login_from', 'm');
+        } elseif ($앱표 !== '') {
+            /* 앱에서 시작한 것은 웹 세션을 만들지 않는다. 앞선 모바일 웹 로그인이
+               남긴 표가 그대로 있으면, 나중에 이 브라우저로 들어오는 사람이
+               엉뚱하게 모바일 화면으로 떨어진다 — 여기서 지운다. */
+            $request->session()->forget('login_from');
         }
 
         if ($앱표 !== '' && preg_match('/^[A-Za-z0-9_-]{16,128}$/', $앱표)) {
