@@ -284,12 +284,22 @@ class _PrescriptionUploadScreenState
                         final name = nameCtrl.text.trim();
                         if (name.isEmpty) return;
 
-                        /* 빈칸은 그대로 둔다(서버도 받지 않아도 된다). 다만 적다 만
-                           번호는 받지 않는다 — 열세 자리를 채워야 공단에 낼 수 있고,
-                           반쪽 번호는 나중에 누가 다시 물어야 한다. */
+                        /* 주민등록번호는 **반드시** 받는다 (2026-09-30 지시).
+
+                           여태 비워 두어도 등록됐다. 그런데 그 번호 없이는 공단에 낼
+                           서류가 서지 않는다 — 등록신청서ㆍ요양비위임장ㆍ세금계산서가
+                           모두 그것을 찍는다. 나중에 누군가 다시 물어 채워야 하고, 그
+                           사이 만들어진 서류는 다시 만들어야 한다.
+
+                           열세 자리를 다 채워야 한다 — 적다 만 번호는 안 받은 것과 같다. */
                         final rrn = residentCtrl.text.trim();
                         final digits = rrn.replaceAll(RegExp(r'\D'), '');
-                        if (digits.isNotEmpty && digits.length != 13) {
+                        if (digits.isEmpty) {
+                          setDialogState(() =>
+                              residentError = '주민등록번호를 입력해 주십시오.');
+                          return;
+                        }
+                        if (digits.length != 13) {
                           setDialogState(() =>
                               residentError = '주민등록번호 13자리를 모두 입력해 주십시오.');
                           return;
