@@ -92,7 +92,6 @@
              transition:transform .22s ease; box-shadow:0 8px 24px rgba(0,0,0,.34); }
     .toast.on { transform:translate(-50%, 0); }
 
-    .foot { text-align:center; font-size:11.5px; color:rgba(255,255,255,.45); padding-top:20px; }
   </style>
 </head>
 <body>
@@ -164,7 +163,6 @@
     </div>
   </div>
 
-  <div class="foot">모바일 웹 · 문의 1588-7866</div>
 </div>
 
 <div class="toast" id="toast"></div>
