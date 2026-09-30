@@ -12,7 +12,22 @@ import '../utils/constants.dart';
 import '../widgets/common_widgets.dart';
 
 /// 로그인한 사용자 정보 (이름, 이메일)
-final _userInfoProvider = FutureProvider<({String name, String email})>((ref) async {
+///
+/// **화면에 들어올 때마다 다시 읽는다** (2026-09-30 실전 시험에서 드러남).
+///
+/// 그냥 FutureProvider 로 두었더니 앱을 켠 뒤 처음 읽은 값을 앱이 꺼질 때까지
+/// 그대로 보여 주었다 — 로그아웃하고 다른 사람으로 다시 들어와도 계정 카드는
+/// 먼저 사람 이름과 메일 주소를 그대로 달고 있었다. 헤더의 이름 배지는 제대로
+/// 바뀌므로 한 화면에서 두 사람이 보인다.
+///
+///   헤더 배지  Stella Kim      (로그인할 때 갱신되는 값)
+///   계정 카드  관리자 · admin@ce-admin.co.kr   (앱을 켤 때 읽은 값)
+///
+/// 누구로 들어와 있는지는 서류를 누구 이름으로 올리느냐를 가르므로, 잘못 보이면
+/// 사람이 남의 이름으로 올린다. autoDispose 로 두면 화면을 떠날 때 버려지고
+/// 다시 들어올 때 새로 읽는다.
+final _userInfoProvider =
+    FutureProvider.autoDispose<({String name, String email})>((ref) async {
   final prefs = await SharedPreferences.getInstance();
   return (
     name:  prefs.getString(AppConstants.keyUserName)  ?? '',

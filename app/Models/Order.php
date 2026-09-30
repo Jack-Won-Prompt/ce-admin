@@ -164,12 +164,41 @@ class Order extends Model
      *
      * 아직 받지 않은 링크가 살아 있으면 그 사이로 본다 — 「보냈다」고 적혔고
      * 받은 때가 비어 있으며 아직 기한이 남은 것.
+     *
+     * **다만 그 링크가 정정이 보낸 것이어야 한다** (2026-09-30 실전 시험에서 드러남).
+     *
+     * 여태 「살아 있는 미결제 링크」면 무엇이든 참으로 보았다. 그래서 정정을 한 번도
+     * 건 적이 없고 결제도 아직 안 된 주문에서 ［주문 정정］을 누르면,
+     * **처음 보낸 그 결제 링크** 때문에 「고객이 재결제를 마친 뒤에 다시 정정해
+     * 주십시오」로 막혔다 — 진행중인 정정이 없으니 안내도 사실과 다르다.
+     *
+     *   EUD202609302047571 · amend_state=NULL · 정정 이력 0건
+     *   결제 링크 #3 sent · 81,000원 · paid_at=NULL · 기한 10-07  → 막힘
+     *
+     * 결제 전 정정은 막을 까닭이 없다. 그 길은 이미 제대로 서 있다 —
+     * OrderCancelService::금액맞추기() 가 입금 전이면 살아 있는 링크를 모두
+     * `cancelled` 로 거두고 바뀐 금액으로 다시 보낸다(링크다시보내기).
+     *
+     * 이 관문이 막아야 하는 것은 **정정이 보낸 재결제 링크를 기다리는 사이의 또 다른
+     * 정정**뿐이다. 그러므로 마지막 정정보다 **뒤에 만들어진** 링크만 센다. 정정 이력은
+     * OrderAmendment::뜨기() 가 금액을 고치기 전에 남기므로, 재결제 링크는 반드시
+     * 그 줄보다 뒤에 선다.
      */
     public function 재결제기다리는중인가(): bool
     {
+        $마지막정정 = \Illuminate\Support\Facades\Schema::hasTable('order_amendments')
+            ? OrderAmendment::where('order_id', $this->id)->max('created_at')
+            : null;
+
+        /* 정정을 건 적이 없으면 살아 있는 링크는 최초 결제 링크다 — 기다리는 중이 아니다 */
+        if (! $마지막정정) {
+            return false;
+        }
+
         return $this->paymentLinks()
             ->whereNull('paid_at')
             ->whereIn('status', ['sent', 'pending'])
+            ->where('created_at', '>=', $마지막정정)
             ->where(function ($q) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })

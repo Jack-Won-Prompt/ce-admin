@@ -220,6 +220,20 @@ return [
                                       . '가상계좌로 받은 돈은 왔던 길로 되돌아가지 않아, 주문 정정ㆍ취소로 '
                                       . '무를 때 돌려줄 계좌(은행ㆍ번호ㆍ예금주)를 따로 받아야 합니다 — '
                                       . '그 손이 부담이면 여기서 끕니다.'],
+            /* 환자가 결제 화면에서 가상계좌를 고를 수 있는가 (2026-09-30 지시).
+
+               위의 「가상계좌 발급」과 다른 칸이다 — 그쪽은 **담당자가 결제전송에서**
+               가상계좌를 골라 계좌를 발급해 보내는 길이고, 이 칸은 **환자가 결제
+               화면에서 직접** 카드ㆍ가상계좌를 고르게 하는 길이다.
+
+               여태 `.env` 의 TOSS_VA_SELECTABLE 로만 바꿀 수 있어, 운영 서버에 그 줄이
+               없으면 기본값 false 로 잠긴 채 화면에서는 왜 안 보이는지 알 길이 없었다. */
+            'va_selectable' => ['label' => '결제 화면에서 가상계좌 선택',
+                                'config' => 'toss.virtual_account.selectable', 'type' => 'bool',
+                                'help'  => '켜면 환자가 결제 화면에서 카드ㆍ가상계좌를 고릅니다. '
+                                         . '**상점에 가상계좌 계약이 있을 때만 켜십시오** — 계약이 없으면 '
+                                         . '토스가 결제창을 열지 않고 「계약된 결제수단이 아닙니다」로 '
+                                         . '되돌려, 환자는 우리 잘못으로 읽습니다.'],
             'va_bank'        => ['label' => '가상계좌 은행 코드', 'config' => 'toss.virtual_account.bank', 'width' => 1],
             'va_valid_hours' => ['label' => '입금 기한(시간)',    'config' => 'toss.virtual_account.valid_hours', 'type' => 'int', 'width' => 1],
             'va_fallback_bank'    => ['label' => '입금계좌 은행',   'config' => 'toss.virtual_account.fallback_bank',
