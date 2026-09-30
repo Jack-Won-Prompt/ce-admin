@@ -4380,6 +4380,12 @@ class PrescriptionController extends Controller
             '026090002148' => ['#{날짜}' => self::날짜글($prescription->repurchase_date
                                               ?: $prescription->next_repurchase)],
 
+            /* 처방**서류**등록안내_환자용(260930) — 위 문구의 새 판이다 (2026-09-30 승인).
+               「처방전이」를 「처방 서류가」로 고쳐 다시 승인받았다. 자리는 그대로이므로
+               같은 날짜를 채운다 — 이 규칙이 없으면 #{날짜} 가 남아 잣대에 걸린다. */
+            '026090002236' => ['#{날짜}' => self::날짜글($prescription->repurchase_date
+                                              ?: $prescription->next_repurchase)],
+
             /* 재등록 신청 안내 — 「재등록 기한: #{날짜}」.
                최초 등록신청서 팩스 전송일 + 2년이다 (2026-09-30 지시).
                보낸 적이 없으면 비어 있고, 그러면 아래 잣대가 막는다. */
