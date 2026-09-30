@@ -308,7 +308,10 @@ class SettlementController extends Controller
                     'deposit_amount' => '',
                     'paid_at'        => '',
                     'deposit_at'     => '',
-                    'deposited_at'  => $a->amended_at?->format('Y-m-d H:i') ?? '-',
+                    /* 「입금일시」는 돈이 들어온 때다 — 물러난 줄에는 그런 것이 없다.
+                       여태 정정한 시각을 적어 두어, 21:29 에 입금된 것처럼 읽혔다.
+                       정정한 때는 「정산 사유」와 청구 상태가 이미 말한다. */
+                    'deposited_at'  => '-',
                     'deposit_done'  => false,
                     'deposit_hand'  => false,
                     'deposit_due'   => 0,
@@ -377,7 +380,12 @@ class SettlementController extends Controller
                이 건의 값은 뒤의 「주문 금액」ㆍ「청구 금액」ㆍ「본인 부담금」이 말한다
                (2026-09-30 지시로 이름을 그렇게 맞췄다). */
             ['header' => '단가',        'name' => 'unit_price',   'width' => 100, 'editor' => 'number', 'summary' => false],
-            ['header' => '입금액',      'name' => 'deposit',      'width' => 100, 'align' => 'right'],
+            /* 이 칸은 **입금 확인 단추** 자리다 — 금액이 아니다 (2026-09-30 지시).
+
+               이름이 「입금액」이라 옆의 「입금 금액」(실제로 받은 돈)과 겹쳐 보였다.
+               담당자는 같은 뜻의 칸이 둘인 줄 알고 어느 쪽이 맞는지 되물었다.
+               하는 일로 적는다 — 누르면 이 줄의 입금을 확인한다. */
+            ['header' => '입금 확인',   'name' => 'deposit',      'width' => 100, 'align' => 'center'],
             /* 입금 일시 — 여태 이 목록에는 금액만 있었다 (2026-09-19 지시).
                언제 들어왔는지는 가상계좌 목록에만 있어, 정산 담당자가 두 화면을
                오가며 맞춰 보아야 했다. */

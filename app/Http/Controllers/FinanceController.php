@@ -1063,13 +1063,13 @@ class FinanceController extends Controller
                 ['header' => '제품코드',   'name' => 'code',      'width' => 110],
                 ['header' => '제품명',     'name' => 'product',   'width' => 200],
                 ['header' => '주문수량',   'name' => 'qty',       'width' => 90] + $money,
-                ['header' => '주문금액',   'name' => 'total',     'width' => 110] + $money,
+                ['header' => '주문 금액',  'name' => 'total',     'width' => 110] + $money,
                 /* 비율을 이름에 박지 않는다 (2026-09-22 확인요청 1쪽 · 탭 이름과 같은 까닭).
                    환자 결제 청구용이 아닌 건은 본인부담이 100% 인 경우가 있고, 지자체는
                    90% 가 아니라 100% 로 들어오는 일이 있다 — 이름이 늘 맞지는 않는다.
                    탭 이름(self::TABS)에서는 2026-09-11 에 이미 뗐는데 이 칸만 남아 있었다. */
-                ['header' => '환자부담금', 'name' => 'copay', 'width' => 130] + $money,
-                ['header' => '공단/지자체 부담금', 'name' => 'nhis', 'width' => 170] + $money,
+                ['header' => '청구 금액', 'name' => 'nhis', 'width' => 170] + $money,
+                ['header' => '본인 부담금', 'name' => 'copay', 'width' => 130] + $money,
                 ['header' => '출고일자',   'name' => 'shipped_at','width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '배송일자',   'name' => 'delivered', 'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '배송상태',   'name' => 'ship_state','width' => 90,  'align' => 'center', 'sortable' => true],
@@ -1090,7 +1090,7 @@ class FinanceController extends Controller
                    값이 화면마다 다른 이름으로 서면 담당자가 같은 것인지 되묻는다.
                    여태 「입금일시ㆍ입금금액」이라 적혀 있었고 입금확인은 아예 없었다. */
                 ['header' => '결제수단',   'name' => 'pay_method', 'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '입금확인',   'name' => 'deposit_at', 'width' => 115, 'align' => 'center', 'sortable' => true],
+                ['header' => '입금 확인일', 'name' => 'deposit_at', 'width' => 115, 'align' => 'center', 'sortable' => true],
                 ['header' => '입금 금액',  'name' => 'paid',       'width' => 110] + $money,
                 ['header' => '결제 시각',  'name' => 'paid_time',  'width' => 140, 'align' => 'center', 'sortable' => true],
                 /* 카드로 받은 건의 상세 (2026-09-23 지시) — 여태 「카드」까지만 적혀,
@@ -1112,13 +1112,13 @@ class FinanceController extends Controller
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
                 // 환자에게 청구한 금액 — 입금과 맞춰 보는 값이다
-                ['header' => '주문금액',   'name' => 'billed',    'width' => 110] + $money,
-                ['header' => '본인부담액', 'name' => 'copay',     'width' => 110] + $money,
+                ['header' => '주문 금액',  'name' => 'billed',    'width' => 110] + $money,
+                ['header' => '본인 부담금', 'name' => 'copay',     'width' => 110] + $money,
                 ['header' => '입금일자',   'name' => 'paid_at',   'width' => 100, 'align' => 'center', 'sortable' => true],
                 /* 입금확인 — 다른 목록과 같은 넷을 여기에도 세운다 (2026-09-20 지시).
                    입금일자와 달리 「받았는가」를 묻는 칸이다 — 본인부담이 0원인 건은
                    빈칸이 아니라 「본인부담 없음」이라 적힌다. */
-                ['header' => '입금확인',   'name' => 'deposit_at', 'width' => 115, 'align' => 'center', 'sortable' => true],
+                ['header' => '입금 확인일', 'name' => 'deposit_at', 'width' => 115, 'align' => 'center', 'sortable' => true],
                 /* 결제 시각 — 날짜만으로는 같은 날 두 번 오간 건을 가릴 수 없다(2026-09-10 지시) */
                 ['header' => '결제 시각',  'name' => 'paid_time', 'width' => 150, 'align' => 'center', 'sortable' => true],
                 ['header' => '입금 금액',  'name' => 'paid',      'width' => 110] + $money,
