@@ -5064,7 +5064,10 @@ class PrescriptionController extends Controller
             'recipient_type'  => 'required|string|max:50',
             'fax_no'          => ['required', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],
             'documents'       => 'nullable|array',
-            'documents.*'     => 'string|in:authorization,delegation,prescription,purchase_history,cash_receipt,tax_invoice,guardian_id',
+            /* 본인 신분증(patient_id)도 받는다 (2026-09-30 실전 시험에서 드러남).
+               신분증 링크로 받은 사진은 첨부가 아니라 동의 기록에 담기므로
+               attachment_ids 로는 실을 수 없다 — 보호자 신분증과 같은 길이다. */
+            'documents.*'     => 'string|in:authorization,delegation,prescription,purchase_history,cash_receipt,tax_invoice,guardian_id,patient_id',
             'attachment_ids'  => 'nullable|array',
             'attachment_ids.*' => 'integer|exists:prescription_attachments,id',
         ]);
@@ -5119,6 +5122,7 @@ class PrescriptionController extends Controller
             /* 미성년자 건에만 함께 나간다. 첨부가 아니라 개인정보동의에 딸린 파일이라
                attachment_ids 로는 고를 수 없다 — 여기서 이름을 붙인다. */
             'guardian_id'      => '법정대리인 신분증',
+            'patient_id'       => '본인 신분증',
         ];
         /* 심평원은 우리 팩스를 받지 않는다. 고를 수 있게 두면 잘못 보낸다.
 
@@ -6271,6 +6275,27 @@ class PrescriptionController extends Controller
                         foreach (['public', 'local'] as $disk) {
                             if (Storage::disk($disk)->exists($gpath)) {
                                 $files[] = Storage::disk($disk)->path($gpath);
+                                break;
+                            }
+                        }
+                    }
+                    break;
+
+                case 'patient_id':
+                    /* 본인 신분증 — 신분증 링크(kind='id_card')로 받은 사진이다.
+                       보호자 신분증과 같이 첨부가 아니라 동의 기록에 딸려 들어가므로
+                       (consents/patient-id/…) 첨부 목록에서는 찾을 수 없다.
+
+                       위임동의와 **다른 줄**에 담긴다 — 마지막 동의가 신분증 건이
+                       아닐 수 있어, 받아 둔 것 가운데 마지막을 찾는다. */
+                    $ppath = $prescription->consents()
+                        ->whereNotNull('patient_id_path')
+                        ->orderByDesc('id')->value('patient_id_path');
+
+                    if ($ppath) {
+                        foreach (['public', 'local'] as $disk) {
+                            if (Storage::disk($disk)->exists($ppath)) {
+                                $files[] = Storage::disk($disk)->path($ppath);
                                 break;
                             }
                         }

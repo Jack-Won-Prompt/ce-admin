@@ -135,6 +135,19 @@ final class NhisFaxAuto
             $have[] = 'delegation';
         }
 
+        /* 신분증 링크로 받은 본인 신분증도 「있다」로 센다 (2026-09-30 실전 시험에서
+           드러남).
+
+           그 사진은 **첨부가 아니라 동의 기록**에 담긴다(공개되지 않는 디스크에
+           둔다 — 신분증은 주소만 알면 누구나 여는 자리에 두지 않는다). 그런데 여기서는
+           첨부만 세고 있어, 환자가 링크로 올려도 늘 「신분증이 아직 없습니다」였다.
+           그래서 자동 팩스가 **한 번도 나가지 못했다.**
+
+           보호자 신분증은 이미 동의 기록에서 찾고 있었다(아래) — 본인 것만 빠져 있었다. */
+        if ($this->patientIdPath($prescription)) {
+            $have[] = 'id_card';
+        }
+
         $missing = [];
         foreach (self::REQUIRED as $type => $label) {
             if (! in_array($type, $have, true)) {
@@ -167,6 +180,21 @@ final class NhisFaxAuto
     private function guardianIdPath(Prescription $prescription): ?string
     {
         return \App\Support\DelegationGate::보호자신분증($prescription);
+    }
+
+    /**
+     * 신분증 링크로 받아 둔 본인 신분증 — 없으면 null (2026-09-30).
+     *
+     * 위임동의와 **다른 줄**에 담긴다(kind='id_card') — 마지막 동의가 신분증 건이
+     * 아닐 수 있어, 받아 둔 것 가운데 마지막을 찾는다. 주문 등록 화면의 서류 목록도
+     * 같은 방식으로 찾는다.
+     */
+    private function patientIdPath(Prescription $prescription): ?string
+    {
+        return $prescription->consents()
+            ->whereNotNull('patient_id_path')
+            ->orderByDesc('id')
+            ->value('patient_id_path');
     }
 
     /**
@@ -223,6 +251,15 @@ final class NhisFaxAuto
 
         if ($this->guardianIdPath($prescription)) {
             $docs[] = 'guardian_id';
+        }
+
+        /* 본인 신분증도 첨부가 아니다 — 첨부로 올라온 것이 없을 때만 동의 기록에서
+           꺼내 붙인다. 둘 다 있으면 같은 사람의 신분증이 두 장 나간다. */
+        $첨부로온신분증 = PrescriptionAttachment::where('prescription_id', $prescription->id)
+            ->where('doc_type', 'id_card')->exists();
+
+        if (! $첨부로온신분증 && $this->patientIdPath($prescription)) {
+            $docs[] = 'patient_id';
         }
 
         $request = \Illuminate\Http\Request::create('/', 'POST', [
