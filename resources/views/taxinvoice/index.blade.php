@@ -1051,10 +1051,13 @@ async function loadHistory(page = 1) {
       if (r.record_type === 'pending') {
         return {
           ...r,
-          /* 발행 대기는 아직 관리번호가 없다 — 주문번호를 적고 처방번호를 잇는다.
-             발행된 줄과 같은 꼴이라야 한 열에서 견주어 읽을 수 있다. */
+          /* 「주문번호」 칸에는 **주문번호만** 적는다 (2026-09-30 지시).
+
+             발행 대기 줄만 처방번호를 이어 붙여 두 줄로 섰다 — 발행된 줄은 주문번호
+             하나인데 대기 줄만 달라, 같은 열을 훑는 눈이 걸린다. 처방번호는 줄을
+             열면 상세에 그대로 있고, 아래 「처방번호」 열에도 실려 있다. */
           date: wDate,
-          mgt: (r.order_number ?? '—') + (r.rx_number ? String.fromCharCode(10) + r.rx_number : ''),
+          mgt: (r.order_number ?? '—'),
           buyer: (r.invoiceeCorpName ?? '—'),
           supply, tax, type: '—', status: '발행 대기',
           record_type: 'pending', rx_number: (r.rx_number ?? ''), mgtKey: '', canCancel: false,
