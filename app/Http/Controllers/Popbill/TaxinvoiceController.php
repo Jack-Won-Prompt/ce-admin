@@ -294,20 +294,31 @@ class TaxinvoiceController extends Controller
                그대로 더하면 이 기간에 국세청에 남은 금액이 나온다. */
             ->flatMap(function (array $줄) {
                 if ((int) ($줄['stateCode'] ?? 0) !== 600) {
-                    return [$줄];
+                    return [$줄 + ['_seq' => 0]];
                 }
 
                 $음수 = fn ($v) => -abs((int) $v);
 
+                /* 두 줄은 **붙어 서고 발행이 먼저다** (2026-09-30 지시).
+
+                   청구 관리ㆍ정산/회계가 「원 주문 → 취소 → 지금 값」으로 위에서 아래로
+                   흐르게 했다. 여기도 같은 잣대다 — 발행하고 물렀다는 순서로 읽혀야 한다.
+
+                   그러려면 두 줄이 **같은 자리에 묶여야** 한다. 취소 시각으로 세우면
+                   목록 전체가 최신 먼저라 취소가 위로 올라가고, 발행이 한참 아래로
+                   떨어지는 일도 생긴다. 둘 다 발행 시각에 묶고, 그 안에서만 차례를
+                   가른다(_seq). */
                 $발행 = array_merge($줄, [
                     'record_type' => 'taxinvoice',
                     'stateCode'   => '300',
                     'sort_date'   => $줄['issueDT'] ?: $줄['sort_date'],
                     '_pair'       => 'issued',
+                    '_seq'        => 0,
                 ]);
 
                 $취소 = array_merge($줄, [
-                    'sort_date'       => $줄['stateDT'] ?: $줄['sort_date'],
+                    'sort_date'       => $줄['issueDT'] ?: $줄['sort_date'],
+                    '_seq'            => 1,
                     'supplyCostTotal' => (string) $음수($줄['supplyCostTotal']),
                     'taxTotal'        => (string) $음수($줄['taxTotal']),
                     'totalAmount'     => (string) $음수($줄['totalAmount']),
@@ -318,7 +329,7 @@ class TaxinvoiceController extends Controller
                     '_pair'           => 'cancelled',
                 ]);
 
-                return [$취소, $발행];
+                return [$발행, $취소];
             })
             ->values();
 
@@ -368,6 +379,7 @@ class TaxinvoiceController extends Controller
 
                 return [
                     'record_type'     => 'pending',
+                    '_seq'            => 0,
                     /* 대기 줄도 시각까지 — 발행된 줄과 같은 잣대라야 섞어 세울 수 있다 */
                     'sort_date'       => $at?->format('YmdHis') ?? '',
                     'invoicerMgtKey'  => null,
@@ -407,8 +419,13 @@ class TaxinvoiceController extends Controller
             });
 
         // ── 4. 합치기 → 날짜 내림차순 → 페이징 ────────────────────
+        /* 날짜는 최신 먼저, 한 계산서 안에서는 **발행 → 취소** 차례다 (2026-09-30 지시).
+           `_seq` 가 없는 줄(발행 대기ㆍ취소를 거치지 않은 계산서)은 0 으로 본다. */
         $combined = $tiRecords->concat($rxRecords)
-            ->sortByDesc('sort_date')
+            ->sortBy([
+                ['sort_date', 'desc'],
+                ['_seq', 'asc'],
+            ])
             ->values();
 
         $total = $combined->count();

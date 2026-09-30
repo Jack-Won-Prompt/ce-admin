@@ -2378,22 +2378,23 @@ document.addEventListener('click', (e) => {
          「본인부담 없음」이라 적는다(2026-09-14 지시) — 빈칸만 보면 입금이 확인된
          건인데 값이 빠진 것으로 읽힌다. 그 글이 들어가도록 조금 넓혔다. */
       { header: '입금확인',     name: 'deposit_at',      width: 115, align: 'center', sortable: true },
-      /* 입금 금액 — 실제로 받은 돈(2026-09-14 요청). 「받을 금액」과 나란히 보면
+      /* 입금 금액 — 실제로 받은 돈(2026-09-14 요청). 「본인 부담금」과 나란히 보면
          덜 받았는지 한눈에 가린다. 받지 않은 건은 빈칸이다. */
       { header: '입금 금액',    name: 'deposit_amount',  width: 100, align: 'right',  sortable: true, renderer: money },
       /* 결제 시각 — 날짜만으로는 같은 날 두 번 오간 건을 가릴 수 없다(2026-09-10 지시).
          토스가 승인한 시각이 먼저고, 없으면 가상계좌 입금ㆍ담당자 확인 시각이다. */
       { header: '결제 시각',    name: 'paid_at',         width: 140, align: 'center', sortable: true },
-      /* 「받을 금액」이다 — 총액이 아니다 (2026-09-10 지시).
+      /* 「주문 금액」이다 — 본인＋기관이다 (2026-09-30 지시).
 
-         주문 줄의 total_amount 는 **환자에게 받을 돈**(본인부담금)을 담는다. 배송비가
-         없으니 본인부담 그것뿐이다(2026-09-03 확정). 그런데 칸 이름이 「총 금액」이라
-         옆의 「본인 부담금」과 같은 수가 서고 「기관 부담금」을 더해도 맞지 않아,
-         합이 틀린 것처럼 보였다.
+         이 칸에는 `OrderGridExtras::of` 가 **본인부담＋기관부담**을 담는다. 그런데
+         이름만 「받을 금액」이라, 옆의 「본인 부담금」과 다른 수가 서서 어느 것이
+         환자에게 받을 돈인지 읽히지 않았다 —
 
-         공단부담을 더한 진짜 총액을 보는 자리는 Finance 다 — 거기서는 본인＋기관을
-         따로 셈해 「주문금액」으로 세운다. */
-      { header: '받을 금액',    name: 'total_amount',    width: 100, align: 'right',  sortable: true, renderer: money },
+           (E)김선미  받을 금액 810,000 · 본인 부담금 81,000 · 기관 부담금 729,000
+
+         환자에게 받을 돈은 옆의 「본인 부담금」이 이미 말하고, 기관에 청구할 돈은
+         「기관 부담금」이 말한다. 이 칸은 그 둘을 더한 것이므로 값대로 부른다. */
+      { header: '주문 금액',    name: 'total_amount',    width: 100, align: 'right',  sortable: true, renderer: money },
       { header: '본인 부담금',  name: 'copay',           width: 110, align: 'right',  sortable: true, renderer: money },
       { header: '기관 부담금',  name: 'nhis_amount',     width: 110, align: 'right',  sortable: true, renderer: money },
     ];
