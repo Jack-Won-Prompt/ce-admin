@@ -261,8 +261,14 @@ class FinanceController extends Controller
 
                날짜와 시각을 따로 담는다 — 「입금일자」는 날짜로 세는 자리라 그대로 두고,
                시각은 제 칸에서 본다. */
-            'paid_at'    => $o->paidAt()?->format('Y-m-d') ?? '',
-            'paid_time'  => $o->paidAtLabel('Y-m-d H:i:s'),
+            /* **무른 건은 비운다** (2026-09-30 실전 시험에서 드러남).
+
+               paidAt() 은 토스가 준 승인 시각을 읽는데 그 값은 결제를 전액 취소해도
+               그대로 남는다. 그래서 81,000원을 물러 준 건이 「입금 금액 0 · 입금일자
+               2026-09-30」으로 서서 받은 것인지 아닌지 가릴 수 없었다. 옆 칸의
+               입금 금액이 이미 isDepositConfirmed() 를 보므로 날짜도 같은 잣대를 쓴다. */
+            'paid_at'    => $o->isDepositConfirmed() ? ($o->paidAt()?->format('Y-m-d') ?? '') : '',
+            'paid_time'  => $o->isDepositConfirmed() ? $o->paidAtLabel('Y-m-d H:i:s') : '',
             'paid'       => $paid,
             /* 입금확인 — 다른 아홉 목록과 같은 잣대다 (2026-09-20 지시).
 
