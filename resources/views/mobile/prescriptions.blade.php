@@ -62,15 +62,27 @@
 <div class="m-sheet" id="lookupSheet">
   <div class="m-grab"></div>
   <h2>처방전 조회</h2>
-  <p class="desc">이름과 생년월일이 모두 일치해야 조회됩니다. 다른 담당자가 등록한 처방전에도 서류를 추가할 수 있습니다.</p>
+  <p class="desc">이름과 생년월일이 모두 일치해야 조회됩니다. 생년월일은 숫자 8자리나 주민등록번호 앞자리로도 됩니다.
+    다른 담당자가 등록한 처방전에도 서류를 추가할 수 있습니다.</p>
 
   <div class="m-field">
     <label class="m-label" for="lkName">환자 이름</label>
     <input class="m-input" id="lkName" placeholder="이름" autocomplete="off">
   </div>
+  {{-- 손으로 적어도 되고 달력에서 골라도 된다 — 앱의 _LookupSheet 과 같다
+       (2026-10-01 지시). 여태 이 칸이 달력 입력이라 숫자를 칠 수 없었다:
+       붙임표 없는 여덟 자리도, 주민등록번호 앞자리도 넣을 길이 없었다.
+       읽는 것은 서버가 한다(PrescriptionApiController::생년월일로). --}}
   <div class="m-field">
     <label class="m-label" for="lkBirth">생년월일</label>
-    <input class="m-input" id="lkBirth" type="date" max="{{ now()->toDateString() }}">
+    <div class="lk-birth">
+      <input class="m-input" id="lkBirth" inputmode="numeric" autocomplete="off"
+             placeholder="19900505 또는 1990-05-05">
+      <i class="bx bx-calendar" aria-hidden="true"></i>
+      {{-- 달력 단추 자리에 투명하게 겹쳐 둔다 — 누르면 기기의 날짜 고르개가 열린다 --}}
+      <input type="date" id="lkBirthPick" max="{{ now()->toDateString() }}"
+             aria-label="달력에서 선택" onchange="lkPicked(this)">
+    </div>
   </div>
 
   <button class="m-btn" id="lkBtn" onclick="lookupGo()"><i class="bx bx-search"></i> <span id="lkBtnTxt">찾기</span></button>
@@ -101,6 +113,13 @@
   .rx-div  { height:1px; background:#E0E6F0; border:0; margin:10px 0; }
   .rx-foot { display:flex; align-items:center; gap:4px; font-size:11px; color:#90A4AE; }
   .rx-foot .sp { flex:1; }
+  /* 생년월일 칸 — 글자로 적는 칸 위에 날짜 고르개를 투명하게 겹쳐 둔다 */
+  .lk-birth { position:relative; }
+  .lk-birth .m-input { padding-right:44px; }
+  .lk-birth i { position:absolute; right:14px; top:50%; transform:translateY(-50%);
+                font-size:18px; color:#90A4AE; pointer-events:none; }
+  .lk-birth input[type="date"] { position:absolute; right:0; top:0; width:44px; height:100%;
+                                 opacity:0; border:0; padding:0; margin:0; background:none; }
   /* 조회 결과 카드 — 앱의 _LookupSheet 결과와 같다 */
   .lk-card { border:1px solid #E3E8EF; border-radius:12px; padding:12px; margin-bottom:8px; }
   .lk-top  { display:flex; align-items:center; gap:8px; }
@@ -282,9 +301,14 @@
       </div>`;
   }
 
+  /** 달력에서 고른 날짜를 글자 칸에 적어 둔다 */
+  function lkPicked(고르개) {
+    if (고르개.value) document.getElementById('lkBirth').value = 고르개.value;
+  }
+
   async function lookupGo() {
     const 이름 = document.getElementById('lkName').value.trim();
-    const 생일 = document.getElementById('lkBirth').value;
+    const 생일 = document.getElementById('lkBirth').value.trim();
     const 통   = document.getElementById('lkResult');
 
     if (!이름 || !생일) {
