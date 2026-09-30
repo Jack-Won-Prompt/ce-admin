@@ -172,7 +172,12 @@ class TaxinvoiceController extends Controller
         $tiRecords = $tiRows
             ->map(fn($r) => [
                 'record_type'     => 'taxinvoice',
-                'sort_date'       => $r->write_date,
+                /* 같은 날 줄이 뒤섞이지 않게 **시각까지** 본다 (2026-09-30 지시).
+
+                   여태 작성일자(Ymd)만으로 세웠다. 하루에 여러 건이 나가면 그 안의
+                   차례가 조회할 때마다 달라져, 담당자가 「방금 낸 것」을 눈으로 못
+                   찾았다. 발행 시각이 있으면 그것을, 없으면 작성일 끝으로 둔다. */
+                'sort_date'       => $r->issue_dt ?: ($r->write_date . '999999'),
                 'invoicerMgtKey'  => $r->mgt_key_type === 'SELL'    ? $r->mgt_key : null,
                 'invoiceeMgtKey'  => $r->mgt_key_type === 'BUY'     ? $r->mgt_key : null,
                 'trusteeMgtKey'   => $r->mgt_key_type === 'TRUSTEE' ? $r->mgt_key : null,
@@ -193,9 +198,19 @@ class TaxinvoiceController extends Controller
                 'totalAmount'     => (string) ($r->total_amount ?: $r->supply_cost_total + $r->tax_total),
                 'ntsconfirmNum'   => $r->nts_confirm_num,
 
-                // 팝빌이 주는 나머지 (요청서 6쪽)
-                'invoicerCeoName' => $r->invoicer_ceo_name,
-                'invoiceeCeoName' => $r->invoicee_ceo_name,
+                /* 대표자 이름은 **팝빌 목록 응답에 아예 없다** (2026-09-30 확인).
+
+                   조회로 받아 오는 항목에 invoicerCEOName·invoiceeCEOName 이 담기지
+                   않아, 상호는 서는데 성명 칸만 늘 비어 있었다 — 한 쪽만 맞아 보인다.
+
+                   우리가 신고할 때 적어 둔 값이 주문에 그대로 있다. 그것으로 채운다 —
+                   신고한 값이므로 국세청 기록과 어긋나지 않는다. 공급자 대표자는
+                   설정에 담긴 우리 회사 값이다. */
+                'invoicerCeoName' => $r->invoicer_ceo_name
+                                      ?: config('popbill.company.ceo_name'),
+                'invoiceeCeoName' => $r->invoicee_ceo_name
+                                      ?: ($r->order?->tax_invoice_ceo_name
+                                          ?: \App\Models\Patient::bare($r->order?->patient?->name)),
                 'stateDT'         => $r->state_dt,
                 'isFinal'         => (bool) $r->is_final,
                 'syncedAt'        => $r->synced_at?->toDateTimeString(),
@@ -257,7 +272,8 @@ class TaxinvoiceController extends Controller
 
                 return [
                     'record_type'     => 'pending',
-                    'sort_date'       => $at?->format('Ymd') ?? '',
+                    /* 대기 줄도 시각까지 — 발행된 줄과 같은 잣대라야 섞어 세울 수 있다 */
+                    'sort_date'       => $at?->format('YmdHis') ?? '',
                     'invoicerMgtKey'  => null,
                     'invoiceeMgtKey'  => null,
                     'trusteeMgtKey'   => null,
