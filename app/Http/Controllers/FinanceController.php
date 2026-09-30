@@ -148,9 +148,13 @@ class FinanceController extends Controller
         $정정 = $this->amendRows($rows);
 
         /* 정정 줄은 제 주문 바로 뒤에 세운다 — 표를 훑을 때 셋이 붙어 있어야 읽힌다.
-           차례는 「정정 후(지금) · 원 주문 · 취소」다. 목록이 최신 먼저라 지금 값이
-           맨 위에 서고, 그 아래로 물러난 것들이 따라온다. */
+
+           차례는 **원 주문 → 취소 → 정정 후(지금)** 다 (2026-09-30 지시).
+           청구 관리ㆍ정산/회계와 같은 잣대다 — 먼저 얼마였고, 그것을 물렀고, 그래서
+           지금 얼마인가가 위에서 아래로 흘러야 돈의 움직임이 읽힌다. 여태 지금 값이
+           맨 위에 서서 거꾸로 읽혔다. */
         $data = $rows->flatMap(fn (Order $o) => array_merge(
+            $정정[$o->id] ?? [],
             [[
                 // 정정한 적이 있으면 이 줄이 「정정 후」다 — 무엇을 보고 있는지 밝힌다
                 'kind'   => isset($정정[$o->id]) ? '정정 후' : '주문',
@@ -160,7 +164,6 @@ class FinanceController extends Controller
             + $extras->rx($o->prescription, $o->patient)
             + $extras->ww($o, $o->prescription, $o->patient)
             + $extras->of($o)],
-            $정정[$o->id] ?? [],
         ))->values();
 
         /* 통합주문내역은 갈래를 가리지 않고 모두 담는다 (2026-09-11 확인요청 8쪽).
@@ -399,7 +402,7 @@ class FinanceController extends Controller
                 'ww_so_no'   => $a->withworks_so_no ?? '',
             ];
 
-            // 아래에서 위로 쌓으므로 취소를 먼저 넣는다 — 화면에는 원 주문이 먼저 선다
+            // 원 주문 → 취소 차례로 쌓는다 — 그 아래에 지금 값 줄이 선다
             $out[$a->order_id][] = $바탕 + [
                 'kind'       => "정정 {$a->seq}차 · 원 주문",
                 'order_kind' => \App\Support\OrderAmendLines::원줄말($바탕구분),
@@ -409,7 +412,9 @@ class FinanceController extends Controller
                 'copay'      => (int) $a->patient_copay,
                 'nhis'       => (int) $a->nhis_amount,
                 'ship_state' => '',
-                'status'     => '정정 전',
+                /* 주문상태 말은 화면마다 같아야 한다 (2026-09-30 지시) —
+                   청구 관리ㆍ정산/회계와 같은 「주문 정정」ㆍ「주문 취소」를 쓴다. */
+                'status'     => '주문 정정',
                 'cancelled'  => '',
                 'cancel_at'  => '',
                 'paid_at'    => '',
@@ -425,7 +430,7 @@ class FinanceController extends Controller
                 'copay'      => -(int) $a->patient_copay,
                 'nhis'       => -(int) $a->nhis_amount,
                 'ship_state' => '',
-                'status'     => '정정 취소',
+                'status'     => '주문 취소',
                 'cancelled'  => '취소',
                 'cancel_at'  => $날,
                 'paid_at'    => '',

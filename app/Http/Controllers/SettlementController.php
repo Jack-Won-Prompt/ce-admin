@@ -333,7 +333,12 @@ class SettlementController extends Controller
                 ];
 
                 /* 「원/추가」 칸도 줄마다 갈라 적는다 (2026-09-27 확인요청 5쪽) */
-                $폄[] = ['status'       => \App\Support\OrderAmendLines::원주문말($a),
+                /* 「주문상태」 칸에는 주문의 상태를 적는다 (2026-09-30 지시).
+
+                   여태 「정정 1차 · 원 주문」처럼 청구 쪽 말이 들어가 있었다. 몇 차
+                   정정의 어느 줄인지는 옆의 「원/추가」 칸이 이미 말한다
+                   (원주문 · 원주문-취소 · 원주문-정정). */
+                $폄[] = ['status'       => '주문 정정',
                          'status_key'   => '',
                          'order_kind'   => \App\Support\OrderAmendLines::원줄말($바탕구분),
                          'total_amount' => $금액,
@@ -341,7 +346,7 @@ class SettlementController extends Controller
                          'copay'        => (int) $a->patient_copay]
                       + $물러난값 + $줄;
 
-                $폄[] = ['status'       => \App\Support\OrderAmendLines::취소말($a),
+                $폄[] = ['status'       => '주문 취소',
                          'status_key'   => '',
                          'order_kind'   => \App\Support\OrderAmendLines::취소줄말($바탕구분),
                          'total_amount' => -$금액,
