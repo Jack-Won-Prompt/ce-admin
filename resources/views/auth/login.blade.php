@@ -444,10 +444,14 @@
           </label>
           <div class="input-wrap">
             <i class="bx bx-envelope input-icon"></i>
+            {{-- 계정을 미리 채워 두지 않는다 (2026-09-30 지시). 여태 관리자 주소와
+                 비밀번호가 화면에 박혀 있어, 주소만 아는 사람이 그대로 눌러
+                 들어올 수 있었다. 로그인은 Microsoft 계정으로 한다. --}}
             <input type="email" id="email" name="email"
                    class="form-control"
-                   value="{{ old('email', 'admin@ce-admin.co.kr') }}"
+                   value="{{ old('email') }}"
                    placeholder="admin@example.com"
+                   autocomplete="off"
                    autofocus>
           </div>
           @error('email')
@@ -465,8 +469,8 @@
             <i class="bx bx-lock-alt input-icon"></i>
             <input type="password" id="password" name="password"
                    class="form-control"
-                   value="12345678"
-                   placeholder="••••••••">
+                   placeholder="••••••••"
+                   autocomplete="new-password">
             <button type="button" class="pw-toggle" onclick="togglePw()">
               <i class="bx bx-show" id="pwToggleIcon"></i>
             </button>
