@@ -105,6 +105,8 @@ class SyncKakaoTemplatesCommand extends Command
 
             $무엇 = $줄 === null ? '새로'
                 : (($줄->body ?? '') !== $본문 || $줄->label !== $이름 ? '고침' : '그대로');
+
+            $코드 = $줄?->code ?: $코드;
             $셈[$무엇]++;
 
             $보기[] = [$팝빌코드, mb_substr($이름, 0, 24), $코드,
@@ -118,7 +120,11 @@ class SyncKakaoTemplatesCommand extends Command
                 ['id' => $줄?->id],
                 [
                     'channel'           => 'alimtalk',
-                    'code'              => $코드,
+                    /* **이미 있는 줄의 코드는 건드리지 않는다.** 사람이 문자 쪽 코드에
+                       맞춰 고쳐 둔 것이 있다(신분증ㆍ위임장 서명처럼 문자와 알림톡을
+                       함께 보내려면 코드가 같아야 한다). 여기서 되돌리면 그 자리가
+                       조용히 문자만 나가는 상태로 돌아간다. */
+                    'code'              => $줄?->code ?: $코드,
                     'ats_template_code' => $팝빌코드,
                     'label'             => $이름,
                     'description'       => '팝빌 승인 알림톡 · 채널 ' . ($t['plusFriendID'] ?? '-'),

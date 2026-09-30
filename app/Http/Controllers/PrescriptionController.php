@@ -36,7 +36,8 @@ class PrescriptionController extends Controller
 {
     public function __construct(
         private readonly VirtualAccountService $vaService,
-        private readonly KakaoService $kakaoService,
+        /* 알리고를 부르던 자리는 걷었다 — 알림톡은 팝빌로 나간다 (2026-09-30).
+           KakaoService 는 정적 `templates()` 로만 남아 유형 목록을 준다. */
         private readonly PopbillMessageService $smsService,
         /* 나간 것은 발송 내역에 쌓여야 한다 — 팝빌을 곧바로 부르면 그 자취가 없다 */
         private readonly \App\Services\MessageSender $sender,
@@ -2847,6 +2848,7 @@ class PrescriptionController extends Controller
            채워진 적이 없어 화면이 늘 「미설정」이었다(그래 놓고 발송은 성공이라 답했다). */
         $kakaoConfigured = (bool) (config('popbill.LinkID') && config('popbill.SecretKey')
                                    && config('popbill.test.corp_num'));
+        /* 유형 목록일 뿐이다 — 보내는 곳은 팝빌이다 (2026-09-30) */
         $kakaoTemplates  = \App\Services\KakaoService::templates();
         $smsTemplates    = self::smsTemplates();
 
@@ -4253,34 +4255,21 @@ class PrescriptionController extends Controller
      * 켜져 있어 「발송되었습니다」라고 답하고 아무것도 보내지 않았다 — 그렇게 기록만
      * 남은 건이 열두 건이다. 보내지 못하면 보내지 못했다고 답한다.
      */
-    public function sendKakao(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
+    /**
+     * 알림톡 본문의 변수를 채울 값 — **보내기와 미리보기가 같은 것을 쓴다**.
+     *
+     * 두 곳에 따로 적어 두었더니 미리보기는 옛 글을, 보내기는 새 글을 쓰는 일이
+     * 생겼다. 담당자가 화면에서 본 것과 환자가 받는 것이 다르면 아무도 알아채지
+     * 못한다 — 그래서 한 곳에 둔다 (2026-09-30).
+     *
+     * **빈 값은 담지 않는다.** 담으면 strtr 가 자리표시를 빈 글자로 지워 버려
+     * 「못 채운 변수가 남았나」 잣대에 걸리지 않는다 — 그러면 「처방전 종료일:」
+     * 뒤가 빈 채로 환자에게 간다. 「-」 를 채우는 것도 같은 까닭으로 안 된다.
+     */
+    private function 알림톡값들(Prescription $prescription, ?string $atsCode, string $서류명 = ''): array
     {
-        $request->validate([
-            'template_code' => 'required|string',
-            'mobile'        => 'required|string',
-        ]);
-
-        $prescription->load(['patient', 'order.tossPayment']);
         $order = $prescription->order;
         $tp    = $order?->tossPayment;
-
-        $tpl = \App\Models\MessageTemplate::channel('alimtalk')->active()
-            ->where('code', $request->template_code)->first();
-
-        if (!$tpl) {
-            return response()->json(['success' => false, 'message' => '메시지 유형을 찾지 못했습니다.'], 422);
-        }
-
-        /* 팝빌에 등록ㆍ승인된 템플릿 코드가 있어야 나간다. 없으면 여기서 멈춘다 —
-           보낸 것처럼 답해 두면 아무도 받지 못한 채 보냈다고 기록만 남는다. */
-        $atsCode = \App\Models\MessageTemplate::hasAtsColumn() ? trim((string) $tpl->ats_template_code) : '';
-        if ($atsCode === '') {
-            return response()->json([
-                'success' => false,
-                'message' => "「{$tpl->label}」에 팝빌 알림톡 템플릿 코드가 없습니다. "
-                           . '메시지 관리에서 승인받은 템플릿 코드를 넣어 주십시오.',
-            ], 422);
-        }
 
         $params = [
             /* 「(E)」는 우리끼리 쓰는 표시다 — 알림톡 본문과 수신자명(rcvnm)에 그대로
@@ -4344,6 +4333,47 @@ class PrescriptionController extends Controller
 
         $params += array_filter($템플릿별[$atsCode] ?? [],
             fn ($값) => trim((string) $값) !== '');
+
+        /* 담당자가 화면에서 고른 값 — 「서류등록 안내」의 #{서류명} (2026-09-30 지시).
+           고르지 않으면 담지 않는다. 그러면 잣대가 막는다. */
+        if (trim($서류명) !== '') {
+            $params['#{서류명}'] = trim($서류명);
+        }
+
+        return $params;
+    }
+
+    public function sendKakao(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'template_code' => 'required|string',
+            'mobile'        => 'required|string',
+        ]);
+
+        $prescription->load(['patient', 'order.tossPayment']);
+        $order = $prescription->order;
+        $tp    = $order?->tossPayment;
+
+        $tpl = \App\Models\MessageTemplate::channel('alimtalk')->active()
+            ->where('code', $request->template_code)->first();
+
+        if (!$tpl) {
+            return response()->json(['success' => false, 'message' => '메시지 유형을 찾지 못했습니다.'], 422);
+        }
+
+        /* 팝빌에 등록ㆍ승인된 템플릿 코드가 있어야 나간다. 없으면 여기서 멈춘다 —
+           보낸 것처럼 답해 두면 아무도 받지 못한 채 보냈다고 기록만 남는다. */
+        $atsCode = \App\Models\MessageTemplate::hasAtsColumn() ? trim((string) $tpl->ats_template_code) : '';
+        if ($atsCode === '') {
+            return response()->json([
+                'success' => false,
+                'message' => "「{$tpl->label}」에 팝빌 알림톡 템플릿 코드가 없습니다. "
+                           . '메시지 관리에서 승인받은 템플릿 코드를 넣어 주십시오.',
+            ], 422);
+        }
+
+        $params = $this->알림톡값들($prescription, $atsCode,
+            (string) $request->input('doc_name', ''));
 
         /* 변수는 다 채워지는데 **뜻이 맞지 않는** 자리 — 채워 놓고 막는다.
            아래 잣대(#{...} 가 남았나)로는 걸리지 않으므로 여기서 이름을 대고 막는다. */
@@ -4461,49 +4491,48 @@ class PrescriptionController extends Controller
     }
 
     // ── 카카오 알림톡 미리보기 ──────────────────────────────
+    /**
+     * 알림톡 미리보기 — **실제로 나갈 글 그대로**를 보여 준다 (2026-09-30).
+     *
+     * 예전에는 코드에 박아 둔 글 세 벌을 보여 주었다. 팝빌에서 승인받은 13개를 담은
+     * 뒤로는 그 셋에 해당하는 것이 없어 어느 유형을 골라도 「미리보기 없음」만 떴다 —
+     * 담당자는 무엇이 나갈지 보지 못한 채 보내기를 눌러야 했다.
+     *
+     * 이제 승인 본문을 읽어 보내기와 **같은 값**으로 채운다(`알림톡값들`).
+     * 못 채운 변수는 지우지 않고 그대로 보여 준다 — 그 자리가 비어 있다는 것이
+     * 담당자가 보아야 할 바로 그것이고, 보내기도 같은 까닭으로 막는다.
+     */
     public function kakaoPreview(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
         $request->validate(['template_code' => 'required|string']);
 
         $prescription->load(['patient', 'order.tossPayment', 'items']);
-        $order = $prescription->order;
-        $tp    = $order?->tossPayment;
 
-        // 기관이 내는 몫은 청구전략이 정한다(정해지지 않았으면 예전 규칙)
-        $stratRate = \App\Support\BillingStrategy::payerRate(
-            $prescription->counsel_acc_add_type, $prescription->benefit_class);
-        $itemCopay = (int) $prescription->items->sum(function ($i) use ($stratRate) {
-            $base = (float)($i->insurance_price ?? $i->product_price ?? 0);
-            $qty  = (int)($i->quantity ?? 1);
-            $rate = $stratRate ?? match ($i->nhis_status ?? 'eligible') {
-                'eligible' => 0.9, 'partial' => 0.5, default => 0.0,
-            };
-            return round($base * $qty) - round($base * $rate * $qty);
-        });
+        $틀 = \App\Models\MessageTemplate::channel('alimtalk')
+            ->where('code', $request->template_code)->first();
 
-        $params = [
-            /* 「(E)」는 우리끼리 쓰는 표시다 — 환자에게 가는 글에 내지 않는다 (2026-09-27 지시) */
-            '#{고객명}'    => \App\Models\Patient::bare($prescription->patient?->name)
-                              ?: (\App\Models\Patient::bare($prescription->patient_name_ocr) ?: '고객'),
-            '#{주문번호}'  => $order?->order_number ?? '-',
-            '#{제품명}'    => $order?->product_name ?? $prescription->rx_number,
-            '#{본인부담금}'=> $itemCopay ? number_format($itemCopay) : '-',
-            '#{금액}'      => $itemCopay ? number_format($itemCopay) : '-',
-            '#{은행명}'    => $tp?->bank_name ?? '-',
-            '#{계좌번호}'  => $tp?->account_number ?? '-',
-            '#{기한}'      => $tp?->due_date?->format('Y-m-d H:i') ?? '-',
-            '#{택배사}'    => '택배',
-            '#{운송장번호}'=> $order?->tracking_number ?? '-',
-            '#{배송지}'    => $order?->shipping_address ?? '-',
-            '#{채널명}'    => config('kakao.channel_id', '콜로플라스트'),
-        ];
+        $mobile = $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '';
 
-        $preview = $this->kakaoService->buildPreview($request->template_code, $params);
-        $mobile  = $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '';
+        if (! $틀 || trim((string) $틀->body) === '') {
+            return response()->json([
+                'preview'  => '(승인된 문구가 없습니다 — 메시지 관리에서 알림톡 템플릿 코드와 본문을 채워 주십시오.)',
+                'mobile'   => $mobile,
+                'missing'  => [],
+            ]);
+        }
+
+        $값들 = $this->알림톡값들($prescription, $틀->ats_template_code,
+            (string) $request->input('doc_name', ''));
+
+        $글 = trim(strtr((string) $틀->body, $값들));
+
+        preg_match_all('/#\{[^}]*\}/u', $글, $남은것);
 
         return response()->json([
-            'preview' => $preview,
+            'preview' => $글,
             'mobile'  => $mobile,
+            /* 채우지 못한 것 — 화면이 이것을 보고 「이대로는 못 보낸다」를 알린다 */
+            'missing' => array_values(array_unique($남은것[0] ?? [])),
         ]);
     }
 
@@ -4903,22 +4932,42 @@ class PrescriptionController extends Controller
             '#{고객명}' => $patientName, '#{유효분}' => $유효분, '#{링크}' => $url,
         ], "[콜로플라스트] {$patientName}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크({$유효분}분 유효):\n{$url}");
 
-        try {
-            $res = $this->sender->sendBulk('sms',
-                [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]],
-                $message, 'id_card_request',
-                ['source' => 'consent', 'prescription_id' => $prescription->id]);
+        /* 켜 둔 채널로 모두 보낸다 — 알림톡이 서 있으면 알림톡도 함께 나간다
+           (2026-09-30 지시). 알림톡 본문은 승인받은 글이라 위 $message 를 쓰지
+           못한다 — 변수만 건네고 본문은 MessageSender 가 유형에서 읽는다. */
+        $보낼것 = \App\Models\MessageTemplate::보낼채널들('id_card_request', 문자는틀없이도: true);
+        $받을이  = [['rcv' => $mobile, 'rcvnm' => $patientName, 'patient_id' => $prescription->patient_id]];
+        $나간것  = [];
+        $탈      = null;
 
-            if (! ($res['success'] ?? false)) {
-                throw new \RuntimeException($res['message'] ?? '문자를 보내지 못했습니다.');
+        try {
+            foreach ($보낼것 as [$채널, $틀코드]) {
+                $res = $this->sender->sendBulk($채널, $받을이, $message,
+                    $틀코드 ?: 'id_card_request',
+                    ['source' => 'consent', 'prescription_id' => $prescription->id],
+                    ['#{링크}' => $url, '#{유효분}' => (string) $유효분]);
+
+                if ($res['success'] ?? false) {
+                    $나간것[] = $채널 === 'alimtalk' ? '알림톡' : '문자';
+                } else {
+                    /* 한쪽이 못 나가도 다른 쪽은 살린다 — 둘 다 못 나갔을 때만 실패다 */
+                    $탈 = $res['message'] ?? '보내지 못했습니다.';
+                    Log::warning('[신분증] 한 채널 실패', ['채널' => $채널, 'error' => $탈]);
+                }
             }
 
+            if ($나간것 === []) {
+                throw new \RuntimeException($탈 ?? '문자를 보내지 못했습니다.');
+            }
+
+            $무엇 = implode('ㆍ', $나간것);
+
             activity()->causedBy(auth()->user())->performedOn($prescription)
-                ->log("신분증 제출 SMS 발송 → {$patientName} {$mobile}");
+                ->log("신분증 제출 {$무엇} 발송 → {$patientName} {$mobile}");
 
             return response()->json([
                 'success'    => true,
-                'message'    => 'SMS가 발송되었습니다.',
+                'message'    => "{$무엇}가 발송되었습니다.",
                 'expires_at' => $expiresAt->format('H:i'),
                 'consent_id' => $consent->id,
             ]);

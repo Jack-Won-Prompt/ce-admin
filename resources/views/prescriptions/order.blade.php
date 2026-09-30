@@ -1743,9 +1743,19 @@ $calcDeposit  = $calcCopay;
                 @endforeach
               </div>
             </div>
+            {{-- 서류명을 묻는 유형이 있다 — 「서류등록 안내」의 #{서류명} (2026-09-30 지시).
+                 승인 문구가 그 변수를 쓰면 여기서 골라야 채워진다. 고르지 않으면
+                 서버가 막는다. 쓰지 않는 유형에서는 이 칸이 아예 뜨지 않는다. --}}
+            <div id="kakaoDocNameWrap" style="display:none;">
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">서류 이름</div>
+              <select id="kakaoDocName" class="form-control" style="font-size:12px;height:32px;" onchange="loadKakaoPreview()">
+                <option value="">선택해 주십시오</option>
+              </select>
+            </div>
             <div id="kakaoPreviewWrap" style="display:none;">
-              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">메시지 미리보기</div>
+              <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">메시지 미리보기 <span style="font-weight:400;">— 이 글 그대로 나갑니다</span></div>
               <div id="kakaoPreviewBox" style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:10px 12px;font-size:11px;line-height:1.8;white-space:pre-wrap;color:var(--gray-800);max-height:120px;overflow-y:auto;"></div>
+              <div id="kakaoMissingNote" style="display:none;margin-top:6px;background:var(--danger-light);border:1px solid var(--danger);border-radius:var(--radius);padding:6px 10px;font-size:10px;color:var(--danger);"></div>
             </div>
             @if($prescription->order)
             <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-size:11px;display:flex;flex-direction:column;gap:4px;">
@@ -13452,12 +13462,38 @@ window.HELP_TOUR_STEPS = [
   });
 
   // 템플릿 선택 시 자동 미리보기
+  /* 알림톡 유형마다 승인 문구가 다르다 — 그 글이 #{서류명} 을 쓰면 고르개를 띄운다.
+     본문은 서버가 내려준 그대로다(KAKAO_TPL_BODY). 화면이 짐작하지 않는다. */
+  const KAKAO_TPL_BODY = @json(collect($kakaoTemplates)->map(fn ($t) => (string) ($t['text'] ?? ''))->all());
+
+  function 서류명묻나(code) {
+    return (KAKAO_TPL_BODY[code] ?? '').includes('#{서류명}');
+  }
+
   function onTplChange(radio) {
     document.querySelectorAll('.kakao-tpl-item').forEach(item => {
       const checked = item.querySelector('input').checked;
       item.style.borderColor = checked ? '#FEE500' : 'var(--border)';
       item.style.background  = checked ? '#FFFDE7' : '';
     });
+
+    const code = document.querySelector('input[name=kakao_tpl]:checked')?.value;
+    const wrap = document.getElementById('kakaoDocNameWrap');
+    const sel  = document.getElementById('kakaoDocName');
+
+    if (code && 서류명묻나(code)) {
+      /* 첨부 유형과 같은 목록을 쓴다 — 두 벌로 적으면 한쪽만 고쳐진다 */
+      if (sel.options.length <= 1) {
+        Object.entries(DOC_TYPE_OPTS).forEach(([값, 이름]) => {
+          sel.add(new Option(이름, 이름));
+        });
+      }
+      wrap.style.display = 'block';
+    } else {
+      wrap.style.display = 'none';
+      sel.value = '';
+    }
+
     loadKakaoPreview();
   }
 
@@ -13470,12 +13506,29 @@ window.HELP_TOUR_STEPS = [
     wrap.style.display = 'block';
     box.textContent = '불러오는 중...';
 
+    const docName = document.getElementById('kakaoDocName')?.value ?? '';
+
     try {
-      const res  = await fetch(`{{ route('prescriptions.kakaoPreview', $prescription) }}?template_code=${tpl}`, {
+      const res  = await fetch(`{{ route('prescriptions.kakaoPreview', $prescription) }}`
+                   + `?template_code=${encodeURIComponent(tpl)}&doc_name=${encodeURIComponent(docName)}`, {
         headers: { 'Accept': 'application/json' }
       });
       const data = await res.json();
       box.textContent = data.preview ?? '미리보기 없음';
+
+      /* 채우지 못한 값이 있으면 눌러 보기 전에 알린다 — 그대로는 나가지 않는다.
+         팝빌이 거절할 뿐 아니라, 새어 나가면 환자가 「#{이름}님」을 읽는다. */
+      const 안내 = document.getElementById('kakaoMissingNote');
+      const 빈것 = data.missing ?? [];
+      안내.style.display = 빈것.length ? 'block' : 'none';
+      안내.textContent = 빈것.length
+        ? `채우지 못한 값이 있어 보낼 수 없습니다 — ${빈것.join(', ')}`
+        : '';
+
+      const btn = document.getElementById('btnKakaoSend');
+      btn.disabled = 빈것.length > 0;
+      btn.style.opacity = 빈것.length ? '.5' : '';
+      btn.style.cursor  = 빈것.length ? 'not-allowed' : 'pointer';
 
       const mobileEl = document.getElementById('kakaoMobile');
       if (data.mobile && !mobileEl.value) mobileEl.value = data.mobile;
@@ -13487,8 +13540,10 @@ window.HELP_TOUR_STEPS = [
   async function sendKakaoMsg() {
     const tpl    = document.querySelector('input[name=kakao_tpl]:checked')?.value;
     const mobile = document.getElementById('kakaoMobile').value.trim();
+    const docName = document.getElementById('kakaoDocName')?.value ?? '';
     if (!tpl)    { showToast('메시지 유형을 선택해 주십시오.', 'warning'); return; }
     if (!mobile) { showToast('수신 번호를 입력해 주십시오.', 'warning');  return; }
+    if (서류명묻나(tpl) && !docName) { showToast('서류 이름을 골라 주십시오.', 'warning'); return; }
 
     const btn = document.getElementById('btnKakaoSend');
     BtnState.loading(btn, '발송 중...');
@@ -13501,7 +13556,7 @@ window.HELP_TOUR_STEPS = [
           'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ template_code: tpl, mobile }),
+        body: JSON.stringify({ template_code: tpl, mobile, doc_name: docName }),
       });
       const data = await res.json();
       if (data.success) {
