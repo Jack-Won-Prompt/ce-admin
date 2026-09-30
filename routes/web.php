@@ -1550,6 +1550,14 @@ Route::get('/docs/purchase-confirm/{patient}',
 Route::get('/m/login', [\App\Http\Controllers\MobileWebController::class, 'login'])
     ->middleware('guest')->name('m.login');
 
+/* 신규 신설도 손님 자리다 — 아직 계정이 없는 사람이 쓰는 화면이다 (2026-10-01 지시).
+   제출은 /privacy/catheter 와 같은 자리(privacy.submit)로 가고, from=m 이 붙어 있으면
+   완료 화면만 모바일 것으로 돌아온다. */
+Route::get('/m/register', [\App\Http\Controllers\MobileWebController::class, 'register'])
+    ->middleware('guest')->name('m.register');
+Route::get('/m/register/done', [\App\Http\Controllers\MobileWebController::class, 'registerDone'])
+    ->name('m.register.done');
+
 Route::middleware(['auth'])->prefix('m')->name('m.')->group(function () {
     $c = \App\Http\Controllers\MobileWebController::class;
 

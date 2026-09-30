@@ -31,6 +31,28 @@ class MobileWebController extends Controller
     }
 
     /**
+     * 신규 신설 — 신규 신청자가 스스로 작성하는 화면 (2026-10-01 지시).
+     *
+     * **담는 코드는 여기 없다.** 화면만 내고 제출은 기존 `privacy.submit` 으로 간다 —
+     * 검증과 저장이 한 곳에만 있어야 공개 폼(/privacy/catheter)과 이 화면이 서로
+     * 다른 것을 받는 일이 없다.
+     *
+     * 갈래는 카테터(자가도뇨) 하나다. 이 시스템이 다루는 것이 카테터이고, 옮겨 온
+     * 거래처 12,608명이 모두 (E) 계정 곧 카테터 환자다. 장루가 필요해지면 그때
+     * 유형 고르개를 앞에 둔다.
+     */
+    public function register(): View
+    {
+        return view('mobile.register');
+    }
+
+    /** 신규 신설 — 제출 완료 */
+    public function registerDone(): View
+    {
+        return view('mobile.register-done');
+    }
+
+    /**
      * 채팅 탭을 보일지 — 앱의 _chatVisible 과 같은 잣대 (2026-09-25 정합성 검증).
      *
      * 서버 설정(환경 설정 ▸ 모바일 앱)을 따른다. 못 읽으면 보인다 — 여태 늘 보였고,
