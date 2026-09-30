@@ -145,6 +145,24 @@ class TaxinvoiceController extends Controller
                         'synced_at'  => now(),
                     ]);
                 }
+
+                /* 팝빌에서 취소된 것을 **주문에도 옮겨 적는다** (2026-09-30 지시).
+
+                   여태 이 표의 상태만 갱신하고 주문은 그대로 두었다. 사람이 팝빌
+                   화면에서 직접 취소하면 그 사실이 우리 주문에 닿지 않아, 화면은
+                   계속 「발행완료」라 적었다 —
+
+                     TI20260930000002  팝빌 취소 19:19:25
+                     우리 주문 #2      tax_invoice_status=issued (22:40 정정 뒤에도)
+
+                   그러면 청구 전 건에 이미 없는 계산서가 살아 있는 것처럼 읽히고,
+                   다음 발행이 「이미 발행됨」에 걸려 새 금액이 나가지 못한다.
+
+                   반대 방향(취소를 되돌리는 일)은 하지 않는다 — 우리가 낸 뒤 저쪽이
+                   아직 못 따라온 찰나일 수 있고, 그때 되살리면 없는 계산서가 선다. */
+                if ((int) $data['state_code'] === 600) {
+                    self::주문의계산서취소기록($data['mgt_key']);
+                }
             }
         } catch (\Throwable) {
             // Popbill 오류 시 DB 캐시로 폴백 (경고 없이 계속 진행)
@@ -560,4 +578,36 @@ class TaxinvoiceController extends Controller
         $result = $this->svc->registIssue($corpNum, $invoice, $userId);
         return response()->json($result);
     }
+
+    /**
+     * 팝빌에서 취소된 계산서를 낸 주문의 기록을 맞춘다 (2026-09-30 지시).
+     *
+     * 문서번호는 `TI` + 발행일(Ymd) + 주문 id(6자리)로 만든다 — 뒤 여섯 자리가 주문
+     * id 다. 그 모양이 아닌 번호(수기 발행ㆍ옛 건)는 되짚을 수 없으므로 지나간다.
+     */
+    private static function 주문의계산서취소기록(?string $mgtKey): void
+    {
+        if (! $mgtKey || ! preg_match('/^TI\d{8}(\d{6})$/', $mgtKey, $m)) {
+            return;
+        }
+
+        $order = Order::find((int) $m[1]);
+
+        /* 그 주문이 지금 쓰고 있는 번호일 때만 맞춘다 — 재발행으로 번호가 바뀌었으면
+           옛 번호의 취소를 새 계산서에 적으면 안 된다. */
+        if (! $order
+            || $order->tax_invoice_status !== 'issued'
+            || $order->tax_invoice_mgt_key !== $mgtKey) {
+            return;
+        }
+
+        $order->forceFill([
+            'tax_invoice_status'       => 'cancelled',
+            'tax_invoice_cancelled_at' => $order->tax_invoice_cancelled_at ?? now(),
+        ])->save();
+
+        \Illuminate\Support\Facades\Log::info('[세금계산서] 팝빌에서 취소된 것을 주문에 옮겨 적었습니다',
+            ['order' => $order->id, 'mgt_key' => $mgtKey]);
+    }
+
 }

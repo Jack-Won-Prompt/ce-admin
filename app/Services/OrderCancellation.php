@@ -209,9 +209,68 @@ class OrderCancellation
 
             return '취소함';
         } catch (\Throwable $e) {
+            /* **이미 취소된 것을 또 취소하려 한 것인가** (2026-09-30 실전 시험에서 드러남).
+
+               팝빌이 「[-11002030] 발행완료 상태의 (세금)계산서만 발행취소할 수
+               있습니다」로 되돌린다. 그 말은 대개 **이미 취소돼 있다**는 뜻이다 —
+               팝빌 화면에서 사람이 먼저 취소했거나, 앞선 걸음이 취소해 놓고 우리
+               기록만 못 따라간 것이다.
+
+                 TI20260930000002  팝빌 stateCode=600 · stateMemo=취소 · 19:19:25
+                 우리 주문         tax_invoice_status=issued · cancelled_at=NULL
+
+               그대로 두면 정정을 거친 뒤에도 화면이 「발행완료」라 적어, 청구 전 건에
+               이미 취소된 계산서가 살아 있는 것처럼 읽힌다. 게다가 다음 발행이
+               「이미 발행됨」에 걸려 새 금액이 영영 나가지 않는다.
+
+               저쪽에 물어 정말 취소돼 있으면 **우리 기록을 맞춘다.** 취소가 안 된
+               것이면 그때는 그대로 알린다 — 사람이 손대야 하는 일이다. */
+            $이미취소 = $this->팝빌에서취소됐나($order);
+
+            if ($이미취소) {
+                $order->forceFill([
+                    'tax_invoice_status'       => 'cancelled',
+                    'tax_invoice_cancelled_at' => now(),
+                ])->save();
+
+                activity()->performedOn($order)->log(
+                    "세금계산서는 이미 취소돼 있었습니다 — 기록을 맞췄습니다 ({$why})"
+                );
+
+                Log::info('[주문취소] 세금계산서가 이미 취소돼 있어 기록만 맞췄습니다',
+                    ['order' => $order->id, 'mgt_key' => $order->tax_invoice_mgt_key]);
+
+                return '이미 취소돼 있었습니다';
+            }
+
             Log::error('[주문취소] 세금계산서 취소 실패', ['order' => $order->id, 'error' => $e->getMessage()]);
 
             return '!세금계산서(' . ($order->tax_invoice_no ?: '-') . ')를 취소하지 못했습니다: ' . $e->getMessage();
+        }
+    }
+
+    /**
+     * 팝빌에서 이미 취소된 계산서인가 — 저쪽에 직접 묻는다.
+     *
+     * 상태코드 600 이 취소다. 물어 보지 못하면 「모른다」로 두고 거짓을 적지 않는다 —
+     * 취소되지 않은 것을 취소됐다고 적으면 국세청에 살아 있는 계산서가 우리 화면에서
+     * 사라진다.
+     */
+    private function 팝빌에서취소됐나(Order $order): bool
+    {
+        try {
+            $mgtKey = \App\Http\Controllers\OrderController::세금계산서문서번호($order, 새로: false);
+
+            $info = app(TaxinvoiceService::class)->getInfo(
+                config('popbill.test.corp_num'), 'SELL', $mgtKey
+            );
+
+            return (int) ($info->stateCode ?? 0) === 600;
+        } catch (\Throwable $e) {
+            Log::warning('[주문취소] 세금계산서 상태를 물어보지 못했습니다',
+                ['order' => $order->id, 'error' => $e->getMessage()]);
+
+            return false;
         }
     }
 
