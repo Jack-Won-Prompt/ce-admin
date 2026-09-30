@@ -275,7 +275,11 @@ class SettlementController extends Controller
                (「원주문-정정」). 물러난 두 줄이 쓸 바탕말만 여기서 쥔다. */
             $바탕구분 = $order->orderKindLabel();
 
-            $폄 = [$줄];
+            /* 차례는 **원 주문 → 취소 → 지금 값** 이다 (2026-09-30 지시).
+
+               청구 관리와 같은 잣대다. 지금 값 줄을 먼저 세우면 돈이 어떻게 움직였는지가
+               거꾸로 읽힌다 — 먼저 얼마였고, 그것을 물렀고, 그래서 지금 얼마인가. */
+            $폄 = [];
 
             /* 물러난 줄에는 **id 를 싣지 않는다** — 마감 확정ㆍ입금 확인 같은 단추가
                지난 금액에 걸리면 안 된다. 단추가 읽는 값(deposit_done·settle_key 따위)도
@@ -297,6 +301,13 @@ class SettlementController extends Controller
                     'va_state'      => '-',
                     'pay_method'    => '-',
                     'deposit'       => '-',
+                    /* 받은 돈ㆍ결제 시각은 **지금 줄의 것**이다 (2026-09-30 지시).
+
+                       물러난 줄에 그대로 실으면 그때 받은 것처럼 읽힌다 — 실제로는
+                       그 돈을 물러 주었다. 비워 둔다. */
+                    'deposit_amount' => '',
+                    'paid_at'        => '',
+                    'deposit_at'     => '',
                     'deposited_at'  => $a->amended_at?->format('Y-m-d H:i') ?? '-',
                     'deposit_done'  => false,
                     'deposit_hand'  => false,
@@ -335,6 +346,22 @@ class SettlementController extends Controller
                          'copay'        => -(int) $a->patient_copay]
                       + $물러난값 + $줄;
             }
+
+            /* 지금 값 줄은 맨 아래다 — 물러난 줄들을 지나 온 결과이기 때문이다.
+
+               정정을 거쳤는데 지금 계산서가 「취소됨」이면, 그 취소된 것은 물러난
+               줄의 계산서다. 이 줄이 낼 새 계산서는 아직 나가지 않았다 — 「미발행」이
+               맞다(청구 관리와 같은 잣대). */
+            if ($정정->has($order->id)) {
+                if (($줄['tax_invoice'] ?? '') === '취소됨') {
+                    $줄['tax_invoice'] = '미발행';
+                }
+                if (($줄['cash_receipt'] ?? '') === '취소됨') {
+                    $줄['cash_receipt'] = '미발행';
+                }
+            }
+
+            $폄[] = $줄;
 
             return $폄;
         })->values();

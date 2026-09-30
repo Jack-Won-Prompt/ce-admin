@@ -247,6 +247,12 @@ class NhisController extends Controller
                        비워 둔다(money 렌더러가 0 을 빈칸으로 그린다). */
                     'deposit_amount' => 0,
                     'ww_so_amt'      => '',
+                    /* 결제 시각도 지금 줄의 것이다 (2026-09-30 지시).
+
+                       입금 금액은 비웠는데 시각은 그대로 실어, 물러난 줄에 「17:40 결제」가
+                       남았다 — 그때 받은 것처럼 읽히지만 실제로는 그 돈을 물러 주었다. */
+                    'paid_at'        => '',
+                    'deposit_at'     => '',
                     'product'       => $a->product_name ?? '',
                     'submitted_at'  => $a->amended_at?->format('Y-m-d H:i') ?? '',
                     'claim_due'     => '',
