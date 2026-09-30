@@ -91,35 +91,60 @@ class FaxSyncService
     }
 
     /**
-     * 수신자가 여럿일 수 있다. 하나라도 보내는 중이면 보내는 중, 모두 성공이어야 성공,
-     * 하나라도 실패면 실패로 본다 — 부분 실패를 성공으로 적으면 안 된다.
+     * 수신자가 여럿일 수 있다 — 한 줄로 줄여 적는다.
+     *
+     * 팝빌 상태는 진행 순서대로 커진다(0 접수 → 1 변환중 → 2 전송중 → 3 완료).
+     * 그래서 **아직 끝나지 않은 줄이 있으면 가장 뒤처진 상태**를 적는다 — 한 곳이라도
+     * 진행 중이면 이 건은 진행 중이다. 모두 끝났으면 완료가 하나라도 있으면 완료,
+     * 전부 취소면 취소다.
+     *
+     * **성공ㆍ실패를 여기서 가리지 않는다.** 그것은 결과코드(result)가 정한다 —
+     * 완료(3)라도 결과코드가 100 이 아니면 닿지 않았다. 여태 이 자리에서 팝빌 상태를
+     * 우리 상수(2 성공 · 3 실패)와 견주었는데 뜻이 서로 달라, 정상 전송된 팩스가
+     * 실패로 적혔다 (2026-09-30 실전 시험에서 바로잡음).
      */
     private function overallState(array $messages): int
     {
-        $states = array_map(fn ($s) => (int) ($s->state ?? 0), $messages);
-        $unique = array_unique($states);
+        $states = array_map(fn ($s) => (int) ($s->state ?? FaxHistory::STATE_RECEIVED), $messages);
 
-        return match (true) {
-            in_array(FaxHistory::STATE_SENDING, $states, true)                       => FaxHistory::STATE_SENDING,
-            count($unique) === 1 && $states[0] === FaxHistory::STATE_OK              => FaxHistory::STATE_OK,
-            in_array(FaxHistory::STATE_FAIL, $states, true)                          => FaxHistory::STATE_FAIL,
-            count($unique) === 1 && $states[0] === FaxHistory::STATE_CANCEL           => FaxHistory::STATE_CANCEL,
-            default                                                                  => FaxHistory::STATE_WAIT,
-        };
+        if ($states === []) {
+            return FaxHistory::STATE_RECEIVED;
+        }
+
+        $진행중 = array_filter($states, fn ($st) => $st < FaxHistory::STATE_DONE);
+
+        if ($진행중 !== []) {
+            return min($진행중);
+        }
+
+        return in_array(FaxHistory::STATE_DONE, $states, true)
+            ? FaxHistory::STATE_DONE
+            : FaxHistory::STATE_CANCEL;
     }
 
-    /** 결과코드 — 실패한 수신자의 코드를 먼저 남긴다. 왜 실패했는지가 알고 싶은 값이다. */
+    /**
+     * 결과코드 — **닿지 못한 수신자의 코드를 먼저** 남긴다.
+     *
+     * 왜 닿지 않았는지가 알고 싶은 값이다(504 잘못된 수신번호 · 505 응답 없음 …).
+     * 여러 곳에 보냈는데 한 곳만 실패했다면 그 코드가 남아야 한다 — 성공 코드(100)를
+     * 남기면 부분 실패가 성공으로 읽힌다.
+     */
     private function resultCode(array $messages): ?int
     {
         $result = null;
 
         foreach ($messages as $s) {
-            if (isset($s->result) && $s->result !== null) {
-                $result = (int) $s->result;
-                if ((int) ($s->state ?? 0) === FaxHistory::STATE_FAIL) {
-                    break;
-                }
+            if (! isset($s->result) || $s->result === null) {
+                continue;
             }
+
+            $코드 = (int) $s->result;
+
+            if ($코드 !== FaxHistory::RESULT_OK) {
+                return $코드;                       // 닿지 않은 것이 있으면 그것으로 적는다
+            }
+
+            $result = $코드;
         }
 
         return $result;

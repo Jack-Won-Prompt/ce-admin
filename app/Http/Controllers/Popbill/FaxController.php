@@ -122,7 +122,7 @@ class FaxController extends Controller
                 'reserve_dt'     => $request->input('reserve_dt'),
                 'request_num'    => $request->input('request_num'),
                 'sent_by'        => Auth::id(),
-                'popbill_state'  => FaxHistory::STATE_WAIT,
+                'popbill_state'  => FaxHistory::STATE_RECEIVED,
                 'popbill_result' => null,
                 'synced_at'      => null,
             ]);
@@ -292,7 +292,7 @@ class FaxController extends Controller
                     $fileNames = is_array($item->fileNames) ? $item->fileNames : [];
 
                     // 상태 매핑 (팝빌: 0전송전,1전송중,2성공,3실패,4취소 → 동일)
-                    $state  = isset($item->state)  ? (int) $item->state  : FaxHistory::STATE_WAIT;
+                    $state  = isset($item->state)  ? (int) $item->state  : FaxHistory::STATE_RECEIVED;
                     $result2 = isset($item->result) ? (int) $item->result : null;
 
                     $existing = FaxHistory::where('receipt_num', $receiptNum)->first();

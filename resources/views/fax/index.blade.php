@@ -844,7 +844,13 @@ async function loadHistory(page = 1) {
 
     const rows = list.map(row => {
       const s          = String(row.state ?? 0);
-      const statusTxt  = { '0':'대기','1':'전송중','2':'성공','3':'실패','4':'취소' }[s] ?? '알수없음';
+      /* 팝빌 상태 그대로다 — 0 접수 · 1 변환중 · 2 전송중 · 3 완료 · 4 취소.
+         성공ㆍ실패는 상태가 아니라 결과코드(result)가 정한다: 100 이 성공이다.
+         여태 2 를 「성공」ㆍ3 을 「실패」로 적어, 정상 전송된 팩스가 실패로 보였다
+         (2026-09-30 실전 시험에서 바로잡음). */
+      const statusTxt  = String(row.state) === '3'
+        ? (Number(row.result) === 100 ? '전송 성공' : '전송 실패')
+        : ({ '0':'접수','1':'변환 중','2':'전송 중','4':'취소' }[s] ?? '알 수 없음');
       const sentAt     = row.sendDT ? row.sendDT.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/,'$1-$2-$3 $4:$5') : '—';
       return {
         sentAt,
@@ -943,8 +949,13 @@ async function openDetail(receiptNum) {
     // GetFaxDetail 은 FaxState[] 반환 — 각 원소가 수신자별 상태
     const arr   = Array.isArray(data) ? data : [data];
     const first = arr[0] || {};
-    const stMap = { '0':'wait','1':'send','2':'ok','3':'fail','4':'cancel' };
-    const txMap = { '0':'대기','1':'전송중','2':'성공','3':'실패','4':'취소' };
+    /* 팝빌 상태(0 접수 · 1 변환중 · 2 전송중 · 3 완료 · 4 취소)에 결과코드를 함께
+       보아야 닿았는지 알 수 있다 — 완료(3)라도 결과코드가 100 이 아니면 실패다. */
+    const _완료 = String(first.state) === '3';
+    const _닿음 = Number(first.result) === 100;
+    const stMap = { '0':'wait','1':'send','2':'send','3': _닿음 ? 'ok' : 'fail','4':'cancel' };
+    const txMap = { '0':'접수','1':'변환 중','2':'전송 중',
+                    '3': _닿음 ? '전송 성공' : '전송 실패','4':'취소' };
 
     // 접수일시 / 예약일시
     const fmt = s => s ? s.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1-$2-$3 $4:$5:$6') : '';

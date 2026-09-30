@@ -183,8 +183,12 @@
                           \App\Models\NhisFaxLog::STATUS_LABELS[$record->status]['badge'] ?? 'secondary'],
     'message'         => [$record->resultLabel(),
                           $record->fail_count === 0 ? 'success' : ($record->success_count === 0 ? 'danger' : 'warning')],
-    'fax'             => [[0=>'대기',1=>'전송 중',2=>'성공',3=>'실패',4=>'취소'][$record->popbill_state] ?? '대기',
-                          [0=>'secondary',1=>'info',2=>'success',3=>'danger',4=>'secondary'][$record->popbill_state] ?? 'secondary'],
+    /* 상태 이름은 FaxHistory 가 정한다 — 팝빌 상태에 결과코드를 함께 보아
+       완료된 건만 「전송 성공」ㆍ「전송 실패」로 갈라 적는다 (2026-09-30 바로잡음). */
+    'fax'             => [$record->상태이름(),
+                          $record->성공인가() ? 'success'
+                            : ($record->실패인가() ? 'danger'
+                            : ($record->popbill_state === \App\Models\FaxHistory::STATE_CANCEL ? 'secondary' : 'info'))],
     'withworks'       => ($wwWay ?? 'got') === 'sent'
                           ? ['보냄', 'primary']
                           : [$record->status_label ?: ($record->status ?: '받음'), 'info'],

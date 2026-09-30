@@ -5303,7 +5303,12 @@ class PrescriptionController extends Controller
             'attachment_ids'  => $attachmentIds,
             'pdf_path'        => $pdfPath,
             'sent_by'         => auth()->id(),
-            'popbill_state'   => $receiptNum ? \App\Models\FaxHistory::STATE_WAIT : \App\Models\FaxHistory::STATE_FAIL,
+            /* 접수번호를 받았으면 팝빌의 「접수」로, 못 받았으면 우리만 쓰는
+               「발송 실패」로 적는다 — 팝빌에는 실패를 뜻하는 상태가 없다.
+               성공ㆍ실패는 결과코드가 정하고, 그 값은 웹훅ㆍ동기화가 채운다. */
+            'popbill_state'   => $receiptNum
+                ? \App\Models\FaxHistory::STATE_RECEIVED
+                : \App\Models\FaxHistory::STATE_NOT_SENT,
         ]);
         } catch (\Throwable $e) {
             Log::error('[Fax] 보냈으나 이력을 남기지 못했다', [

@@ -15649,13 +15649,22 @@ window.HELP_TOUR_STEPS = [
     }
 
     // ── 팩스 이력 ─────────────────────────────────────
-    const _FAX_STATE = {0:'대기',1:'전송 중',2:'전송 완료',3:'실패',4:'취소'};
-    const _FAX_COLOR = {0:'var(--text-muted)',1:'var(--info)',2:'var(--primary)',3:'var(--danger)',4:'var(--text-muted)'};
+    /* 팝빌 상태 그대로다 — 0 접수 · 1 변환중 · 2 전송중 · 3 완료 · 4 취소.
+       9 는 팝빌에 접수조차 되지 않은 것으로 우리가 따로 두는 값이다.
+       완료(3)는 결과코드가 100 일 때만 닿은 것이다 (2026-09-30 바로잡음). */
+    const _FAX_STATE = {0:'접수',1:'변환 중',2:'전송 중',4:'취소',9:'발송 실패'};
+    const _FAX_COLOR = {0:'var(--text-muted)',1:'var(--info)',2:'var(--info)',4:'var(--text-muted)',9:'var(--danger)'};
+    const _faxStLabel = f => Number(f.popbill_state) === 3
+      ? (Number(f.popbill_result) === 100 ? '전송 성공' : '전송 실패')
+      : (_FAX_STATE[f.popbill_state] ?? '-');
+    const _faxStColor = f => Number(f.popbill_state) === 3
+      ? (Number(f.popbill_result) === 100 ? 'var(--success)' : 'var(--danger)')
+      : (_FAX_COLOR[f.popbill_state] ?? 'var(--text-muted)');
     let faxBody = '';
     if (d.fax_histories && d.fax_histories.length) {
       faxBody = d.fax_histories.map((f, fi) => {
-        const stLabel = _FAX_STATE[f.popbill_state] ?? '-';
-        const stColor = _FAX_COLOR[f.popbill_state] ?? 'var(--text-muted)';
+        const stLabel = _faxStLabel(f);
+        const stColor = _faxStColor(f);
         return `<div style="border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;${fi>0?'margin-top:8px':''}">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
             <span style="font-size:12px;font-weight:700;color:${stColor};">${stLabel}</span>

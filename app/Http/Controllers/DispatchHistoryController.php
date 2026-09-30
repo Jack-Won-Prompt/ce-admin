@@ -148,14 +148,10 @@ class DispatchHistoryController extends Controller
                 ['header' => '보낸 사람', 'name' => 'sender',  'width' => 90],
             ];
         } elseif ($type === 'fax') {
-            $stateLabels = [
-                FaxHistory::STATE_WAIT    => '대기',
-                FaxHistory::STATE_SENDING => '전송 중',
-                FaxHistory::STATE_OK      => '성공',
-                FaxHistory::STATE_FAIL    => '실패',
-                FaxHistory::STATE_CANCEL  => '취소',
-            ];
-            $data = $rows->map(function ($f) use ($stateLabels) {
+            /* 상태 이름은 FaxHistory 가 정한다 — 팝빌 상태(0 접수 · 1 변환중 ·
+               2 전송중 · 3 완료 · 4 취소)에 결과코드를 함께 보아 완료된 건만
+               「전송 성공」ㆍ「전송 실패」로 갈라 적는다. */
+            $data = $rows->map(function ($f) {
                 $rx      = $f->prescription;
                 $files   = is_array($f->file_names) ? $f->file_names : (json_decode((string) $f->file_names, true) ?: []);
                 return [
@@ -166,7 +162,7 @@ class DispatchHistoryController extends Controller
                     'title'    => $f->title ?: '-',
                     'to'       => trim(($f->recipient_type ? $f->recipient_type . ' ' : '') . ($f->fax_no ?: '-')),
                     'files'    => $files ? count($files) . '장' : '-',
-                    'status'   => $stateLabels[$f->popbill_state] ?? '대기',
+                    'status'   => $f->상태이름(),
                     'receipt'  => $f->receipt_num ?: '-',
                     'sender'   => $f->sentBy?->name ?? '-',
                 ];

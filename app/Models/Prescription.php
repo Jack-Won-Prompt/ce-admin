@@ -261,8 +261,12 @@ class Prescription extends Model
      *
      * ## 전송완료만 센다
      *
-     * 접수만 되고 실패한 팩스는 공단에 닿지 않았다. `popbill_state` 가 2(전송완료)인
-     * 것만 본다.
+     * 접수만 되고 닿지 못한 팩스는 공단에 가지 않았다. **완료(팝빌 3)이면서 결과코드가
+     * 100(성공)** 인 것만 본다 — `succeeded()` 가 그 잣대다.
+     *
+     * 여태 `popbill_state = 2` 를 보았는데 팝빌의 2 는 「전송 중」이다. 완료된 건은
+     * 3 으로 적히므로 이 조건에 **한 번도 맞지 않았고**, 재등록 기한은 늘 비어 있었다
+     * (2026-09-30 실전 시험에서 바로잡음).
      *
      * 보낸 적이 없으면 null 이다 — **짐작해 지어내지 않는다.** 그 자리를 채울 근거가
      * 우리에게 없다(이관해 온 환자는 최초 등록이 위드웍스에서 일어났는데, 저쪽에서
@@ -275,7 +279,7 @@ class Prescription extends Model
             : collect([$this->id]);
 
         $후보 = FaxHistory::whereIn('prescription_id', $처방전들)
-            ->where('popbill_state', FaxHistory::STATE_OK)
+            ->succeeded()
             ->where('documents', 'like', '%registration_form%')
             ->orderBy('created_at')
             ->get(['created_at', 'documents']);

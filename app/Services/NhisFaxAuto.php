@@ -70,9 +70,16 @@ final class NhisFaxAuto
         $이미보냄 = \App\Models\FaxHistory::where('prescription_id', $prescription->id)
             ->where('recipient_type', 'nhis')
             ->whereNotIn('popbill_state', [
-                \App\Models\FaxHistory::STATE_FAIL,
                 \App\Models\FaxHistory::STATE_CANCEL,
+                \App\Models\FaxHistory::STATE_NOT_SENT,
             ])
+            /* 완료된 건은 결과코드까지 본다 — 「완료」라도 닿지 않았으면(100 이 아니면)
+               보낸 것으로 치지 않는다. 여태 팝빌의 완료(3)를 우리 실패(3)로 잘못 읽어
+               **정상 전송된 건이 보낸 것으로 세어지지 않았다** — 그대로 두면 같은
+               팩스가 공단에 두 번 간다 (2026-09-30 실전 시험에서 바로잡음). */
+            ->where(fn ($q) => $q->where('popbill_state', '!=', \App\Models\FaxHistory::STATE_DONE)
+                                 ->orWhereNull('popbill_result')
+                                 ->orWhere('popbill_result', \App\Models\FaxHistory::RESULT_OK))
             ->exists();
 
         if ($이미보냄) {
