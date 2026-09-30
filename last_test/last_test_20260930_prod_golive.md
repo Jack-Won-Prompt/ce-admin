@@ -782,3 +782,18 @@ shipping_started  [콜로플라스트] #{고객명}님, 제품이 발송되었�
 
 발송 차례는 넷 모두 `alimtalk → sms` 다
 (`payment_done`ㆍ`shipping_started`ㆍ`id_card_request`ㆍ`delegation_sign`).
+
+### 미뤄 둔 것 (2026-09-30 「나중에 진행」)
+
+**주문 취소ㆍ반품 4종의 알림톡 템플릿 승인** — 지금은 문자만 나간다.
+
+| 코드 | 지금 문자 |
+|---|---|
+| `order_cancelled` | 주문 취소 |
+| `return_received` | 교환ㆍ반품ㆍ취소 접수 |
+| `return_refunded` · `return_refunded_none` | 환불 처리 완료 (금액 있음ㆍ없음) |
+| `return_extra_payment` | 추가 입금 안내 |
+
+할 일은 **팝빌에 템플릿을 올려 카카오 승인을 받는 것**뿐이다. 우리 쪽은 이미 그 길을
+타고 있어(`MessageTemplate::채널마다`), 승인이 나면 `kakao:sync-templates --force` 로
+담고 알림톡 유형의 코드를 위 문자 코드에 맞추기만 하면 붙는다 — **코드 수정 없다.**
