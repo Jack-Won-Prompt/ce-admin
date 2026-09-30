@@ -70,6 +70,7 @@ class ConsentController extends Controller
     }
 
 
+
     /**
      * 본인확인이 끝났는가 — 화면이 직접 묻는다 (2026-09-30 지시).
      *
@@ -79,17 +80,36 @@ class ConsentController extends Controller
      * 서버에는 본인확인이 남는데 **화면만 그대로**였다. 사람은 「PASS 는 안 된다」로
      * 읽는다. 문자 인증은 표준창 안에서 끝나 opener 가 살아 있어 동작했다.
      *
-     * 실제로 위임 서명 #3668 은 본인확인(2026-09-28 11:42)이 남았는데 서명이
-     * 끝나지 않은 채 멈춰 있었다.
+     * ## `since` — 「이번 시도」만 센다
+     *
+     * 언제 인증됐는지를 보지 않으면 **이미 인증된 건에서 다시 누를 때 아무것도 하지
+     * 않고 곧바로 「인증됨」**이 된다. 사람은 누르자마자 통과하는 화면을 보고
+     * 「인증이 진짜 된 것이 맞나」를 묻게 된다 — 실제로 그 물음을 받았다.
+     *
+     * 화면이 본인확인을 시작한 시각(서버가 알려 준 값)을 함께 보내면, 그 뒤에 들어온
+     * 인증만 「됐다」로 답한다. 시각은 **서버가 준 것만** 쓴다 — 폰 시계는 제각각이다.
      *
      * 남의 건을 엿볼 수 없다 — 링크의 토큰을 가진 사람만 자기 건을 묻는다.
      * 돌려주는 것도 「끝났는가」 하나뿐이고 이름ㆍ생년월일 따위는 담지 않는다.
      */
-    public function niceStatus(string $token): JsonResponse
+    public function niceStatus(Request $request, string $token): JsonResponse
     {
-        $consent = PrescriptionConsent::where('token', $token)->firstOrFail();
+        $대상 = PrescriptionConsent::where('token', $token)->firstOrFail();
 
-        return response()->json(['verified' => $consent->nice_verified_at !== null]);
+        $인증시각 = $대상->nice_verified_at;
+        $된것 = $인증시각 !== null;
+
+        /* 화면이 이번 시도를 시작한 시각을 들고 왔으면 그보다 나중 것만 센다 */
+        $부터 = $request->query('since');
+
+        if ($된것 && is_numeric($부터)) {
+            $된것 = $인증시각->getTimestamp() >= ((int) $부터) - 5;   // 5초는 시계 오차 몫
+        }
+
+        return response()->json([
+            'verified' => $된것,
+            'now'      => now()->getTimestamp(),
+        ]);
     }
 
     /** 이 사람의 개인정보 동의를 이미 받아 두었는가 — 서명 화면과 제출이 같은 눈으로 본다. */
@@ -809,7 +829,10 @@ class ConsentController extends Controller
         try {
             $returnUrl = route('consent.nice.callback', ['token' => $consent->token]);
             $params    = $nice->startVerification($consent, $returnUrl);
-            return response()->json(['success' => true] + $params);
+
+            /* 시작 시각을 함께 준다 — 화면이 「이번 시도」만 세도록 (2026-09-30).
+               폰 시계는 제각각이라 서버가 준 값만 쓴다. */
+            return response()->json(['success' => true, 'since' => now()->getTimestamp()] + $params);
         } catch (\Throwable $e) {
             \Log::error('NICE startVerification 실패', ['token' => $token, 'error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => '본인확인 요청 중 오류가 발생했습니다.'], 500);

@@ -1538,7 +1538,9 @@ async function startNice() {
 
     if (btn) btn.textContent = '인증 진행 중...';
     watchNicePopup();
-    niceAskStart();
+    /* 서버가 알려 준 시작 시각을 들고 묻는다 — 그 뒤에 들어온 인증만 「됐다」로
+       본다. 없으면(옛 서버) 예전처럼 「언젠가 됐는가」로 묻는다. */
+    niceAskStart(data.since ?? null);
   } catch (e) {
     if (nicePopup) nicePopup.close();
     ceAlert('본인확인 요청 중 네트워크 오류가 발생했습니다.', { tone: 'danger' });
@@ -1563,18 +1565,22 @@ function resetVerifyBtn() {
    찾아낸다. 화면이 다시 보이는 순간(앱에서 돌아온 때)에는 곧바로 한 번 묻는다. */
 let niceAskTimer = null;
 
+let niceAskSince = null;
+
 async function niceAskOnce() {
   if (identityVerified) return true;
   try {
-    const r = await fetch(NICE_STATUS_URL, { headers: { 'Accept': 'application/json' } });
+    const url = NICE_STATUS_URL + (niceAskSince ? '?since=' + encodeURIComponent(niceAskSince) : '');
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const j = await r.json();
     if (j.verified) { niceMarkVerified(); return true; }
   } catch (e) { /* 잠깐 끊긴 것은 다음 차례에 다시 묻는다 */ }
   return false;
 }
 
-function niceAskStart() {
+function niceAskStart(since) {
   niceAskStop();
+  niceAskSince = since ?? null;
   let left = 200;                       // 3초마다 · 10분이면 표준창이 먼저 끝난다
   niceAskTimer = setInterval(() => {
     if (--left <= 0) { niceAskStop(); return; }

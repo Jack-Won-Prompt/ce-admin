@@ -590,7 +590,8 @@ async function 본인확인() {
     /* 표준창은 팝업으로 연다. 돌아오면 스스로 닫으며 부모에게 알리지만,
        **그 알림에만 기대지 않는다** — 아래 물어보기를 함께 켠다. */
     window.open(out.auth_url, 'nice_delegation', 'width=500,height=620,scrollbars=yes');
-    물어보기시작();
+    /* 서버가 알려 준 시작 시각을 들고 묻는다 — 그 뒤에 들어온 인증만 「됐다」로 본다 */
+    물어보기시작(out.since ?? null);
     btn.disabled = false;
     btn.textContent = '본인확인';
   } catch (e) {
@@ -627,18 +628,22 @@ window.addEventListener('message', (e) => {
    찾아낸다. 화면이 다시 보이는 순간(앱에서 돌아온 때)에는 곧바로 한 번 묻는다. */
 let 묻는시계 = null;
 
+let 물어본시각 = null;
+
 async function 한번묻기() {
   if (확인됨) return true;
   try {
-    const r = await fetch(인증확인, { headers: { 'Accept': 'application/json' } });
+    const 주소 = 인증확인 + (물어본시각 ? '?since=' + encodeURIComponent(물어본시각) : '');
+    const r = await fetch(주소, { headers: { 'Accept': 'application/json' } });
     const j = await r.json();
     if (j.verified) { 인증됨(); 물어보기끝(); return true; }
   } catch (e) { /* 잠깐 끊긴 것은 다음 차례에 다시 묻는다 */ }
   return false;
 }
 
-function 물어보기시작() {
+function 물어보기시작(부터) {
   물어보기끝();
+  물어본시각 = 부터 ?? null;
   /* 10분이면 넉넉하다 — 표준창 자체가 그보다 오래 살지 않는다 */
   let 남은횟수 = 200;
   묻는시계 = setInterval(() => {
