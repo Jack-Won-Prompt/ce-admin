@@ -790,7 +790,10 @@ async function loadHistory(page = 1) {
        이 화면은 현금영수증만 세웠다. 본인부담을 카드로 받은 건은 현금영수증이 나가지
        않고 카드매출전표가 증빙이라 한 줄도 없었다 — 「현금/카드영수증」 한 자리에서
        둘을 함께 본다. 이력은 결제 링크에서 읽는다(승인ㆍ취소ㆍ재승인이 줄마다 남는다). */
-    const cardUrl = `${CB_BASE}/card-receipts?start_date=${sd}&end_date=${ed}`;
+    let cardUrl = `${CB_BASE}/card-receipts?start_date=${sd}&end_date=${ed}`;
+    /* 이름은 세 갈래에 모두 실어 보낸다 — 한 갈래라도 빠지면 그쪽 줄이 걸러지지 않아
+       이름 검색이 아예 안 듣는 것으로 보인다 (2026-09-30 지시). */
+    if (이름) cardUrl += `&name=${encodeURIComponent(이름)}`;
 
     const [pbRes, ordRes, cardRes] = await Promise.all([
       fetch(popbillUrl, { headers: HEADERS }),
