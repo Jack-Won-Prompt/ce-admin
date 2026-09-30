@@ -32,9 +32,30 @@ final class MedicalAidClaimForm
      */
     public const 자격 = ['기초', '차상위경감'];
 
-    /** 이 서식을 내는 건인가 */
+    /**
+     * 이 서식을 내는 건인가.
+     *
+     * **유형을 먼저 본다** (2026-10-01 CASE 6 점검에서 드러남). 여태 자격만 보았다.
+     * 처방외는 처방전 없이 제 돈으로 사는 건이라 요양비 청구가 애초에 없는데,
+     * 처방전으로 시작한 뒤 유형만 처방외로 바꾸면 자격이 그대로 남는다 —
+     * 화면에 유형이 처방외일 때 자격을 비우거나 막는 자리가 없다.
+     *
+     * 그러면 입금이 확인되는 순간 DepositAutoIssue 가 요양비 지급청구서를 그려
+     * 주문에 붙인다. 그 서류는 서류 관리에 남아 나중에 공단ㆍ시군구청으로 나갈 수
+     * 있다 — 낼 일이 없는 청구서다.
+     *
+     * 같은 성격의 다른 판정(BillingStrategy::resolveㆍneedsDelegationㆍ
+     * RepurchaseWindow::blockㆍPaymentLinkService)은 모두 유형을 먼저 본다.
+     * 이 하나만 보지 않았다.
+     */
     public static function applies(Order $order): bool
     {
+        $유형 = (string) ($order->prescription?->counsel_acc_add_type ?? '');
+
+        if ($유형 === BillingStrategy::TYPE_NONRX) {
+            return false;
+        }
+
         return in_array(trim((string) ($order->prescription?->benefit_class ?? '')), self::자격, true);
     }
 

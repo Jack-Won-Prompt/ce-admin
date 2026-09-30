@@ -3465,7 +3465,18 @@ class PrescriptionController extends Controller
                                             $request->input('counsel_acc_add_type'),
                                             $request->input('benefit_class'))
                                         : null,
-            'claim_agency'         => $request->input('claim_agency'),
+            /* 처방외는 우리가 청구하지 않는다 — 청구처를 서버에서 「해당 없음」으로
+               굳힌다 (2026-10-01 CASE 6 점검에서 드러남).
+
+               바로 위 billing_strategy 와 같은 잣대다: **화면이 보낸 값을 그대로 적지
+               않는다.** 여태 이 칸만 화면 값을 그대로 받았고, 유형 20 을 「해당 없음」으로
+               돌리는 코드는 브라우저에만 있었다(order.blade.php · suggestClaimAgency).
+               그래서 API 나 직접 POST 로는 「처방외인데 청구처가 공단」인 건이 담길 수
+               있었고, 청구 관리는 빈 청구처를 공단으로 읽는다(NhisController). */
+            'claim_agency'         => (string) $request->input('counsel_acc_add_type')
+                                        === \App\Support\BillingStrategy::TYPE_NONRX
+                                            ? \App\Support\ClaimAgency::NONE
+                                            : $request->input('claim_agency'),
             /* 이 건을 보내는 청구처 — 주소로 찾아 사람이 고른 한 줄이다 */
             'billing_office_id'    => $request->input('billing_office_id'),
             'local_gov'            => $request->input('local_gov'),
@@ -6687,10 +6698,25 @@ HTML;
             'counsel_acc_add_type' => ['required', 'string', Rule::in(['10', '20', '30'])],
         ]);
 
-        $prescription->forceFill([
-            'counsel_acc_add_type' => $request->input('counsel_acc_add_type'),
+        $유형 = (string) $request->input('counsel_acc_add_type');
+
+        $적을것 = [
+            'counsel_acc_add_type' => $유형,
             'updated_by'           => Auth::id(),
-        ])->save();
+        ];
+
+        /* 처방외를 고르면 청구처도 그 자리에서 「해당 없음」으로 적는다
+           (2026-10-01 CASE 6 점검).
+
+           주문 줄이 서는 자리가 여기다. 여태 유형만 적고 청구처는 비워 두었고,
+           청구처는 다음 저장 때에야 담겼다 — 그 사이 처방외 건이 청구처 빈칸으로
+           남는다. 청구 관리는 빈 청구처를 공단으로 읽으므로(NhisController), 낼 일이
+           없는 건이 공단 청구 대상으로 서게 된다. */
+        if ($유형 === \App\Support\BillingStrategy::TYPE_NONRX) {
+            $적을것['claim_agency'] = \App\Support\ClaimAgency::NONE;
+        }
+
+        $prescription->forceFill($적을것)->save();
 
         if (! $prescription->patient_id) {
             return response()->json([
