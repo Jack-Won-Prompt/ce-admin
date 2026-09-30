@@ -203,7 +203,8 @@ class TaxinvoiceController extends Controller
                 // 우리 주문을 타고 온 것
                 'orderNumber'     => $r->order?->order_number,
                 'rxNumber'        => $r->order?->prescription?->rx_number,
-                'patientName'     => $r->order?->patient?->name,
+                // 이름 앞의 (E) 는 우리 쪽 표식이다 — 환자 이름으로 보여 주지 않는다
+                'patientName'     => \App\Models\Patient::bare($r->order?->patient?->name),
             ] + ($r->order
                     ? $tiExtras->rx($r->order->prescription, $r->order->patient)
                       + $tiExtras->ww($r->order, $r->order->prescription, $r->order->patient)
@@ -270,7 +271,19 @@ class TaxinvoiceController extends Controller
                     'invoicerCorpNum' => null,
                     'invoicerCorpName'=> null,
                     'invoiceeCorpNum' => null,
-                    'invoiceeCorpName'=> $o->patient?->name ?? $rx?->patient_name_ocr ?? '—',
+                    /* 이름 앞의 (E) 를 뗀다 (2026-09-30 지시).
+
+                       발행된 줄은 발행 경로가 Patient::bare() 로 떼어 신고하는데
+                       (DepositAutoIssue), 대기 줄만 환자 이름을 그대로 실어 한 사람이
+                       두 이름으로 섰다 —
+
+                         발행취소  공급받는자 박경진
+                         발행 대기 공급받는자 (E)박경진
+
+                       (E) 는 운영 자료에서 옮겨 왔다는 우리 쪽 표식이지 환자 이름이
+                       아니다. 대기 줄에 그것이 보이면 담당자는 다른 사람으로 읽는다. */
+                    'invoiceeCorpName'=> \App\Models\Patient::bare($o->patient?->name)
+                                          ?: ($rx?->patient_name_ocr ?? '—'),
                     'supplyCostTotal' => (string) $supply,
                     'taxTotal'        => (string) ($amount - $supply),
                     'totalAmount'     => (string) $amount,
@@ -449,7 +462,7 @@ class TaxinvoiceController extends Controller
             return [
                 'id'          => $o->id,
                 'order_no'    => $o->order_number,
-                'patient'     => $o->patient?->name ?? ($rx?->patient_name_ocr ?? '-'),
+                'patient'     => \App\Models\Patient::bare($o->patient?->name) ?: ($rx?->patient_name_ocr ?? '-'),
                 'strategy'    => $st['label'] ?? '-',
                 'rate'        => $rate,
                 'total'       => $total,
@@ -457,7 +470,11 @@ class TaxinvoiceController extends Controller
                 'created'     => $o->created_at?->format('Y-m-d'),
                 // 공급받는자 — 주문에 적어 둔 것이 있으면 그것이 먼저다
                 'biz_no'      => (string) ($o->tax_invoice_biz_no ?: ''),
-                'biz_name'    => (string) ($o->tax_invoice_biz_name ?: ($o->patient?->name ?? '')),
+                /* 국세청에 신고될 이름이다 — (E) 를 떼지 않으면 그대로 나간다.
+                   발행 경로(DepositAutoIssue)는 이미 bare_name 으로 내는데, 담당자가
+                   화면에서 손으로 낼 때 쓰는 이 기본값만 원본을 실었다. */
+                'biz_name'    => (string) ($o->tax_invoice_biz_name
+                                    ?: \App\Models\Patient::bare($o->patient?->name)),
                 'ceo_name'    => (string) ($o->tax_invoice_ceo_name ?: ''),
                 'email'       => (string) ($o->tax_invoice_email ?: ($o->patient?->email ?? '')),
                 'items'       => \App\Support\IssueLines::rowsFor($o),
