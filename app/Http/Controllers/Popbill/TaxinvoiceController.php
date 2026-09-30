@@ -187,6 +187,22 @@ class TaxinvoiceController extends Controller
 
         $tiExtras = \App\Support\OrderGridExtras::forPatients($tiRows->pluck('order.patient_id'));
 
+        /* 그 계산서를 낸 때의 주문 금액 — 정정으로 물러난 값이다 (2026-09-30 지시).
+
+           금액 칸(받을 금액ㆍ본인 부담금ㆍ기관 부담금)은 주문의 **지금** 값을 싣는다.
+           그런데 취소된 계산서 줄에는 그때의 금액이 서야 한다 — 합계 729,000원짜리
+           계산서 옆에 지금 값(675,000 · 67,500 · 607,500)이 나란히 서면 어느 것도
+           맞지 않아 보인다.
+
+           정정 이력에 그때의 금액과 그때 낸 계산서 번호가 함께 남아 있다. 번호로
+           짝을 지어 그 줄에는 그때 값을 싣는다. */
+        $물러난금액 = \Illuminate\Support\Facades\Schema::hasTable('order_amendments')
+            ? \App\Models\OrderAmendment::whereIn('order_id', $tiRows->pluck('order_id')->filter()->unique())
+                ->whereNotNull('tax_invoice_no')
+                ->get()
+                ->keyBy('tax_invoice_no')
+            : collect();
+
         $tiRecords = $tiRows
             ->map(fn($r) => [
                 'record_type'     => 'taxinvoice',
@@ -242,7 +258,66 @@ class TaxinvoiceController extends Controller
                     ? $tiExtras->rx($r->order->prescription, $r->order->patient)
                       + $tiExtras->ww($r->order, $r->order->prescription, $r->order->patient)
                       + $tiExtras->of($r->order)
-                    : []));
+                    : []))
+            /* 그때의 금액으로 덮는다 — 짝이 없으면(정정을 거치지 않은 계산서면)
+               지금 값이 곧 그때 값이라 그대로 둔다. */
+            ->map(function (array $줄) use ($물러난금액) {
+                $옛 = $물러난금액->get((string) ($줄['ntsconfirmNum'] ?? ''));
+
+                if (! $옛) {
+                    return $줄;
+                }
+
+                return array_merge($줄, [
+                    'total_amount'   => (int) $옛->patient_copay,
+                    'copay'          => (int) $옛->patient_copay,
+                    'patient_copay'  => (int) $옛->patient_copay,
+                    'nhis_amount'    => (int) $옛->nhis_amount,
+                    /* 받은 돈ㆍ창고 매출은 지금 줄의 것이다 — 물러난 줄에 실으면
+                       같은 돈이 두 번 적힌 것처럼 보인다 */
+                    'deposit_amount' => 0,
+                    'ww_so_amt'      => '',
+                ]);
+            })
+            /* 취소된 계산서는 **발행 줄과 취소 줄 둘**로 편다 (2026-09-30 지시).
+
+               여태 한 줄만 서고 그 줄이 「발행취소」였다. 그러면 얼마를 냈다가 얼마를
+               물렸는지 이 화면에서 셀 수 없다 — 낸 적이 있다는 사실이 사라진다.
+               결제 자취를 걸음마다 세우는 것(payment_events)과 같은 뜻이다.
+
+                 발행 줄  발행완료 · 그때 시각 · 금액 그대로
+                 취소 줄  발행취소 · 취소 시각 · 금액에 − 를 붙인다
+
+               그대로 더하면 이 기간에 국세청에 남은 금액이 나온다. */
+            ->flatMap(function (array $줄) {
+                if ((int) ($줄['stateCode'] ?? 0) !== 600) {
+                    return [$줄];
+                }
+
+                $음수 = fn ($v) => -abs((int) $v);
+
+                $발행 = array_merge($줄, [
+                    'record_type' => 'taxinvoice',
+                    'stateCode'   => '300',
+                    'sort_date'   => $줄['issueDT'] ?: $줄['sort_date'],
+                    '_pair'       => 'issued',
+                ]);
+
+                $취소 = array_merge($줄, [
+                    'sort_date'       => $줄['stateDT'] ?: $줄['sort_date'],
+                    'supplyCostTotal' => (string) $음수($줄['supplyCostTotal']),
+                    'taxTotal'        => (string) $음수($줄['taxTotal']),
+                    'totalAmount'     => (string) $음수($줄['totalAmount']),
+                    'total_amount'    => $음수($줄['total_amount']   ?? 0),
+                    'copay'           => $음수($줄['copay']          ?? 0),
+                    'patient_copay'   => $음수($줄['patient_copay']  ?? 0),
+                    'nhis_amount'     => $음수($줄['nhis_amount']    ?? 0),
+                    '_pair'           => 'cancelled',
+                ]);
+
+                return [$취소, $발행];
+            })
+            ->values();
 
         // ── 3. 세금계산서 발행 대기 ─────────────────────────────
         /* 「계산서 발행」 화면이 하던 일이다 — 2026-09-01 요청으로 그 화면을 없애고
