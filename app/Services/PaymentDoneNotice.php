@@ -77,6 +77,11 @@ class PaymentDoneNotice
     /** 실제로 보내는 일 — 빗장 안에서만 부른다 */
     private function 보내기(Order $order): array
     {
+        /* 빗장을 얻은 뒤 표에서 다시 읽는다 — 손에 쥔 주문은 요청이 시작될 때 읽은
+           것이라, 앞선 쪽이 적어 놓은 결제 자취가 그 안에 없다(자동발행과 같은 까닭).
+           결제 줄이 아직 없는 채로 읽혔으면 안내에 실릴 금액이 어긋난다. */
+        $order->refresh();
+
         $order->loadMissing('patient', 'prescription', 'tossPayment');
 
         /* 이미 알린 건은 지나간다 — 웹훅이 두 번 와도 문자는 한 번이다.
