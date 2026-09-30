@@ -2908,9 +2908,14 @@ class PrescriptionController extends Controller
             'bright'    => (int) ($prescription->img_brightness ?? 0),
             'contrast'  => (int) ($prescription->img_contrast ?? 0),
         ]] : [];
-        /* 위임 서명과 보호자 신분증도 문서로 함께 세운다.
+        /* 위임 서명ㆍ보호자 신분증ㆍ본인 신분증도 문서로 함께 세운다.
            첨부 파일과 같은 자리에 두면 썸네일ㆍ확대ㆍ크게 보기가 그대로 동작한다.
-           둘 다 본문으로 내려보내지 않고 권한을 거치는 주소만 준다. */
+           본문으로 내려보내지 않고 권한을 거치는 주소만 준다.
+
+           `isSign` 은 화면이 이 셋만 따로 그려야 해서 둔다 — 첨부는 서버가 Blade 로
+           미리 그려 두지만 이 셋은 화면에서 그린다(renderGenThumbs). 표시가 없으면
+           문서 목록에는 있는데 썸네일이 없어, 담당자가 신분증을 못 찾는다
+           (2026-09-30 「신분증이 첨부파일에서 확인이 안됨」). */
         $signDocs = [];
         /* 지난 서명을 다시 쓰는 건에는 이 처방전에 동의 줄이 없다 (2026-09-26 지시).
            그때도 서명 그림과 보호자 신분증은 보여야 한다 — 담당자가 「서명이 없다」로
@@ -2927,6 +2932,7 @@ class PrescriptionController extends Controller
                     'name'      => '서명 ' . ($lastConsent->patient_name ?? ''),
                     'isPdf'     => false,
                     'isRx'      => false,
+                    'isSign'    => true,
                 ];
             }
             if ($lastConsent->guardian_id_path) {
@@ -2938,6 +2944,7 @@ class PrescriptionController extends Controller
                     'name'      => '신분증 ' . ($lastConsent->guardian_name ?? ''),
                     'isPdf'     => false,
                     'isRx'      => false,
+                    'isSign'    => true,
                 ];
             }
         }
@@ -2959,6 +2966,7 @@ class PrescriptionController extends Controller
                 'name'      => '신분증 ' . ($idCard->patient_name ?? ''),
                 'isPdf'     => false,
                 'isRx'      => false,
+                'isSign'    => true,
             ];
         }
 

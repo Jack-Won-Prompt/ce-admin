@@ -1071,6 +1071,9 @@
      테두리를 주색으로 두어 올린 문서와 한눈에 갈린다. */
   .attach-thumb.is-gen { border-color:var(--primary); }
   .attach-thumb.is-gen .attach-type-badge { background:rgba(115,103,240,.86); }
+  /* 고객에게서 받아 둔 것(위임 서명ㆍ신분증)은 우리가 만든 것과 색으로 가른다 */
+  .attach-thumb.is-sign { border-color:var(--success); }
+  .attach-thumb.is-sign .attach-type-badge { background:rgba(40,199,111,.88); }
   .attach-del-btn { overflow:hidden; position:absolute; top:4px; right:4px; width:18px; height:18px; border-radius:999px;
                     background:var(--danger); border:none; color:#fff; font-size:9px; cursor:pointer;
                     display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; z-index:2; }
@@ -2475,10 +2478,12 @@ $calcDeposit  = $calcCopay;
 
       {{-- 유형 선택과 첨부 추가는 문서 카드 머리로 올라갔다 (시안 137:797) --}}
 
-      {{-- 위임 서명ㆍ보호자 신분증 카드는 두지 않는다.
-           아래 문서 스트립이 이미 그 둘을 문서로 세운다(「위임 서명」ㆍ「보호자 신분증」).
+      {{-- 위임 서명ㆍ신분증 카드는 따로 두지 않는다.
+           문서 스트립이 이 셋(위임 서명ㆍ보호자 신분증ㆍ본인 신분증)을 문서로 세운다.
            같은 그림을 두 곳에 두었더니 미리보기 자리가 그만큼 길어졌고, 카드 쪽은
-           확대도 이동도 되지 않아 결국 아래에서 다시 열어 보게 됐다. --}}
+           확대도 이동도 되지 않아 결국 아래에서 다시 열어 보게 됐다.
+           그림칸은 renderGenThumbs 가 `isSign` 으로 그린다 — 2026-09-30 까지는
+           `isGenerated` 만 그려서 목록에는 있고 그림칸은 없었다. --}}
 
 
       {{-- 등록자 카드 — 등록·검수·수정을 한 줄씩 (시안 137:653) --}}
@@ -6213,7 +6218,14 @@ function renderGenThumbs() {
   const slot = document.getElementById('genThumbs');
   if (!slot) return;
 
-  slot.innerHTML = ALL_DOCS.filter(function (d) { return d.isGenerated; }).map(function (d) {
+  /* 시스템이 만든 서류와 **받아 둔 서명ㆍ신분증**을 함께 그린다.
+
+     서명ㆍ신분증(isSign)은 여태 ALL_DOCS 에만 있고 그림칸이 없었다 — 뷰어로는
+     열릴 수 있었지만 누를 자리가 없어 사람은 「신분증이 첨부파일에 없다」고 읽었다
+     (2026-09-30 지시). 첨부는 서버가 Blade 로 그리고, 이 둘은 여기서 그린다. */
+  slot.innerHTML = ALL_DOCS.filter(function (d) {
+    return d.isGenerated || d.isSign;
+  }).map(function (d) {
     /* 위임장과 팩스통합본은 지금 설정으로 다시 만들 수 있다. 첨부의 지우는 X 자리에
        갱신 단추를 둔다 -- 이 서류들은 지우는 것이 아니라 다시 만드는 것이다. */
     var regen = '';
@@ -6239,7 +6251,7 @@ function renderGenThumbs() {
            + ' ' + _htmlAttr(JSON.stringify(d.name || d.typeLabel)) + ')">'
            + '<i class="fa-solid fa-download"></i></button>';
 
-    return '<div class="attach-thumb doc-thumb is-gen" data-doc-id="' + d.id + '"'
+    return '<div class="attach-thumb doc-thumb ' + (d.isSign ? 'is-sign' : 'is-gen') + '" data-doc-id="' + d.id + '"'
          + ' onclick="switchViewerDoc(this)" title="' + _htmlAttr(d.name) + '">'
          + face
          + '<div class="attach-type-badge">' + _htmlAttr(d.typeLabel) + '</div>'
