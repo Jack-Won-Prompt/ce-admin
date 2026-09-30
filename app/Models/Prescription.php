@@ -268,6 +268,14 @@ class Prescription extends Model
      * 3 으로 적히므로 이 조건에 **한 번도 맞지 않았고**, 재등록 기한은 늘 비어 있었다
      * (2026-09-30 실전 시험에서 바로잡음).
      *
+     * ## 등록신청서는 첨부로도 실린다
+     *
+     * 팩스 이력은 실은 서류를 두 칸에 나눠 적는다 — `documents` 는 시스템이 만든 것
+     * (요양비위임장ㆍ신분증 링크로 받은 것 따위), `attachment_ids` 는 올려 둔 첨부다.
+     * **등록신청서는 보통 첨부로 나간다.** 그런데 여태 `documents` 만 보았고, 그래서
+     * 정상 경로로 보낸 건은 하나도 걸리지 않았다 (2026-09-30 실전 시험에서 바로잡음 —
+     * 상태 코드를 고친 뒤에도 기한이 비어 있어 드러났다).
+     *
      * 보낸 적이 없으면 null 이다 — **짐작해 지어내지 않는다.** 그 자리를 채울 근거가
      * 우리에게 없다(이관해 온 환자는 최초 등록이 위드웍스에서 일어났는데, 저쪽에서
      * 그 날짜를 담은 칸을 확정하지 못했다).
@@ -280,13 +288,28 @@ class Prescription extends Model
 
         $후보 = FaxHistory::whereIn('prescription_id', $처방전들)
             ->succeeded()
-            ->where('documents', 'like', '%registration_form%')
             ->orderBy('created_at')
-            ->get(['created_at', 'documents']);
+            ->get(['created_at', 'documents', 'attachment_ids']);
 
-        /* LIKE 는 거르기만 한 것이다 — 담긴 목록을 실제로 펴서 확인한다 */
+        if ($후보->isEmpty()) {
+            return null;
+        }
+
+        /* 실린 첨부 가운데 등록신청서인 것의 번호 — 한 번에 읽어 둔다 */
+        $첨부번호들 = $후보->flatMap(fn ($줄) => (array) $줄->attachment_ids)
+            ->map(fn ($id) => (int) $id)->filter()->unique();
+
+        $등록신청서첨부 = $첨부번호들->isEmpty()
+            ? collect()
+            : \App\Models\PrescriptionAttachment::whereIn('id', $첨부번호들)
+                ->where('doc_type', 'registration_form')
+                ->pluck('id')->map(fn ($id) => (int) $id);
+
         foreach ($후보 as $줄) {
-            if (in_array('registration_form', (array) $줄->documents, true)) {
+            $실린첨부 = collect((array) $줄->attachment_ids)->map(fn ($id) => (int) $id);
+
+            if (in_array('registration_form', (array) $줄->documents, true)
+                || $등록신청서첨부->intersect($실린첨부)->isNotEmpty()) {
                 return \Carbon\Carbon::parse($줄->created_at)->addYears(2);
             }
         }
