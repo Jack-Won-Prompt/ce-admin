@@ -292,7 +292,10 @@
     const r = await fetch('/api' + 길, Object.assign({}, 옵션, { headers: 머리, credentials: 'same-origin' }));
 
     if (r.status === 401 || r.status === 419) {
-      location.assign('{{ route('login') }}');
+      /* 모바일 로그인으로 보낸다 (2026-09-30 지시). 관리자 로그인 화면은 폰에서
+         읽기 어렵고, 거기서 들어가면 대시보드로 떨어진다 — 로그인이 풀렸을 뿐인
+         사람은 보던 자리로 돌아와야 한다(redirectGuestsTo 와 같은 잣대). */
+      location.assign('{{ route('m.login') }}');
       throw new Error('로그인이 필요합니다.');
     }
 

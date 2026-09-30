@@ -76,6 +76,15 @@ class EntraController extends Controller
         $돌아갈곳 = (string) $request->query('cb', '');
         $request->session()->forget(self::APP_SESSION_KEY);
 
+        /* 모바일 웹에서 시작했으면 적어 둔다 (2026-09-30 지시).
+           Microsoft 를 다녀오는 동안 우리 화면을 떠나 있으므로, 돌아왔을 때
+           어디서 왔는지 알 길이 세션밖에 없다. 적어 두지 않으면 폰으로 들어온
+           사람이 관리자 대시보드에 떨어진다 — 아이디ㆍ비밀번호 길은 이미
+           같은 표(login_from)를 쓰고 있어 그것을 그대로 쓴다. */
+        if ($request->query('from') === 'm') {
+            $request->session()->put('login_from', 'm');
+        }
+
         if ($앱표 !== '' && preg_match('/^[A-Za-z0-9_-]{16,128}$/', $앱표)) {
             $request->session()->put(self::APP_SESSION_KEY, [
                 'nonce'  => $앱표,
@@ -212,7 +221,12 @@ class EntraController extends Controller
 
         $this->남긴다($user, 'sso_login', $email);
 
-        return redirect()->intended(route('dashboard'));
+        /* 모바일 웹에서 시작했으면 모바일 화면으로 돌려보낸다 (2026-09-30 지시).
+           가려던 자리가 있으면 그쪽이 먼저다 — /m/prescriptions/RX-… 를 열다가
+           세션이 끊긴 사람은 로그인을 마치고 그 건으로 되돌아가야 한다. */
+        $모바일 = $request->session()->pull('login_from') === 'm';
+
+        return redirect()->intended($모바일 ? route('m.home') : route('dashboard'));
     }
 
     /**
@@ -249,9 +263,21 @@ class EntraController extends Controller
     {
         $user = Auth::user();
 
+        /* 끊기 전에 어디서 쓰던 사람인지 봐 둔다 (2026-09-30 지시).
+           Microsoft 로그아웃은 미리 등록해 둔 한 주소(관리자 로그인)로만 돌아올 수
+           있다. 그 자리에서 모바일 로그인으로 넘겨주려면 표가 하나 있어야 한다. */
+        $모바일 = $request->session()->get('login_from') === 'm'
+            || str_starts_with((string) $request->headers->get('referer'), url('/m'));
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        /* 새 세션에 적는다 — 위에서 옛 세션을 비웠으므로 이 값만 남는다.
+           GET /login 이 이것을 보고 모바일 로그인으로 보낸 뒤 지운다. */
+        if ($모바일) {
+            $request->session()->put('ui', 'm');
+        }
 
         if ($user) {
             $this->남긴다($user, 'sso_logout', 'RP-initiated');
@@ -260,7 +286,7 @@ class EntraController extends Controller
         $tenant = SsoSettings::all()['tenant_id'] ?? null;
 
         if (! $tenant) {
-            return redirect()->route('login');
+            return redirect()->route($모바일 ? 'm.login' : 'login');
         }
 
         /* 모바일 웹에서 나가도 여기로 온다 — 로그아웃은 웹과 같게 둔다

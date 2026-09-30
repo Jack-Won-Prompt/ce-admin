@@ -171,7 +171,10 @@
 
 <script>
   const SSO쓸수있나 = @json((bool) $sso);
-  const SSO길      = @json($sso ? route('sso.redirect') : null);
+  /* ?from=m 을 달고 간다 (2026-09-30 지시). 이 표가 없으면 Microsoft 를 다녀온
+     뒤 관리자 대시보드로 떨어진다 — 아이디ㆍ비밀번호 폼이 실어 보내는 from 과
+     같은 표다(AuthController::모바일인가). */
+  const SSO길      = @json($sso ? route('sso.redirect', ['from' => 'm']) : null);
   let 비번보임      = @json((bool) $password);
 
   let 알림때 = null;

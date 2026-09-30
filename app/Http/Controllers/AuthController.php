@@ -21,9 +21,18 @@ class AuthController extends Controller
     /**
      * 로그인 페이지
      * GET /login
+     *
+     * 모바일 웹에서 나간 사람은 모바일 로그인으로 보낸다 (2026-09-30 지시).
+     * Microsoft 로그아웃은 등록해 둔 한 주소로만 돌아오므로, 폰으로 쓰던 사람도
+     * 이 자리에 떨어진다 — 그대로 두면 관리자 화면으로 다시 들어가게 된다.
+     * 표는 한 번만 쓴다(EntraController::logout 이 새 세션에 적어 둔다).
      */
-    public function create(): View
+    public function create(Request $request): View|RedirectResponse
     {
+        if ($request->session()->pull('ui') === 'm') {
+            return redirect()->route('m.login');
+        }
+
         return view('auth.login');
     }
 
