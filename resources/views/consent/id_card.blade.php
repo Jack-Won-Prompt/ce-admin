@@ -83,7 +83,7 @@
   <div class="card-header">
     <div class="logo">CE ADMIN</div>
     <h1>신분증 제출</h1>
-    <p>건강보험 등록에 필요한 신분증을 올려 주십시오.</p>
+    <p>건강보험공단 등록에 필요한 신분증을 올려 주십시오.</p>
   </div>
 
   {{-- 누가 보냈는지 밝힌다. 모르는 번호에서 온 링크는 열지 않는 것이 옳다.
@@ -102,7 +102,7 @@
 
   <div class="card-body">
     <div class="who">
-      <b>{{ $consent->patient_name }}</b> 님의 건강보험 등록 서류입니다.<br>
+      <b>{{ $consent->patient_name }}</b> 님의 건강보험공단 등록 서류입니다.<br>
       주민등록증ㆍ운전면허증ㆍ여권 등 사진이 있는 신분증을 올려 주십시오.
     </div>
 
