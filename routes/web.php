@@ -1560,7 +1560,6 @@ Route::middleware(['auth'])->prefix('m')->name('m.')->group(function () {
     Route::get('/chat',                  [$c, 'chat'])->name('chat');
     Route::get('/chat/{room}',           [$c, 'chatRoom'])->name('chat.room');
     Route::get('/settings',              [$c, 'settings'])->name('settings');
-    Route::get('/orders',                [$c, 'orders'])->name('orders');
     Route::get('/notifications',         [$c, 'notifications'])->name('notifications');
     Route::get('/notices',               [$c, 'notices'])->name('notices');
     Route::get('/notices/{id}',          [$c, 'notice'])->name('notice');

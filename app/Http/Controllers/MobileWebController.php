@@ -80,12 +80,6 @@ class MobileWebController extends Controller
         return view('mobile.settings', ['탭' => 'settings', '채팅보임' => $this->채팅보임()]);
     }
 
-    /** 주문 목록 — 앱의 order_list_screen */
-    public function orders(): View
-    {
-        return view('mobile.orders', ['탭' => 'settings', '채팅보임' => $this->채팅보임()]);
-    }
-
     /** 알림 이력 — 앱의 notification_list_screen */
     public function notifications(): View
     {

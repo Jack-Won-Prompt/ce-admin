@@ -52,7 +52,6 @@ class CollectMessagesCommand extends Command
         'mobile/chat-room'      => '모바일 · 채팅방',
         'mobile/chat'           => '모바일 · 채팅',
         'mobile/settings'       => '모바일 · 설정',
-        'mobile/orders'         => '모바일 · 주문 목록',
         'mobile/notifications'  => '모바일 · 알림 이력',
         'mobile/notices'        => '모바일 · 공지사항',
         'mobile/notice'         => '모바일 · 공지 상세',
