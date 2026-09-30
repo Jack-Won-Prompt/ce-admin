@@ -90,7 +90,14 @@ class OrderController extends Controller
         $attCounts = $파일['count'];
         $서류이름  = $파일['names'];
 
-        $gridData = $orders->map(function ($o) use ($extras, $attCounts, $서류이름) {
+        /* 정정한 주문은 **세 줄**로 편다 (2026-09-30 지시).
+
+           청구 관리ㆍ정산/회계ㆍFinance 는 진작 세 줄인데 주문 관리만 지금 값 한 줄이라,
+           같은 주문을 보는데 화면마다 말이 달랐다. 펴는 잣대는 한 곳에 있다
+           (App\Support\OrderAmendLines). */
+        $정정 = \App\Support\OrderAmendLines::모으기($orders);
+
+        $gridData = $orders->flatMap(function ($o) use ($extras, $attCounts, $서류이름, $정정) {
             /* 유형 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류.
                여러 건이 붙었으면 몇 건인지 함께 적는다. 상세로 들어가 보라는 신호다.
                어디까지 진행됐는지는 옆 칸(등록 상태)에서 따로 본다 — 한 칸에 둘을 섞으면
@@ -111,7 +118,7 @@ class OrderController extends Controller
                     ? ' 외 ' . ($o->returns->count() - 1) . '건' : '')
                 : '';
 
-            return [
+            $줄 = [
                 'id'        => $o->id,
                 'order_no'  => $o->order_number,
                 // 교환ㆍ반품ㆍ취소 접수번호와 그 접수로 가는 열쇠
@@ -150,6 +157,65 @@ class OrderController extends Controller
             ] + $extras->rx($o->prescription, $o->patient)
               + $extras->ww($o, $o->prescription, $o->patient)
               + $extras->of($o);
+
+            $이력 = $정정->get($o->id, collect());
+
+            if ($이력->isEmpty()) {
+                return [$줄];
+            }
+
+            /* 차례는 **원 주문 → 취소 → 지금 값** 이다 — 다른 세 화면과 같다.
+               먼저 얼마였고, 그것을 물렀고, 그래서 지금 얼마인가가 위에서 아래로
+               흘러야 돈의 움직임이 읽힌다. */
+            $바탕구분 = $o->orderKindLabel();
+            $폄       = [];
+
+            foreach ($이력 as $a) {
+                /* 물러난 줄에는 **id 를 싣지 않는다** — 겹쳐 누르면 이미 지난 금액으로
+                   손대게 된다. 화면의 두 번 누르기도 id 가 없으면 지나간다.
+
+                   받은 돈ㆍ결제 시각ㆍ창고 매출은 **지금 줄의 것**이라 비운다. 그대로
+                   실으면 그때 받은 것처럼 읽히는데, 실제로는 그 돈을 물러 주었다. */
+                $물러난값 = [
+                    'id'             => null,
+                    'amend_line'     => true,
+                    'deposit_amount' => 0,
+                    'deposit_at'     => '',
+                    'paid_at'        => '',
+                    'ww_so_amt'      => '',
+                    'product'        => $a->product_name ?? '',
+                    'qty'            => (int) $a->quantity,
+                    'ww_so_no'       => $a->withworks_so_no ?? '',
+                    /* 증빙은 그때 낸 것이다 — 어느 계산서가 물러난 것인지 이 줄에서 읽힌다 */
+                    'tax_invoice'    => $a->tax_invoice_no ? '취소됨' : '',
+                    'cash_receipt'   => $a->cash_receipt_no ? '취소됨' : '',
+                ];
+
+                $폄[] = ['status'        => '주문 정정',
+                         'order_kind'    => \App\Support\OrderAmendLines::원줄말($바탕구분),
+                         'total_amount'  => (int) $a->patient_copay + (int) $a->nhis_amount,
+                         'nhis_amount'   => (int) $a->nhis_amount,
+                         'copay'         => (int) $a->patient_copay,
+                         'patient_copay' => (int) $a->patient_copay]
+                      + $물러난값 + $줄;
+
+                $폄[] = ['status'        => '주문 취소',
+                         'order_kind'    => \App\Support\OrderAmendLines::취소줄말($바탕구분),
+                         'total_amount'  => -((int) $a->patient_copay + (int) $a->nhis_amount),
+                         'nhis_amount'   => -(int) $a->nhis_amount,
+                         'copay'         => -(int) $a->patient_copay,
+                         'patient_copay' => -(int) $a->patient_copay]
+                      + $물러난값 + $줄;
+            }
+
+            /* 정정을 거쳤는데 지금 계산서가 「취소됨」이면, 그 취소된 것은 물러난 줄의
+               계산서다. 이 줄이 낼 새 계산서는 아직 나가지 않았다 — 「미발행」이 맞다. */
+            if (($줄['tax_invoice'] ?? '') === '취소됨')  { $줄['tax_invoice']  = '미발행'; }
+            if (($줄['cash_receipt'] ?? '') === '취소됨') { $줄['cash_receipt'] = '미발행'; }
+
+            $폄[] = $줄;
+
+            return $폄;
         })->values();
 
         return view('orders.index', compact('gridData', 'statusCounts', 'dealCounts'));
