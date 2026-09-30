@@ -4308,17 +4308,21 @@ class PrescriptionController extends Controller
            같은 이름이 템플릿마다 다른 것을 가리키는 자리가 있어(#{날짜} 가 어떤
            글에서는 재구매 가능일이고 다른 글에서는 재등록 기한이다) 그런 자리는
            아래 $템플릿별 에서 따로 정한다. */
-        $params += [
+        /* **빈 값은 담지 않는다.** 담으면 strtr 가 자리표시를 빈 글자로 지워 버려,
+           아래의 「못 채운 변수가 남았나」 잣대에 걸리지 않는다 — 그러면
+           「처방전 종료일:」 뒤가 빈 채로 환자에게 간다. 담지 않아야 자리표시가
+           그대로 남아 걸린다. 「-」 를 채우는 것도 같은 까닭으로 안 된다. */
+        $params += array_filter([
             '#{이름}'          => $params['#{고객명}'],
-            '#{병원명}'        => $prescription->hospital_name ?: '-',
+            '#{병원명}'        => (string) $prescription->hospital_name,
             '#{발행일}'        => self::날짜글($prescription->issued_date),
             '#{처방전 종료일}' => self::날짜글($prescription->rx_end_date),
             '#{재구매 가능일}' => self::날짜글($prescription->repurchase_date),
-            '#{송장번호}'      => $order?->tracking_number ?: '',
-            '#{주소}'          => $order?->shipping_address ?: '',
-            '#{제품번호}'      => $order?->product_code ?: ($prescription->product_code ?: ''),
+            '#{송장번호}'      => (string) ($order?->tracking_number ?? ''),
+            '#{주소}'          => (string) ($order?->shipping_address ?? ''),
+            '#{제품번호}'      => (string) ($order?->product_code ?: ($prescription->product_code ?: '')),
             '#{주문수량}'      => (string) ($order?->quantity ?: $prescription->quantity ?: ''),
-        ];
+        ], fn ($값) => trim((string) $값) !== '');
 
         /* 뜻이 템플릿마다 갈리는 변수 — 팝빌 템플릿 코드로 정한다.
            여기에 없는 템플릿의 #{날짜} 는 채우지 않는다. 엉뚱한 날짜가 환자에게
@@ -4328,7 +4332,8 @@ class PrescriptionController extends Controller
             '026090002148' => ['#{날짜}' => self::날짜글($prescription->repurchase_date)],
         ];
 
-        $params += $템플릿별[$atsCode] ?? [];
+        $params += array_filter($템플릿별[$atsCode] ?? [],
+            fn ($값) => trim((string) $값) !== '');
 
         /* 변수는 다 채워지는데 **뜻이 맞지 않는** 자리 — 채워 놓고 막는다.
            아래 잣대(#{...} 가 남았나)로는 걸리지 않으므로 여기서 이름을 대고 막는다. */
