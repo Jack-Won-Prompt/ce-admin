@@ -4317,7 +4317,11 @@ class PrescriptionController extends Controller
             '#{병원명}'        => (string) $prescription->hospital_name,
             '#{발행일}'        => self::날짜글($prescription->issued_date),
             '#{처방전 종료일}' => self::날짜글($prescription->rx_end_date),
-            '#{재구매 가능일}' => self::날짜글($prescription->repurchase_date),
+            /* 이관분은 재구매 가능일이 `next_repurchase` 에 담겼다(원천 udf30).
+               `repurchase_date` 는 우리가 직접 올린 처방전에만 찬다 — 둘 다 본다
+               (2026-09-30 운영: repurchase_date 0건 · next_repurchase 48,356건). */
+            '#{재구매 가능일}' => self::날짜글($prescription->repurchase_date
+                                   ?: $prescription->next_repurchase),
             '#{송장번호}'      => (string) ($order?->tracking_number ?? ''),
             '#{주소}'          => (string) ($order?->shipping_address ?? ''),
             '#{제품번호}'      => (string) ($order?->product_code ?: ($prescription->product_code ?: '')),
@@ -4329,7 +4333,8 @@ class PrescriptionController extends Controller
            가느니 아래 잣대에 걸려 못 나가는 편이 낫다. */
         $템플릿별 = [
             /* 처방전등록안내_환자용 — 「재구매 가능일 #{날짜} 이전에 연락드리겠습니다」 */
-            '026090002148' => ['#{날짜}' => self::날짜글($prescription->repurchase_date)],
+            '026090002148' => ['#{날짜}' => self::날짜글($prescription->repurchase_date
+                                              ?: $prescription->next_repurchase)],
         ];
 
         $params += array_filter($템플릿별[$atsCode] ?? [],

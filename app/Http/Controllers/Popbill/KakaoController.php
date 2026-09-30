@@ -17,8 +17,29 @@ class KakaoController extends Controller
     public function balance(Request $request): JsonResponse
     {
         $corpNum = $request->query('corp_num', config('popbill.test.corp_num'));
-        $balance = $this->svc->getBalance($corpNum);
-        return response()->json(['corp_num' => $corpNum, 'balance' => $balance]);
+
+        /* 둘 다 준다. 우리는 연동회원이라 **파트너 포인트에서 깎이므로**, 연동회원
+           포인트만 보면 늘 0 이어서 못 보내는 것으로 잘못 읽는다 (2026-09-30). */
+        $단가 = null;
+        $내는곳 = null;
+
+        try {
+            $요금 = $this->svc->getChargeInfo($corpNum);
+            $단가 = (float) ($요금->unitCost ?? 0);
+            $내는곳 = (string) ($요금->chargeMethod ?? '');
+        } catch (\Throwable) {
+        }
+
+        $파트너 = $this->svc->getPartnerBalance($corpNum);
+
+        return response()->json([
+            'corp_num'        => $corpNum,
+            'balance'         => $this->svc->getBalance($corpNum),   // 연동회원 제 포인트
+            'partner_balance' => $파트너,                             // 실제로 깎이는 곳
+            'unit_cost'       => $단가,
+            'charge_method'   => $내는곳,
+            'sendable'        => $단가 > 0 ? (int) floor($파트너 / $단가) : null,
+        ]);
     }
 
     /**

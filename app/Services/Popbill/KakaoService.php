@@ -42,6 +42,37 @@ class KakaoService extends PopbillBaseService
     }
 
     /**
+     * 파트너(연동사) 잔여포인트 — **차감은 여기서 일어난다**.
+     *
+     * 우리는 연동회원이라 알림톡 값이 연동회원 포인트가 아니라 파트너 포인트에서
+     * 깎인다(`GetChargeInfo` 의 `chargeMethod` 가 「파트너」다). 위의 getBalance() 는
+     * 연동회원 제 포인트라 늘 0 으로 보이는데, 그것만 보고 「포인트가 없어 못 보낸다」고
+     * 읽으면 틀린다 (2026-09-30 에 내가 그렇게 잘못 읽었다).
+     */
+    public function getPartnerBalance(string $corpNum): float
+    {
+        try {
+            return $this->api->GetPartnerBalance($corpNum);
+        } catch (PopbillException $e) {
+            $this->handleException($e);
+        }
+    }
+
+    /**
+     * 과금 정보 — 단가ㆍ누가 내는가ㆍ요금제.
+     *
+     * 잔여포인트만으로는 몇 통 보낼 수 있는지 알 수 없다. 단가를 함께 읽는다.
+     */
+    public function getChargeInfo(string $corpNum): object
+    {
+        try {
+            return $this->api->GetChargeInfo($corpNum, 'ATS');
+        } catch (PopbillException $e) {
+            $this->handleException($e);
+        }
+    }
+
+    /**
      * 알림톡 템플릿 목록 확인
      */
     public function listTemplates(string $corpNum): array
