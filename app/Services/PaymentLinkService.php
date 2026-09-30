@@ -111,6 +111,24 @@ class PaymentLinkService
                 'message' => $못보낸말 ? $보낸말 . ' ' . implode(' / ', $못보낸말) : $보낸말];
     }
 
+    /**
+     * 환자에게 적어 보낼 배송지 한 줄.
+     *
+     * `shipping_address` 에는 저장할 때 상세주소까지 합쳐 담는다. 그런데 이어 붙지
+     * 않은 옛 건이 있어 상세주소 칸을 따로 본다 — 이미 들어 있으면 덧대지 않는다.
+     */
+    private static function 주소한줄(Order $order): string
+    {
+        $주소   = trim((string) ($order->shipping_address ?? ''));
+        $상세   = trim((string) ($order->shipping_address_detail ?? ''));
+
+        if ($상세 === '' || $주소 === '' || str_contains($주소, $상세)) {
+            return $주소;
+        }
+
+        return trim($주소 . ' ' . $상세);
+    }
+
     /** 채널 이름 — 화면과 이력에 같은 말로 적는다 */
     public static function 채널이름(string $channel): string
     {
@@ -194,8 +212,11 @@ class PaymentLinkService
             '#{제품번호}' => (string) ($order->product_code ?? ''),
             '#{제품명}' => (string) ($order->product_name ?? ''),
             '#{주문수량}' => (string) ((int) ($order->quantity ?? 0)),
-            '#{주소}' => trim((string) ($order->shipping_address ?? '') . ' '
-                              . (string) ($order->shipping_address_detail ?? '')),
+            /* 배송지 칸에는 **이미 상세주소까지 담겨 있다** — 저장할 때 합쳐 넣는다.
+               여기서 또 이으면 「…배재정동빌딩 B동 10층 배재정동빌딩 B동 10층」처럼
+               두 번 적힌다(2026-09-30 확인). 상세주소는 이어 붙지 않은 옛 건에만
+               덧댄다. */
+            '#{주소}' => self::주소한줄($order),
             '#{유의사항}' => $유의사항,
             '#{취소줄}' => $취소줄, '#{금액}' => $amount, '#{링크}' => $link->url,
             '#{유효일}' => (string) self::VALID_DAYS,
