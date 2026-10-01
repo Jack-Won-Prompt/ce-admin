@@ -3307,6 +3307,12 @@ window.ceQuill = (function () {
   .ce-rich ol, .ce-rich ul { margin: 0 0 6px; padding-left: 20px; }
   .ce-rich img { max-width: 100%; height: auto; }
   .ce-rich a { color: var(--primary, #2563eb); text-decoration: underline; }
+  /* 표 — 허용 이름표에는 있는데 꾸밈이 없어 글자가 붙어 보였다 (2026-10-01).
+     border ㆍ cellpadding 속성은 걸러지므로(RichText::속성) 여기서 입힌다.
+     넓은 표는 제 안에서 굴린다 — 창을 밀어내지 않게. */
+  .ce-rich table { border-collapse: collapse; margin: 0 0 8px; max-width: 100%; display: block; overflow-x: auto; }
+  .ce-rich th, .ce-rich td { border: 1px solid var(--gray-300, #d1d5db); padding: 4px 8px; text-align: left; }
+  .ce-rich th { background: var(--gray-50, #f9fafb); font-weight: 700; }
 </style>
 
 @stack('scripts')

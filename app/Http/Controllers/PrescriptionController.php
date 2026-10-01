@@ -4989,6 +4989,41 @@ class PrescriptionController extends Controller
         $patientName = trim((string) $request->input('name'))
             ?: (\App\Models\Patient::bare($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?? '환자'));
 
+        /* **아직 열려 있는 링크가 있으면 다시 보내지 않는다** (2026-10-01 지시 ㉮).
+
+           2026-10-01 에 서명 링크가 98통 나갔는데 그 가운데 71통이 거듭 보낸 것이었다
+           — 한 분이 다섯 통을 받기도 했다. 링크가 30분 만에 닫히던 때라 환자가 열지
+           않으면 담당자가 다시 누를 수밖에 없었다. 그 까닭은 당일 23시 30분으로 고쳤고,
+           이제 거듭 보내는 것 자체를 막는다.
+
+           **아주 막지는 않는다.** 환자가 문자를 지웠거나 번호를 고쳐 다시 보내야 하는
+           일이 있다. 그때는 화면이 다시 묻고, 담당자가 그렇다고 하면 보낸다
+           (`force` 가 그 뜻이다).
+
+           번호가 바뀌었으면 그냥 보낸다 — 먼저 보낸 링크는 다른 사람에게 가 있다. */
+        if (! $request->boolean('force')) {
+            $열린것 = \App\Models\PrescriptionConsent::where('prescription_id', $prescription->id)
+                ->where('status', 'pending')
+                ->whereNotNull('expires_at')->where('expires_at', '>', now())
+                ->latest('id')->first();
+
+            $같은번호 = $열린것
+                && preg_replace('/\D/', '', (string) $열린것->patient_mobile) === $mobile;
+
+            if ($같은번호) {
+                return response()->json([
+                    'success'  => false,
+                    'resend'   => true,          // 화면이 이것을 보고 다시 묻는다
+                    'sent_at'  => $열린것->created_at?->format('Y-m-d H:i'),
+                    'expires'  => $열린것->expires_at?->format('Y-m-d H:i'),
+                    'message'  => '이미 보낸 서명 링크가 '
+                                . $열린것->expires_at->format('n월 j일 H시 i분') . '까지 열려 있습니다 ('
+                                . $열린것->created_at->format('H:i') . ' 발송). '
+                                . '환자가 그 문자를 그대로 눌러 서명할 수 있습니다. 그래도 다시 보내시겠습니까?',
+                ], 409);
+            }
+        }
+
         return $this->issueConsent($prescription, $mobile, $patientName);
     }
 

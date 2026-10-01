@@ -16482,7 +16482,7 @@ window.HELP_TOUR_STEPS = [
       .catch(() => showToast('복사하지 못했습니다 — 항목의 내용을 직접 선택해 주십시오.', 'warning'));
   }
 
-  async function sendConsentSms() {
+  async function sendConsentSms(force = false) {
     const mobile = document.getElementById('consentMobile').value.trim();
     if (!mobile) { ceAlert('수신 번호를 입력해 주십시오.', { tone: 'warning' }); return; }
     if (mobile.replace(/\D/g, '').length < 9) {
@@ -16499,10 +16499,25 @@ window.HELP_TOUR_STEPS = [
       const res  = await fetch(CONSENT_SMS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' },
-        body: JSON.stringify({ mobile, name }),
+        body: JSON.stringify({ mobile, name, force }),
       });
       const data = await res.json();
       const box  = document.getElementById('consentSendResult');
+
+      /* 아직 열려 있는 링크가 있으면 서버가 409 로 되묻는다 (2026-10-01 지시 ㉮).
+
+         거듭 보내는 것을 막되 아주 막지는 않는다 — 환자가 문자를 지웠거나 못 받은
+         일이 있다. 담당자가 그렇다고 하면 그때 보낸다. */
+      if (data.resend) {
+        box.style.display = 'none';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 발송';
+
+        const 갈까 = await ceConfirm(data.message, { confirmText: '다시 보내기', cancelText: '닫기' });
+        if (갈까) { await sendConsentSms(true); }
+        return;
+      }
+
       box.style.display = 'block';
 
       if (data.success) {
