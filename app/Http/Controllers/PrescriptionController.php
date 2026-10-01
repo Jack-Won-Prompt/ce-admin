@@ -4673,6 +4673,46 @@ class PrescriptionController extends Controller
             ], 422);
         }
 
+        /* 발송ㆍ발행 내역에 남길 한 줄 (2026-10-01 지시
+           「빠짐 없이 외부로 나간 모든 메세지 발송 발행 보여야 함」).
+
+           이 자리는 팝빌을 **직접** 부른다(MessageSender 를 지나지 않는다). 그래서
+           여태 활동 기록에만 남고 발송ㆍ발행 내역에는 한 줄도 서지 않았다 —
+           그 화면이 보여 주던 것이 주문 흐름의 여섯 갈래뿐이었던 까닭이다.
+
+           모양은 MessageSender 가 적는 것과 같게 둔다. 화면이 이미 그 모양을 읽는다.
+           실패한 것도 적는다 — 팝빌까지 갔다가 거절당한 것도 「보낸 일」이고,
+           그것이 안 보이면 「보냈는데 안 왔다」를 되짚을 자리가 없다. */
+        $내역적기 = function (?string $receiptNum, ?string $error) use ($prescription, $tpl, $content, $mobile, $params) {
+            try {
+                \App\Models\MessageHistory::create([
+                    'channel'         => 'alimtalk',
+                    'template_code'   => $tpl->code,
+                    'template_label'  => $tpl->label,
+                    'content'         => $content,
+                    'total'           => 1,
+                    'success_count'   => $error === null ? 1 : 0,
+                    'fail_count'      => $error === null ? 0 : 1,
+                    'receivers'       => [[
+                        'rcv'        => $mobile,
+                        'rcvnm'      => $params['#{고객명}'] ?? '',
+                        'patient_id' => $prescription->patient_id,
+                    ]],
+                    'receipt_nums'    => $receiptNum !== null ? [$receiptNum] : [],
+                    'error'           => $error,
+                    'source'          => 'kakao-direct',
+                    'prescription_id' => $prescription->id,
+                    'sent_by'         => auth()->id(),
+                ]);
+            } catch (\Throwable $e) {
+                /* 내역을 못 적었다고 발송을 되돌리지는 않는다 — 이미 나갔다.
+                   다만 조용히 지나가면 「보냈는데 기록이 없다」가 또 생기므로 남긴다. */
+                Log::error('[알림톡] 발송 내역을 남기지 못했습니다', [
+                    'rx' => $prescription->rx_number, 'error' => $e->getMessage(),
+                ]);
+            }
+        };
+
         try {
             $kakao = app(\App\Services\Popbill\KakaoService::class);
 
@@ -4694,8 +4734,12 @@ class PrescriptionController extends Controller
                 'rx' => $prescription->rx_number, 'tpl' => $atsCode, 'error' => $e->getMessage(),
             ]);
 
+            $내역적기(null, $e->getMessage());
+
             return response()->json(['success' => false, 'message' => '알림톡 발송 실패: ' . $e->getMessage()], 502);
         }
+
+        $내역적기((string) $receiptNum, null);
 
         $prescription->update(['kakao_sent_at' => now()]);
         activity()->causedBy(auth()->user())->performedOn($prescription)
