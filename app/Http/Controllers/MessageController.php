@@ -28,16 +28,31 @@ class MessageController extends Controller
 
     public function index(Request $request): View
     {
-        $gridData = $this->query($request)->get()->map(fn (Patient $p) => [
-            'id'       => $p->id,
-            'name'     => $p->name,
-            'mobile'   => $this->formatMobile($p->mobile ?? $p->phone),
-            'raw'      => preg_replace('/\D/', '', (string) ($p->mobile ?? $p->phone)),
-            'rx_count' => (int) $p->prescriptions_count,
-            'last_rx'  => $p->prescriptions_max_created_at
-                            ? substr((string) $p->prescriptions_max_created_at, 0, 10) : '',
-            'created'  => $p->created_at?->format('Y-m-d H:i:s') ?? '',
-        ]);
+        /* **모델을 세우지 않는다** (2026-10-01 — 메모리 부족으로 화면이 죽었다).
+
+           여태 `->get()` 으로 거래처를 모두 Eloquent 모델로 세웠다. 이관 전에는 몇
+           십 건이라 지나갔는데, 운영 거래처 12,608명을 담은 뒤로 128MB 를 넘겨
+           PHP 치명 오류(Allowed memory size exhausted)가 났다 — 예외가 아니라
+           치명 오류라서 오류 기록에도 파일 로그에도 남지 않고 500 만 떴다.
+
+           목록이 쓰는 칸은 일곱이다. 그 칸만 골라 `toBase()` 로 받으면 모델 한 벌에
+           딸리는 원본ㆍ관계ㆍ씌우개가 서지 않는다. 주민등록번호를 고르지 않으므로
+           복호화도 일어나지 않는다. */
+        $gridData = $this->query($request, [
+                'patients.id', 'patients.name', 'patients.mobile', 'patients.phone', 'patients.created_at',
+            ])
+            ->toBase()->get()
+            ->map(fn ($p) => [
+                'id'       => $p->id,
+                'name'     => $p->name,
+                'mobile'   => $this->formatMobile($p->mobile ?? $p->phone),
+                'raw'      => preg_replace('/\D/', '', (string) ($p->mobile ?? $p->phone)),
+                'rx_count' => (int) ($p->prescriptions_count ?? 0),
+                'last_rx'  => $p->prescriptions_max_created_at
+                                ? substr((string) $p->prescriptions_max_created_at, 0, 10) : '',
+                /* toBase 는 Carbon 으로 바꾸지 않는다 — 글자 그대로 자른다 */
+                'created'  => substr((string) ($p->created_at ?? ''), 0, 19),
+            ]);
 
         // 번호가 없는 거래처는 보낼 수 없다. 몇 건인지 화면에 알린다.
         $sendable = $gridData->filter(fn ($r) => $r['raw'] !== '')->count();
@@ -77,10 +92,19 @@ class MessageController extends Controller
             ])->all();
     }
 
-    /** 목록과 '전체 발송' 이 같은 조건을 보도록 조회를 한 곳에 둔다 */
-    private function query(Request $request)
+    /**
+     * 목록과 '전체 발송' 이 같은 조건을 보도록 조회를 한 곳에 둔다.
+     *
+     * **고를 칸을 인자로 받는다** (2026-10-01). 부르는 쪽에서 `->select()` 를 뒤에
+     * 붙이면 `withCount`ㆍ`withMax` 가 넣어 둔 하위질의가 함께 지워져 건수와 마지막
+     * 처방일이 모두 null 로 온다. 칸을 먼저 정하고서 부분합을 얹어야 둘이 함께 선다.
+     *
+     * 기본값은 전부(`patients.*`)다 — 칸을 주지 않는 부르는 쪽이 생겨도 전과 같이 돈다.
+     */
+    private function query(Request $request, array $칸 = ['patients.*'])
     {
-        $q = Patient::withCount('prescriptions')->withMax('prescriptions', 'created_at')->latest();
+        $q = Patient::query()->select($칸)
+            ->withCount('prescriptions')->withMax('prescriptions', 'created_at')->latest();
 
         if ($request->filled('q')) {
             $kw     = $request->q;
@@ -116,16 +140,21 @@ class MessageController extends Controller
             'template_code' => 'nullable|string|max:60',
         ]);
 
+        /* 여기도 모델을 세우지 않는다 (2026-10-01 — index 와 같은 까닭).
+           「조건 전체」로 보내면 지금 걸린 거래처를 모두 받는데, 그것이 12,608명이면
+           모델로 세우는 순간 메모리가 바닥난다. 보낼 때 쓰는 칸은 넷뿐이다. */
+        $칸 = ['patients.id', 'patients.name', 'patients.mobile', 'patients.phone'];
+
         $patients = $request->scope === 'all'
-            ? $this->query($request)->get()
-            : Patient::whereIn('id', $request->patient_ids)->get();
+            ? $this->query($request, $칸)->toBase()->get()
+            : Patient::query()->select($칸)->whereIn('patients.id', $request->patient_ids)->toBase()->get();
 
         $receivers = $patients
-            ->map(fn (Patient $p) => [
+            ->map(fn ($p) => [
                 'rcv'        => $p->mobile ?? $p->phone,
                 /* 「(E)」는 우리끼리 쓰는 표시다 — 문자 수신자명으로 나가지 않게 뗀다
-                   (2026-09-27 지시) */
-                'rcvnm'      => $p->bare_name,
+                   (2026-09-27 지시). 모델이 아니므로 정적 함수를 그대로 부른다. */
+                'rcvnm'      => Patient::bare($p->name),
                 'patient_id' => $p->id,
             ])
             ->filter(fn ($r) => preg_replace('/\D/', '', (string) $r['rcv']) !== '')
