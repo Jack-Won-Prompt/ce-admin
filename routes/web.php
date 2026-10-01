@@ -110,6 +110,13 @@ Route::middleware(['auth'])->group(function () {
         // 빈 검수·등록 화면 (메뉴 '처방전 관리') — 초안 1건을 잡아 검수 화면으로 보낸다
         // ('/{prescription}' 보다 먼저 등록해야 'create' 가 처방번호로 해석되지 않는다)
         Route::get('/create',                            [PrescriptionController::class, 'create'])->name('create');
+        /* 거래처 고르개 — 두 글자부터 서버가 찾는다 (2026-10-01 지시).
+
+           **'/{prescription}' 보다 반드시 먼저 둔다.** 뒤에 두었다가 운영에서 404 가
+           났다(2026-10-01 11:31). 'patient-picker' 가 처방번호로 읽혀 show 로 들어가고,
+           그 번호의 처방전이 없으니 404 가 된다. 로그인하지 않고 부르면 auth 가 먼저
+           가로채 302 를 주므로, 경로가 맞는지는 로그인 상태로 확인해야 한다. */
+        Route::get('/patient-picker',                    [PrescriptionController::class, 'patientPicker'])->name('patientPicker');
         // 「조회」로 고른 사람의 상담ㆍ환자 정보 한 벌 — 고른 순간 화면을 채운다
         Route::get('/patients/{patient}/detail',          [PrescriptionController::class, 'patientDetail'])->name('patientDetail');
         // 그 사람이 지금까지 만든 건들 — 새 건으로 갈지 하던 건을 이어갈지 고른다
@@ -185,9 +192,6 @@ Route::middleware(['auth'])->group(function () {
            파일 검수는 **처방전 목록**에서 한다. 그래서 주문 등록 화면을 열어 둔 채
            검수를 마치면, 그 화면은 열 때 박아 둔 옛 상태를 그대로 들고 있어
            「검수를 완료해야 합니다」로 막혔다 — 검수는 이미 끝났는데. */
-        /* 거래처 고르개 — 두 글자부터 서버가 찾는다 (2026-10-01 지시).
-           처방전에 매이지 않는 자리라 {prescription} 보다 앞에 세운다. */
-        Route::get( '/patient-picker', [PrescriptionController::class, 'patientPicker'])->name('patientPicker');
         Route::get( '/{prescription}/review-state', [PrescriptionController::class, 'reviewState'])->name('reviewState');
         Route::get( '/{prescription}/consent-status', [ConsentController::class,     'statusCheck'])->name('consentStatus');
         Route::get( '/{prescription}/consent-pdf',    [ConsentController::class,     'downloadPdf'])->name('consentPdf');
