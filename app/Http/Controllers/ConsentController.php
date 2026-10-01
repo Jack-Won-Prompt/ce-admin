@@ -1041,6 +1041,38 @@ class ConsentController extends Controller
 
             $쓸것 = $옮긴서명 ? \App\Support\DelegationGate::옮겨온서명동의($prescription) : $지난서명;
 
+            /* **서면으로 받아 올린 위임장**도 「완료」로 세운다 (2026-10-01 지시
+               「위임장 업로드하면 서명동의 완료되고 다시 링크를 보내지 않음」).
+
+               전자 서명이 없으므로 서명 그림도 없다. 그것을 숨기지 않고 그대로
+               「서면 위임장(업로드)」이라 적는다 — 담당자가 배지만 보고 전자 서명을
+               받은 줄 알면, 서명 그림이 필요한 자리에서 비어 있는 까닭을 찾지 못한다. */
+            $서면위임장 = $쓸것 ? null : \App\Support\DelegationGate::서면위임장($prescription);
+
+            if ($서면위임장) {
+                return response()->json([
+                    'exists'            => (bool) $latest,
+                    'status'            => $latest?->status,
+                    'privacy'           => $privacy,
+                    'delegation_signed' => $delegationSigned,
+                    'reused_sign'       => [
+                        'source'      => 'paper',
+                        'label'       => '서면 위임장(업로드)',
+                        'signed_at'   => $서면위임장->created_at?->format('Y-m-d'),
+                        'rx_number'   => null,
+                        'valid_until' => null,
+                        'matched_by'  => null,
+
+                        'patient_name'   => $prescription->patient?->bare_name,
+                        'patient_mobile' => $prescription->patient?->mobile,
+                        'responded_at'   => $서면위임장->created_at?->format('Y-m-d H:i:s'),
+                        /* 서명 그림은 없다 — 꾸미지 않는다. 「서명확인」 창이
+                           「서명 그림이 없습니다」로 선다. */
+                        'signature_data' => null,
+                    ],
+                ]);
+            }
+
             return response()->json([
                 /* 동의 줄이 있으면 사실대로 true 다 — 보낸 자취를 없는 것으로 적지
                    않는다. 배지는 아래 reused_sign 을 보고 선다. */

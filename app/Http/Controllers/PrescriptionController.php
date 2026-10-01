@@ -2837,6 +2837,24 @@ class PrescriptionController extends Controller
             && filled($c->signature_data);
 
         if (! $서명담김) {
+            /* 서면으로 받아 올린 위임장도 「완료」다 (2026-10-01 지시) —
+               statusCheck 와 같은 답을 주어야 배지가 화면마다 갈리지 않는다. */
+            if ($서면 = \App\Support\DelegationGate::서면위임장($patient)) {
+                return [
+                    'status'       => 'agreed',
+                    'responded_at' => $서면->created_at?->format('Y-m-d'),
+                    'rx_number'    => null,
+                    'reused_sign'  => [
+                        'source'      => 'paper',
+                        'label'       => '서면 위임장(업로드)',
+                        'signed_at'   => $서면->created_at?->format('Y-m-d'),
+                        'rx_number'   => null,
+                        'valid_until' => null,
+                        'matched_by'  => null,
+                    ],
+                ];
+            }
+
             if ($옮긴서명 = \App\Support\DelegationGate::거래처서명($patient)) {
                 return [
                     'status'       => 'agreed',
@@ -5021,6 +5039,16 @@ class PrescriptionController extends Controller
                 'prescription_id', Prescription::where('patient_id', $patient->id)->select('id'))
             ->exists();
         if ($asked) return $no('이미 위임동의를 보낸 분입니다.');
+
+        /* **서면 위임장을 받아 둔 분에게는 보내지 않는다** (2026-10-01 지시
+           「위임장 업로드하면 서명동의 완료되고 다시 링크를 보내지 않음」).
+
+           한 번도 링크를 보낸 적 없는 분이라도 종이 위임장이 올라와 있으면 이미 받은
+           것이다. 그런 분에게 서명 링크가 나가면, 환자는 방금 종이에 한 서명을 또
+           하라는 문자를 받는다. */
+        if (\App\Support\DelegationGate::서면위임장($prescription)) {
+            return $no('서면 위임장을 받아 둔 분입니다.');
+        }
 
         $mobile = preg_replace('/\D/', '', (string) ($patient->mobile ?: $prescription->mobile_ocr));
         if (strlen($mobile) < 9 || strlen($mobile) > 11) {

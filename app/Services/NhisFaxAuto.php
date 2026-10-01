@@ -189,6 +189,7 @@ final class NhisFaxAuto
         return \App\Support\DelegationGate::보호자신분증($prescription);
     }
 
+
     /**
      * 신분증 링크로 받아 둔 본인 신분증 — 없으면 null (2026-09-30).
      *
@@ -252,7 +253,15 @@ final class NhisFaxAuto
            보호자 신분증은 동의 기록에 딸린 파일이다. */
         $docs = [];
 
-        if ($this->delegationDoc($prescription)) {
+        /* 위임장이 첨부로 올라와 있으면 **생성 서류를 더하지 않는다** (2026-10-01 지시).
+
+           위 $ids 가 첨부 가운데 doc_type=delegation 을 이미 집어 넣는다. 여기서
+           생성본까지 더하면 같은 위임장이 두 장 나가고, 공단은 그것을 중복 등록으로
+           읽는다. 본인 신분증에 이미 같은 규칙이 서 있다(아래). */
+        $올린위임장 = PrescriptionAttachment::where('prescription_id', $prescription->id)
+            ->where('doc_type', 'delegation')->exists();
+
+        if (! $올린위임장 && $this->delegationDoc($prescription)) {
             $docs[] = 'delegation';
         }
 

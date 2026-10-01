@@ -339,10 +339,46 @@ final class DelegationGate
         return $path ?: self::지난서명($prescription)?->guardian_id_path;
     }
 
-    /** 위임 서명을 받았는가 — 지난 서명을 다시 쓰는 건도 받은 것으로 본다 */
+    /**
+     * 서면으로 받아 올린 위임장 — 없으면 null (2026-10-01 지시).
+     *
+     * 「위임장 업로드하면 서명동의 완료되고 다시 링크를 보내지 않음」
+     *
+     * 전자서명이 안 되는 환자가 있다. 그때는 위임장을 인쇄해 서명받아 올린다.
+     * 개인정보 동의가 이미 그 꼴이다(PrivacyConsent::paperFor) — 종이로 받은 것도
+     * 받은 것으로 센다.
+     *
+     * **사람으로 본다.** 위임은 사람이 하는 것이고, 이 클래스의 다른 자리도 모두
+     * 사람 단위다(지난서명ㆍ거래처서명). 그 사람의 어느 건에 올렸든 받은 것으로
+     * 세어야, 다음 건에서 또 링크가 나가지 않는다.
+     *
+     * 돌려주는 것은 첨부 줄이다 — **서명 그림이 아니다.** 종이에는 그림이 없으므로
+     * 쓸서명() 은 이것을 돌려주지 않는다. 서명 그림이 들어가는 서류(요양비 지급
+     * 청구서ㆍ서명확인 창)는 빈 채로 두어야 「서명을 받은 것처럼」 꾸미지 않는다.
+     */
+    public static function 서면위임장(Prescription|Patient|null $것): ?\App\Models\PrescriptionAttachment
+    {
+        $patientId = $것 instanceof Prescription ? $것->patient_id : $것?->id;
+
+        if (! $patientId) {
+            return null;
+        }
+
+        return \App\Models\PrescriptionAttachment::where('doc_type', 'delegation')
+            ->whereIn('prescription_id',
+                Prescription::where('patient_id', $patientId)->select('id'))
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * 위임 서명을 받았는가 — 지난 서명을 다시 쓰는 건도, **서면으로 올린 위임장도**
+     * 받은 것으로 본다 (2026-10-01 지시).
+     */
     public static function signed(Prescription $prescription): bool
     {
-        return self::쓸서명($prescription) !== null;
+        return self::쓸서명($prescription) !== null
+            || self::서면위임장($prescription) !== null;
     }
 
     /** 막아야 하면 그 말을, 지나가도 되면 null */
