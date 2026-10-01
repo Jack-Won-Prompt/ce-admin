@@ -11,39 +11,73 @@
      이 이름은 앵커로만 남긴다 — 별도 스타일은 주지 않는다.
      (스타일을 남겨 두면 gap 6 · radius 20 · 12.5px/600 이 전역 규격을 덮어쓴다.) */
 
-  /* 상세 · 신규 등록 카드 — 흰 카드(r12 · pad 12/16 · bd 1px gray-200 · 그림자 없음) */
-  .srx-card { background:var(--gray-0); border:1px solid var(--gray-200); border-radius:12px; padding:12px 16px; }
-  .srx-grid2 { display:grid; grid-template-columns:1.15fr .85fr; gap:12px; align-items:start; }
-  @media (max-width:1000px) { .srx-grid2 { grid-template-columns:1fr; } }
-  /* 섹션 제목 — 14/700 · lh22 */
-  .srx-card h4 { margin:0 0 12px; font-size:14px; font-weight:700; line-height:22px; color:var(--gray-1000);
-    padding-bottom:8px; border-bottom:1px solid var(--gray-200); display:flex; align-items:center; gap:8px; }
-  /* 필드 — 라벨 21 + gap 8 + 인풋 32 (.ds-filter-field 와 같은 규격) */
+  /* ── 목록 위 얇은 띠 — 검색 조건 단추와 목록 단추가 선다 ──────────── */
+  .srx-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .srx-bar .spacer { flex:1; }
+  /* 지금 걸려 있는 조건을 글로 적는다 — 팝오버를 닫으면 무엇으로 걸러진 목록인지
+     알 수 없다. 조건이 없으면 이 자리도 서지 않는다. */
+  .srx-cond { display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;
+    font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
+  .srx-cond b { color:var(--gray-1000); font-weight:700; }
+
+  /* ── 옮길 수 있는 팝오버 ──────────────────────────────────────────
+     채팅창과 같은 방식이다(layouts/app.blade.php 의 initDrag) — 머리를 잡고 끌면
+     움직이고, 둔 자리는 브라우저에 기억해 둔다. 두 팝오버가 같은 규격을 쓴다. */
+  .srx-pop { position:fixed; z-index:1200; display:none;
+    background:var(--gray-0); border:1px solid var(--gray-200); border-radius:12px;
+    box-shadow:0 12px 40px rgba(0,0,0,.18); }
+  .srx-pop.open { display:block; }
+  .srx-pop.dragging { opacity:.92; }
+  .srx-pop-head { display:flex; align-items:center; gap:8px; height:44px; padding:0 12px 0 16px;
+    border-bottom:1px solid var(--gray-200); cursor:grab; user-select:none; }
+  .srx-pop-head:active { cursor:grabbing; }
+  .srx-pop-head .ttl { flex:1; font-size:14px; font-weight:700; line-height:22px;
+    color:var(--gray-1000); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .srx-pop-head .x { width:28px; height:28px; border:0; background:none; cursor:pointer;
+    color:var(--gray-600); font-size:16px; border-radius:6px; }
+  .srx-pop-head .x:hover { background:var(--gray-100); color:var(--gray-1000); }
+  .srx-pop-body { padding:16px; max-height:calc(100vh - 160px); overflow-y:auto; }
+  .srx-pop-foot { display:flex; align-items:center; justify-content:flex-end; gap:8px;
+    padding:12px 16px; border-top:1px solid var(--gray-200); }
+
+  #srxPopSearch { width:420px; }
+  #srxPopAnswer { width:720px; }
+  @media (max-width:800px) {
+    #srxPopSearch, #srxPopAnswer { width:calc(100vw - 24px); }
+  }
+
+  /* ── 팝오버 안의 필드 — .ds-filter-field 와 같은 규격(라벨 21 + gap 8 + 인풋 32) ── */
   .srx-field { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
   .srx-field label { font-size:13px; font-weight:500; line-height:21px; color:var(--gray-700); }
   .srx-field input[type=text], .srx-field select, .srx-field textarea {
     padding:5px 12px; border:1px solid var(--gray-200); border-radius:8px;
     font-size:13px; font-weight:400; line-height:20px; color:var(--gray-1000);
-    background:var(--gray-0); font-family:inherit; }
+    background:var(--gray-0); font-family:inherit; width:100%; box-sizing:border-box; }
   .srx-field input[type=text], .srx-field select { height:32px; }
-  /* 여러 줄 입력은 32px 규격을 그대로 쓰면 위아래가 눌린다 — 전역 textarea 와 같은 여백을 준다 */
+  /* 여러 줄 입력은 32px 규격을 그대로 쓰면 위아래가 눌린다 */
   .srx-field textarea { min-height:120px; resize:vertical; padding:9px 12px; line-height:21px; }
   .srx-row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .srx-hint { font-size:12px; font-weight:400; line-height:19px; color:var(--gray-600); }
-  .srx-meta { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:12px; }
-  .srx-body { font-size:13px; font-weight:400; line-height:21px; white-space:pre-wrap; color:var(--gray-1000); }
-  .srx-answer { margin-top:12px; padding:12px 16px; background:var(--primary-50);
+
+  /* ── 답변 팝오버의 요청 내용 ─────────────────────────────────── */
+  .srx-sec { margin-bottom:16px; }
+  .srx-sec h4 { margin:0 0 8px; font-size:13px; font-weight:700; line-height:21px; color:var(--gray-1000); }
+  .srx-meta { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:8px; }
+  .srx-body { font-size:13px; font-weight:400; line-height:21px; white-space:pre-wrap;
+    color:var(--gray-1000); background:var(--gray-50); border:1px solid var(--gray-200);
+    border-radius:8px; padding:12px; max-height:220px; overflow-y:auto; }
+  /* 등록자ㆍSR 담당자를 나란히 적는다 — 누가 올렸고 누가 답하는지가 이 창의 머리말이다 */
+  .srx-who { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  .srx-who .k { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:4px; }
+  .srx-who .v { font-size:13px; font-weight:700; line-height:21px; color:var(--gray-1000); }
+  .srx-answer { margin-top:12px; padding:12px; background:var(--primary-50);
     border:1px solid var(--gray-200); border-radius:8px; }
   .srx-answer .lbl { font-size:11px; font-weight:700; line-height:18px; color:var(--primary); margin-bottom:4px; }
-  /* 상태 배지 — 배지 규격(r6 · pad 2/6 · 11px/500 · lh18).
-     원래 미처리=주황 · 답변완료=초록이었다. 시안에는 주황·초록이 없어
-     '손대야 하는 상태'는 alert, 진행·완료는 primary, 종료는 gray 로 옮겼다.
 
-     ★ 반드시 .srx-meta 로 한 단계 좁힌다.
-     layouts/app.blade.php 에도 같은 이름의 .sr-badge / .sr-b-*(10px/700 · pad 2/8 · r999 ·
-     주황·초록)가 있는데, 그 <style> 은 <body> 안(2296~2616줄)이고 @stack('styles') 는
-     <head>(1165줄)라서 특정성이 같으면 전역이 이긴다.
-     이름 그대로 두면 여기 값이 한 줄도 먹지 않는다(전역 SR 플로팅 패널 배지는 그대로 둔다). */
+  /* 상태 배지 — 배지 규격(r6 · pad 2/6 · 11px/500 · lh18).
+     ★ 반드시 .srx-meta 로 한 단계 좁힌다. layouts/app.blade.php 에도 같은 이름의
+     .sr-badge / .sr-b-* 가 있는데 그 <style> 은 <body> 안이고 @stack('styles') 는
+     <head> 라서 특정성이 같으면 전역이 이긴다. 이름 그대로 두면 한 줄도 먹지 않는다. */
   .srx-meta .sr-badge { display:inline-flex; align-items:center; font-size:11px; font-weight:500; line-height:18px;
     padding:2px 6px; border-radius:6px; }
   .srx-meta .sr-b-open        { background:var(--alert-100);   color:var(--alert-500); }
@@ -55,165 +89,170 @@
 
 @section('content')
 
-@php $curStatus = request('status'); @endphp
+@php
+  $curStatus = request('status');
+  /* 지금 걸린 조건을 글로 적어 둔다 — 팝오버를 닫은 뒤에도 무엇으로 걸렀는지 보여야 한다 */
+  $걸린것 = [];
+  if ($curStatus)            { $걸린것[] = ['상태',   $statuses[$curStatus] ?? $curStatus]; }
+  if (request('category'))   { $걸린것[] = ['구분',   $categories[request('category')] ?? request('category')]; }
+  if (request('q'))          { $걸린것[] = ['검색어', request('q')]; }
+@endphp
 
-{{-- 상태 칩 — h31 · r999 · pad 6/10 · 12/700, 건수 배지 16×16 정원 --}}
-{{-- 상단 칩 대신 검색 필터에서 고른다. 칩이 한 줄을 통째로 차지하면서도
-     고르는 일은 필터가 함께 했다 — 같은 일을 두 자리에서 하고 있었다. --}}
+{{-- 목록 위 얇은 띠 — 검색은 팝오버로 옮겼다 (2026-10-01 지시).
 
+     여태 검색 필터가 흰 카드 한 장을 통째로 차지해, 목록을 보려면 늘 그만큼 아래로
+     밀렸다. 조건을 고르는 일은 잠깐이고 목록을 보는 일이 오래다. --}}
+<div class="srx-bar">
+  <button type="button" class="ds-btn ds-btn-primary" onclick="srxPop.open('srxPopSearch')">
+    <i class="fa-solid fa-magnifying-glass"></i> 검색 조건
+  </button>
 
-{{-- 검색 필터 — 흰 카드(r12 · pad 12/16) 안에 라벨 위 · 컨트롤 아래.
-     폭은 인라인 style 대신 9열 그리드(검색어 3열 · 구분 2열)로 잡는다. --}}
-<form method="GET" action="{{ route('sr.index') }}" class="ds-filter-card">
-  <div class="ds-filter-fields">
-    <div class="ds-filter-field">
-      {{-- 상태가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
-      <label class="ds-field-label">상태</label>
-      <select name="status" class="form-control form-select" onchange="this.form.submit()">
-        <option value="">전체 ({{ $counts['all'] }})</option>
-        @foreach($statuses as $key => $label)
-          <option value="{{ $key }}" {{ $curStatus === $key ? 'selected' : '' }}>
-            {{ $label }}@if(($counts[$key] ?? 0) > 0) ({{ $counts[$key] }})@endif
-          </option>
-        @endforeach
-      </select>
-    </div>
-    <div class="ds-filter-field span-3">
-      <label class="ds-field-label">검색어</label>
-      <input type="text" name="q" value="{{ request('q') }}" class="form-control"
-             placeholder="제목ㆍ내용">
-    </div>
-    <div class="ds-filter-field span-2">
-      <label class="ds-field-label">구분</label>
-      <select name="category" class="form-control form-select">
-        <option value="">전체 구분</option>
-        @foreach($categories as $k => $v)
-          <option value="{{ $k }}" {{ request('category') === $k ? 'selected' : '' }}>{{ $v }}</option>
-        @endforeach
-      </select>
-    </div>
-  </div>
-  <div class="ds-filter-actions">
-    @if(request('q') || request('category'))
-      <a href="{{ route('sr.index', array_filter(['status' => $curStatus])) }}" class="ds-btn">초기화</a>
-    @endif
-    <button type="submit" class="ds-btn ds-btn-primary"><i class="fa-solid fa-magnifying-glass"></i> 검색</button>
-    {{-- 결과바에 있던 단추를 찾는 자리로 옮겼다 — 목록 위에 띠를 하나 더 두지 않는다 --}}
-    <button type="button" class="ds-btn" onclick="window.__srxGrid?.downloadExcel()">엑셀 다운</button>
-    @perm('service-requests', 'delete')
-    <button type="button" class="ds-btn" style="color:var(--alert-500);"
-      onclick="srDeleteSelected()">
-      <i class="bx bx-trash"></i> 선택 삭제
-    </button>
-    @endperm
-  </div>
-</form>
+  @if($걸린것)
+    <span class="srx-cond">
+      @foreach($걸린것 as [$이름, $값])
+        <span>{{ $이름 }} <b>{{ $값 }}</b></span>@if(! $loop->last)<span style="opacity:.4;">·</span>@endif
+      @endforeach
+    </span>
+    <a href="{{ route('sr.index') }}" class="ds-btn">초기화</a>
+  @endif
 
-{{-- 흰 카드(r12) 안에 탭바와 그리드 --}}
+  <span class="spacer"></span>
+
+  <button type="button" class="ds-btn" onclick="window.__srxGrid?.downloadExcel()">엑셀 다운</button>
+  @perm('service-requests', 'delete')
+  <button type="button" class="ds-btn" style="color:var(--alert-500);" onclick="srDeleteSelected()">
+    <i class="bx bx-trash"></i> 선택 삭제
+  </button>
+  @endperm
+</div>
+
+{{-- 흰 카드(r12) 안에 머리줄과 그리드 --}}
 <div class="ds-grid-section">
   <div class="ds-grid-card">
-    {{-- 패널 탭은 카드 안 상단 (h44 · pad 0/16 · gap 16) --}}
+    {{-- 탭은 하나만 남는다 (2026-10-01 지시).
+
+         「신규 등록」은 상단 SR 패널이 같은 일을 하고, 그쪽은 보고 있던 화면까지 함께
+         적어 준다 — 두 자리에 두면 한쪽만 고치는 날이 온다.
+         「상세ㆍ답변」은 목록 줄을 두 번 눌러 여는 팝오버로 옮겼다. --}}
     <div class="pnl-tabs">
-      <button type="button" id="pnlBtnList" class="pnl-tab active" onclick="pnlShow('list')">
-        <i class="fa-solid fa-list"></i> SR 목록<span class="pnl-tab-cnt">(총 <b>{{ number_format($total) }}</b>건)</span></button>
-      <button type="button" id="pnlBtnDetail" class="pnl-tab" onclick="pnlShow('detail')">
-        <i class="fa-solid fa-comments"></i> 상세 · 답변
-        <span id="pnlDetailTitle" style="font-size:12px;font-weight:500;color:var(--gray-600);"></span>
+      <button type="button" class="pnl-tab active" onclick="return false;">
+        <i class="fa-solid fa-list"></i> SR 목록<span class="pnl-tab-cnt">(총 <b>{{ number_format($total) }}</b>건)</span>
       </button>
-      @perm('service-requests', 'create')
-      <button type="button" id="pnlBtnNew" class="pnl-tab" onclick="pnlShow('new')">
-        <i class="fa-solid fa-plus"></i> 신규 등록
-      </button>
-      @endperm
+      <span style="flex:1;"></span>
+      <span class="srx-hint" style="padding-right:16px;">줄을 두 번 누르면 답변 창이 열립니다.</span>
     </div>
 
-{{-- 목록 --}}
-<div id="pnlList">
-  <div id="srxGrid"></div>
-</div>
+    <div id="srxGrid"></div>
+  </div>{{-- /.ds-grid-card --}}
+</div>{{-- /.ds-grid-section --}}
 
-{{-- 상세 · 답변 --}}
-<div id="pnlDetail" style="display:none;padding:16px;">
-  <div id="srxEmpty" class="pnl-empty">
-    <i class="bx bx-hand-pointer" style="font-size:16px;opacity:.35;display:block;margin-bottom:8px;"></i>
-    목록에서 SR 을 <b>클릭</b>하면 내용과 답변이 여기에 표시됩니다.
+
+{{-- ── 검색 조건 팝오버 — 머리를 잡고 끌어 옮길 수 있다 ───────────── --}}
+<div class="srx-pop" id="srxPopSearch" role="dialog" aria-label="검색 조건">
+  <div class="srx-pop-head" data-pop-drag>
+    <i class="fa-solid fa-magnifying-glass" style="font-size:13px;color:var(--gray-400);"></i>
+    <span class="ttl">검색 조건</span>
+    <button type="button" class="x" onclick="srxPop.close('srxPopSearch')" aria-label="닫기">
+      <i class="bx bx-x"></i>
+    </button>
   </div>
-  <div id="srxBody" style="display:none;" class="srx-grid2">
-    <div class="srx-card">
-      <h4><i class="bx bx-detail"></i> 요청 내용</h4>
-      <div id="srxDetail"></div>
-    </div>
-    <div class="srx-card">
-      <h4><i class="bx bx-message-check"></i> 답변</h4>
-      @perm('service-requests', 'update')
+  <form method="GET" action="{{ route('sr.index') }}">
+    <div class="srx-pop-body">
       <div class="srx-field">
-        <label>답변 내용</label>
-        <textarea id="srxAnswer" maxlength="5000" placeholder="처리 결과나 안내 사항을 입력해 주십시오."></textarea>
-      </div>
-      <div class="srx-row2">
-        <div class="srx-field">
-          <label>상태</label>
-          <select id="srxStatus">
-            @foreach($statuses as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
-          </select>
-        </div>
-        <div class="srx-field" style="justify-content:flex-end;">
-          <button type="button" class="btn btn-primary btn-sm" id="srxAnswerBtn" onclick="srxSaveAnswer()" style="height:32px;">
-            <i class="bx bx-save"></i> 답변 저장
-          </button>
-        </div>
-      </div>
-      @else
-      <div class="srx-hint">답변 권한이 없어 조회만 가능합니다.</div>
-      @endperm
-    </div>
-  </div>
-</div>
-
-{{-- 신규 등록 --}}
-@perm('service-requests', 'create')
-<div id="pnlNew" style="display:none;padding:16px;">
-  <div class="srx-card" style="max-width:720px;">
-    <h4><i class="bx bx-plus"></i> SR 신규 등록</h4>
-    <div class="srx-row2">
-      <div class="srx-field">
-        <label>구분</label>
-        <select id="srxCategory">
-          @foreach($categories as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
-        </select>
-      </div>
-      <div class="srx-field">
-        <label>우선순위</label>
-        <select id="srxPriority">
-          @foreach($priorities as $k => $v)
-            <option value="{{ $k }}" {{ $k === 'normal' ? 'selected' : '' }}>{{ $v }}</option>
+        {{-- 상태가 무엇을 볼지 가장 크게 가른다 — 첫 칸에 둔다 --}}
+        <label for="srxFStatus">상태</label>
+        <select name="status" id="srxFStatus" class="form-control form-select">
+          <option value="">전체 ({{ $counts['all'] }})</option>
+          @foreach($statuses as $key => $label)
+            <option value="{{ $key }}" {{ $curStatus === $key ? 'selected' : '' }}>
+              {{ $label }}@if(($counts[$key] ?? 0) > 0) ({{ $counts[$key] }})@endif
+            </option>
           @endforeach
         </select>
       </div>
+      <div class="srx-field">
+        <label for="srxFCategory">구분</label>
+        <select name="category" id="srxFCategory" class="form-control form-select">
+          <option value="">전체 구분</option>
+          @foreach($categories as $k => $v)
+            <option value="{{ $k }}" {{ request('category') === $k ? 'selected' : '' }}>{{ $v }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div class="srx-field" style="margin-bottom:0;">
+        <label for="srxFQ">검색어</label>
+        <input type="text" name="q" id="srxFQ" value="{{ request('q') }}" class="form-control"
+               placeholder="제목ㆍ내용">
+      </div>
     </div>
-    <div class="srx-field">
-      <label>제목 <span style="color:var(--danger);">*</span></label>
-      <input type="text" id="srxTitle" maxlength="200" placeholder="예) 처방전 목록에 발행일 필터 추가">
+    <div class="srx-pop-foot">
+      <a href="{{ route('sr.index') }}" class="ds-btn">초기화</a>
+      <button type="submit" class="ds-btn ds-btn-primary">
+        <i class="fa-solid fa-magnifying-glass"></i> 검색
+      </button>
     </div>
-    <div class="srx-field">
-      <label>내용 <span style="color:var(--danger);">*</span></label>
-      <textarea id="srxContent" maxlength="5000" placeholder="어떤 화면에서 무엇이 어떻게 되면 좋을지 입력해 주십시오."></textarea>
-    </div>
-    <div class="srx-field">
-      <label>대상 화면</label>
-      <input type="text" id="srxPageLabel" maxlength="100" placeholder="예) 처방전 목록">
-      <span class="srx-hint">비워 두면 기록되지 않습니다. 상단 SR 패널로 등록하면 보고 있던 화면이 자동 기록됩니다.</span>
-    </div>
-    <button type="button" class="btn btn-primary btn-sm" id="srxSubmitBtn" onclick="srxSubmit()"
-            style="width:100%;height:32px;">
-      <i class="bx bx-send"></i> 등록
+  </form>
+</div>
+
+{{-- ── 답변 팝오버 — 목록 줄을 두 번 누르면 열린다 ────────────────── --}}
+<div class="srx-pop" id="srxPopAnswer" role="dialog" aria-label="SR 답변">
+  <div class="srx-pop-head" data-pop-drag>
+    <i class="fa-solid fa-comments" style="font-size:13px;color:var(--gray-400);"></i>
+    <span class="ttl" id="srxPopTitle">SR 답변</span>
+    <button type="button" class="x" onclick="srxPop.close('srxPopAnswer')" aria-label="닫기">
+      <i class="bx bx-x"></i>
     </button>
   </div>
-</div>
-@endperm
+  <div class="srx-pop-body">
+    {{-- 등록자ㆍSR 담당자 — 누가 올렸고 누가 답하는지 (2026-10-01 지시).
+         SR 담당자는 답변을 적는 사람이다. 아직 답변이 없으면 지금 보고 있는 사람으로
+         적어 둔다 — 저장하면 그 이름이 그대로 담긴다(answered_by). --}}
+    <div class="srx-who">
+      <div>
+        <div class="k">등록자</div>
+        <div class="v" id="srxWhoWriter">-</div>
+      </div>
+      <div>
+        <div class="k">SR 담당자</div>
+        <div class="v" id="srxWhoAnswerer">-</div>
+      </div>
+    </div>
 
-  </div>{{-- /.ds-grid-card --}}
-</div>{{-- /.ds-grid-section --}}
+    <div class="srx-sec">
+      <h4>요청 내용</h4>
+      <div class="srx-meta" id="srxMeta"></div>
+      <div class="srx-body" id="srxContentBox"></div>
+      <div id="srxPrevAnswer"></div>
+    </div>
+
+    @perm('service-requests', 'update')
+    <div class="srx-sec" style="margin-bottom:0;">
+      <h4>답변</h4>
+      <div class="srx-field">
+        <label for="srxAnswer">답변 내용</label>
+        <textarea id="srxAnswer" maxlength="5000"
+                  placeholder="처리 결과나 안내 사항을 입력해 주십시오."></textarea>
+      </div>
+      <div class="srx-field" style="margin-bottom:0;max-width:220px;">
+        <label for="srxStatus">상태</label>
+        <select id="srxStatus">
+          @foreach($statuses as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
+        </select>
+      </div>
+    </div>
+    @else
+    <div class="srx-hint">답변 권한이 없어 조회만 가능합니다.</div>
+    @endperm
+  </div>
+  @perm('service-requests', 'update')
+  <div class="srx-pop-foot">
+    <button type="button" class="ds-btn" onclick="srxPop.close('srxPopAnswer')">닫기</button>
+    <button type="button" class="ds-btn ds-btn-primary" id="srxAnswerBtn" onclick="srxSaveAnswer()">
+      <i class="bx bx-save"></i> 답변 저장
+    </button>
+  </div>
+  @endperm
+</div>
 
 @endsection
 
@@ -223,17 +262,114 @@
   const BASE  = @json(url('sr'));
   const CSRF  = document.querySelector('meta[name=csrf-token]')?.content ?? '';
   const CLS   = { open:'sr-b-open', in_progress:'sr-b-in_progress', answered:'sr-b-answered', closed:'sr-b-closed' };
+  const ME    = @json(Auth::user()?->name ?? '');
   let _rows = @json($gridData);
   let _sel  = null;
 
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
+  /* ── 옮길 수 있는 팝오버 ───────────────────────────────────────────
+     채팅창(layouts/app.blade.php 의 initDrag)과 같은 방식이다 — pointer 사건으로
+     끌고, setPointerCapture 로 창 밖으로 나가도 놓치지 않으며, 둔 자리를
+     localStorage 에 적어 둔다.
+
+     처음 여는 자리는 화면 가운데다. 끌어 옮긴 뒤에는 그 자리를 기억한다 — 옮겨 둔
+     사람이 다시 열 때마다 가운데로 돌아가면 옮긴 뜻이 없다. */
+  window.srxPop = (function () {
+    const 자리열쇠 = id => 'srxPop.pos.' + id;
+
+    function 안으로(el, left, top) {
+      const b = el.getBoundingClientRect();
+      const x = Math.max(8, Math.min(left, window.innerWidth  - b.width  - 8));
+      const y = Math.max(8, Math.min(top,  window.innerHeight - b.height - 8));
+      el.style.left = x + 'px';
+      el.style.top  = y + 'px';
+    }
+
+    function 자리세우기(el) {
+      let 둔자리 = null;
+      try { 둔자리 = JSON.parse(localStorage.getItem(자리열쇠(el.id)) || 'null'); } catch (_) {}
+
+      if (둔자리 && Number.isFinite(둔자리.left) && Number.isFinite(둔자리.top)) {
+        안으로(el, 둔자리.left, 둔자리.top);
+        return;
+      }
+
+      const b = el.getBoundingClientRect();
+      안으로(el, (window.innerWidth - b.width) / 2, Math.max(64, (window.innerHeight - b.height) / 3));
+    }
+
+    function 끌기붙이기(el) {
+      const 머리 = el.querySelector('[data-pop-drag]');
+      if (!머리 || 머리.dataset.bound === '1') return;
+      머리.dataset.bound = '1';
+
+      let sx = 0, sy = 0, ox = 0, oy = 0, 끄는중 = false;
+
+      머리.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 || e.target.closest('button')) return;
+        const b = el.getBoundingClientRect();
+        sx = e.clientX; sy = e.clientY; ox = b.left; oy = b.top;
+        끄는중 = true;
+        el.classList.add('dragging');
+        머리.setPointerCapture(e.pointerId);
+      });
+
+      머리.addEventListener('pointermove', (e) => {
+        if (!끄는중) return;
+        안으로(el, ox + (e.clientX - sx), oy + (e.clientY - sy));
+      });
+
+      const 멈춤 = (e) => {
+        if (!끄는중) return;
+        끄는중 = false;
+        el.classList.remove('dragging');
+        try { 머리.releasePointerCapture(e.pointerId); } catch (_) {}
+        const b = el.getBoundingClientRect();
+        localStorage.setItem(자리열쇠(el.id), JSON.stringify({ left: b.left, top: b.top }));
+      };
+      머리.addEventListener('pointerup', 멈춤);
+      머리.addEventListener('pointercancel', 멈춤);
+    }
+
+    /* 창을 줄여 팝오버가 화면 밖으로 나가면 도로 끌어들인다 */
+    window.addEventListener('resize', () => {
+      document.querySelectorAll('.srx-pop.open').forEach((el) => {
+        const b = el.getBoundingClientRect();
+        안으로(el, b.left, b.top);
+      });
+    });
+
+    /* 바깥을 눌러도 닫지 않는다 — 옮겨 둔 창이 목록을 누를 때마다 사라지면
+       두 번 누르기로 여는 뜻이 없다. 닫는 길은 × 와 Esc 둘이다. */
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const 열린것 = document.querySelector('.srx-pop.open');
+      if (열린것) 닫기(열린것.id);
+    });
+
+    function 열기(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('open');
+      끌기붙이기(el);
+      자리세우기(el);
+      el.querySelector('input, textarea, select')?.focus();
+    }
+
+    function 닫기(id) {
+      document.getElementById(id)?.classList.remove('open');
+    }
+
+    return { open: 열기, close: 닫기 };
+  })();
+
   const grid = new wwGrid({
     el: document.getElementById('srxGrid'),
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true,
-    // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
+    // 엑셀 저장은 목록 위 띠로 옮겼다(동작은 downloadExcel() 동일).
     toolbar: false,
-    // 하단 상태바는 시안에 없다 — 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다.
+    // 하단 상태바는 시안에 없다 — 전체 건수는 탭 이름에 있다.
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '상태',      name: 'statusLabel',   width: 90,  align: 'center', sortable: true },
@@ -241,7 +377,7 @@
       { header: '우선순위',  name: 'priorityLabel', width: 80,  align: 'center', sortable: true },
       { header: '제목',      name: 'title',         width: 300 },
       { header: '대상 화면', name: 'page',          width: 150 },
-      { header: '답변자',    name: 'answerer',      width: 100 },
+      { header: 'SR 담당자', name: 'answerer',      width: 100 },
       /* 자취(누가 언제)는 맨 끝에 둔다 — 눈이 먼저 닿아야 할 자리는 업무다.
          시ㆍ분ㆍ초까지 적는다 (2026-09-07 지시). */
       { header: '등록자',    name: 'writer',        width: 100, sortable: true },
@@ -250,50 +386,49 @@
     data: _rows,
   });
   window.__srxGrid = grid;
-  window.dsBindSelCount(grid, 'srxSelCount');
 
-  window.pnlShow = function (which) {
-    [['list','pnlList','pnlBtnList'], ['detail','pnlDetail','pnlBtnDetail'], ['new','pnlNew','pnlBtnNew']]
-      .forEach(([k, paneId, btnId]) => {
-        const pane = document.getElementById(paneId), btn = document.getElementById(btnId);
-        if (pane) pane.style.display = (k === which) ? '' : 'none';
-        if (btn)  btn.classList.toggle('active', k === which);
-      });
-  };
+  /* 두 번 누르면 답변 창이 열린다 (2026-10-01 지시).
 
-  document.getElementById('srxGrid').addEventListener('click', function (e) {
+     한 번 누르기로 열지 않는다 — 체크상자를 고르거나 칸을 훑는 동안 창이 열리면
+     목록을 읽을 수 없다. 두 번 누르기는 「이 줄을 열겠다」는 분명한 뜻이다. */
+  document.getElementById('srxGrid').addEventListener('dblclick', function (e) {
     if (e.target.closest('input, button, a, select, textarea')) return;
     const cell = e.target.closest('[data-row-index]');
     if (!cell) return;
     const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
-    if (row) selectRow(row.id);
+    if (row) 답변창열기(row.id);
   });
 
-  function selectRow(id) {
+  function 답변창열기(id) {
     const r = _rows.find(x => x.id === id);
     if (!r) return;
     _sel = r;
-    document.getElementById('srxEmpty').style.display = 'none';
-    document.getElementById('srxBody').style.display  = '';
-    document.getElementById('pnlDetailTitle').textContent = r.title;
 
-    document.getElementById('srxDetail').innerHTML = `
-      <div style="font-size:14px;font-weight:700;line-height:22px;margin-bottom:4px;">${esc(r.title)}</div>
-      <div class="srx-meta">
-        <span class="sr-badge ${CLS[r.status] || ''}">${esc(r.statusLabel)}</span>
-        · ${esc(r.categoryLabel)} · 우선순위 ${esc(r.priorityLabel)}
-        · ${esc(r.writer)} · ${esc(r.created)}
-        ${r.page ? ' · 대상: ' + esc(r.page) : ''}
-      </div>
-      <div class="srx-body">${esc(r.content)}</div>
-      ${r.answer ? `<div class="srx-answer">
-        <div class="lbl">답변 · ${esc(r.answerer)} · ${esc(r.answered_at)}</div>
-        <div class="srx-body">${esc(r.answer)}</div>
-      </div>` : ''}`;
+    document.getElementById('srxPopTitle').textContent = r.title;
+    document.getElementById('srxWhoWriter').textContent = r.writer || '-';
+    /* 아직 답변이 없으면 지금 보고 있는 사람이 담당자가 된다 — 저장하면 그 이름이
+       answered_by 로 담긴다. 「(예정)」을 붙여 아직 담긴 값이 아님을 밝힌다. */
+    document.getElementById('srxWhoAnswerer').textContent =
+      r.answerer ? r.answerer : (ME ? ME + ' (예정)' : '-');
+
+    document.getElementById('srxMeta').innerHTML = `
+      <span class="sr-badge ${CLS[r.status] || ''}">${esc(r.statusLabel)}</span>
+      · ${esc(r.categoryLabel)} · 우선순위 ${esc(r.priorityLabel)}
+      · ${esc(r.created)}${r.page ? ' · 대상: ' + esc(r.page) : ''}`;
+
+    document.getElementById('srxContentBox').textContent = r.content || '';
+
+    document.getElementById('srxPrevAnswer').innerHTML = r.answer
+      ? `<div class="srx-answer">
+           <div class="lbl">담긴 답변 · ${esc(r.answerer)} · ${esc(r.answered_at)}</div>
+           <div class="srx-body" style="background:transparent;border:0;padding:0;max-height:none;">${esc(r.answer)}</div>
+         </div>`
+      : '';
 
     const a = document.getElementById('srxAnswer'); if (a) a.value = r.answer || '';
     const s = document.getElementById('srxStatus'); if (s) s.value = r.status;
-    pnlShow('detail');
+
+    srxPop.open('srxPopAnswer');
   }
 
   window.srxSaveAnswer = async function () {
@@ -312,46 +447,12 @@
       const d = await res.json();
       if (!res.ok || !d.success) { ceAlert(d.message || '저장하지 못했습니다.', { tone: 'danger' }); return; }
       showToast(d.message, 'success');
-      // 목록·상세 반영
+      // 목록을 고치고 창은 열어 둔다 — 담긴 값이 그 자리에서 보여야 한다
       _rows = _rows.map(x => x.id === d.row.id ? d.row : x);
       grid.setData(_rows);
-      selectRow(d.row.id);
+      답변창열기(d.row.id);
     } catch (e) {
       ceAlert('저장 중 오류가 발생했습니다.', { tone: 'danger' });
-    } finally { btn.disabled = false; }
-  };
-
-  window.srxSubmit = async function () {
-    const title   = document.getElementById('srxTitle').value.trim();
-    const content = document.getElementById('srxContent').value.trim();
-    if (!title || !content) { ceAlert('제목과 내용을 모두 입력해 주십시오.', { tone: 'warning' }); return; }
-
-    const btn = document.getElementById('srxSubmitBtn');
-    btn.disabled = true;
-    try {
-      const res = await fetch(BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
-        body: JSON.stringify({
-          title, content,
-          category:   document.getElementById('srxCategory').value,
-          priority:   document.getElementById('srxPriority').value,
-          page_label: document.getElementById('srxPageLabel').value.trim(),
-        }),
-      });
-      const d = await res.json();
-      if (!res.ok || !d.success) {
-        ceAlert(d.message || Object.values(d.errors ?? {}).flat().join('\n') || '등록하지 못했습니다.', { tone: 'danger' });
-        return;
-      }
-      showToast(d.message, 'success');
-      _rows = [d.row, ...(_rows ?? [])];
-      grid.setData(_rows);
-      document.getElementById('srxTitle').value = '';
-      document.getElementById('srxContent').value = '';
-      pnlShow('list');
-    } catch (e) {
-      ceAlert('등록 중 오류가 발생했습니다.', { tone: 'danger' });
     } finally { btn.disabled = false; }
   };
 
@@ -371,11 +472,7 @@
       showToast(d.message, 'success');
       _rows = _rows.filter(x => x.id !== c[0].id);
       grid.setData(_rows);
-      if (_sel && _sel.id === c[0].id) {
-        _sel = null;
-        document.getElementById('srxBody').style.display  = 'none';
-        document.getElementById('srxEmpty').style.display = '';
-      }
+      if (_sel && _sel.id === c[0].id) { _sel = null; srxPop.close('srxPopAnswer'); }
     } catch (e) { ceAlert('삭제 중 오류가 발생했습니다.', { tone: 'danger' }); }
   };
 })();
