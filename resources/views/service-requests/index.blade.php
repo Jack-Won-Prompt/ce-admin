@@ -104,7 +104,15 @@
      여태 검색 필터가 흰 카드 한 장을 통째로 차지해, 목록을 보려면 늘 그만큼 아래로
      밀렸다. 조건을 고르는 일은 잠깐이고 목록을 보는 일이 오래다. --}}
 <div class="srx-bar">
-  <button type="button" class="ds-btn ds-btn-primary" onclick="srxPop.open('srxPopSearch')">
+  @perm('service-requests', 'create')
+  {{-- 탭이 아니라 띠의 단추로 둔다 (2026-10-01 지시 「신규 버튼이 안보임」).
+       탭을 걷을 때 등록하는 자리까지 함께 걷은 것이 잘못이었다 — 상단 패널의
+       작은 아이콘 하나로는 눈에 띄지 않는다. --}}
+  <button type="button" class="ds-btn ds-btn-primary" onclick="srxPop.open('srxPopNew')">
+    <i class="fa-solid fa-plus"></i> 신규 등록
+  </button>
+  @endperm
+  <button type="button" class="ds-btn" onclick="srxPop.open('srxPopSearch')">
     <i class="fa-solid fa-magnifying-glass"></i> 검색 조건
   </button>
 
@@ -139,14 +147,64 @@
       <button type="button" class="pnl-tab active" onclick="return false;">
         <i class="fa-solid fa-list"></i> SR 목록<span class="pnl-tab-cnt">(총 <b>{{ number_format($total) }}</b>건)</span>
       </button>
-      <span style="flex:1;"></span>
-      <span class="srx-hint" style="padding-right:16px;">줄을 두 번 누르면 답변 창이 열립니다.</span>
     </div>
 
     <div id="srxGrid"></div>
   </div>{{-- /.ds-grid-card --}}
 </div>{{-- /.ds-grid-section --}}
 
+
+{{-- ── 신규 등록 팝오버 — 머리를 잡고 끌어 옮길 수 있다 ───────────── --}}
+@perm('service-requests', 'create')
+<div class="srx-pop" id="srxPopNew" role="dialog" aria-label="SR 신규 등록">
+  <div class="srx-pop-head" data-pop-drag>
+    <i class="fa-solid fa-plus" style="font-size:13px;color:var(--gray-400);"></i>
+    <span class="ttl">SR 신규 등록</span>
+    <button type="button" class="x" onclick="srxPop.close('srxPopNew')" aria-label="닫기">
+      <i class="bx bx-x"></i>
+    </button>
+  </div>
+  <div class="srx-pop-body">
+    <div class="srx-row2">
+      <div class="srx-field">
+        <label for="srxCategory">구분</label>
+        <select id="srxCategory">
+          @foreach($categories as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach
+        </select>
+      </div>
+      <div class="srx-field">
+        <label for="srxPriority">우선순위</label>
+        <select id="srxPriority">
+          @foreach($priorities as $k => $v)
+            <option value="{{ $k }}" {{ $k === 'normal' ? 'selected' : '' }}>{{ $v }}</option>
+          @endforeach
+        </select>
+      </div>
+    </div>
+    <div class="srx-field">
+      <label for="srxTitle">제목 <span style="color:var(--alert-500);">*</span></label>
+      <input type="text" id="srxTitle" maxlength="200" placeholder="예) 처방전 목록에 발행일 필터 추가">
+    </div>
+    <div class="srx-field">
+      <label>내용 <span style="color:var(--alert-500);">*</span></label>
+      {{-- 답변 칸과 같은 편집기다 — 창을 처음 열 때 선다 --}}
+      <div class="ce-quill"><div id="srxContent"
+           data-ph="어떤 화면에서 무엇이 어떻게 되면 좋을지 입력해 주십시오."></div></div>
+    </div>
+    <div class="srx-field" style="margin-bottom:0;">
+      <label for="srxPageLabel">대상 화면</label>
+      <input type="text" id="srxPageLabel" maxlength="100" placeholder="예) 처방전 목록">
+      <span class="srx-hint">비워 두면 기록되지 않습니다. 상단 SR 패널로 등록하면 보고 있던 화면이 자동 기록됩니다.</span>
+    </div>
+  </div>
+  <div class="srx-pop-foot">
+    <button type="button" class="ds-btn" onclick="srxPop.close('srxPopNew')">닫기</button>
+    <button type="button" class="ds-btn ds-btn-primary" id="srxSubmitBtn" onclick="srxSubmit()">
+      <i class="bx bx-send"></i> 등록
+    </button>
+  </div>
+</div>
+@endperm
 
 {{-- ── 검색 조건 팝오버 — 머리를 잡고 끌어 옮길 수 있다 ───────────── --}}
 <div class="srx-pop" id="srxPopSearch" role="dialog" aria-label="검색 조건">
@@ -233,7 +291,8 @@
       <div class="srx-field">
         <label>답변 내용</label>
         {{-- Quill 편집기 — 창을 처음 열 때 선다 (2026-10-01 지시) --}}
-        <div class="ce-quill"><div id="srxAnswer"></div></div>
+        <div class="ce-quill"><div id="srxAnswer"
+             data-ph="처리 결과나 안내 사항을 입력해 주십시오."></div></div>
       </div>
       <div class="srx-field" style="margin-bottom:0;max-width:220px;">
         <label for="srxStatus">상태</label>
@@ -356,7 +415,15 @@
       el.classList.add('open');
       끌기붙이기(el);
       자리세우기(el);
-      el.querySelector('input, textarea, select')?.focus();
+
+      /* 그 창에 편집기 자리가 있으면 세운다 — 열 때 세우므로 편집기를 쓰지 않는
+         사람은 Quill 을 내려받지 않는다. 두 번째부터는 이미 선 것을 돌려준다. */
+      el.querySelectorAll('.ce-quill > div').forEach((자리) => {
+        window.ceQuill?.make(자리, 자리.dataset.ph || '')
+          .catch(() => showToast('편집기를 불러오지 못했습니다.', 'warning'));
+      });
+
+      el.querySelector('input, select')?.focus();
     }
 
     function 닫기(id) {
@@ -462,6 +529,45 @@
       답변창열기(d.row.id);
     } catch (e) {
       ceAlert('저장 중 오류가 발생했습니다.', { tone: 'danger' });
+    } finally { btn.disabled = false; }
+  };
+
+  /* 신규 등록 (2026-10-01 지시) — 띠의 「신규 등록」이 여는 팝오버에서 보낸다 */
+  window.srxSubmit = async function () {
+    const title   = document.getElementById('srxTitle').value.trim();
+    const content = ceQuill.html(document.getElementById('srxContent')?.__quill);
+    if (!title || !content) { ceAlert('제목과 내용을 모두 입력해 주십시오.', { tone: 'warning' }); return; }
+
+    const btn = document.getElementById('srxSubmitBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+        body: JSON.stringify({
+          title, content,
+          category:   document.getElementById('srxCategory').value,
+          priority:   document.getElementById('srxPriority').value,
+          page_label: document.getElementById('srxPageLabel').value.trim(),
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.success) {
+        ceAlert(d.message || Object.values(d.errors ?? {}).flat().join('\n') || '등록하지 못했습니다.', { tone: 'danger' });
+        return;
+      }
+      showToast(d.message, 'success');
+
+      /* 담긴 줄을 목록 맨 위에 세우고 적던 것을 비운다 — 창은 닫는다.
+         이어서 또 올릴 일이 흔하지 않고, 열어 둔 채 비우면 담긴 것인지 헷갈린다. */
+      _rows = [d.row, ...(_rows ?? [])];
+      grid.setData(_rows);
+      document.getElementById('srxTitle').value = '';
+      document.getElementById('srxPageLabel').value = '';
+      ceQuill.set(document.getElementById('srxContent')?.__quill, '');
+      srxPop.close('srxPopNew');
+    } catch (e) {
+      ceAlert('등록 중 오류가 발생했습니다.', { tone: 'danger' });
     } finally { btn.disabled = false; }
   };
 
