@@ -345,6 +345,17 @@ class PaymentLinkService
             'payment_key'   => $paymentKey,
             'toss_order_id' => $tossOrderId,
         ]);
+
+        /* 다 받았으면 아직 남아 있는 다른 링크를 거둔다 (2026-10-01 지시).
+           안 거두면 고객이 먼저 받은 문자로 한 번 더 낼 수 있다 — Order::남은링크거두기. */
+        try {
+            $link->order?->refresh()->남은링크거두기('결제 완료');
+        } catch (\Throwable $e) {
+            /* 거두지 못해도 결제는 끝난 것이다 — 여기서 넘어지면 안 된다 */
+            Log::warning('[결제전송] 남은 링크를 거두지 못함', [
+                'link' => $link->id, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function send(string $channel, Order $order, string $mobile, string $text,

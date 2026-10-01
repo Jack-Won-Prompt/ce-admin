@@ -136,6 +136,19 @@ class DepositAutoIssue
         }
 
         try {
+            /* 돈이 다 들어왔으면 아직 남아 있는 결제 링크를 먼저 거둔다 (2026-10-01 지시).
+
+               가상계좌 입금은 markPaid() 를 지나지 않는다 — 입금 웹훅이 이 자리를 부른다.
+               여기에도 두어야 수단과 상관없이 거둬진다. 두 길에서 다 불려도 두 번째는
+               거둘 것이 없어 0건으로 지나간다. */
+            try {
+                $order->남은링크거두기('입금 확인');
+            } catch (\Throwable $e) {
+                Log::warning('[입금자동처리] 남은 링크를 거두지 못함', [
+                    'order' => $order->order_number, 'error' => $e->getMessage(),
+                ]);
+            }
+
             return $this->돌기($order, $cause);
         } finally {
             $빗장->release();
