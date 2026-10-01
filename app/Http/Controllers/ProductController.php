@@ -316,10 +316,12 @@ class ProductController extends Controller
             return null;
         }
 
-        $items = [];
+        $items   = [];
+        $dropped = 0;
         foreach ($res->json('result') ?? [] as $i) {
             /* 같은 제품의 M 코드는 빼고 보인다 (2026-10-01 지시 · 뺄품목) */
             if (self::뺄품목($i['item_code'] ?? null)) {
+                $dropped++;
                 continue;
             }
 
@@ -342,7 +344,10 @@ class ProductController extends Controller
             ];
         }
 
-        $found = (int) ($res->json('found') ?? count($items));
+        /* 걸러 낸 만큼 전체 수에서도 뺀다 — 그러지 않으면 M 코드를 가린 자리가
+           「2건 가운데 1건입니다 — 검색어를 좁혀 주십시오」로 보인다. 보여 줄 것은
+           다 보여 준 것이다 (2026-10-01 지시). 옛 길은 이미 그렇게 세고 있었다. */
+        $found = max(0, (int) ($res->json('found') ?? (count($items) + $dropped)) - $dropped);
         $shown = count($items);
 
         return [
