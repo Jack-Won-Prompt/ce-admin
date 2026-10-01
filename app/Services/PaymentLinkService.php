@@ -283,10 +283,23 @@ class PaymentLinkService
         $name   = \App\Models\Patient::bare($link->order?->patient?->name) ?: '고객';
         $amount = number_format($link->amount);
 
-        /* 은행은 코드로 온다(IBK · 003). 사람이 읽을 이름으로 바꾼다 — 코드만 적어
-           보내면 어느 은행 앱을 열어야 할지 알 수 없다. */
-        $code = $va['bankCode'] ?? $va['bank'] ?? '';
-        $bank = \App\Services\TossPayments\TossClient::BANK_NAMES[$code] ?? ($code ?: '');
+        /* 은행 이름 — **토스가 준 이름을 먼저 쓴다** (2026-10-01 고침).
+
+           여태 bankCode 를 먼저 보고 BANK_NAMES 에서 찾았다. 그런데 토스는 두 자리
+           코드로 준다(11ㆍ20ㆍ06). 그 표에는 문자 코드(IBK)와 세 자리(011ㆍ020)만
+           있어 두 자리는 걸리지 않았고, 환자가 받은 문자에 「11 79019636816231」처럼
+           **코드가 그대로 찍혔다** — 어느 은행 앱을 열어야 하는지 알 수 없다.
+
+           토스는 같은 꾸러미에 bank 를 이름으로 함께 준다(「농협」). 그것이 가장
+           정확하다. 없을 때만 코드로 찾고, 그래도 없으면 코드를 적는다 —
+           두 자리를 우리가 짐작해 맞추지 않는다. 틀리면 환자가 다른 은행 앱을 연다. */
+        $code = $va['bankCode'] ?? '';
+        $이름 = trim((string) ($va['bank'] ?? ''));
+
+        $bank = ($이름 !== '' && ! ctype_digit($이름))
+            ? $이름
+            : (\App\Services\TossPayments\TossClient::BANK_NAMES[$code]
+               ?? (\App\Services\TossPayments\TossClient::BANK_NAMES[$이름] ?? ($code ?: $이름)));
 
         /* 예금주도 「(E)」를 뗀다 (2026-09-27 지시).
 

@@ -2807,6 +2807,24 @@ class PrescriptionController extends Controller
         ];
     }
 
+    /**
+     * 은행 이름 — 토스가 준 이름이 가장 정확하다.
+     *
+     * 코드는 두 자리로 온다(11ㆍ20ㆍ06). 우리 표에는 문자 코드와 세 자리만 있어
+     * 두 자리는 걸리지 않는다. 짐작해 맞추지 않는다 — 틀리면 환자가 다른 은행 앱을
+     * 연다. 이름도 코드도 없으면 코드를 그대로 적는다.
+     */
+    private static function 은행이름(\App\Models\TossPayment $tp): string
+    {
+        $이름 = trim((string) ($tp->raw_response['virtualAccount']['bank'] ?? ''));
+
+        if ($이름 !== '' && ! ctype_digit($이름)) {
+            return $이름;
+        }
+
+        return \App\Services\TossPayments\TossClient::BANK_NAMES[$tp->bank] ?? (string) $tp->bank;
+    }
+
     /** 결제하기 창에 적을 가상계좌 — 없으면 null */
     private static function 가상계좌(?Order $order): ?array
     {
@@ -2817,7 +2835,9 @@ class PrescriptionController extends Controller
         }
 
         return [
-            'bank'    => \App\Services\TossPayments\TossClient::BANK_NAMES[$tp->bank] ?? $tp->bank,
+            /* 토스가 준 이름을 먼저 쓴다 — 코드(11ㆍ20ㆍ06)로는 어느 은행인지
+               알 수 없다. 문자를 짓는 자리와 같은 잣대다(PaymentLinkService). */
+            'bank'    => self::은행이름($tp),
             'account' => $tp->account_number,
             'holder'  => $tp->customer_name,
             'amount'  => (int) $tp->amount,
