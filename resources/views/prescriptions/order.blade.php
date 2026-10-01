@@ -9708,7 +9708,28 @@ window.HELP_TOUR_STEPS = [
    *
    * 저장할지 버릴지도 묻지 않는다. 탭이 따로 서니 보던 건은 제 탭에 그대로 있다.
    */
+  /* 지금 보고 있는 것이 **내 빈 초안**인가 — 서버가 다시 쓰는 바로 그 건이다.
+     서버는 담당자마다 빈 초안 하나만 두고 「신규 등록」마다 그것을 되쓴다
+     (빈초안잡기). 그래서 그 건을 보고 있을 때 단추를 누르면 **같은 건이 같은 자리에
+     다시 열려** 화면이 하나도 바뀌지 않는다 — 담당자 눈에는 단추가 죽은 것으로
+     보인다(2026-10-01 「신규 버튼이 클릭이 왜 안될까요?」). */
+  const IS_MY_BLANK_DRAFT = @json(
+      (bool) $prescription->is_blank_draft
+      && (int) $prescription->created_by === (int) auth()->id()
+      && ! $prescription->order
+      && $prescription->consents()->doesntExist()
+      && $prescription->documents()->doesntExist()
+      && $prescription->attachments()->doesntExist()
+  );
+
   function resetReviewScreen() {
+    /* 이미 그 건이면 새로 열지 않고 그렇다고 알린다 (2026-10-01 지시).
+       열어도 같은 건이 올 뿐이고, 아무 말이 없으면 눌러도 소용없는 단추가 된다. */
+    if (IS_MY_BLANK_DRAFT) {
+      ceAlert('이미 신규 등록 상태입니다.', { title: '신규 등록' });
+      return;
+    }
+
     ceOpenTab(NEW_ENTRY_URL, '주문 - 신규', 'file-edit-02');
   }
 

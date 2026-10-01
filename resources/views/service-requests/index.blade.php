@@ -40,10 +40,28 @@
   .srx-pop-foot { display:flex; align-items:center; justify-content:flex-end; gap:8px;
     padding:12px 16px; border-top:1px solid var(--gray-200); }
 
+  /* 등록ㆍ답변 창은 넓게 쓴다 (2026-10-01 지시).
+
+     글을 적는 자리라 좁으면 줄이 잘게 끊기고, 답변 창은 요청 내용과 지난 답변까지
+     함께 보여 주어 창 안에서 다시 굴려야 했다. 화면이 좁으면 화면 너비를 따른다.
+     검색 창은 칸 몇 개뿐이라 그대로 둔다. */
   #srxPopSearch { width:420px; }
-  #srxPopAnswer { width:720px; }
+  #srxPopNew    { width:min(960px, calc(100vw - 48px)); }
+  #srxPopAnswer { width:min(1080px, calc(100vw - 48px)); }
+
+  /* 창이 커진 만큼 안쪽도 길게 쓴다 — 바닥줄(저장ㆍ닫기)이 밀려나지 않게 머리ㆍ바닥
+     높이를 뺀 값으로 잡는다. */
+  #srxPopNew .srx-pop-body,
+  #srxPopAnswer .srx-pop-body { max-height:calc(100vh - 150px); }
+
+  /* 글 적는 칸도 함께 키운다 — 창만 넓히고 칸이 그대로면 빈 자리만 넓어진다 */
+  #srxPopNew .ce-quill .ql-editor    { min-height:260px; }
+  #srxPopAnswer .ce-quill .ql-editor { min-height:300px; }
+
   @media (max-width:800px) {
-    #srxPopSearch, #srxPopAnswer { width:calc(100vw - 24px); }
+    #srxPopSearch, #srxPopNew, #srxPopAnswer { width:calc(100vw - 24px); }
+    #srxPopNew .ce-quill .ql-editor,
+    #srxPopAnswer .ce-quill .ql-editor { min-height:180px; }
   }
 
   /* ── 팝오버 안의 필드 — .ds-filter-field 와 같은 규격(라벨 21 + gap 8 + 인풋 32) ── */
