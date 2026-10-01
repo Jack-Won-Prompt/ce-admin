@@ -474,7 +474,7 @@
     const name = (document.getElementById('pcNewName').value || '').trim() || '환자';
     const base = CONSENT_BASE.replace('http://', 'https://');
     document.getElementById('pcNewPreviewBox').textContent =
-      `[콜로플라스트] ${name}님\n건강보험 급여 위임동의 서명 요청입니다.\n서명 링크(30분 유효):\n${base}/consent/(링크)`;
+      `[콜로플라스트] ${name}님\n건강보험 급여 위임동의 서명 요청입니다.\n서명 링크(${window.LINK_UNTIL ?? '오늘 23시 30분'}까지):\n${base}/consent/(링크)`;
   };
 
   window.pcSendNew = async function () {
@@ -572,7 +572,7 @@
     const name = (document.getElementById('pcSmsName').value || '').trim() || '환자';
     const base = CONSENT_BASE.replace('http://', 'https://');
     document.getElementById('pcSmsPreviewBox').textContent =
-      `[콜로플라스트] ${name}님\n건강보험 급여 위임동의 서명 요청입니다.\n서명 링크(30분 유효):\n${base}/consent/(링크)`;
+      `[콜로플라스트] ${name}님\n건강보험 급여 위임동의 서명 요청입니다.\n서명 링크(${window.LINK_UNTIL ?? '오늘 23시 30분'}까지):\n${base}/consent/(링크)`;
   };
 
   window.pcSendSms = async function () {

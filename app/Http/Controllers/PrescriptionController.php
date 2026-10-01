@@ -5187,10 +5187,13 @@ class PrescriptionController extends Controller
            설정(delegation_sign.link_minutes)과 그것을 읽는 자리
            (DelegationSignController::유효분)가 진작 있었는데, 정작 여기는 30을
            글자로 박아 두어 설정을 바꿔도 이 길로 나간 링크만 30분이었다.
-           문자에 적는 「○분 유효」도 같은 값을 쓴다 — 따로 적으면 화면이 거짓말을 한다. */
+           2026-10-01 지시로 **보낸 날 23시 30분**에 닫힌다. 문자에 적는 「언제까지」도
+           같은 자리에서 가져온다(DelegationSignController::만료말) — 따로 적으면
+           화면이 거짓말을 한다. */
         $유효분     = \App\Http\Controllers\DelegationSignController::유효분();
         $token       = \Illuminate\Support\Str::random(24);
-        $expiresAt   = now()->addMinutes($유효분);
+        /* 보낸 날 23시에 닫힌다 (2026-10-01 지시) — 세는 자리는 한 곳이다 */
+        $expiresAt   = \App\Http\Controllers\DelegationSignController::만료시각();
 
         /* 미성년자는 혼자 위임할 수 없다. 서명 화면에서 법정대리인의 이름과 서명을 함께 받는다.
            나이는 마스킹된 주민번호 앞자리로 안다 — 원문을 열지 않는다(P0-1). */
@@ -5227,9 +5230,14 @@ class PrescriptionController extends Controller
 
         // URL이 localhost인 경우 링크가 클릭되지 않을 수 있음 — 운영 서버 URL로 변경 필요
         /* 문구는 메시지 관리에서 고친다 (2026-09-23 지시) */
+        $만료말 = \App\Http\Controllers\DelegationSignController::만료말();
+
+        /* 메시지 유형에 `#{만료}` 를 쓰면 「오늘 23시 30분」이 들어간다. 옛 유형이
+           아직 `#{유효분}` 을 쓰고 있어 그 값도 함께 넘긴다 (2026-10-01 지시). */
         $message = \App\Models\MessageTemplate::문구('consent_sign', [
-            '#{고객명}' => $patientName, '#{유효분}' => $유효분, '#{링크}' => $url,
-        ], "[콜로플라스트] {$patientName}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크({$유효분}분 유효):\n{$url}");
+            '#{고객명}' => $patientName, '#{유효분}' => $유효분,
+            '#{만료}'   => $만료말, '#{링크}' => $url,
+        ], "[콜로플라스트] {$patientName}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크({$만료말}까지):\n{$url}");
 
         /* 알림톡을 먼저, 막히면 문자로 잇는다 (2026-09-30 지시).
 
@@ -5249,7 +5257,8 @@ class PrescriptionController extends Controller
                     fn (string $채널, ?string $틀코드) => $this->sender->sendBulk(
                         $채널, $받을이, $message, $틀코드 ?: 'consent_sign',
                         ['source' => 'consent', 'prescription_id' => $prescription->id],
-                        ['#{링크}' => $url, '#{유효분}' => (string) $유효분]),
+                        ['#{링크}' => $url, '#{유효분}' => (string) $유효분,
+                         '#{만료}' => \App\Http\Controllers\DelegationSignController::만료말()]),
                     문자는틀없이도: true);
 
             if ($나간것 === []) {
@@ -5302,10 +5311,11 @@ class PrescriptionController extends Controller
      */
     public function issueIdCard(Prescription $prescription, string $mobile, string $patientName): \Illuminate\Http\JsonResponse
     {
-        /* 신분증만 받는 링크도 같은 설정을 따른다 (2026-09-19) */
+        /* 신분증만 받는 링크도 같은 잣대를 따른다 (2026-09-19 · 2026-10-01) —
+           보낸 날 23시에 닫힌다. 세는 자리는 DelegationSignController 한 곳이다. */
         $유효분   = \App\Http\Controllers\DelegationSignController::유효분();
         $token     = \Illuminate\Support\Str::random(24);
-        $expiresAt = now()->addMinutes($유효분);
+        $expiresAt = \App\Http\Controllers\DelegationSignController::만료시각();
 
         /* 나이는 마스킹된 주민번호 앞자리로 안다 — 원문을 열지 않는다(P0-1). */
         $masked  = $prescription->resident_no_ocr_masked ?: $prescription->patient?->masked_resident_no;
@@ -5336,7 +5346,8 @@ class PrescriptionController extends Controller
         /* 문구는 메시지 관리에서 고친다 (2026-09-23 지시) */
         $message = \App\Models\MessageTemplate::문구('id_card_request', [
             '#{고객명}' => $patientName, '#{유효분}' => $유효분, '#{링크}' => $url,
-        ], "[콜로플라스트] {$patientName}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크({$유효분}분 유효):\n{$url}");
+        ], "[콜로플라스트] {$patientName}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n"
+         . "제출 링크(" . \App\Http\Controllers\DelegationSignController::만료말() . "까지):\n{$url}");
 
         /* 발송 방식은 채널마다 한 곳이 정한다 — 알림톡 우선ㆍ실패 시 문자가 기본이다
            (2026-09-30 지시). 알림톡 본문은 승인받은 글이라 위 $message 를 쓰지
@@ -5349,7 +5360,8 @@ class PrescriptionController extends Controller
                     fn (string $채널, ?string $틀코드) => $this->sender->sendBulk(
                         $채널, $받을이, $message, $틀코드 ?: 'id_card_request',
                         ['source' => 'consent', 'prescription_id' => $prescription->id],
-                        ['#{링크}' => $url, '#{유효분}' => (string) $유효분]),
+                        ['#{링크}' => $url, '#{유효분}' => (string) $유효분,
+                         '#{만료}' => \App\Http\Controllers\DelegationSignController::만료말()]),
                     문자는틀없이도: true);
 
             if ($나간것 === []) {

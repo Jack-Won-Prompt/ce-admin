@@ -700,10 +700,48 @@ class DelegationSignController extends Controller
         ]);
     }
 
-    /** 링크 하나가 열려 있는 동안 */
+    /**
+     * 링크가 닫히는 때 — **보낸 날 23시 30분** (2026-10-01 지시).
+     *
+     * 여태는 보낸 때로부터 몇 분이었다(설정 link_minutes). 그런데 환자는 문자를 바로
+     * 열지 않는다 — 일하다가, 저녁에, 집에 가서 연다. 30분이면 그 사이에 닫히고,
+     * 담당자는 재발송을 다시 눌러야 했다.
+     *
+     * 「오늘 안에 해 주십시오」가 사람에게 가장 또렷하다. 몇 분 남았는지 세지 않아도
+     * 되고, 받은 날 안에 끝내면 된다는 것이 한눈에 읽힌다.
+     *
+     * **23시 30분이 이미 지났으면 다음 날 23시 30분으로 둔다.** 23시 20분에 보낸
+     * 링크가 10분 만에 닫히면 보내나 마나다.
+     */
+    public static function 만료시각(): \Illuminate\Support\Carbon
+    {
+        $끝 = now()->setTime(23, 30, 0);
+
+        return $끝->isPast() ? $끝->addDay() : $끝;
+    }
+
+    /**
+     * 링크가 열려 있는 남은 시간(분) — 문자에 적는 말을 지을 때 쓴다.
+     *
+     * 남겨 두는 까닭: 메시지 유형의 본문에 `#{유효분}` 을 쓰는 곳이 있고, 알림톡은
+     * 승인받은 본문이라 우리가 글을 바꿀 수 없다. 그 자리에는 남은 분을 넣어 준다.
+     */
     public static function 유효분(): int
     {
-        return (int) config('delegation_sign.link_minutes', 30);
+        return max(1, (int) now()->diffInMinutes(self::만료시각()));
+    }
+
+    /**
+     * 문자에 적는 「언제까지」 — 「오늘 23시 30분」ㆍ「내일 23시 30분」.
+     *
+     * 24시로 적는다. 「11시 30분」으로 적으면 환자가 오전으로 읽을 수 있다 —
+     * 오전으로 읽으면 이미 지난 시각이라 열어 보지도 않는다.
+     */
+    public static function 만료말(): string
+    {
+        $끝 = self::만료시각();
+
+        return ($끝->isToday() ? '오늘' : '내일') . ' ' . $끝->format('G시 i분');
     }
 
     /**
@@ -716,11 +754,14 @@ class DelegationSignController extends Controller
     public static function 문자글(string $이름, string $링크, int $분): string
     {
         /* 문구는 메시지 관리에서 고친다 (2026-09-23 지시) */
+        /* 메시지 유형에 `#{만료}` 를 쓰면 「오늘 23시 30분」이 들어간다. 옛 유형이
+           아직 `#{유효분}` 을 쓰고 있어 그 값도 함께 넘긴다 (2026-10-01 지시). */
         return \App\Models\MessageTemplate::문구('delegation_sign', [
-            '#{고객명}' => $이름, '#{유효분}' => $분, '#{링크}' => $링크,
+            '#{고객명}' => $이름, '#{유효분}' => $분,
+            '#{만료}'   => self::만료말(), '#{링크}' => $링크,
         ], "[콜로플라스트] {$이름}님\n"
          . "요양비 청구 위임장 전자서명 요청입니다.\n"
-         . "서명 링크({$분}분 유효):\n" . $링크);
+         . "서명 링크(" . self::만료말() . "까지):\n" . $링크);
     }
 
     /** 문자에 담는 주소 */
@@ -760,7 +801,7 @@ class DelegationSignController extends Controller
         $이름 = \App\Models\Patient::bare($이름) ?: $줄->이름();
         $토큰 = Str::random(24);
         $분   = self::유효분();
-        $만료 = now()->addMinutes($분);
+        $만료 = self::만료시각();          // 보낸 날 23시 (2026-10-01 지시)
         $길   = self::링크($토큰);
         $글   = self::문자글($이름, $길, $분);
 
@@ -779,7 +820,8 @@ class DelegationSignController extends Controller
                             적힌 번호로 실제로 나간다 — 명단 줄이 시험 번호로 돌아가면
                             화면에는 「발송 완료」인데 환자는 받지 못한다. */
                          '업무발송' => true],
-                        ['#{링크}' => $길, '#{유효분}' => (string) $분]),
+                        ['#{링크}' => $길, '#{유효분}' => (string) $분,
+                         '#{만료}' => self::만료말()]),
                     문자는틀없이도: true);
 
             if ($나간것 === []) {

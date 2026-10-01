@@ -16069,6 +16069,10 @@ window.HELP_TOUR_STEPS = [
   /* 링크가 열려 있는 동안 — 설정 한 곳에서 온다. 미리보기 글이 실제로 나가는
      문자와 어긋나지 않도록 서버가 준 값을 그대로 쓴다 (2026-09-19). */
   const LINK_MINUTES = @json(\App\Http\Controllers\DelegationSignController::유효분());
+  /* 링크가 닫히는 때 — 보낸 날 23시 30분 (2026-10-01 지시).
+     미리보기에 이 말을 그대로 적는다. 몇 분 남았는지 적으면 화면을 열어 둔 사이에
+     어긋난다 — 환자가 받는 글도 「오늘 23시 30분까지」다. */
+  const LINK_UNTIL   = @json(\App\Http\Controllers\DelegationSignController::만료말());
 
   const CONSENT_SMS_URL    = @json(route('prescriptions.consentSms', $prescription));
 
@@ -16294,7 +16298,7 @@ window.HELP_TOUR_STEPS = [
     const baseUrl = @json(rtrim(config('app.consent_public_url', config('app.url')), '/')).replace('http://', 'https://');
     const el = document.getElementById('idCardMsgPreview');
     if (el) {
-      el.textContent = `[콜로플라스트] ${name}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크(${LINK_MINUTES}분 유효):\n${baseUrl}/consent/(링크)`;
+      el.textContent = `[콜로플라스트] ${name}님\n건강보험 등록에 필요한 신분증 제출 요청입니다.\n제출 링크(${LINK_UNTIL}까지):\n${baseUrl}/consent/(링크)`;
     }
   }
 
@@ -16447,7 +16451,7 @@ window.HELP_TOUR_STEPS = [
     const name    = (nameEl?.value ?? '').trim() || (nameEl?.placeholder ?? '').trim() || '환자';
     const baseUrl = @json(rtrim(config('app.consent_public_url', config('app.url')), '/')).replace('http://', 'https://');
     const mockUrl = baseUrl + '/consent/(링크)';
-    const preview = `[콜로플라스트] ${name}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크(${LINK_MINUTES}분 유효):\n${mockUrl}`;
+    const preview = `[콜로플라스트] ${name}님\n요양비 청구 서류 확인 및 전자서명 요청입니다.\n서명 링크(${LINK_UNTIL}까지):\n${mockUrl}`;
     const el = document.getElementById('consentMsgPreview');
     if (el) el.textContent = preview;
   }
