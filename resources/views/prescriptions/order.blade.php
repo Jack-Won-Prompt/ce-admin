@@ -1924,6 +1924,22 @@ $calcDeposit  = $calcCopay;
               <b id="payAmount" style="color:var(--primary);">{{ number_format($prescription->order?->total_amount ?? 0) }}원</b>
             </div>
 
+            {{-- 발급된 가상계좌 (2026-10-01 지시).
+
+                 환자가 전화로 「계좌를 다시 알려 달라」고 할 때, 담당자가 발송ㆍ발행
+                 내역에서 그 문자를 찾아 본문을 열어야 했다. 여기에 적어 둔다.
+                 값은 payState().va 에서 오고, 가상계좌가 없으면 통째로 숨는다. --}}
+            <div id="payVaBox" style="display:none;padding:10px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                <i class="fa-solid fa-building-columns" style="font-size:11px;color:var(--primary);"></i>
+                <span style="font-size:11px;font-weight:700;color:var(--text-primary);">발급된 가상계좌</span>
+                <span id="payVaTag" style="font-size:10px;padding:1px 6px;border-radius:999px;"></span>
+                <button type="button" class="rx-tpl-mini" style="margin-left:auto;" onclick="copyVaAccount()">복사</button>
+              </div>
+              <div style="font-size:13px;font-weight:700;letter-spacing:.2px;" id="payVaAccount">-</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;" id="payVaSub">-</div>
+            </div>
+
             <div>
               <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:6px;">결제 방법</div>
               <div style="display:flex;flex-direction:column;gap:4px;" id="payMethods">
@@ -13459,8 +13475,59 @@ window.HELP_TOUR_STEPS = [
   });
   window.addEventListener('focus', 바깥상태다시읽기);
 
+  /**
+   * 발급된 가상계좌를 결제하기 창에 적는다 (2026-10-01 지시).
+   *
+   * 환자가 전화로 「계좌를 다시 알려 달라」고 할 때 쓰는 자리다. 여태는 담당자가
+   * 발송ㆍ발행 내역에서 그 문자를 찾아 본문을 열어야 했다.
+   *
+   * 기한이 지난 계좌는 그렇다고 적는다 — 지난 계좌를 알려 주면 환자가 넣어도
+   * 들어오지 않고, 그 돈을 되찾는 데 며칠이 걸린다.
+   */
+  function 가상계좌다시() {
+    const box = document.getElementById('payVaBox');
+    if (!box) return;
+
+    const va = PAY_STATE?.va;
+    if (!va || !va.account) { box.style.display = 'none'; return; }
+
+    box.style.display = '';
+
+    document.getElementById('payVaAccount').textContent = `${va.bank} ${va.account}`;
+
+    const 조각 = [];
+    if (va.holder) 조각.push(`예금주 ${va.holder}`);
+    if (va.amount) 조각.push(`${Number(va.amount).toLocaleString('ko-KR')}원`);
+    if (va.due)    조각.push(`${va.due} 까지`);
+    document.getElementById('payVaSub').textContent = 조각.join(' · ');
+
+    const tag = document.getElementById('payVaTag');
+    if (va.paid) {
+      tag.textContent = '입금완료';
+      tag.style.cssText = 'font-size:10px;padding:1px 6px;border-radius:999px;background:var(--primary-50,#eef2ff);color:var(--primary);';
+    } else if (va.expired) {
+      tag.textContent = '기한지남 · 다시 발급 필요';
+      tag.style.cssText = 'font-size:10px;padding:1px 6px;border-radius:999px;background:var(--alert-50,#fef0c7);color:#B54708;';
+    } else {
+      tag.textContent = '입금대기';
+      tag.style.cssText = 'font-size:10px;padding:1px 6px;border-radius:999px;background:var(--gray-100);color:var(--text-muted);';
+    }
+  }
+
+  /** 계좌번호만 복사한다 — 전화로 불러 주거나 다른 곳에 붙일 때 쓴다 */
+  window.copyVaAccount = function () {
+    const va = PAY_STATE?.va;
+    if (!va?.account) return;
+
+    const 글 = `${va.bank} ${va.account}`;
+    navigator.clipboard?.writeText(글)
+      .then(() => showToast('계좌번호를 복사했습니다 — ' + 글, 'success'))
+      .catch(() => showToast(글, 'info', 8000));
+  };
+
   /** 단추의 딱지를 지금 상태로 다시 그린다 */
   function 딱지다시() {
+    가상계좌다시();
     const btn = document.getElementById('btnPayTrigger');
     if (!btn) return;
 

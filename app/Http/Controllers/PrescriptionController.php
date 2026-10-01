@@ -2799,6 +2799,32 @@ class PrescriptionController extends Controller
                 $prescription->order?->tossPayment?->status,
                 ['CANCELED', 'PARTIAL_CANCELED'], true),
             'cancelled_amount' => (int) ($prescription->order?->tossPayment?->cancel_amount ?? 0),
+
+            /* 발급된 가상계좌 (2026-10-01 지시).
+               환자가 전화로 「계좌를 다시 알려 달라」고 할 때, 담당자가 발송 내역에서
+               그 문자를 찾아 본문을 열지 않아도 되게 한다. 이미 담겨 있는 값이다. */
+            'va'        => self::가상계좌($prescription->order),
+        ];
+    }
+
+    /** 결제하기 창에 적을 가상계좌 — 없으면 null */
+    private static function 가상계좌(?Order $order): ?array
+    {
+        $tp = $order?->tossPayment;
+
+        if (! $tp || $tp->method !== 'VIRTUAL_ACCOUNT' || blank($tp->account_number)) {
+            return null;
+        }
+
+        return [
+            'bank'    => \App\Services\TossPayments\TossClient::BANK_NAMES[$tp->bank] ?? $tp->bank,
+            'account' => $tp->account_number,
+            'holder'  => $tp->customer_name,
+            'amount'  => (int) $tp->amount,
+            'due'     => $tp->due_date?->format('Y-m-d H:i'),
+            /* 기한이 지났는가 — 지난 계좌를 알려 주면 환자가 넣어도 들어오지 않는다 */
+            'expired' => (bool) ($tp->due_date?->isPast()),
+            'paid'    => $tp->deposited_at !== null,
         ];
     }
 
