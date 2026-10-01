@@ -16348,14 +16348,17 @@ window.HELP_TOUR_STEPS = [
     rb.style.borderRadius = 'var(--radius)';
     rb.style.fontSize = '11px';
     rb.style.whiteSpace = 'nowrap';
-    /* 다시 쓰는 서명이면 어디서 온 것인지ㆍ언제까지 쓰는지 한 줄 더 적는다 */
-    const 꼬리 = 다시쓰는것
-      ? `<span style="font-size:10px;color:var(--text-muted);margin-left:4px;">${dtpEsc(다시쓰는것.label)}`
-        + (다시쓰는것.signed_at ? ` · ${dtpEsc(다시쓰는것.signed_at)} 서명` : '')
-        + (다시쓰는것.valid_until ? ` — ${dtpEsc(다시쓰는것.valid_until)} 까지` : '')
-        + (다시쓰는것.matched_by === 'name' ? ' · 이름만으로 이은 줄' : '')
-        + '</span>'
-      : '';
+    /* **꼬리는 적지 않는다** (2026-10-01 지시 「기존 형식만 => 서명 동의 완료 ·
+       사람이 적어 둔 값은 안보이게」).
+
+       한때 「운영 데이터의 서명 · 2026-09-30 서명 — 2031-09-30 까지」를 덧붙였다.
+       그 끝의 날짜는 거래처의 건보위임동의 종료일인데, 옮겨 온 서명 259건 가운데
+       그 값이 채워진 것은 한 건뿐이다 — 나머지는 「서명일＋5년−1일」로 셈한 값이다.
+       근거가 갈리는 수를 배지에 적으면, 담당자가 그 날짜를 공단 등록값으로 읽는다.
+
+       `다시쓰는것` 은 그대로 받는다 — 부르는 자리 셋이 넘겨주고 있고, 나중에 다시
+       보이기로 정하면 이 자리 한 곳만 되살리면 된다. */
+    const 꼬리 = '';
 
     rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span>${꼬리}<button onclick="event.stopPropagation();${cfg.action}" style="height:16px;padding:0 5px;font-size:10px;background:${cfg.btnBg ?? 'none'};border:1px solid ${cfg.btnBorder};color:${cfg.btnColor};border-radius:6px;cursor:pointer;margin-left:4px;font-weight:600;">${cfg.btnLabel}</button>`;
   }
