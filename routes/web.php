@@ -421,6 +421,10 @@ Route::middleware(['auth'])->group(function () {
     // 발송/발행 내역 관리
     Route::get('/dispatch',              [DispatchHistoryController::class, 'index'])->name('dispatch.index');
     Route::get('/dispatch/{type}/{id}',  [DispatchHistoryController::class, 'show'])->name('dispatch.show');
+    /* 못 나간 문자ㆍ알림톡 다시 보내기 (2026-10-01 지시).
+       '/dispatch/{type}/{id}' 보다 **앞**에 둔다 — 뒤에 두면 'message' 가 갈래로
+       읽혀 상세로 들어간다(2026-10-01 거래처 고르개에서 같은 일을 겪었다). */
+    Route::post('/dispatch/message/{message}/resend', [DispatchHistoryController::class, 'resend'])->name('dispatch.resend');
 
     // 팩스 발송
     Route::get('/fax', [FaxPageController::class, 'index'])->name('fax.index');

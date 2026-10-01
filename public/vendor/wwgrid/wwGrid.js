@@ -1148,6 +1148,20 @@ class wwGrid {
     }
   }
 
+  /**
+   * 높이를 다시 잰다 — 탭처럼 숨어 있다 나타난 표가 부른다 (2026-10-01 지시).
+   *
+   * height:'fit' 은 「래퍼 위쪽부터 화면 아래까지」로 잰다. 그런데 표가 숨은 판
+   * (display:none) 안에서 세워지면 그 위치가 0 으로 읽혀, 화면 높이만큼 잡힌다 —
+   * 판이 열리는 순간 표가 화면 아래로 삐져나오고 **스크롤이 둘**이 된다
+   * (메시지 관리의 「발송 이력」 탭이 그랬다).
+   *
+   * 판을 여는 쪽에서 이것을 부르면 그 자리에서 다시 잰다.
+   */
+  fit() {
+    this._applyFitHeight();
+  }
+
   /* ── height:'fit' 계산: 페이지 스크롤이 없어지도록 래퍼 높이를 뷰포트에 맞춤 ── */
   _applyFitHeight() {
     if (this.height !== 'fit' || !this._wrapEl) return;
@@ -1875,7 +1889,12 @@ class wwGrid {
           inner.appendChild(document.createTextNode(String(node)));
         }
       } else {
-        inner.appendChild(document.createTextNode(this._formatDisplay(cellValue, col)));
+        const 글 = this._formatDisplay(cellValue, col);
+        inner.appendChild(document.createTextNode(글));
+        /* 칸보다 긴 글은 오른쪽이 잘린다 — 마우스를 얹으면 전문이 보이게 둔다
+           (2026-10-01 지시 「내용 항목도 오른쪽 끝 확인이 어려움」).
+           칸 너비를 늘리면 다른 칸이 밀리고, 줄바꿈을 하면 줄 높이가 들쭉날쭉해진다. */
+        if (글 && 글.length > 12) inner.title = 글;
       }
 
       // popup 셀 — 오른쪽 끝에 트리거 아이콘

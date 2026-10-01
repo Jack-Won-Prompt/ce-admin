@@ -9,6 +9,7 @@ use App\Models\NhisFaxLog;
 use App\Models\Order;
 use App\Models\TossPayment;
 use App\Models\WithworksEvent;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -98,6 +99,95 @@ class DispatchHistoryController extends Controller
         return view('dispatch.index', compact('gridData', 'gridColumns', 'total', 'type', 'types', 'counts', 'dateFrom', 'dateTo', 'search', 'perPage'));
     }
 
+    /**
+     * 못 나간 문자ㆍ알림톡을 다시 보낸다 (2026-10-01 지시).
+     *
+     * 2026-10-01 팝빌 파트너 포인트가 떨어져 12:20~12:28 사이 17건이 나가지 못했다.
+     * 그런데 다시 보내는 자리가 어디에도 없었다 — 담당자가 내역에서 실패를 눈으로
+     * 찾아 건마다 제 화면으로 찾아가 다시 눌러야 했다.
+     *
+     * **한 통도 두 번 가지 않게 한다.** 이것이 이 자리의 가장 큰 짐이다:
+     *
+     *   · 일부만 실패한 묶음은 받지 않는다. 누가 받았고 누가 못 받았는지 기록에
+     *     남지 않아(실패한 번호를 따로 담지 않는다), 다시 보내면 이미 받은 사람이
+     *     같은 문자를 또 받는다.
+     *   · 서명 링크는 **새로 발급한다.** 그 글에 담긴 주소는 토큰이 박힌 것이고
+     *     이미 만료되었다 — 그대로 보내면 환자가 열리지 않는 주소를 받는다.
+     *   · 다시 보낸 것도 내역에 한 줄로 남는다(source 는 그대로). 옛 줄을 고치지
+     *     않는다 — 그때 못 나갔다는 사실은 사실대로 남아야 한다.
+     */
+    public function resend(Request $request, \App\Models\MessageHistory $message): JsonResponse
+    {
+        if ((int) $message->fail_count < 1) {
+            return response()->json(['success' => false, 'message' => '실패한 발송이 아닙니다.'], 422);
+        }
+
+        if ((int) $message->success_count > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => '일부만 실패한 묶음이라 다시 보내지 않습니다. '
+                           . '누가 받았는지 기록에 남지 않아, 다시 보내면 이미 받은 분이 같은 글을 또 받습니다. '
+                           . '해당 화면에서 받지 못한 분에게만 보내 주십시오.',
+            ], 422);
+        }
+
+        $받을이 = collect($message->receivers ?? [])
+            ->map(fn ($r) => [
+                'rcv'        => preg_replace('/\D/', '', (string) ($r['rcv'] ?? '')),
+                'rcvnm'      => $r['rcvnm'] ?? '',
+                'patient_id' => $r['patient_id'] ?? null,
+            ])
+            ->filter(fn ($r) => $r['rcv'] !== '')
+            ->values()
+            ->all();
+
+        if (! $받을이) {
+            return response()->json(['success' => false, 'message' => '받을 번호가 남아 있지 않습니다.'], 422);
+        }
+
+        /* 서명 링크는 주소가 토큰이라 그대로 보낼 수 없다 — 새로 발급한다.
+           발급하는 자리가 곧 보내는 자리다(issueConsent). */
+        if (in_array($message->source, ['consent', 'delegation-sign'], true)) {
+            $prescription = $message->prescription;
+
+            if (! $prescription) {
+                return response()->json([
+                    'success' => false,
+                    'message' => '서명 링크는 새로 발급해야 하는데, 이 발송에 이어진 처방전이 없습니다. '
+                               . '주문 등록 화면의 「서명 동의」에서 보내 주십시오.',
+                ], 422);
+            }
+
+            $것 = $받을이[0];
+            $답 = app(\App\Http\Controllers\PrescriptionController::class)
+                ->issueConsent($prescription, $것['rcv'], $것['rcvnm'] ?: '고객')
+                ->getData(true);
+
+            return response()->json([
+                'success' => (bool) ($답['success'] ?? false),
+                'message' => ($답['success'] ?? false)
+                    ? '서명 링크를 새로 발급해 보냈습니다.'
+                    : ($답['message'] ?? '보내지 못했습니다.'),
+            ], ($답['success'] ?? false) ? 200 : 502);
+        }
+
+        $답 = app(\App\Services\MessageSender::class)->sendBulk(
+            $message->channel,
+            $받을이,
+            (string) $message->content,
+            $message->template_code,
+            ['source' => $message->source, 'prescription_id' => $message->prescription_id],
+        );
+
+        activity()->causedBy(auth()->user())
+            ->log("발송 다시 보내기 (#{$message->id} {$message->template_label}) → " . ($답['message'] ?? ''));
+
+        return response()->json([
+            'success' => (bool) ($답['success'] ?? false),
+            'message' => $답['message'] ?? '보내지 못했습니다.',
+        ], ($답['success'] ?? false) ? 200 : 502);
+    }
+
     /** 타입별 wwGrid 데이터/컬럼 생성 (원본 테이블 셀을 텍스트로 매핑) */
     /**
      * 창고로 넘긴 것을 가리는 조건.
@@ -134,6 +224,9 @@ class DispatchHistoryController extends Controller
                 // 무엇을 보냈는지는 첫 줄만 — 훑는 자리라 전문은 상세에서 본다
                 'content'  => \Illuminate\Support\Str::limit(preg_replace('/\s+/u', ' ', (string) $m->content), 100),
                 'sender'   => $m->sentBy?->name ?? '-',
+                /* 다시 보낼 수 있는 줄인가 — 한 통도 못 나간 묶음만 받는다.
+                   일부만 실패한 것은 누가 받았는지 모르므로 받지 않는다(resend). */
+                'resend'   => ((int) $m->fail_count > 0 && (int) $m->success_count < 1) ? '다시 보내기' : '',
             ])->values();
             $columns = [
                 ['header' => '발송일시', 'name' => 'created',  'width' => 130, 'sortable' => true],
@@ -146,6 +239,7 @@ class DispatchHistoryController extends Controller
                 ['header' => '결과',     'name' => 'result',   'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '내용',     'name' => 'content',  'width' => 300],
                 ['header' => '보낸 사람', 'name' => 'sender',  'width' => 90],
+                ['header' => '다시 보내기', 'name' => 'resend', 'width' => 110, 'align' => 'center'],
             ];
         } elseif ($type === 'fax') {
             /* 상태 이름은 FaxHistory 가 정한다 — 팝빌 상태(0 접수 · 1 변환중 ·

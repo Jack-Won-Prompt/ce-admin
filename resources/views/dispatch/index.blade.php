@@ -382,6 +382,61 @@ window.HELP_TOUR_STEPS = [
     }
   };
 
+  /* 못 나간 것을 다시 보낸다 (2026-10-01 지시).
+
+     「다시 보내기」 칸에 글이 있는 줄에서만 선다 — 서버가 「한 통도 못 나간 묶음」만
+     그 글을 채워 준다. 일부만 실패한 것은 누가 받았는지 기록에 없어 받지 않는다.
+
+     누르기 전에 한 번 묻는다. 실제 고객에게 나가는 일이라, 목록을 훑다가 잘못 눌러
+     같은 글이 또 가는 일이 없어야 한다. */
+  const RESEND_BASE = @json(url('dispatch/message'));
+
+  document.getElementById('dispatchGrid').addEventListener('click', async function (e) {
+    if (TYPE !== 'message') return;
+
+    const cell = e.target.closest('[data-row-index]');
+    if (!cell) return;
+
+    /* 「다시 보내기」 칸을 눌렀을 때만 — 다른 칸을 누르는 것은 줄 고르기다 */
+    const 칸 = cell.closest('td') || cell;
+    if (!/다시 보내기/.test(칸.textContent || '')) return;
+
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (!row || !row.id || !row.resend) return;
+
+    const 묻는말 = `「${row.template}」을(를) ${row.total}명에게 다시 보냅니다.\n\n`
+                 + `${row.created} 에 ${row.ng}건 모두 실패한 발송입니다.\n`
+                 + `실제로 고객에게 발송됩니다. 진행할까요?`;
+    if (!window.confirm(묻는말)) return;
+
+    칸.textContent = '보내는 중…';
+
+    try {
+      const res = await fetch(`${RESEND_BASE}/${row.id}/resend`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+        },
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        칸.textContent = '보냈습니다';
+        (window.showToast ?? alert)(data.message || '다시 보냈습니다.', 'success');
+        /* 새 줄이 내역에 쌓였다 — 목록을 다시 읽어야 보인다 */
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        칸.textContent = '다시 보내기';
+        (window.showToast ?? alert)(data.message || '보내지 못했습니다.', 'warning', 8000);
+      }
+    } catch (err) {
+      console.error('[발송 내역] 다시 보내지 못했습니다', err);
+      칸.textContent = '다시 보내기';
+      (window.showToast ?? alert)('다시 보내지 못했습니다. 잠시 뒤 눌러 주십시오.', 'warning');
+    }
+  });
+
   // 행 더블클릭 → 상세내용 탭에 상세를 인페이지로 표시(페이지 이동 없음)
   document.getElementById('dispatchGrid').addEventListener('dblclick', function (e) {
     const cell = e.target.closest('[data-row-index]');

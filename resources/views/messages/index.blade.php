@@ -482,6 +482,15 @@
     btn.classList.add('active');
     document.querySelectorAll('.ms-panel').forEach(p => p.classList.remove('active'));
     document.getElementById(btn.dataset.panel).classList.add('active');
+
+    /* 숨어 있던 표는 높이를 다시 잰다 (2026-10-01 지시 「발송 이력 탭이 이중 스크롤」).
+       display:none 안에서 세워진 표는 제 위치를 0 으로 읽어 화면 높이만큼 잡는다 —
+       판이 열리면 표가 화면 아래로 삐져나와 스크롤이 둘이 된다. */
+    requestAnimationFrame(() => {
+      [window.__msHistGrid, window.__msGrid].forEach(g => {
+        if (g && typeof g.fit === 'function') g.fit();
+      });
+    });
     // 판마다 다른 단추는 그 판일 때만 보인다
     document.querySelectorAll('.ms-panel-act').forEach(b => {
       b.style.display = b.dataset.for === btn.dataset.panel ? '' : 'none';
