@@ -81,9 +81,19 @@
   .srx-sec { margin-bottom:16px; }
   .srx-sec h4 { margin:0 0 8px; font-size:13px; font-weight:700; line-height:21px; color:var(--gray-1000); }
   .srx-meta { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:8px; }
-  .srx-body { font-size:13px; font-weight:400; line-height:21px; white-space:pre-wrap;
+  /* 꾸밈글(Quill)이 들어오는 자리다 — `white-space:pre-wrap` 을 걷는다 (2026-10-01).
+
+     글자만 담던 때의 규칙이었다. 지금은 <p>ㆍ<ul> 로 들어오는데, 이름표 사이의
+     줄바꿈과 들여쓰기가 그대로 찍혀 문단마다 빈 줄이 벌어지고 목록이 어긋나 보였다.
+     줄바꿈은 <br> 과 <p> 가 맡는다.
+
+     `max-height` 도 걷는다. 창이 넓어지면서(960·1080) 안쪽은 창이 굴리면 되고,
+     220px 로 잘라 두면 긴 답변이 작은 상자 안에서 다시 굴러야 한다. */
+  .srx-body { font-size:13px; font-weight:400; line-height:21px;
     color:var(--gray-1000); background:var(--gray-50); border:1px solid var(--gray-200);
-    border-radius:8px; padding:12px; max-height:220px; overflow-y:auto; }
+    border-radius:8px; padding:12px; }
+  /* 담긴 글이 옛 글자뿐인 줄(이름표가 하나도 없는 것)은 줄바꿈을 살려 둔다 */
+  .srx-body.is-plain { white-space:pre-wrap; }
   /* 등록자ㆍSR 담당자를 나란히 적는다 — 누가 올렸고 누가 답하는지가 이 창의 머리말이다 */
   .srx-who { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
   .srx-who .k { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); margin-bottom:4px; }
@@ -503,12 +513,17 @@
       · ${esc(r.categoryLabel)} · 우선순위 ${esc(r.priorityLabel)}
       · ${esc(r.created)}${r.page ? ' · 대상: ' + esc(r.page) : ''}`;
 
-    document.getElementById('srxContentBox').innerHTML = r.content || '';
+    /* 옛 글자뿐인 줄은 줄바꿈을 살려야 한다 — 이름표가 하나도 없으면 그렇게 본다.
+       꾸밈글(Quill)은 <p>ㆍ<ul> 이 줄바꿈을 맡으므로 pre-wrap 을 걸면 빈 줄이 벌어진다
+       (2026-10-01 「팝업 내용 틀이 깨져 보임」). */
+    const 내용칸 = document.getElementById('srxContentBox');
+    내용칸.innerHTML = r.content || '';
+    내용칸.classList.toggle('is-plain', !/<[a-z][\s\S]*>/i.test(r.content || ''));
 
     document.getElementById('srxPrevAnswer').innerHTML = r.answer
       ? `<div class="srx-answer">
            <div class="lbl">답변 · ${esc(r.answerer)} · ${esc(r.answered_at)}</div>
-           <div class="srx-body ce-rich" style="background:transparent;border:0;padding:0;max-height:none;">${r.answer}</div>
+           <div class="srx-body ce-rich${/<[a-z][\s\S]*>/i.test(r.answer || '') ? '' : ' is-plain'}" style="background:transparent;border:0;padding:0;">${r.answer}</div>
          </div>`
       : '';
 
