@@ -16,6 +16,25 @@ class ProductController extends Controller
     private const MAX_ITEMS = 100;
 
     /**
+     * 제품 조회에서 뺄 품목인가 (2026-10-01 지시).
+     *
+     * 운영 위드웍스에는 같은 제품이 두 코드로 서 있다 — 「29012」와 「M29012」가
+     * 이름까지 같고 둘 다 사용중이다. 조회 창에 두 줄이 떠서 담당자가 어느 것을
+     * 골라야 하는지 알 수 없었고, M 쪽은 소비자가가 1원이라 **잘못 고르면 금액이
+     * 거의 0 이 된다.**
+     *
+     * **코드 첫 글자가 M 인 것만** 뺀다. 「M 이 들어간 것」으로 넓히면 가운데 M 을
+     * 품은 정상 제품까지 사라진다 — OCMB(신환 가방)ㆍOCMG(밀착판)ㆍOCMS(곡가위)ㆍ
+     * OCMW(밀착판) 처럼 계정 148659 에만 일곱 가지가 있다.
+     *
+     * 근본은 저쪽에서 쓰지 않는 코드를 내리는 것이다(use_yn=N). 그때까지 가려 둔다.
+     */
+    private static function 뺄품목(?string $code): bool
+    {
+        return str_starts_with(strtoupper(trim((string) $code)), 'M');
+    }
+
+    /**
      * demoworks.co.kr API를 통해 제품을 검색하는 프록시 엔드포인트.
      */
     public function search(Request $request): JsonResponse
@@ -299,6 +318,11 @@ class ProductController extends Controller
 
         $items = [];
         foreach ($res->json('result') ?? [] as $i) {
+            /* 같은 제품의 M 코드는 빼고 보인다 (2026-10-01 지시 · 뺄품목) */
+            if (self::뺄품목($i['item_code'] ?? null)) {
+                continue;
+            }
+
             $items[] = [
                 'code'  => (string) ($i['item_code']   ?? ''),
                 'name'  => (string) ($i['item_name']   ?? ''),
@@ -357,6 +381,12 @@ class ProductController extends Controller
                단종된 것이 섞여 나온다 — 골라서 주문에 올리면 창고에서 막힌다.
                (계정 136155 기준 미사용 15건) */
             if (($item['use_yn'] ?? 'Y') === 'N') {
+                $dropped++;
+                continue;
+            }
+
+            /* 같은 제품의 M 코드는 빼고 보인다 (2026-10-01 지시 · 뺄품목) */
+            if (self::뺄품목($item['item_code'] ?? $item['code'] ?? $item['product_code'] ?? null)) {
                 $dropped++;
                 continue;
             }
