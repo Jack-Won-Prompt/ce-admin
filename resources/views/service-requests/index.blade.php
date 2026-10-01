@@ -489,7 +489,7 @@
 
     document.getElementById('srxPrevAnswer').innerHTML = r.answer
       ? `<div class="srx-answer">
-           <div class="lbl">담긴 답변 · ${esc(r.answerer)} · ${esc(r.answered_at)}</div>
+           <div class="lbl">답변 · ${esc(r.answerer)} · ${esc(r.answered_at)}</div>
            <div class="srx-body ce-rich" style="background:transparent;border:0;padding:0;max-height:none;">${r.answer}</div>
          </div>`
       : '';
