@@ -3223,24 +3223,55 @@ window.ceQuill = (function () {
     return 준비;
   }
 
-  /** 자리 하나에 편집기를 세운다. 이미 선 자리면 그것을 그대로 돌려준다. */
+  /**
+   * 자리 하나에 편집기를 세운다. 이미 선 자리면 그것을 그대로 돌려준다.
+   *
+   * **세우는 중인 것도 그대로 돌려준다** (2026-10-01 지시 「입력 헤더가 2개 보임」).
+   *
+   * 이 함수는 Quill 을 내려받느라 기다린다. 그래서 `el.__quill` 만 보면, 그 기다리는
+   * 사이에 한 번 더 불린 쪽은 아직 비어 있는 것을 보고 **또 하나를 세운다** — 도구막대가
+   * 두 줄이 된다. SR 답변 창이 그랬다: 창을 여는 자리와 답변을 채우는 자리가 같은 칸을
+   * 동시에 세웠다.
+   *
+   * 세우는 약속을 칸에 걸어 두어, 뒤에 부른 쪽은 그 약속을 함께 기다리게 한다.
+   */
   async function make(자리, 안내말) {
     const el = typeof 자리 === 'string' ? document.querySelector(자리) : 자리;
     if (!el) return null;
 
-    if (el.__quill) return el.__quill;
+    if (el.__quill)       return el.__quill;
+    if (el.__quill세우는중) return el.__quill세우는중;
 
-    const Q = await 불러오기();
-    if (!Q) return null;
+    el.__quill세우는중 = (async () => {
+      const Q = await 불러오기();
+      if (!Q) return null;
 
-    const q = new Q(el, {
-      theme: 'snow',
-      placeholder: 안내말 || '',
-      modules: { toolbar: TOOLBAR },
-    });
+      /* 앞서 세운 도구막대가 남아 있으면 걷는다 — 칸을 다시 그렸거나 두 번 세워진
+         자리가 있을 수 있다. Quill 은 제 도구막대를 칸 바로 앞에 붙인다. */
+      let 앞 = el.previousElementSibling;
+      while (앞 && 앞.classList.contains('ql-toolbar')) {
+        const 그앞 = 앞.previousElementSibling;
+        앞.remove();
+        앞 = 그앞;
+      }
 
-    el.__quill = q;
-    return q;
+      const q = new Q(el, {
+        theme: 'snow',
+        placeholder: 안내말 || '',
+        modules: { toolbar: TOOLBAR },
+      });
+
+      el.__quill = q;
+      return q;
+    })();
+
+    try {
+      return await el.__quill세우는중;
+    } finally {
+      /* 끝났으면 약속은 걷는다 — 다음부터는 위의 `el.__quill` 이 바로 답한다.
+         실패했을 때도 걷어야 다시 눌러 세울 수 있다. */
+      delete el.__quill세우는중;
+    }
   }
 
   /** 담을 글 — 사람 눈에 빈 칸이면 '' 로 돌려준다 (Quill 은 빈 칸을 <p><br></p> 로 낸다) */
