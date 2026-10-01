@@ -256,4 +256,84 @@ class DelegationSign extends Model
 
         return $this->{$칸} ? '동의함' : '동의하지 않음';
     }
+
+    /**
+     * 이 거래처의 서명을 **원본에서** 찾는다 — 없으면 null (2026-10-01 지시).
+     *
+     * 이관(2026-09-29)은 한 번 돌린 것이라, 그 뒤에 서명한 사람은 이 표에 들어오지
+     * 못한다. 그래서 운영 데이터 › 위임장 서명에는 「서명 완료」로 보이는데 주문
+     * 등록 화면은 「서명 동의 대기중」이었다 — 두 화면이 서로 다른 표를 읽은 것이다.
+     * 2026-10-01 네 사람이 그랬다(최경범ㆍ김석현ㆍ박상서ㆍ황유진).
+     *
+     * 이제 옮겨 담은 표에서 못 찾으면 여기로 와서 원본을 본다. 이관이 다시 돌아도
+     * 같은 답이 나오도록 **맞추는 잣대를 이관 명령과 같게** 둔다
+     * (MigratePatientsFromWithworksCommand) — 이름을 맞추고, 가린 주민번호로 좁히고,
+     * 둘 이상이면 쓰지 않는다. 사람을 잘못 이으면 남의 서명으로 위임장이 나간다.
+     *
+     * 이관 명령은 운영 고객(ww_customers)을 거쳐 이었지만 여기서는 거래처를 손에
+     * 들고 있다. 가린 주민번호가 없는 원본은 생년월일로 좁히고, 그것도 없으면
+     * 그 이름이 **원본에도 거래처에도 하나뿐일 때만** 잇는다.
+     *
+     * @param string $동의칸 agree_delegation | agree_privacy — 무엇에 동의한 줄을 찾는가
+     */
+    public static function 거래처것(?Patient $patient, string $동의칸 = 'agree_delegation'): ?self
+    {
+        if (! $patient?->id || ! in_array($동의칸, ['agree_delegation', 'agree_privacy'], true)) {
+            return null;
+        }
+
+        $맨이름 = Patient::bare((string) $patient->name);
+        if ($맨이름 === '') {
+            return null;
+        }
+
+        $이름들 = array_values(array_unique([$맨이름, '(E)' . $맨이름]));
+
+        /* 서명을 마쳤고, 그 동의에 체크했고, 그림이 남아 있어야 한다 — 옮겨 담은
+           표에 넣을 때 쓰던 조건 그대로다. 그림이 없는 줄을 받아 주면 위임장이
+           빈 서명란으로 공단에 나간다. */
+        $후보 = static::query()
+            ->where('status', 'signed')
+            ->where($동의칸, true)
+            ->whereIn('customer_name', $이름들)
+            ->where(fn ($q) => $q->where('sign_base64', '!=', '')->whereNotNull('sign_base64')
+                                 ->orWhere(fn ($w) => $w->where('sign_path', '!=', '')->whereNotNull('sign_path')))
+            ->orderByDesc('signed_at')->orderByDesc('id')
+            ->get();
+
+        if ($후보->isEmpty()) {
+            return null;
+        }
+
+        // ① 가린 주민번호로 좁힌다 — 이관 명령의 name_birth 와 같은 자리다
+        if (filled($patient->resident_no_masked)) {
+            $좁힘 = $후보->where('resident_no_masked', $patient->resident_no_masked)->values();
+
+            if ($좁힘->isNotEmpty()) {
+                return $좁힘->count() === 1 ? $좁힘->first() : null;
+            }
+        }
+
+        // ② 생년월일로 좁힌다 — 원본에 가린 주민번호가 없는 줄이 있다
+        if ($patient->birth_date) {
+            $생년 = $patient->birth_date instanceof \DateTimeInterface
+                ? $patient->birth_date->format('Y-m-d')
+                : substr((string) $patient->birth_date, 0, 10);
+
+            $좁힘 = $후보->filter(fn ($d) => $d->birth_date
+                && $d->birth_date->format('Y-m-d') === $생년)->values();
+
+            if ($좁힘->isNotEmpty()) {
+                return $좁힘->count() === 1 ? $좁힘->first() : null;
+            }
+        }
+
+        /* ③ 이름만 — 원본에도 거래처에도 그 이름이 하나뿐일 때만 잇는다.
+              동명이인이 하나라도 있으면 쓰지 않는다. */
+        if ($후보->count() !== 1) {
+            return null;
+        }
+
+        return Patient::whereIn('name', $이름들)->count() === 1 ? $후보->first() : null;
+    }
 }

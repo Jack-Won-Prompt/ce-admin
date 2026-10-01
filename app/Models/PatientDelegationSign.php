@@ -60,6 +60,83 @@ class PatientDelegationSign extends Model
         return Patient::bare($this->customer_name);
     }
 
+    /**
+     * 원본(운영 데이터 › 위임장 서명)을 이 표의 **꼴로만** 만든다 — **담지 않는다**
+     * (2026-10-01 지시).
+     *
+     * 이관 뒤에 서명한 사람은 이 표에 없다. 그때 원본을 이 꼴로 감싸 건네면,
+     * 이 표를 읽는 자리(배지ㆍ위임장ㆍ서명확인 창ㆍ개인정보 동의)를 하나도 고치지
+     * 않아도 된다.
+     *
+     * `exists` 를 false 로 두어 실수로 save() 해도 새 줄이 생기지 않게 한다 —
+     * 담는 일은 이관 명령 한 곳에서만 한다. 담아 버리면 이관이 다시 돌 때 같은
+     * 서명이 두 줄이 되고, 어느 것이 원본에서 온 것인지 알 수 없게 된다.
+     */
+    public static function 원본꼴(DelegationSign $원본, int $patientId): self
+    {
+        $것 = new self();
+
+        $것->forceFill([
+            'patient_id'         => $patientId,
+            'delegation_sign_id' => $원본->id,
+            /* 이관 명령이 적는 값과 섞이지 않게 따로 적는다 — 화면이 「무엇으로
+               이었는가」를 그대로 보여 주므로, 아직 옮겨 담기 전이라는 것이 보인다. */
+            'matched_by'         => 'live',
+
+            'customer_name'      => $원본->customer_name,
+            'dealer_name'        => $원본->dealer_name,
+            'phone'              => $원본->phone,
+            'guardian_phone'     => $원본->guardian_phone,
+            'main_contact'       => $원본->main_contact,
+            'resident_no_masked' => $원본->resident_no_masked,
+            'birth_date'         => $원본->birth_date,
+
+            'guardian_name'       => $원본->guardian_name,
+            'guardian_relation'   => $원본->guardian_relation,
+            'guardian_birth_date' => $원본->guardian_birth_date,
+
+            'agree_delegation'   => (bool) $원본->agree_delegation,
+            'agree_privacy'      => (bool) $원본->agree_privacy,
+            'agree_marketing'    => (bool) $원본->agree_marketing,
+
+            'signed_at'          => $원본->signed_at,
+            'sign_base64'        => $원본->sign_base64,
+            'sign_path'          => $원본->sign_path,
+        ]);
+
+        $것->exists = false;
+
+        return $것;
+    }
+
+    /**
+     * 이 거래처의 서명 — 옮겨 담은 것이 없으면 원본에서 찾아 그 꼴로 돌려준다.
+     *
+     * 이 표를 읽는 모든 자리가 이 한 곳을 지나야 두 길의 답이 갈리지 않는다.
+     *
+     * @param string $동의칸 agree_delegation | agree_privacy
+     */
+    public static function 거래처것(?Patient $patient, string $동의칸 = 'agree_delegation'): ?self
+    {
+        if (! $patient?->id) {
+            return null;
+        }
+
+        $옮긴것 = static::where('patient_id', $patient->id)
+            ->where($동의칸, true)
+            ->whereNotNull('signed_at')
+            ->orderByDesc('signed_at')->orderByDesc('id')
+            ->first();
+
+        if ($옮긴것) {
+            return $옮긴것;
+        }
+
+        $원본 = DelegationSign::거래처것($patient, $동의칸);
+
+        return $원본 ? static::원본꼴($원본, $patient->id) : null;
+    }
+
     /** 무엇으로 이었는지 사람이 읽을 말 */
     public function 짝지은말(): string
     {

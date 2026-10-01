@@ -166,18 +166,28 @@ final class DelegationGate
             return null;
         }
 
-        $서명 = \App\Models\PatientDelegationSign::where('patient_id', $prescription->patient_id)
-            ->where('agree_delegation', true)
-            ->whereNotNull('sign_base64')->where('sign_base64', '!=', '')
-            ->orderByDesc('signed_at')->orderByDesc('id')
-            ->first();
+        /* 옮겨 담은 표에 없으면 원본(운영 데이터 › 위임장 서명)까지 본다
+           (2026-10-01 지시). 찾는 일은 PatientDelegationSign::거래처것 한 곳에 있다 —
+           두 곳에서 따로 찾으면 배지와 문이 어긋나는 날이 온다. */
+        $서명 = \App\Models\PatientDelegationSign::거래처것(
+            $prescription->patient ?? \App\Models\Patient::find($prescription->patient_id),
+            'agree_delegation',
+        );
 
         if (! $서명) {
             return null;
         }
 
+        /* 그림을 끝내 구하지 못하면 서명으로 치지 않는다 — 파일이 아직 안 옮겨진
+           줄이 있을 수 있다. 빈 서명란으로 위임장이 나가느니 막는 편이 낫다. */
+        $동의 = self::서명을동의로($서명, $prescription);
+
+        if (blank($동의->signature_data)) {
+            return null;
+        }
+
         /* 위임기간이 지났으면 다시 받아야 한다 — 우리 서명과 같은 잣대다 */
-        $끝 = self::유효기간(self::서명을동의로($서명, $prescription), $prescription->patient);
+        $끝 = self::유효기간($동의, $prescription->patient);
 
         return ($끝 && $끝->gte(now())) ? $서명 : null;
     }
@@ -205,6 +215,16 @@ final class DelegationGate
         Prescription $prescription
     ): PrescriptionConsent {
         $그림 = (string) $서명->sign_base64;
+
+        /* 그림이 파일로만 있는 줄도 있다 — 그때는 파일을 읽어 담는다 (2026-10-01).
+
+           옮겨 담은 표는 base64 를 함께 들고 왔지만, 원본(운영 데이터 › 위임장 서명)은
+           파일만 있는 줄이 섞여 있다. 그 줄을 그대로 건네면 **서명란이 빈 위임장**이
+           공단에 나간다 — 이 클래스가 그림 없는 줄을 받지 않는 바로 그 까닭이다. */
+        if ($그림 === '' && $서명->sign_path) {
+            $바이트 = $서명->서명그림();
+            $그림    = $바이트 ? 'data:image/png;base64,' . base64_encode($바이트) : '';
+        }
 
         /* 원본이 data URI 로 담긴 것도, 알맹이만 담긴 것도 있다 — 받는 쪽은 data URI 를
            그대로 <img src> 에 넣으므로 꼴을 맞춰 준다 */
@@ -280,11 +300,8 @@ final class DelegationGate
             return null;
         }
 
-        $서명 = \App\Models\PatientDelegationSign::where('patient_id', $patient->id)
-            ->where('agree_delegation', true)
-            ->whereNotNull('sign_base64')->where('sign_base64', '!=', '')
-            ->orderByDesc('signed_at')->orderByDesc('id')
-            ->first();
+        /* 옮겨 담은 표에 없으면 원본까지 본다 (2026-10-01 지시) */
+        $서명 = \App\Models\PatientDelegationSign::거래처것($patient, 'agree_delegation');
 
         if (! $서명) {
             return null;

@@ -185,11 +185,13 @@ class PrivacyConsent extends Model
             return null;
         }
 
-        return \App\Models\PatientDelegationSign::where('patient_id', $patientId)
-            ->where('agree_privacy', true)
-            ->whereNotNull('signed_at')
-            ->orderByDesc('signed_at')->orderByDesc('id')
-            ->first();
+        /* 옮겨 담은 표에 없으면 원본(운영 데이터 › 위임장 서명)까지 본다
+           (2026-10-01 지시). 이관은 한 번 돌린 것이라 그 뒤에 서명한 사람은 이 표에
+           없다 — 위임 서명과 **같은 길**을 지나야 둘이 갈리지 않는다. */
+        return \App\Models\PatientDelegationSign::거래처것(
+            \App\Models\Patient::find($patientId),
+            'agree_privacy',
+        );
     }
 
     /**
