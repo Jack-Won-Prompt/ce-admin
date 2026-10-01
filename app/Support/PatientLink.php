@@ -36,16 +36,35 @@ class PatientLink
             $patient = Patient::whereResidentNo($residentNo)->first();
         }
 
+        /* **이름은 「(E)」를 떼고 맞댄다** (2026-10-01 지시).
+
+           거래처는 담길 때 사업부가 IC 면 이름 앞에 「(E)」가 붙는다
+           (Patient::nameWithCareTag). 그런데 여기서는 **맨 이름으로 찾고 있었다** —
+           이관한 12,608명이 모두 「(E)」를 달고 있으므로 한 명도 걸리지 않았고,
+           주민번호나 휴대폰이 어긋나는 건마다 같은 사람을 새로 만들었다.
+
+           2026-10-01 (E)김광연이 그랬다 — 서명이 들어온 순간 거래처가 하나 더 생겨,
+           위임 자료는 새 거래처의 주문에, 제품은 본래 거래처의 주문에 갈려 담겼다.
+
+           찾을 때는 두 꼴을 다 본다. LIKE 로 넓히지 않는다 — 「김광연」이 「김광연수」를
+           끌어오면 남의 자료에 이어 붙는다. */
+        $맨이름  = Patient::bare($name);
+        $이름들  = array_values(array_unique(array_filter([$맨이름, '(E)' . $맨이름])));
+
+        /* 휴대폰도 꼴을 맞춰 맞댄다 — 한쪽은 「010-5118-2497」, 다른 쪽은
+           「01051182497」로 담긴다. 글자 그대로 견주면 같은 번호가 다른 번호가 된다. */
+        $번호 = preg_replace('/\D/', '', (string) $mobile);
+
         // ② 이름 + 휴대폰으로 검색
-        if (!$patient && $mobile) {
-            $patient = Patient::where('name', $name)
-                ->where('mobile', $mobile)
+        if (!$patient && $번호 !== '') {
+            $patient = Patient::whereIn('name', $이름들)
+                ->whereRaw("REPLACE(REPLACE(COALESCE(mobile,''),'-',''),' ','') = ?", [$번호])
                 ->first();
         }
 
         // ③ 이름만으로 검색 (동명이인 주의 — 하나일 때만 연결)
         if (!$patient) {
-            $sameNamePatients = Patient::where('name', $name)->get();
+            $sameNamePatients = Patient::whereIn('name', $이름들)->get();
             if ($sameNamePatients->count() === 1) {
                 $patient = $sameNamePatients->first();
             }
