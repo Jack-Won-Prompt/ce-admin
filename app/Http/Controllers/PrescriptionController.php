@@ -628,6 +628,35 @@ class PrescriptionController extends Controller
             ];
         }
 
+        /* **이미 보낸 결제 안내가 살아 있으면 다시 보내지 않는다** (2026-10-01 지시).
+
+           담당자가 「결제하기」로 먼저 보내 두는 일이 잦다. 그런데 주문 생성ㆍ연계가
+           끝나면 이 자리가 또 보내, 환자는 같은 안내를 두 통 받았다. 가상계좌는
+           계좌번호까지 같아(살아 있는 계좌를 다시 쓴다) 어느 것을 보고 내야 하는지
+           더 헷갈린다.
+
+           **수단은 가리지 않는다** (지시). 카드로 보내 둔 뒤 가상계좌로 바꾸는 일은
+           담당자가 「결제하기」에서 직접 한다 — 그 자리가 수단을 고르는 자리다.
+
+           잣대는 PaymentLink::is_open 하나다. 받았거나(paid) 거뒀거나(cancelled)
+           기한이 지난(expired) 링크는 살아 있는 것이 아니므로 그때는 보낸다.
+           못 나간 것(failed)은 살아 있는 것으로 본다 — 주소는 멀쩡하고 보내는 길
+           하나가 막힌 것이라, 그 건은 발송ㆍ발행 내역의 「다시 보내기」가 맡는다. */
+        $살아있는링크 = \App\Models\PaymentLink::where('order_id', $order->id)
+            ->latest('id')->get()
+            ->first(fn ($l) => $l->is_open);
+
+        if ($살아있는링크) {
+            return [
+                'sent'    => false,
+                'method'  => $살아있는링크->method,
+                'message' => ($received ? '주문 접수 안내를 보냈습니다. ' : '')
+                           . '결제 안내는 이미 보낸 것이 있어 다시 보내지 않았습니다 ('
+                           . (\App\Models\PaymentLink::METHODS[$살아있는링크->method] ?? $살아있는링크->method)
+                           . ' · ' . ($살아있는링크->sent_at?->format('m-d H:i') ?: '-') . ').',
+            ];
+        }
+
         $method = $this->confirmPayMethod($order);
         $mobile = $prescription->patient?->mobile ?: $prescription->mobile_ocr;
 
