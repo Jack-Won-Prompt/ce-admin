@@ -208,6 +208,56 @@ class DispatchHistoryController extends Controller
         };
     }
 
+    /**
+     * 받는 번호를 목록에 그릴 꼴로 만든다.
+     *
+     * receivers 는 [['rcv' => '01012345678', 'rcvnm' => '홍길동'], …] 로 담긴다.
+     * 번호는 숫자만 들어 있어 그대로 두면 읽기 어렵다 — 끊어서 적는다.
+     * 여럿이면 첫 번호에 「외 N명」을 붙인다(전부는 상세에서 본다).
+     */
+    private static function 받는번호($receivers): string
+    {
+        $목록 = is_array($receivers) ? $receivers : (json_decode((string) $receivers, true) ?: []);
+
+        $번호들 = [];
+        foreach ($목록 as $r) {
+            $숫자 = preg_replace('/\D/', '', (string) (is_array($r) ? ($r['rcv'] ?? '') : $r));
+            if ($숫자 !== '') {
+                $번호들[] = self::번호끊기($숫자);
+            }
+        }
+
+        if (! $번호들) {
+            return '-';
+        }
+
+        return count($번호들) === 1
+            ? $번호들[0]
+            : $번호들[0] . ' 외 ' . (count($번호들) - 1) . '명';
+    }
+
+    /**
+     * 숫자만 담긴 번호를 010-1234-5678 로 끊는다. 아는 꼴이 아니면 그대로 둔다.
+     *
+     * 서울(02)을 먼저 본다 — 지역번호를 한 덩이로 묶어 두면 0212345678 이
+     * 021-234-5678 로 끊겨 엉뚱한 번호로 읽힌다.
+     */
+    private static function 번호끊기(string $숫자): string
+    {
+        foreach ([
+            '/^(02)(\d{3,4})(\d{4})$/',          // 서울
+            '/^(01[016789])(\d{3,4})(\d{4})$/',  // 휴대폰
+            '/^(0[3-6]\d)(\d{3,4})(\d{4})$/',    // 그 밖의 지역
+            '/^(1[5678]\d{2})(\d{4})$/',         // 1588 같은 대표번호
+        ] as $꼴) {
+            if (preg_match($꼴, $숫자, $m)) {
+                return implode('-', array_slice($m, 1));
+            }
+        }
+
+        return $숫자;
+    }
+
     private function buildGrid(string $type, $rows): array
     {
         if ($type === 'message') {
@@ -217,6 +267,8 @@ class DispatchHistoryController extends Controller
                 'channel'  => $m->channelLabel(),
                 'template' => $m->template_label ?: ($m->template_code ?: '자유 문구'),
                 'rx'       => $m->prescription?->rx_number ?? '-',
+                // 누구에게 나갔는지 — 목록에서 바로 보여야 「안 왔다」를 되짚을 수 있다
+                'rcv'      => self::받는번호($m->receivers),
                 'total'    => (int) $m->total,
                 'ok'       => (int) $m->success_count,
                 'ng'       => (int) $m->fail_count,
@@ -233,6 +285,7 @@ class DispatchHistoryController extends Controller
                 ['header' => '채널',     'name' => 'channel',  'width' => 80,  'align' => 'center', 'sortable' => true],
                 ['header' => '유형',     'name' => 'template', 'width' => 130, 'sortable' => true],
                 ['header' => '처방번호', 'name' => 'rx',       'width' => 130],
+                ['header' => '수신 번호', 'name' => 'rcv',     'width' => 160],
                 ['header' => '대상',     'name' => 'total',    'width' => 70,  'editor' => 'number'],
                 ['header' => '성공',     'name' => 'ok',       'width' => 70,  'editor' => 'number'],
                 ['header' => '실패',     'name' => 'ng',       'width' => 70,  'editor' => 'number'],
@@ -640,11 +693,19 @@ class DispatchHistoryController extends Controller
         return MessageHistory::with(['sentBy', 'prescription'])
             ->whereBetween(DB::raw('DATE(message_histories.created_at)'), [$from, $to])
             ->when($search, function ($q) use ($search) {
-                $q->where(function ($q2) use ($search) {
+                /* 목록에는 010-3422-7121 로 그려 주는데 receivers 에는 숫자만 담겨 있다.
+                   보이는 대로 긁어 붙이면 한 건도 안 나온다 — 숫자만 남긴 것으로도 훑는다. */
+                $숫자 = preg_replace('/\D/', '', (string) $search);
+
+                $q->where(function ($q2) use ($search, $숫자) {
                     $q2->where('content', 'like', "%{$search}%")
                        ->orWhere('template_label', 'like', "%{$search}%")
                        ->orWhere('receivers', 'like', "%{$search}%")
                        ->orWhereHas('prescription', fn ($q3) => $q3->where('rx_number', 'like', "%{$search}%"));
+
+                    if ($숫자 !== '' && $숫자 !== $search) {
+                        $q2->orWhere('receivers', 'like', "%{$숫자}%");
+                    }
                 });
             })
             ->orderByDesc('message_histories.created_at');
