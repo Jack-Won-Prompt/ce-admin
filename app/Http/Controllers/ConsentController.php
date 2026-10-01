@@ -1010,9 +1010,22 @@ class ConsentController extends Controller
            신분증만 받은 줄도 `agreed` 가 되기 때문이다(DelegationGate). */
         $delegationSigned = \App\Support\DelegationGate::signed($prescription);
 
-        if (!$latest) {
-            /* 이 처방전에 동의 줄이 없어도 **쓸 수 있는 서명이 있을 수 있다**
-               (2026-09-29 지시).
+        /* **서명이 담긴 줄이 없을 때도 이 길로 보낸다** (2026-10-01 지시
+           「… (E)이승원 서명동의한 환자 주문 등록에서 위임동의 완료로 안 보임」).
+
+           여태 잣대가 「동의 줄이 하나도 없는가」(`!$latest`)였다. 그래서 담당자가
+           「완료」가 안 보여 위임동의 링크를 한 번 보내면, 그 `pending` 줄이 가장 최근
+           줄이 되어 **유효한 옮겨 온 서명을 영구히 가렸다** — 보낼수록 더 가려지는 덫이다.
+
+           보내 두기만 한 줄(pending)ㆍ거절된 줄ㆍ만료된 줄은 서명이 아니다. 서명이
+           담긴 줄이 있을 때만 그것을 쓰고, 아니면 쓸 수 있는 서명을 찾아 준다. */
+        $서명담김 = $latest
+            && $latest->status === 'agreed'
+            && filled($latest->signature_data);
+
+        if (! $서명담김) {
+            /* 이 처방전에 쓸 수 있는 서명이 담긴 줄이 없어도 **쓸 수 있는 서명이 있을
+               수 있다** (2026-09-29 지시).
 
                  · 지난 서명 — 같은 사람의 지난 건에서 받아 위임기간 안이다
                  · 옮겨 온 서명 — 운영 데이터(위드웍스 위임장 서명)에서 온 것
@@ -1029,7 +1042,10 @@ class ConsentController extends Controller
             $쓸것 = $옮긴서명 ? \App\Support\DelegationGate::옮겨온서명동의($prescription) : $지난서명;
 
             return response()->json([
-                'exists'            => false,
+                /* 동의 줄이 있으면 사실대로 true 다 — 보낸 자취를 없는 것으로 적지
+                   않는다. 배지는 아래 reused_sign 을 보고 선다. */
+                'exists'            => (bool) $latest,
+                'status'            => $latest?->status,
                 'privacy'           => $privacy,
                 'delegation_signed' => $delegationSigned,
                 /* 화면이 배지를 세울 때 쓰는 값 — exists 는 그대로 false 다.

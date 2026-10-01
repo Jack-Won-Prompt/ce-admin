@@ -233,8 +233,20 @@ final class DelegationGate
      */
     public static function 유효기간(PrescriptionConsent $consent, ?Patient $patient = null): ?Carbon
     {
-        $patient ??= $consent->prescription?->patient;
+        return self::서명유효기간(
+            $consent->responded_at ?? $consent->updated_at ?? $consent->created_at,
+            $patient ?? $consent->prescription?->patient
+        );
+    }
 
+    /**
+     * 서명한 날과 거래처만으로 재는 유효기간 (2026-10-01).
+     *
+     * 동의 줄 없이 **거래처에 이어 둔 옮겨 온 서명**을 가릴 때 쓴다. 셈은 위와 한
+     * 곳이어야 한다 — 두 곳에서 각자 재면 배지는 「완료」인데 문은 막히는 날이 온다.
+     */
+    public static function 서명유효기간($서명일, ?Patient $patient = null): ?Carbon
+    {
         if ($patient?->nhis_agree_end) {
             try {
                 return Carbon::parse($patient->nhis_agree_end)->endOfDay();
@@ -242,8 +254,6 @@ final class DelegationGate
                 // 값이 날짜가 아니면 아래 서명일 기준으로 센다
             }
         }
-
-        $서명일 = $consent->responded_at ?? $consent->updated_at ?? $consent->created_at;
 
         if (! $서명일) {
             return null;
@@ -254,6 +264,35 @@ final class DelegationGate
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * 거래처에 이어 둔 옮겨 온 서명 — **처방전 없이** 가린다 (2026-10-01 지시).
+     *
+     * 「운영 데이터 메뉴의 위임장 서명에서 (E)이승원 서명동의한 환자 주문 등록에서
+     * 위임동의 완료로 안 보임」에서 드러났다. 거래처를 고르는 자리(latestConsentState)는
+     * 처방전을 손에 들고 있지 않아 옮겨온서명() 을 부를 수 없었고, 그래서 이관된 서명을
+     * 아예 보지 못했다 — 같은 화면의 쪽지는 보고 있는데 배지만 몰랐다.
+     */
+    public static function 거래처서명(?Patient $patient): ?\App\Models\PatientDelegationSign
+    {
+        if (! $patient?->id) {
+            return null;
+        }
+
+        $서명 = \App\Models\PatientDelegationSign::where('patient_id', $patient->id)
+            ->where('agree_delegation', true)
+            ->whereNotNull('sign_base64')->where('sign_base64', '!=', '')
+            ->orderByDesc('signed_at')->orderByDesc('id')
+            ->first();
+
+        if (! $서명) {
+            return null;
+        }
+
+        $끝 = self::서명유효기간($서명->signed_at, $patient);
+
+        return ($끝 && $끝->gte(now())) ? $서명 : null;
     }
 
     /** 이 건이 미성년자의 것인가 — 보호자 신분증을 함께 내야 하는가 */

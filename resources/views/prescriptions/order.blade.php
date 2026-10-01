@@ -7902,7 +7902,11 @@ window.HELP_TOUR_STEPS = [
     /* 위임동의는 처방전에 달리지만 사람에게 묶어 읽는다 — 지난 처방전에서 이미 서명을
        받았다면 이 처방전에서도 「위임동의 완료」로 보여야 한다. */
     const st = data.consent?.status;
-    if (st && typeof window._applyConsentBtn === 'function') window._applyConsentBtn(st);
+    /* 다시 쓰는 서명(운영 데이터에서 옮겨 온 것)이 오면 함께 넘긴다 — 배지에
+       「어디서 온 서명인지ㆍ언제까지」가 적혀야 담당자가 되짚을 수 있다 (2026-10-01). */
+    if (st && typeof window._applyConsentBtn === 'function') {
+      window._applyConsentBtn(st, data.consent?.reused_sign ?? null);
+    }
     // 개인정보 동의도 사람을 따라간다 — 없으면 「받은 것 없음」으로 되돌린다
     if (typeof window._applyPrivacyBtn === 'function') {
       window._applyPrivacyBtn(data.privacy ?? { exists: false, agreed: false });
@@ -15847,7 +15851,11 @@ window.HELP_TOUR_STEPS = [
       /* data 는 const 라 다시 담을 수 없다 — 볼 것을 따로 쥔다 */
       let 볼것 = data;
 
-      if (!data.exists && data.reused_sign) {
+      /* `exists` 가 true 여도(보내 둔 pending 줄이 있어도) 서명이 담기지 않았으면
+         서버가 reused_sign 을 준다 — 그것을 먼저 본다 (2026-10-01 지시).
+         여태 `!data.exists` 를 함께 보아, 링크를 한 번 보낸 뒤에는 이 길로 오지
+         못하고 서명 보내기 창으로 새 나갔다. */
+      if (data.reused_sign) {
         볼것 = Object.assign({ exists: true, status: 'agreed' }, data.reused_sign);
       } else if (!data.exists || data.status !== 'agreed') {
         pop.style.display = 'none';
@@ -16580,8 +16588,14 @@ window.HELP_TOUR_STEPS = [
          (2026-09-29 지시) — 지난 서명이거나, 운영 데이터에서 옮겨 온 서명이다.
          여태 여기서 그냥 돌아섰고, 그래서 위임장에 서명한 사람인데도 「서명 동의」
          단추가 그대로 서서 담당자가 이미 받은 서명을 또 받으러 갔다. */
+      /* 서명이 담긴 줄이 없으면 서버가 reused_sign 을 준다 — 동의 줄이 있든 없든
+         그것이 오면 「완료」로 세운다 (2026-10-01 지시). 여태 `!data.exists` 일 때만
+         보아, 보내 둔 pending 줄 하나가 유효한 옮겨 온 서명을 가렸다. */
+      if (data.reused_sign) {
+        _applyConsentBtn('agreed', data.reused_sign);
+        return;
+      }
       if (!data.exists) {
-        if (data.reused_sign) _applyConsentBtn('agreed', data.reused_sign);
         return;
       }
 

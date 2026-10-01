@@ -2670,6 +2670,43 @@ class PrescriptionController extends Controller
             ->orderByDesc('responded_at')->orderByDesc('id')
             ->first();
 
+        /* **서명이 담긴 줄이 없으면 옮겨 온 서명을 본다** (2026-10-01 지시
+           「운영 데이터 메뉴의 위임장 서명에서 (E)이승원 서명동의한 환자 주문 등록에서
+           위임동의 완료로 안 보임」).
+
+           여태 이 자리는 우리 동의 줄만 보았다. 그래서 운영 데이터(위드웍스 위임장)에서
+           서명을 옮겨 온 사람은 「위임동의 완료」가 서지 않았고, 담당자는 이미 받은
+           서명을 또 받으러 링크를 보냈다. 그러면 그 `pending` 줄이 가장 최근 줄이 되어
+           **유효한 서명을 영구히 가린다** — 스스로를 강화하는 덫이었다.
+
+           그래서 「서명이 담긴 줄이 있는가」로 가린다. 보내 두기만 한 줄(pending)이나
+           거절된 줄은 서명이 아니므로 옮겨 온 서명에 자리를 내준다.
+
+           화면이 쓰는 꼴은 ConsentController 의 `reused_sign` 과 같다 — 같은 배지를
+           그리는 자리이므로 이름이 갈리면 한쪽만 고치는 날이 온다. */
+        $서명담김 = $c
+            && $c->status === 'agreed'
+            && filled($c->signature_data);
+
+        if (! $서명담김) {
+            if ($옮긴서명 = \App\Support\DelegationGate::거래처서명($patient)) {
+                return [
+                    'status'       => 'agreed',
+                    'responded_at' => $옮긴서명->signed_at?->format('Y-m-d'),
+                    'rx_number'    => null,
+                    'reused_sign'  => [
+                        'source'      => 'migrated',
+                        'label'       => '운영 데이터의 서명',
+                        'signed_at'   => $옮긴서명->signed_at?->format('Y-m-d'),
+                        'rx_number'   => null,
+                        'valid_until' => \App\Support\DelegationGate::서명유효기간(
+                                            $옮긴서명->signed_at, $patient)?->format('Y-m-d'),
+                        'matched_by'  => $옮긴서명->matched_by,
+                    ],
+                ];
+            }
+        }
+
         if (!$c) {
             return null;
         }
