@@ -463,6 +463,32 @@ class Order extends Model
      */
     public function payMethod(): string
     {
+        /* **돈이 들어온 뒤에는 토스가 알려 준 유형이 정본이다** (2026-10-01 지시).
+
+           이 값이 증빙을 가른다 — 가상계좌ㆍ무통장이면 현금영수증, 카드면 매출전표다
+           (DepositAutoIssue::cashReceipt).
+
+           담당자가 **카드 링크**를 보내도 환자는 토스 결제창에서 **가상계좌**를 고를 수
+           있다. 그런데 여태 우리가 안내한 수단(pay_method = card)만 보아, 그 건은
+           현금영수증을 「카드니까」 건너뛰고 매출전표는 카드 승인 자료가 없어 만들지
+           못했다 — **본인부담에 증빙이 하나도 남지 않았다**
+           (2026-10-01 (E)이승원 81,000원 · 가상계좌로 받았는데 card 로 적혀 있었다).
+
+           같은 원칙이 payMethodLabel 에는 이미 적혀 있다(2026-09-09 지시) — 이름표만
+           바로잡고 증빙을 가르는 이 자리를 두었던 것이 잘못이다.
+
+           토스가 분명히 말한 둘만 받는다. 그 밖의 유형은 아래 예전 길로 간다 —
+           모르는 값으로 현금영수증과 매출전표를 가르면 같은 금액이 두 번 신고된다. */
+        $토스 = $this->tossPayment?->method;
+
+        if ($토스 === 'VIRTUAL_ACCOUNT') {
+            return \App\Models\PaymentLink::METHOD_VIRTUAL;
+        }
+
+        if ($토스 === 'CARD') {
+            return \App\Models\PaymentLink::METHOD_CARD;
+        }
+
         if ($this->pay_method && isset(\App\Models\PaymentLink::METHODS[$this->pay_method])) {
             return $this->pay_method;
         }

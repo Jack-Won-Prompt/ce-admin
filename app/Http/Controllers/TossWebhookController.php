@@ -175,6 +175,31 @@ class TossWebhookController extends Controller
 
         $tp = \App\Models\TossPayment::where('payment_key', $key)->first();
 
+        /* **결제 줄이 없으면 결제 링크로 세운다** (2026-10-01 지시 — 입금 웹훅과 같다).
+
+           카드 건도 돌아오는 화면이 그 줄을 세운다. 그 요청이 끊기면 줄이 없는 채로
+           승인 알림만 오고, 여기서 그냥 지나가 **돈은 받았는데 장부에 한 줄도 남지
+           않는다.** 우리가 200 으로 답하므로 토스도 다시 보내지 않는다. */
+        if (! $tp?->order) {
+            $링크 = \App\Models\PaymentLink::query()
+                ->where(fn ($q) => $q->where('payment_key', $key)
+                                     ->orWhere('toss_order_id', $payload['data']['orderId'] ?? ''))
+                ->with('order')->latest('id')->first();
+
+            if ($링크?->order) {
+                try {
+                    $tp = $this->vaService->주문결제줄($링크, $res);
+                    Log::warning('[Toss] 결제 줄이 없어 링크로 세웠다 — 돌아오는 화면이 끊긴 건이다', [
+                        'link' => $링크->id, 'order' => $링크->order_id,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::error('[Toss] 링크로 결제 줄을 세우지 못했다', [
+                        'link' => $링크->id, 'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
         if (! $tp?->order) {
             return response()->json(['ok' => true, 'skipped' => '이어진 주문 없음']);
         }

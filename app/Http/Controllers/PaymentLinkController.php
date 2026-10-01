@@ -393,49 +393,13 @@ class PaymentLinkController extends Controller
             return;
         }
 
-        /* 한 주문에 한 줄이다 — toss_payments 는 order_id 가 유일하다.
-           그런데 예전에는 결제키로 찾아 올렸다. 가상계좌를 먼저 발급해 둔
-           주문을 고객이 카드로 내면, 같은 주문에 다른 결제키로 한 줄을 더
-           넣으려 해 유일 제약에 걸렸다 — 결제는 끝난 뒤인데 돌아오는 화면이
-           500 으로 죽어, 고객은 돈을 내고도 실패한 줄 알았다.
+        /* 결제 줄을 세우는 셈은 **한 곳에 둔다** (2026-10-01).
 
-           주문으로 찾아 올린다. 가장 마지막 결제가 그 주문의 결제다. */
-        /* 지운 줄까지 본다. 유일 제약은 소프트 삭제를 가리지 않는다 — 지워 둔
-           가상계좌 줄이 남아 있으면 새로 넣으려다 똑같이 걸린다. 되살려 덮는다. */
-        $tp    = TossPayment::withTrashed()->firstOrNew(['order_id' => $link->order_id]);
-        $isNew = ! $tp->exists;
-
-        /* 앞 결제의 취소 자취를 지울 것인가 — **결제키가 달라졌을 때만** 지운다.
-
-           한 주문에 한 줄이라, 정정으로 환불한 뒤 새 금액을 다시 받으면 같은 줄을
-           덮어 쓴다. 그런데 취소액만 남겨 두어 Order::결제기준금액() 이
-           「받은 돈 − 취소액」을 0 으로 읽었다. 목록은 결제완료라는데 정정
-           미리보기는 「입금 전이라 환불할 금액이 없습니다」로 갈려, 그대로 정정하면
-           **실제로 받은 돈을 돌려주지 않는다**
-           (2026-09-23 무한 테스트 CASE 6 에서 드러남).
-
-           같은 결제키로 이 자리에 다시 들어오는 일이 있다(돌아오는 화면 새로고침).
-           그때까지 지우면 부분취소한 금액이 없던 일이 되므로, 키가 같으면 둔다. */
-        $새결제 = ($res['paymentKey'] ?? $link->payment_key) !== $tp->payment_key;
-
-        $tp->forceFill([
-            'payment_key'    => $res['paymentKey'] ?? $link->payment_key,
-            'toss_order_id'  => $res['orderId'] ?? $link->toss_order_id,
-            'method'         => $va ? 'VIRTUAL_ACCOUNT' : 'CARD',
-            'status'         => $res['status'] ?? 'DONE',
-            'amount'         => (int) ($res['totalAmount'] ?? $link->amount),
-            'bank'           => $va['bankCode']      ?? null,
-            'account_number' => $va['accountNumber'] ?? null,
-            'customer_name'  => $va['customerName']  ?? ($link->order?->patient?->name),
-            'due_date'       => $va['dueDate']       ?? null,
-            'deposited_at'   => $va ? null : now(),
-            'raw_response'   => $res,
-            'deleted_at'     => null,
-        ] + ($새결제 ? [
-            'cancel_amount'  => 0,
-            'cancel_reason'  => null,
-            'canceled_at'    => null,
-        ] : []))->save();
+           입금 웹훅도 같은 일을 해야 한다 — 이 화면이 끊겨 줄이 없는 채로 입금이
+           들어오는 길이 있기 때문이다(2026-10-01 (E)이승원). 두 곳에서 각자 적으면
+           한쪽만 고치는 날이 온다. */
+        $tp    = app(\App\Services\TossPayments\VirtualAccountService::class)->주문결제줄($link, $res);
+        $isNew = $tp->wasRecentlyCreated;
 
         /* 가상계좌를 고른 사람에게는 계좌를 문자로 한 번 더 적어 보낸다.
            이 화면을 닫으면 계좌를 다시 볼 곳이 우리 쪽에 없어, 담당자에게 전화해
