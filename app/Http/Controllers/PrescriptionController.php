@@ -2661,6 +2661,26 @@ class PrescriptionController extends Controller
      * 동의는 처방전에 달리지만 사람에게 묶어 읽는다 — 지난 처방전에서 이미 서명을 받았다면
      * 새 처방전에서도 「위임동의 완료」로 보여야 한다. 만료된 것은 만료로 적는다.
      */
+    /**
+     * 검수가 끝났는가 — 화면이 다시 묻는 자리 (2026-10-01 지시).
+     *
+     * 파일 검수는 처방전 목록에서 한다. 주문 등록 화면은 열 때 박아 둔 상태를 그대로
+     * 들고 있어, 그 사이 검수를 마쳐도 모른 채 「검수를 완료해야 합니다」로 막았다
+     * (2026-10-01 (E)이동진 EUD202610010953081 — 10:22:37 에 검수를 마쳤는데
+     * 09:52 에 연 화면이 막았다).
+     *
+     * 화면을 다시 불러야 풀리는 막음은 막음이 아니다 — 담당자는 왜 막히는지 모른다.
+     */
+    public function reviewState(Prescription $prescription): JsonResponse
+    {
+        return response()->json([
+            'status'      => $prescription->status,
+            'reviewed'    => in_array($prescription->status, ['approved', 'ordered', 'ocr_done'], true),
+            'reviewed_at' => $prescription->reviewed_at?->format('Y-m-d H:i'),
+            'reviewer'    => \App\Models\User::find($prescription->reviewed_by)?->name,
+        ]);
+    }
+
     private function latestConsentState(Patient $patient): ?array
     {
         $c = \App\Models\PrescriptionConsent::whereIn(

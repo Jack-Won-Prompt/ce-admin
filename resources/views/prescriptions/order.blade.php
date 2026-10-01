@@ -10960,7 +10960,7 @@ window.HELP_TOUR_STEPS = [
      동의 없이 공단에 청구할 서류가 만들어지며, 처방보다 많은 수량이 팔린다. */
 
   /** 검수를 마쳤는가 — 마치기 전에는 사지도 저장하지도 못한다 */
-  function gateReviewed() {
+  async function gateReviewed() {
     if (RX_STATUS === 'approved' || RX_STATUS === 'ordered') return true;
 
     /* 처방외 건은 검수를 지나지 않는다 (2026-09-15 지시).
@@ -10976,6 +10976,31 @@ window.HELP_TOUR_STEPS = [
        처방외는 그 표에서 기관 부담이 없는 쪽으로 서므로, 검수를 열어 준다고 해서
        청구가 새지 않는다. */
     if ((document.getElementById('f-acc-add-type')?.value ?? '') === '20') return true;
+
+    /* **막기 전에 서버에 다시 묻는다** (2026-10-01 지시).
+
+       RX_STATUS 는 이 화면을 열 때 한 번 박히는 값이다. 그런데 파일 검수는
+       **처방전 목록**에서 한다 — 이 화면을 열어 둔 채 검수를 마치면 여기는 그 사실을
+       영영 모르고, 이미 끝난 검수를 두고 「검수를 완료해야 합니다」로 막았다
+       (2026-10-01 (E)이동진 EUD202610010953081 — 10:22:37 검수, 09:52 에 연 화면).
+
+       화면을 다시 불러야 풀리는 막음은 막음이 아니다. 담당자는 왜 막히는지 모르고,
+       다 적어 둔 것을 잃을까 봐 새로 고치지도 못한다. */
+    try {
+      const res = await fetch(`/prescriptions/${encodeURIComponent(RX_NUMBER)}/review-state`,
+                              { headers: { 'Accept': 'application/json' } });
+      if (res.ok) {
+        const d = await res.json();
+        if (d.reviewed) {
+          /* 끝나 있었다 — 화면의 상태도 그 자리에서 맞춘다 */
+          setRxStatus(d.status, null, null);
+          showToast('검수가 끝나 있어 그대로 진행합니다'
+                    + (d.reviewed_at ? ` (${d.reviewed_at}${d.reviewer ? ' · ' + d.reviewer : ''})` : ''),
+                    'success');
+          return true;
+        }
+      }
+    } catch (e) { /* 못 물어보면 아래 잣대로 간다 — 묻지 못한 것이 통과시킬 까닭은 아니다 */ }
 
     ceAlert('검수를 완료해야 구매를 진행하고 저장할 수 있습니다.', { title: '검수가 아직입니다' });
     return false;
@@ -11379,12 +11404,12 @@ window.HELP_TOUR_STEPS = [
     } catch (e) { }
   }
 
-  function gateOrder() {
+  async function gateOrder() {
     /* 어느 문에서 막혔는지 적어 둔다 — 창을 닫아도 자취가 남는다 */
     /* 취소로 닫은 건이 가장 먼저다 (2026-09-27 확인요청 6쪽) — 닫힌 건에 대고
        검수가 어떻고 수량이 어떻고를 따지는 것은 뒤바뀐 차례다. */
     if (gate취소사유())          { 막힘알림('취소 사유', '취소로 닫은 건입니다'); return false; }
-    if (!gateReviewed())        { 막힘알림('검수',      '검수가 아직 끝나지 않았습니다'); return false; }
+    if (!await gateReviewed())  { 막힘알림('검수',      '검수가 아직 끝나지 않았습니다'); return false; }
     if (!gateConsent())         { 막힘알림('동의',      '필요한 동의를 아직 받지 못했습니다'); return false; }
     if (!gateTotalCount(true))  { 막힘알림('총계',      '1일 처방 개수 × 총 처방일수가 총계와 맞지 않습니다'); return false; }
     if (!gate청구한도(true))     { 막힘알림('청구 한도', '공단 청구 한도를 넘었습니다'); return false; }
@@ -11399,7 +11424,7 @@ window.HELP_TOUR_STEPS = [
     const btn = e.target.closest('button') ?? e.target;
 
     // 검수ㆍ동의ㆍ수량 — 셋 다 지나야 창고로 보낼 수 있다(요청서 7ㆍ12ㆍ17쪽)
-    if (!gateOrder()) return;
+    if (!await gateOrder()) return;
 
     /* 확인을 받고, 겹쳐 누르는 것을 막는다 (2026-09-15 지시).
        이미 연계된 주문에 또 보내면 창고에 판매주문이 하나 더 선다. */
@@ -12311,7 +12336,7 @@ window.HELP_TOUR_STEPS = [
     const 창고로가나 = orderExists && existingOrder;
 
     if (창고로가나) {
-      if (!gateOrder()) return;
+      if (!await gateOrder()) return;
     } else {
       gateTotalCount(false);
       gate청구한도(false);

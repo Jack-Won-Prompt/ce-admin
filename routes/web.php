@@ -180,6 +180,12 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{prescription}/withworks-order', [PrescriptionController::class, 'deleteWithworksOrder'])->name('withworksOrderDelete');
         // 메모 CRUD
         Route::post('/{prescription}/consent-sms',    [PrescriptionController::class, 'sendConsentSms'])->name('consentSms');
+        /* 검수가 끝났는지 화면이 다시 묻는 자리 (2026-10-01 지시).
+
+           파일 검수는 **처방전 목록**에서 한다. 그래서 주문 등록 화면을 열어 둔 채
+           검수를 마치면, 그 화면은 열 때 박아 둔 옛 상태를 그대로 들고 있어
+           「검수를 완료해야 합니다」로 막혔다 — 검수는 이미 끝났는데. */
+        Route::get( '/{prescription}/review-state', [PrescriptionController::class, 'reviewState'])->name('reviewState');
         Route::get( '/{prescription}/consent-status', [ConsentController::class,     'statusCheck'])->name('consentStatus');
         Route::get( '/{prescription}/consent-pdf',    [ConsentController::class,     'downloadPdf'])->name('consentPdf');
         Route::get( '/{prescription}/consent-signature', [ConsentController::class,  'downloadSignature'])->name('consentSignature');
