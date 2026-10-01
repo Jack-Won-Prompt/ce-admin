@@ -232,6 +232,30 @@ class PrivacyConsent extends Model
                서명 그림은 보지 않는다. 그 그림은 위임장에 찍을 것이고, 개인정보 동의는
                그 화면에서 체크한 사실 자체가 증빙이다. 옮길 때 서명을 마친 줄만 담았다
                (PatientDelegationSign). */
+            /* **서면 위임장을 받아 두었으면 개인정보 동의도 받은 것으로 본다**
+               (2026-10-01 지시 「위임장을 올리면 개인정보 동의도 받은 것으로 본다」).
+
+               종이로 쓰는 위임장 서식에는 **개인정보 수집ㆍ이용 동의 항목이 함께
+               들어 있다**(2026-10-01 확인). 그래서 그 한 장에 받은 서명이 두 동의의
+               증빙이 된다 — 전자 서명 화면이 위임동의와 개인정보 동의를 한 번에 받아
+               두 PDF 로 나누어 담는 것과 같다.
+
+               source 에는 무엇으로 받았는지 그대로 적는다(서면 위임장(업로드)).
+               화면도 그 말을 그대로 보인다 — 증빙을 찾을 때 어느 서류를 열어야 하는지
+               담당자가 바로 알 수 있어야 한다. */
+            if ($위임장 = \App\Support\DelegationGate::서면위임장(
+                    \App\Models\Patient::find($patientId))) {
+                return [
+                    'exists' => true,
+                    'agreed' => true,
+                    'source' => '서면 위임장(업로드)',
+                    'at'     => $위임장->created_at?->format('Y-m-d H:i'),
+                    'paper'  => true,
+                    'info'   => [],
+                    'items'  => [],
+                ];
+            }
+
             if ($옮긴 = static::옮겨온동의($patientId)) {
                 return [
                     'exists'    => true,

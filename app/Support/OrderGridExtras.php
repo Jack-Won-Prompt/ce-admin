@@ -805,6 +805,19 @@ class OrderGridExtras
             }
         }
 
+        /* 서면 위임장을 받아 둔 거래처도 개인정보 동의로 센다 (2026-10-01 지시).
+           판정 한 곳(PrivacyConsent::stateFor)과 같은 잣대여야 목록과 상세가
+           갈리지 않는다. 마케팅 동의는 적지 않는다 — 위임장에 그 항목이 없다. */
+        $위임장받은곳 = \App\Models\PrescriptionAttachment::where('doc_type', 'delegation')
+            ->whereIn('prescription_id',
+                \App\Models\Prescription::whereIn('patient_id', $ids)->select('id'))
+            ->join('prescriptions', 'prescriptions.id', '=', 'prescription_attachments.prescription_id')
+            ->distinct()->pluck('prescriptions.patient_id');
+
+        foreach ($위임장받은곳 as $pid) {
+            $this->privacy[(int) $pid] = true;
+        }
+
         foreach ($people as $p) {
             if (! ($this->privacy[$p->id] ?? false)) {
                 foreach ([$p->mobile, $p->phone] as $tel) {

@@ -16619,11 +16619,11 @@ window.HELP_TOUR_STEPS = [
     if (st.paper) {
       return `
         <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.7;">
-          <strong>개인정보 수집·이용 동의서</strong>를 서면으로 받아 두었습니다.<br>
-          <span style="color:var(--text-muted);">올린 때 ${esc(st.at) || '-'}</span>
+          <strong>개인정보 수집·이용 동의</strong>를 서면으로 받아 두었습니다.<br>
+          <span style="color:var(--text-muted);">받은 서류 ${esc(st.source) || '서면(업로드)'} · 올린 때 ${esc(st.at) || '-'}</span>
         </p>
         <p style="font-size:11px;color:var(--text-muted);margin:0;line-height:1.6;">
-          적힌 내용은 첨부 문서에서 봅니다 — 서류 관리의 「개인정보 동의서」입니다.
+          적힌 내용은 서류 관리에서 그 서류를 열어 확인합니다.
         </p>
         <div style="display:flex;justify-content:flex-end;">
           <button class="btn btn-outline btn-sm" id="pvOpenList">개인정보동의 화면</button>
