@@ -3055,7 +3055,7 @@ $calcDeposit  = $calcCopay;
                          친 이름은 그대로 들고 간다. --}}
                     <button type="button" class="ds-btn" id="pkNewAccount" style="display:none;"
                             onclick="pkNewAccount()">
-                      <i class="fa-solid fa-user-plus"></i> 신규 등록
+                      <i class="fa-solid fa-user-plus"></i> 거래처 신규 등록
                     </button>
                     <button type="button" class="ds-btn" onclick="pkClose()">닫기</button>
                     <button type="button" class="ds-btn ds-btn-primary" onclick="pkPick()">선택</button>
