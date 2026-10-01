@@ -13277,7 +13277,7 @@ window.HELP_TOUR_STEPS = [
   /* ── 결제 전송 ─────────────────────────────────────────
      만들어 보내고, 무엇을 보냈는지 그 자리에서 본다. 창이 열릴 때 이력을 한 번 불러
      둔다 — 보내기 전에 「아까 보낸 것이 아직 안 냈구나」를 먼저 보게 하려는 것이다. */
-  const PAY_STATE      = @json($payState);
+  let PAY_STATE        = @json($payState);
   /* 주문이 생기면 둘 다 채운다 — const 로 두면 화면을 열 때의 null 이 그대로 굳는다.
      이력(index)은 2026-09-26 에 고쳤는데 **보내기(store)는 남아 있었다.** 그래서
      주문을 만든 그 화면에서 결제전송의 「전송」을 누르면 아무 일도 일어나지 않고
@@ -13295,6 +13295,57 @@ window.HELP_TOUR_STEPS = [
      같은 안내가 두 번 나가지 않는다. 화면을 연 동안 한 번만 알린다 — 창을 여닫을
      때마다 뜨면 읽지 않고 지나치게 된다. */
   let _결제알림함 = false;
+
+  /* 창으로 돌아오면 바깥에서 바뀐 것을 다시 읽는다 (2026-10-01 지시).
+
+     이 화면은 열 때 박아 둔 값을 끝까지 들고 간다. 그런데 그 값들은 **바깥에서**
+     바뀐다 — 검수는 처방전 목록에서, 결제는 환자가 토스에서, 입금은 웹훅으로.
+     담당자는 화면을 새로 고칠 까닭을 알 수 없고, 적어 둔 것을 잃을까 봐 고치지도
+     못한다. 같은 모양으로 하루에 셋이 났다:
+
+       · 「결제 대기」인데 이미 받은 건 (EUD202610010927221)
+       · 「검수를 완료해야 합니다」인데 이미 검수를 마친 건 (EUD202610010953081)
+       · 「링크 전송완료」인데 이미 받은 건 (같은 건)
+
+     그래서 **다른 창을 보고 돌아오는 그 순간** 한 번 묻는다. 검수를 하러 가거나
+     결제를 보고 오는 길이 모두 이 길을 지난다.
+
+     읽기만 하고 적은 것은 건드리지 않는다 — 담당자가 치던 칸을 덮으면 그것이 더 나쁘다.
+     짧은 사이에 여러 번 묻지 않는다(10초). */
+  let _되읽은때 = 0;
+
+  async function 바깥상태다시읽기() {
+    if (!window.RX_NUMBER) return;
+    if (Date.now() - _되읽은때 < 10000) return;
+    _되읽은때 = Date.now();
+
+    try {
+      const res = await fetch(`/prescriptions/${encodeURIComponent(RX_NUMBER)}/review-state`,
+                              { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) return;
+      const d = await res.json();
+
+      /* 검수 — 끝나 있으면 걸음과 문을 함께 푼다 */
+      if (d.status && d.status !== RX_STATUS) {
+        setRxStatus(d.status, null, null);
+      }
+
+      /* 결제 — 딱지와 전송 단추를 다시 세운다 */
+      if (d.pay) {
+        const 전 = PAY_STATE?.paid;
+        PAY_STATE = d.pay;
+        딱지다시();
+        if (!전 && d.pay.paid) {
+          showToast('결제가 확인되어 화면을 맞췄습니다', 'success');
+        }
+      }
+    } catch (e) { /* 못 읽으면 그대로 둔다 — 보여 주는 자리라 막지 않는다 */ }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') 바깥상태다시읽기();
+  });
+  window.addEventListener('focus', 바깥상태다시읽기);
 
   /** 단추의 딱지를 지금 상태로 다시 그린다 */
   function 딱지다시() {

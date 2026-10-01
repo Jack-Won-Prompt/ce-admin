@@ -976,8 +976,23 @@ class wwGrid {
        너비로 돌아가면, 넓혀 놓고 쓰던 사람은 올 때마다 다시 넓혀야 한다.
        열쇠는 「경로 + 담는 칸의 id」다 — 한 화면에 표가 둘이어도 갈린다.
        id 가 없는 표는 남길 자리가 없어 그냥 지나간다. */
+    /* **건마다 달라지는 조각은 지운다** (2026-10-01 지시).
+
+       열쇠가 「경로 + id」인데, 상세 화면의 경로에는 그 건의 번호가 들어 있다 —
+       /prescriptions/RX-20261001-009 처럼. 그래서 칸을 넓혀 두어도 **다음 건을 열면
+       다른 열쇠**가 되어 코드에 적힌 너비로 돌아갔다. 담당자에게는 「조정했는데 계속
+       예전 위치로 돌아간다」로 보인다(2026-10-01 주문 목록).
+
+       숫자가 섞인 조각을 `*` 로 바꾼다 — /prescriptions/* · /orders/* 처럼 **화면
+       하나에 열쇠 하나**가 된다. 같은 화면의 다른 건은 같은 설정을 쓰는 것이 맞다.
+       숫자가 없는 조각(/m/prescriptions 따위)은 그대로 둔다. */
+    this._screenPath = String(location.pathname || '/')
+      .split('/')
+      .map((조각, i) => (i > 0 && /\d/.test(조각)) ? '*' : 조각)
+      .join('/');
+
     this._widthKey    = (this.el && this.el.id)
-      ? 'wwgrid.w:' + location.pathname + '#' + this.el.id
+      ? 'wwgrid.w:' + this._screenPath + '#' + this.el.id
       : null;
     this._savedWidths = this._loadWidths();
 
@@ -986,7 +1001,7 @@ class wwGrid {
        때마다 다시 끌어야 했다(2026-09-10 지시).
        열쇠 꼴은 너비와 같다 — 「경로 + 담는 칸의 id」. */
     this._orderKey = (this.el && this.el.id)
-      ? 'wwgrid.o:' + location.pathname + '#' + this.el.id
+      ? 'wwgrid.o:' + this._screenPath + '#' + this.el.id
       : null;
     this._codeOrder = this.columns.map(c => c.name);   // 코드에 적힌 첫 차례
     this._applySavedOrder();
@@ -1000,7 +1015,7 @@ class wwGrid {
 
        열쇠 꼴은 너비ㆍ차례와 같다 — 「경로 + 담는 칸의 id」. */
     this._hiddenKey = (this.el && this.el.id)
-      ? 'wwgrid.h:' + location.pathname + '#' + this.el.id
+      ? 'wwgrid.h:' + this._screenPath + '#' + this.el.id
       : null;
 
     /* 칸의 온 벌을 따로 들고 있는다. this.columns 는 **보이는 칸**이다 —

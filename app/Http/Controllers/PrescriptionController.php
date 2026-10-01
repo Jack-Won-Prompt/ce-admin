@@ -2671,6 +2671,45 @@ class PrescriptionController extends Controller
      *
      * 화면을 다시 불러야 풀리는 막음은 막음이 아니다 — 담당자는 왜 막히는지 모른다.
      */
+    /**
+     * 결제를 이미 보냈는가ㆍ받았는가 — 화면과 되묻는 자리가 같은 것을 본다 (2026-10-01).
+     *
+     * 여태 show() 안에만 있었다. 그런데 화면을 열어 둔 채 환자가 결제하면 그 화면은
+     * 옛 값을 끝까지 들고 가 「링크 전송완료」라 적었다 — 돈은 들어왔는데
+     * (2026-10-01 (E)이승원 EUD202610010927221). 창으로 돌아올 때 다시 읽으려면
+     * 같은 셈을 돌려주는 자리가 있어야 하고, 그 셈은 한 곳이어야 한다.
+     */
+    private function payState(Prescription $prescription): array
+    {
+        $payLinks  = $prescription->order?->paymentLinks()->latest('id')->get() ?? collect();
+        $payLast   = $payLinks->first();
+        return [
+            'sent'      => $payLinks->isNotEmpty(),
+            'paid'      => $payLinks->contains('status', 'paid')
+                           || (bool) $prescription->order?->deposit_confirmed_at,
+            'method'    => $payLast ? (\App\Models\PaymentLink::METHODS[$payLast->method] ?? $payLast->method) : '',
+            'status'    => $payLast?->status ?? '',
+            'status_label' => $payLast ? ($payLast->status_label ?? '') : '',
+            'sent_at'   => $payLast?->sent_at?->format('Y-m-d H:i') ?? '',
+            'count'     => $payLinks->count(),
+            /* 받을 돈을 다 받았는가 — 이 값이 서면 더 보내지 못한다 (2026-09-15 지시).
+               paid 와 다르다. paid 는 「한 번이라도 받았는가」라서, 정정으로 금액이
+               늘어 차액이 남은 건도 참이 된다 — 그 건은 더 보낼 수 있어야 한다. */
+            'settled'   => (bool) $prescription->order?->다받았나(),
+            'received'  => (int) ($prescription->order?->받은금액() ?? 0),
+            /* 결제가 취소된 건인가 (2026-09-16 지시).
+
+               토스에서 취소되면 받은 돈이 0이 되고 입금 확인도 거둬진다
+               (PaymentCancelSync). 그러면 paid 는 저절로 거짓이 되는데, 화면에는
+               「보낸 적 있음」만 남아 **왜 다시 보내야 하는지**가 드러나지 않는다.
+               취소됐다는 사실을 따로 적어 딱지가 그것을 말하게 한다. */
+            'cancelled' => in_array(
+                $prescription->order?->tossPayment?->status,
+                ['CANCELED', 'PARTIAL_CANCELED'], true),
+            'cancelled_amount' => (int) ($prescription->order?->tossPayment?->cancel_amount ?? 0),
+        ];
+    }
+
     public function reviewState(Prescription $prescription): JsonResponse
     {
         return response()->json([
@@ -2678,6 +2717,10 @@ class PrescriptionController extends Controller
             'reviewed'    => in_array($prescription->status, ['approved', 'ordered', 'ocr_done'], true),
             'reviewed_at' => $prescription->reviewed_at?->format('Y-m-d H:i'),
             'reviewer'    => \App\Models\User::find($prescription->reviewed_by)?->name,
+
+            /* 결제 상태도 함께 돌려준다 (2026-10-01 지시) — 창으로 돌아올 때 화면이
+               한 번만 물어 검수와 결제를 같이 맞춘다. 두 번 물으면 두 번 늦는다. */
+            'pay'         => $this->payState($prescription),
         ]);
     }
 
@@ -3158,33 +3201,7 @@ class PrescriptionController extends Controller
 
            보낸 자취는 payment_links 에 쌓이고, 받았는지는 그 줄의 paid 와 주문의
            입금 확인 둘 가운데 하나라도 서면 참이다. */
-        $payLinks  = $prescription->order?->paymentLinks()->latest('id')->get() ?? collect();
-        $payLast   = $payLinks->first();
-        $payState  = [
-            'sent'      => $payLinks->isNotEmpty(),
-            'paid'      => $payLinks->contains('status', 'paid')
-                           || (bool) $prescription->order?->deposit_confirmed_at,
-            'method'    => $payLast ? (\App\Models\PaymentLink::METHODS[$payLast->method] ?? $payLast->method) : '',
-            'status'    => $payLast?->status ?? '',
-            'status_label' => $payLast ? ($payLast->status_label ?? '') : '',
-            'sent_at'   => $payLast?->sent_at?->format('Y-m-d H:i') ?? '',
-            'count'     => $payLinks->count(),
-            /* 받을 돈을 다 받았는가 — 이 값이 서면 더 보내지 못한다 (2026-09-15 지시).
-               paid 와 다르다. paid 는 「한 번이라도 받았는가」라서, 정정으로 금액이
-               늘어 차액이 남은 건도 참이 된다 — 그 건은 더 보낼 수 있어야 한다. */
-            'settled'   => (bool) $prescription->order?->다받았나(),
-            'received'  => (int) ($prescription->order?->받은금액() ?? 0),
-            /* 결제가 취소된 건인가 (2026-09-16 지시).
-
-               토스에서 취소되면 받은 돈이 0이 되고 입금 확인도 거둬진다
-               (PaymentCancelSync). 그러면 paid 는 저절로 거짓이 되는데, 화면에는
-               「보낸 적 있음」만 남아 **왜 다시 보내야 하는지**가 드러나지 않는다.
-               취소됐다는 사실을 따로 적어 딱지가 그것을 말하게 한다. */
-            'cancelled' => in_array(
-                $prescription->order?->tossPayment?->status,
-                ['CANCELED', 'PARTIAL_CANCELED'], true),
-            'cancelled_amount' => (int) ($prescription->order?->tossPayment?->cancel_amount ?? 0),
-        ];
+        $payState = $this->payState($prescription);
 
         /* 주문 고르개가 쓸 줄들과, 추가 주문이 더 살 수 있는 수량 (2026-09-14 확인요청 4쪽).
 
