@@ -239,7 +239,10 @@ class DispatchHistoryController extends Controller
                 ['header' => '결과',     'name' => 'result',   'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '내용',     'name' => 'content',  'width' => 300],
                 ['header' => '보낸 사람', 'name' => 'sender',  'width' => 90],
-                ['header' => '다시 보내기', 'name' => 'resend', 'width' => 110, 'align' => 'center'],
+                /* 글자만 두면 누를 수 있는 자리인지 보이지 않는다 — 배지로 그린다.
+                   그리는 일은 화면이 한다(renderer). 서버는 「설 수 있는가」만 정한다. */
+                ['header' => '다시 보내기', 'name' => 'resend', 'width' => 120, 'align' => 'center',
+                 'renderer' => 'dsResendBadge'],
             ];
         } elseif ($type === 'fax') {
             /* 상태 이름은 FaxHistory 가 정한다 — 팝빌 상태(0 접수 · 1 변환중 ·

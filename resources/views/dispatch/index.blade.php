@@ -243,6 +243,24 @@
     background: none; padding: 0; border-radius: 0; color: var(--gray-1000);
     font-size: 13px; font-weight: 500; line-height: 21px;
   }
+  /* ── 「다시 보내기」 배지 (2026-10-01 지시) ──────────────────────
+     글자만 두면 누를 수 있는 자리인지 보이지 않는다. 눌러야 하는 것이므로
+     손 모양 커서와 테두리를 함께 둔다. 보내는 중ㆍ보냄은 눌리지 않는다. */
+  .ds-resend-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    height: 22px; padding: 0 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; line-height: 20px; white-space: nowrap;
+    color: var(--primary); background: var(--primary-50, #eef2ff);
+    border: 1px solid var(--primary-200, #c7d2fe);
+    cursor: pointer; user-select: none;
+    transition: background .12s, border-color .12s;
+  }
+  .ds-resend-badge:hover { background: var(--primary); border-color: var(--primary); color: var(--gray-0, #fff); }
+  .ds-resend-badge i { font-size: 10px; }
+  .ds-resend-badge.is-busy,
+  .ds-resend-badge.is-done { pointer-events: none; }
+  .ds-resend-badge.is-busy { color: var(--text-muted); background: var(--gray-100); border-color: var(--gray-300); }
+  .ds-resend-badge.is-done { color: var(--success, #0f9d58); background: var(--gray-0, #fff); border-color: var(--success, #0f9d58); }
 </style>
 @endpush
 
@@ -342,12 +360,27 @@ window.HELP_TOUR_STEPS = [
 (function () {
   const DETAIL_BASE = @json(url('dispatch'));   // + '/{type}/{id}'
   const TYPE = @json($type);
+  /* 「다시 보내기」를 배지로 그린다 (2026-10-01 지시).
+     서버는 'resend' 칸에 글을 채우거나 비워 「설 수 있는가」만 정한다. */
+  function dsResendBadge(value) {
+    if (!value) return null;
+
+    const b = document.createElement('span');
+    b.className = 'ds-resend-badge';
+    b.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 다시 보내기';
+
+    return b;
+  }
+
   const grid = new wwGrid({
     el: document.getElementById('dispatchGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일)
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },   // 시안에 하단 상태바가 없다. 전체·선택 건수는 조회 결과 탭 이름과 검색 단추 줄에 있다
-    columns: @json($gridColumns),
+    /* 서버가 renderer 를 **이름**으로 준다 — JSON 에는 함수를 담을 수 없다.
+       여기서 그 이름을 실제 함수로 바꿔 끼운다. */
+    columns: @json($gridColumns).map(c =>
+      c.renderer === 'dsResendBadge' ? { ...c, renderer: dsResendBadge } : c),
     data: @json($gridData),
   });
   window.__dispatchGrid = grid;
@@ -394,22 +427,36 @@ window.HELP_TOUR_STEPS = [
   document.getElementById('dispatchGrid').addEventListener('click', async function (e) {
     if (TYPE !== 'message') return;
 
-    const cell = e.target.closest('[data-row-index]');
-    if (!cell) return;
+    /* 배지를 누른 것만 받는다 — 다른 칸을 누르는 것은 줄 고르기다 */
+    const 배지 = e.target.closest('.ds-resend-badge');
+    if (!배지) return;
 
-    /* 「다시 보내기」 칸을 눌렀을 때만 — 다른 칸을 누르는 것은 줄 고르기다 */
-    const 칸 = cell.closest('td') || cell;
-    if (!/다시 보내기/.test(칸.textContent || '')) return;
+    const cell = 배지.closest('[data-row-index]');
+    if (!cell) return;
 
     const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
     if (!row || !row.id || !row.resend) return;
 
-    const 묻는말 = `「${row.template}」을(를) ${row.total}명에게 다시 보냅니다.\n\n`
-                 + `${row.created} 에 ${row.ng}건 모두 실패한 발송입니다.\n`
-                 + `실제로 고객에게 발송됩니다. 진행할까요?`;
-    if (!window.confirm(묻는말)) return;
+    /* 실제로 고객에게 나가는 일이라 한 번 묻는다. 목록을 훑다가 잘못 눌러 같은 글이
+       또 가서는 안 된다. 화면의 확인창을 쓴다(ceConfirm) — 브라우저 기본 창은
+       생김새도 글도 이 화면과 따로 논다. */
+    const 받는이 = (row.rx && row.rx !== '-') ? ` (${row.rx})` : '';
+    const 묻는말 = `「${row.template}」을(를) ${row.total}명에게 다시 보냅니다.${받는이}\n\n`
+                 + `${row.created} 에 ${row.ng}건 모두 나가지 못한 발송입니다.\n`
+                 + `실제로 고객에게 발송됩니다.`;
 
-    칸.textContent = '보내는 중…';
+    const 갈까 = (typeof ceConfirm === 'function')
+      ? await ceConfirm(묻는말, { confirmText: '다시 보내기', cancelText: '닫기' })
+      : window.confirm(묻는말);
+    if (!갈까) return;
+
+    const 되돌리기 = () => {
+      배지.classList.remove('is-busy');
+      배지.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 다시 보내기';
+    };
+
+    배지.classList.add('is-busy');
+    배지.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 보내는 중';
 
     try {
       const res = await fetch(`${RESEND_BASE}/${row.id}/resend`, {
@@ -422,18 +469,22 @@ window.HELP_TOUR_STEPS = [
       const data = await res.json();
 
       if (data.success) {
-        칸.textContent = '보냈습니다';
-        (window.showToast ?? alert)(data.message || '다시 보냈습니다.', 'success');
+        배지.classList.remove('is-busy');
+        배지.classList.add('is-done');
+        배지.innerHTML = '<i class="fa-solid fa-check"></i> 보냈습니다';
+        showToast(data.message || '다시 보냈습니다.', 'success');
         /* 새 줄이 내역에 쌓였다 — 목록을 다시 읽어야 보인다 */
         setTimeout(() => location.reload(), 1200);
       } else {
-        칸.textContent = '다시 보내기';
-        (window.showToast ?? alert)(data.message || '보내지 못했습니다.', 'warning', 8000);
+        되돌리기();
+        /* 못 보낸 까닭은 길다(「일부만 실패한 묶음이라…」) — 토스트로 스쳐 가면
+           읽기 전에 사라진다. 창으로 세운다. */
+        await ceAlert(data.message || '보내지 못했습니다.', { title: '다시 보내지 못했습니다' });
       }
     } catch (err) {
       console.error('[발송 내역] 다시 보내지 못했습니다', err);
-      칸.textContent = '다시 보내기';
-      (window.showToast ?? alert)('다시 보내지 못했습니다. 잠시 뒤 눌러 주십시오.', 'warning');
+      되돌리기();
+      await ceAlert('다시 보내지 못했습니다. 잠시 뒤 눌러 주십시오.', { title: '다시 보내지 못했습니다' });
     }
   });
 
