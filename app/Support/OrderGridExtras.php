@@ -787,6 +787,24 @@ class OrderGridExtras
             }
         }
 
+        /* 운영 데이터에서 옮겨 온 동의도 받은 것으로 센다 (2026-10-01 지시).
+
+           판정 한 곳(PrivacyConsent::stateFor)은 옮겨 온 서명의 agree_privacy 를 본다.
+           목록이 그것을 보지 않으면 같은 사람이 목록에서는 빈칸, 주문 등록 화면에서는
+           「완료」로 갈린다 — 담당자는 어느 쪽을 믿어야 할지 알 수 없다. */
+        $옮긴것 = \App\Models\PatientDelegationSign::whereIn('patient_id', $ids)
+            ->where('agree_privacy', true)
+            ->whereNotNull('signed_at')
+            ->get(['patient_id', 'agree_marketing']);
+
+        foreach ($옮긴것 as $s) {
+            $pid = (int) $s->patient_id;
+            if (! ($this->privacy[$pid] ?? false)) {
+                $this->privacy[$pid]   = true;
+                $this->marketing[$pid] = $s->agree_marketing ? '동의함' : '동의하지 않음';
+            }
+        }
+
         foreach ($people as $p) {
             if (! ($this->privacy[$p->id] ?? false)) {
                 foreach ([$p->mobile, $p->phone] as $tel) {

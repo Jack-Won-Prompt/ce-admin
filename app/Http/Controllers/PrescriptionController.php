@@ -980,6 +980,9 @@ class PrescriptionController extends Controller
            곳이 없어진다(OrderNotice 는 담당자를 먼저 본다). */
         $managers      = User::whereIn('role', ['admin', 'manager'])->orderBy('name')->get();
         // 화면으로 나가는 목록이므로 마스킹 컬럼만 읽는다 — 평문·암호문은 조회하지 않는다(P0-1)
+        /* 업로드 화면의 이름 조회는 아직 목록을 받아 쓴다(upload.blade.php 의 PATIENTS).
+           주문 등록 화면은 2026-10-01 에 서버에서 찾도록 바꾸었는데, 이 화면은 고치는
+           자리가 달라 함께 옮기지 않았다 — 옮길 때 이 줄도 거둔다. */
         $patientsJson  = self::patientPickerList();
 
         // 화면 상단에 알리는 검수 대기 건수 (시안 128:3171)
@@ -2394,10 +2397,70 @@ class PrescriptionController extends Controller
      * 만드는 자리도 하나로 둔다. 화면으로 나가는 목록이라 마스킹 컬럼만 읽는다 —
      * 평문ㆍ암호문은 조회하지 않는다(P0-1).
      */
-    private static function patientPickerList(): \Illuminate\Support\Collection
+    /**
+     * 거래처 고르개가 쓸 줄들 (2026-10-01 — 찾는 일을 서버로 옮겼다).
+     *
+     * 여태 **전부**를 화면에 박았다. 이관 뒤 12,609명이 되어 주문 등록 화면마다
+     * 1.27MB 를 내려보내고 서버 메모리 40MB 를 썼으며, 고르개를 열면 12,609줄을
+     * 모두 그리느라 늦게 떴다. 쓰지 않는 사람에게도 매번 나갔다.
+     *
+     * 이제 찾을 말을 받아 그만큼만 돌려준다.
+     *
+     * @param ?string $q     찾을 말 — 이름ㆍ전화번호. 두 글자 미만이면 빈 줄
+     * @param ?string $이름  **꼭 맞는 이름**으로 가린다 — 같은 이름 가리기에 쓴다
+     */
+    private static function patientPickerList(?string $q = null, ?string $이름 = null, int $한도 = 50): \Illuminate\Support\Collection
     {
-        return \App\Models\Patient::orderBy('name')
-            ->get(['id', 'name', 'mobile', 'phone', 'birth_date', 'resident_no_masked'])
+        $질의 = \App\Models\Patient::query()
+            ->select(['id', 'name', 'mobile', 'phone', 'birth_date', 'resident_no_masked'])
+            ->orderBy('name');
+
+        if ($이름 !== null && trim($이름) !== '') {
+            /* 「(E)」는 사업부 표시다 — 떼고 맞댄다. 두 꼴을 다 본다(PatientLink 와 같은 잣대).
+               LIKE 로 넓히지 않는다: 「김광연」이 「김광연수」를 끌어오면 남의 자료에 붙는다. */
+            $맨 = \App\Models\Patient::bare($이름);
+            $질의->whereIn('name', array_values(array_unique(array_filter([$맨, '(E)' . $맨]))));
+        } elseif ($q !== null) {
+            $글 = trim($q);
+
+            if (mb_strlen($글) < 2) {
+                return collect();          // 두 글자 미만은 찾지 않는다 — 12,609명이 다 걸린다
+            }
+
+            /* 화면이 하던 것과 같은 잣대로 찾는다(여태 _pkHits 가 하던 일).
+               친 말 하나가 이름ㆍ전화번호ㆍ생년월일ㆍ주민번호 어디에든 걸리면 그 사람이고,
+               띄어 쓰면 낱말마다 걸려야 한다 — 「이희영 820108」로 동명이인을 가른다. */
+            foreach (preg_split('/\s+/u', $글, -1, PREG_SPLIT_NO_EMPTY) as $낱말) {
+                $숫자 = preg_replace('/\D/', '', $낱말);
+
+                $질의->where(function ($w) use ($낱말, $숫자) {
+                    $w->where('name', 'like', '%' . $낱말 . '%');
+
+                    if ($숫자 === '') {
+                        return;
+                    }
+
+                    /* 담긴 꼴이 제각각이다 — 「010-5118-2497」도 「01051182497」도 있다.
+                       부호를 떼고 맞댄다. 그러지 않으면 같은 번호가 다른 번호가 된다. */
+                    $맨 = fn ($칸) => "REPLACE(REPLACE(COALESCE({$칸},''),'-',''),' ','')";
+
+                    $w->orWhereRaw($맨('mobile') . ' LIKE ?', ['%' . $숫자 . '%'])
+                      ->orWhereRaw($맨('phone') . ' LIKE ?', ['%' . $숫자 . '%'])
+                      /* 생년월일은 「19630320」으로 담기지만 사람은 「630320」을 친다 —
+                         가운데를 보는 LIKE 라 두 꼴이 다 걸린다. */
+                      ->orWhereRaw($맨('birth_date') . ' LIKE ?', ['%' . $숫자 . '%'])
+                      /* 주민번호는 가려 둔 값(630320-1******)이라 앞에서부터만 맞댄다 */
+                      ->orWhereRaw($맨('resident_no_masked') . ' LIKE ?', [$숫자 . '%']);
+                });
+            }
+
+            $질의->limit($한도);
+        }
+        /* 찾을 말이 없으면 **전부**다 — 끊지 않는다. 업로드 화면이 목록을 그대로
+           받아 쓰므로(uploadPage), 여기서 50줄로 끊으면 그 화면의 이름 조회가
+           50명만 보이게 된다. 주문 등록 화면은 늘 q 나 name 을 주고 묻는다. */
+
+        return $질의->get()
             ->map(fn ($p) => [
                 'id'     => $p->id,
                 'name'   => $p->name,
@@ -2708,6 +2771,28 @@ class PrescriptionController extends Controller
                 ['CANCELED', 'PARTIAL_CANCELED'], true),
             'cancelled_amount' => (int) ($prescription->order?->tossPayment?->cancel_amount ?? 0),
         ];
+    }
+
+    /**
+     * 거래처 고르개가 묻는 자리 (2026-10-01 지시).
+     *
+     * `q` 로 찾고, `name` 으로는 **꼭 맞는 이름**을 가린다. 뒤의 것이 같은 사람이 둘로
+     * 갈리는 것을 막는 자리다 — 화면이 저장 직전에 이것을 보고 창을 연다.
+     */
+    public function patientPicker(Request $request): JsonResponse
+    {
+        $이름 = $request->query('name');
+        $q    = $request->query('q');
+
+        $줄 = self::patientPickerList(
+            $이름 !== null ? null : (string) $q,
+            $이름 !== null ? (string) $이름 : null,
+        );
+
+        return response()->json([
+            'patients' => $줄->values(),
+            'count'    => $줄->count(),
+        ]);
     }
 
     public function reviewState(Prescription $prescription): JsonResponse
@@ -3123,7 +3208,9 @@ class PrescriptionController extends Controller
         $allDocsJson = array_merge($rxDoc, $attachmentsJson, self::generatedDocsJson($prescription), $signDocs);
 
         // 이름 옆 「조회」 창이 쓰는 목록 — 업로드 화면과 같은 것을 쓴다
-        $patientsJson = self::patientPickerList();
+        /* 고르개 목록은 더 이상 화면에 박지 않는다 (2026-10-01) — 두 글자부터
+           서버가 찾는다(prescriptions.patientPicker). */
+        $patientsJson = collect();
 
         /* 주문 담당자로 고를 수 있는 사람 — 지금 쓰고 있는 CE 담당자 전부(관리자 포함).
            이름을 그대로 담는 칸이라 이름만 넘긴다. */

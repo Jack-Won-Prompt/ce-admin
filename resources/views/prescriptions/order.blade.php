@@ -7486,11 +7486,55 @@ window.HELP_TOUR_STEPS = [
   }
 
   /* ── 이름 조회 창 ──────────────────────────────────────
-     업로드 화면의 같은 이름 창을 그대로 옮겼다(upload.blade.php). 목록은 화면에 이미
-     실려 있어(PK_PATIENTS) 서버를 다시 부르지 않는다. 여기서는 바탕을 덮지 않는
-     팝오버라, 고르는 동안에도 옆의 처방전 이미지를 그대로 볼 수 있다. */
-  const PK_PATIENTS = @json($patientsJson ?? []);
+     업로드 화면의 같은 이름 창을 그대로 옮겼다(upload.blade.php). 여기서는 바탕을
+     덮지 않는 팝오버라, 고르는 동안에도 옆의 처방전 이미지를 그대로 볼 수 있다.
+
+     ── 거래처 목록은 **서버에 묻는다** (2026-10-01 지시).
+
+     여태 거래처 전부를 이 화면에 박아 두었다(PK_PATIENTS). 운영 데이터를 옮겨 와
+     12,609명이 되면서 주문 등록 화면을 열 때마다 1.27MB 를 내려받고, 서버는 40MB 를
+     쓰고, 창을 열면 12,609줄을 모두 그려 늦게 떴다. 이름 조회를 쓰지 않는 담당자에게도
+     매번 나갔다.
+
+     이제 두 글자부터 서버가 찾는다(prescriptions.patientPicker). 찾는 잣대는 서버 한
+     곳에 있다 — 이름ㆍ전화번호ㆍ생년월일ㆍ주민번호를 함께 보고, 띄어 쓴 낱말마다
+     걸려야 한다. */
+  const PK_URL = @json(route('prescriptions.patientPicker'));
+
+  /** 한 번에 받아 오는 최대 줄 수 — 서버의 한도와 같아야 한다 */
+  const PK_LIMIT = 50;
+
   let pkGrid = null;
+
+  async function pkAsk(params) {
+    const res = await fetch(PK_URL + '?' + new URLSearchParams(params).toString(),
+                            { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return (await res.json()).patients ?? [];
+  }
+
+  /**
+   * 거래처에 **꼭 같은 이름**이 있는가 — 서버에 묻는다.
+   *
+   * 같은 사람이 둘로 갈리는 것을 막는 자리다. 2026-10-01 김광연 건이 그 갈림이었다 —
+   * 위임 자료는 새로 생긴 거래처의 주문에, 제품은 본래 거래처의 주문에 나뉘어 담겼다.
+   * 그래서 서버도 LIKE 로 넓히지 않고 「(E)」를 뗀 두 꼴만 맞댄다.
+   *
+   * 저장 직전에는 늘 새로 묻는다({fresh:true}) — 그 사이에 다른 담당자가 같은 이름을
+   * 등록했을 수 있다. 이름을 타자하는 동안에는 쥐고 있던 답을 쓴다.
+   */
+  const _pk이름답 = new Map();
+
+  async function 같은이름거래처(name, opts = {}) {
+    const 맨이름 = String(name ?? '').replace(/^\s*\(E\)\s*/, '').trim();
+    if (!맨이름) return [];
+
+    if (!opts.fresh && _pk이름답.has(맨이름)) return _pk이름답.get(맨이름);
+
+    const rows = await pkAsk({ name: 맨이름 });
+    _pk이름답.set(맨이름, rows);
+    return rows;
+  }
 
   window.pkOpen = function (e) {
     if (e) e.stopPropagation();
@@ -7552,43 +7596,14 @@ window.HELP_TOUR_STEPS = [
     document.getElementById('pkQ').focus();
   };
 
-  /* 친 말 하나가 이름ㆍ전화번호ㆍ생년월일 어디에든 걸리면 그 사람이다.
-     띄어 쓰면 낱말마다 걸려야 한다 — 「이희영 820108」로 동명이인을 가른다.
-     숫자를 친 것이면 전화번호와 생년월일에서 찾는다(1982-01-08 로도, 820108 로도). */
-  function _pkHits(p, term) {
-    if ((p.name || '').toLowerCase().includes(term)) return true;
-    const d = term.replace(/\D/g, '');
-    if (!d) return false;
-    if (((p.mobile || '') + (p.phone || '')).replace(/\D/g, '').includes(d)) return true;
-    const b  = (p.birth || '').replace(/\D/g, '');
-    const rn = (p.rn || '').replace(/\D/g, '');
-    return b.includes(d) || b.slice(2).includes(d) || rn.startsWith(d);
-  }
-
-  window.pkSearch = function () {
-    const terms = (document.getElementById('pkQ').value || '')
-      .trim().toLowerCase().split(/\s+/).filter(Boolean);
-
-    const hit = terms.length
-      ? PK_PATIENTS.filter(p => terms.every(t => _pkHits(p, t)))
-      : PK_PATIENTS;
-
-    const rows = hit.map(p => ({ id: p.id, name: p.name, mobile: p.mobile || p.phone || '',
-                                 birth: p.birth || '', rn: p.rn || '' }));
-    document.getElementById('pkNote').textContent =
-      rows.length ? `${rows.length}명` : '찾은 사람이 없습니다.';
-
-    /* 없는 사람이면 다음 걸음은 새로 적는 일이다. 찾았으면 숨긴다 —
-       고를 것이 눈앞에 있는데 새로 적으라고 권하면 같은 사람이 둘로 갈라진다. */
-    const nb = document.getElementById('pkNewAccount');
-    if (nb) nb.style.display = rows.length ? 'none' : '';
-
+  /* 표를 그린다 — 찾은 줄만 받는다. 찾는 일은 서버가 한다(pkSearch). */
+  function _pkDraw(rows) {
     if (!pkGrid) {
       pkGrid = new wwGrid({
         el: document.getElementById('pkGrid'),
         /* 줄을 화면 코드가 직접 훑는다(cg-row-selected 를 손으로 붙였다 뗀다).
            보이는 것만 그리면 굴릴 때 그 표시가 지워지므로 가상화를 쓰지 않는다
-           (2026-09-28). */
+           (2026-09-28). 서버가 50줄로 끊어 주므로 줄 수가 많아 늦어질 일은 없다. */
         virtual: false,
         /* 키를 못 박지 않는다 — 창이 준 자리를 flex 로 받는다(위 .pk-body 규칙) */
         editable: false, rowCheckbox: false, rowNumber: true,
@@ -7614,10 +7629,57 @@ window.HELP_TOUR_STEPS = [
         document.querySelectorAll('#pkGrid tr').forEach(tr => tr.classList.remove('cg-row-selected'));
         cell.closest('tr')?.classList.add('cg-row-selected');
       });
-    } else {
-      pkGrid._pickedIndex = null;
-      pkGrid.setData(rows);
+      return;
     }
+
+    pkGrid._pickedIndex = null;
+    pkGrid.setData(rows);
+  }
+
+  /**
+   * 찾는다 — 서버에 묻는다 (2026-10-01 지시).
+   *
+   * 두 글자 미만이면 묻지 않는다. 한 글자로 물으면 12,609명이 거의 그대로 걸려,
+   * 받아 오는 것도 그리는 것도 전부를 박아 두던 때와 같아진다.
+   */
+  window.pkSearch = async function () {
+    const 친말 = (document.getElementById('pkQ').value || '').trim();
+    const note = document.getElementById('pkNote');
+    const nb   = document.getElementById('pkNewAccount');
+
+    if (친말.length < 2) {
+      note.textContent = '이름 · 전화번호 · 생년월일을 두 글자 이상 입력하고 「검색」을 누르십시오.';
+      _pkDraw([]);
+      if (nb) nb.style.display = 'none';
+      return;
+    }
+
+    note.textContent = '찾고 있습니다…';
+
+    let rows;
+    try {
+      rows = await pkAsk({ q: 친말 });
+    } catch (e) {
+      /* 못 물었으면 못 물었다고 적는다. 빈 표를 「없는 사람」으로 보이면 담당자가
+         있는 사람을 새로 등록해 같은 사람이 둘로 갈린다. */
+      console.error('[이름 조회] 거래처를 찾지 못했습니다', e);
+      note.textContent = '조회하지 못했습니다. 「검색」을 다시 눌러 주십시오.';
+      _pkDraw([]);
+      if (nb) nb.style.display = 'none';
+      return;
+    }
+
+    note.textContent = rows.length
+      ? (rows.length >= PK_LIMIT
+          ? `${rows.length}명 — 더 있을 수 있습니다. 이름과 생년월일을 함께 입력하면 좁혀집니다.`
+          : `${rows.length}명`)
+      : '찾은 사람이 없습니다.';
+
+    /* 없는 사람이면 다음은 새로 등록하는 일이다. 찾았으면 숨긴다 —
+       고를 것이 눈앞에 있는데 새로 등록하라고 권하면 같은 사람이 둘로 갈린다. */
+    if (nb) nb.style.display = rows.length ? 'none' : '';
+
+    _pkDraw(rows);
   };
 
   window.pkPick = function () {
@@ -7646,31 +7708,44 @@ window.HELP_TOUR_STEPS = [
     await saveOCR();
   }
 
-  /* 기존에 없는 사람이면 이 건은 그 사람의 첫 구매다 — 신구매를 미리 세운다.
+  /* 기존에 없는 사람이면 이 건은 그 사람의 첫 구매다 — 신구매를 미리 고른다.
      「조회」로 고른 사람이 있으면(f-patient-id) 기존 사람이니 손대지 않는다. 이름만
-     쳤을 때는 이 화면이 들고 있는 거래처 목록에서 찾아보고, 없으면 새 사람으로 본다.
-     이미 골라 둔 값은 덮지 않는다 — 담당자가 재구매로 바꿔 두었으면 그대로 둔다. */
-  function syncPurchaseTypeForNewPatient() {
+     적었을 때는 그 이름의 거래처가 있는지 서버에 묻고, 없으면 새 사람으로 본다.
+     이미 골라 둔 값은 덮지 않는다 — 담당자가 재구매로 바꿔 두었으면 그대로 둔다.
+
+     묻지 못했으면 아무것도 고치지 않는다 — 이것은 미리 골라 주는 편의일 뿐이고,
+     저장을 막는 자리는 아래 같은이름거래처() 다. */
+  async function syncPurchaseTypeForNewPatient() {
     const sel = document.getElementById('f-purchase-type');
     if (!sel || sel.value) return;
 
     if (document.getElementById('f-patient-id')?.value) return;
 
     const name = (document.getElementById('f-name')?.value ?? '').trim();
-    if (!name) return;
+    if (name.length < 2) return;
 
-    // (E) 는 사업부 표시라 이름을 견줄 때는 떼고 본다
-    const bare = (v) => String(v ?? '').replace(/^\s*\(E\)\s*/, '').trim();
-    const known = (PK_PATIENTS ?? []).some(p => bare(p.name) === bare(name));
-    if (!known) sel.value = '신구매';
+    let rows;
+    try {
+      rows = await 같은이름거래처(name);
+    } catch (e) {
+      console.error('[구매유형] 거래처 확인 실패', e);
+      return;
+    }
+
+    // 묻고 돌아온 사이에 담당자가 이름을 고쳤거나 값을 골랐으면 손대지 않는다
+    if (sel.value) return;
+    if ((document.getElementById('f-name')?.value ?? '').trim() !== name) return;
+    if (document.getElementById('f-patient-id')?.value) return;
+
+    if (!rows.length) sel.value = '신구매';
   }
 
-  /* 거래처에 같은 이름이 있는가 — (E) 는 사업부 표시라 견줄 때는 떼고 본다 */
-  function sameNamePatients(name) {
-    const bare = (v) => String(v ?? '').replace(/^\s*\(E\)\s*/, '').trim();
-    const n = bare(name);
-    if (!n) return [];
-    return (PK_PATIENTS ?? []).filter(p => bare(p.name) === n);
+  /* 타자하는 동안 글자마다 서버를 부르지 않는다 — 손이 멈춘 뒤에 한 번 묻는다 */
+  let _pk신구매타이머 = null;
+
+  function syncPurchaseTypeSoon() {
+    clearTimeout(_pk신구매타이머);
+    _pk신구매타이머 = setTimeout(() => { syncPurchaseTypeForNewPatient(); }, 400);
   }
 
   /* 같은 이름이 있어 저장을 멈췄을 때 여는 창.
@@ -7685,8 +7760,11 @@ window.HELP_TOUR_STEPS = [
     pkClose();
     const btn = document.getElementById('pkNewPerson');
     if (btn) btn.style.display = '';
+    /* pkOpen 안의 찾기는 서버에 묻는 일이라 기다리지 않는다 — 창은 바로 열리고
+       표만 조금 뒤에 채워진다. 창이 열렸는지는 그 안의 pkClose 가 이미 지나갔다는
+       뜻이므로, 아래 표시는 그 뒤에 둔다. */
     pkOpen();
-    _sameNameFlow = true;   // pkOpen 안의 pkClose 가 걷고 지나가므로 그 뒤에 세운다
+    _sameNameFlow = true;   // pkOpen 안의 pkClose 가 지나간 뒤에 둔다
 
     showToast(`거래처에 「${name}」 님이 ${count}명 있습니다. 동일인이면 선택하고, 다른 분이면 「신규 저장」을 누르십시오.`,
               'warning', 7000);
@@ -7922,9 +8000,9 @@ window.HELP_TOUR_STEPS = [
     if (this.dataset.pkFilling === '1') return;
     const hid = document.getElementById('f-patient-id');
     if (hid) hid.value = '';
-    syncPurchaseTypeForNewPatient();
+    syncPurchaseTypeSoon();
   });
-  document.addEventListener('DOMContentLoaded', syncPurchaseTypeForNewPatient);
+  document.addEventListener('DOMContentLoaded', () => { syncPurchaseTypeForNewPatient(); });
 
   document.addEventListener('click', (e) => {
     const pop = document.getElementById('pkModal');
@@ -10110,7 +10188,20 @@ window.HELP_TOUR_STEPS = [
        쌓이고, 나중에 합치는 데 더 큰 품이 든다. 창을 열어 누구인지 가린 뒤에 저장한다.
        정말 다른 사람이면 그 창에서 「신규 저장」을 누른다. */
     if (!opts.newPerson && !document.getElementById('f-patient-id')?.value) {
-      const dup = sameNamePatients(name);
+      let dup;
+      try {
+        /* 저장 직전에는 늘 새로 묻는다 — 그 사이에 다른 담당자가 같은 이름을
+           등록했을 수 있다. */
+        dup = await 같은이름거래처(name, { fresh: true });
+      } catch (e) {
+        /* 못 물었으면 저장하지 않는다. 지나보내면 같은 사람이 둘로 갈릴 수 있고,
+           한 번 갈리면 상담도 주문도 두 곳에 나뉘어 쌓인다 — 되돌리는 품이
+           다시 누르는 품보다 훨씬 크다. */
+        console.error('[저장] 같은 이름 확인 실패', e);
+        showToast('같은 이름의 거래처가 있는지 확인하지 못해 저장하지 않았습니다. '
+                + '잠시 뒤 다시 저장해 주십시오.', 'warning', 7000);
+        return false;
+      }
       if (dup.length) { openSameNamePicker(name, dup.length); return false; }
     }
 
@@ -16512,6 +16603,27 @@ window.HELP_TOUR_STEPS = [
         </p>
         <p style="font-size:11px;color:var(--text-muted);margin:0;line-height:1.6;">
           적힌 내용은 첨부 문서에서 봅니다 — 서류 관리의 「개인정보 동의서」입니다.
+        </p>
+        <div style="display:flex;justify-content:flex-end;">
+          <button class="btn btn-outline btn-sm" id="pvOpenList">개인정보동의 화면</button>
+        </div>`;
+    }
+
+    /* 옮겨 온 동의도 담긴 내용이 없다 — 원본은 운영 데이터에 있다. 전자 동의와 같은
+       틀로 그리면 동의자ㆍ연락처ㆍ항목이 모두 「-」로 서서 무엇이 잘못된 것처럼 보인다.
+       어디서 받은 것인지와 받은 때, 마케팅 활용 동의만 적는다 (2026-10-01 지시). */
+    if (st.migrated) {
+      return `
+        <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.7;">
+          <strong>개인정보 수집·이용 동의</strong>를 운영 데이터의 위임장 서명에서
+          함께 받아 두었습니다.<br>
+          <span style="color:var(--text-muted);">받은 때 ${esc(st.at) || '-'}${st.name ? ' · 동의자 ' + esc(st.name) : ''}</span>
+        </p>
+        <p style="font-size:12px;color:var(--text-secondary);margin:0;line-height:1.7;">
+          마케팅 활용 동의 <strong>${esc(st.marketing) || '-'}</strong>
+        </p>
+        <p style="font-size:11px;color:var(--text-muted);margin:0;line-height:1.6;">
+          적힌 내용은 운영 데이터의 「위임장 서명」에서 봅니다.
         </p>
         <div style="display:flex;justify-content:flex-end;">
           <button class="btn btn-outline btn-sm" id="pvOpenList">개인정보동의 화면</button>

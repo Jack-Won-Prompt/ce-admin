@@ -170,6 +170,29 @@ class PrivacyConsent extends Model
     }
 
     /**
+     * 운영 데이터에서 옮겨 온 개인정보 수집ㆍ이용 동의 — 없으면 null (2026-10-01 지시).
+     *
+     * 위드웍스 위임장 서명 화면은 위임ㆍ개인정보ㆍ마케팅 동의를 한 번에 받았고, 그 값이
+     * patient_delegation_signs 에 그대로 옮겨져 있다(2026-09-29 이관).
+     *
+     * 위임 서명과 달리 **위임기간을 보지 않는다.** 위임기간은 공단에 등록한 대리 청구의
+     * 기간이고, 개인정보 수집ㆍ이용 동의는 거래가 이어지는 동안 유지되는 별개의 동의다.
+     * 여기에 5년을 걸면 2031년에 이 사람들이 한꺼번에 막힌다.
+     */
+    public static function 옮겨온동의(?int $patientId): ?\App\Models\PatientDelegationSign
+    {
+        if (! $patientId) {
+            return null;
+        }
+
+        return \App\Models\PatientDelegationSign::where('patient_id', $patientId)
+            ->where('agree_privacy', true)
+            ->whereNotNull('signed_at')
+            ->orderByDesc('signed_at')->orderByDesc('id')
+            ->first();
+    }
+
+    /**
      * 주문 등록 화면의 「개인정보동의」 단추가 읽는 값.
      *
      * 받은 것이 없으면 exists=false 로만 답한다 — 단추는 그대로 「개인정보동의」다.
@@ -191,6 +214,33 @@ class PrivacyConsent extends Model
                     'paper'  => true,
                     'info'   => [],
                     'items'  => [],
+                ];
+            }
+
+            /* **운영 데이터에서 옮겨 온 동의도 받은 것이다** (2026-10-01 지시
+               「운영데이터 위임장서명 완료했는데 … 계속 위임동의메세지 나가는지 확인」).
+
+               위드웍스 위임장 화면은 위임 동의와 개인정보 수집ㆍ이용 동의를 **한 번에**
+               받았다. 그래서 옮겨 온 서명 259건은 모두 agree_privacy = 1 이다. 그런데
+               이 자리는 우리 privacy_consents 표와 서면 첨부만 보고 있어, 그 259명 중
+               258명이 「개인정보 동의 아직」으로 읽혔다 — 위임 서명은 지나가는데
+               (DelegationGate::옮겨온서명) 개인정보 동의에서 주문 저장이 막혔고,
+               담당자는 이미 받은 동의를 다시 받으러 갔다.
+
+               서명 그림은 보지 않는다. 그 그림은 위임장에 찍을 것이고, 개인정보 동의는
+               그 화면에서 체크한 사실 자체가 증빙이다. 옮길 때 서명을 마친 줄만 담았다
+               (PatientDelegationSign). */
+            if ($옮긴 = static::옮겨온동의($patientId)) {
+                return [
+                    'exists'    => true,
+                    'agreed'    => true,
+                    'source'    => '운영 데이터의 서명',
+                    'at'        => $옮긴->signed_at?->format('Y-m-d H:i'),
+                    'migrated'  => true,
+                    'name'      => \App\Models\Patient::bare($옮긴->customer_name),
+                    'marketing' => $옮긴->agree_marketing ? '동의함' : '동의하지 않음',
+                    'info'      => [],
+                    'items'     => [],
                 ];
             }
 

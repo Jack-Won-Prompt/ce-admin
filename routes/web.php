@@ -185,6 +185,9 @@ Route::middleware(['auth'])->group(function () {
            파일 검수는 **처방전 목록**에서 한다. 그래서 주문 등록 화면을 열어 둔 채
            검수를 마치면, 그 화면은 열 때 박아 둔 옛 상태를 그대로 들고 있어
            「검수를 완료해야 합니다」로 막혔다 — 검수는 이미 끝났는데. */
+        /* 거래처 고르개 — 두 글자부터 서버가 찾는다 (2026-10-01 지시).
+           처방전에 매이지 않는 자리라 {prescription} 보다 앞에 세운다. */
+        Route::get( '/patient-picker', [PrescriptionController::class, 'patientPicker'])->name('patientPicker');
         Route::get( '/{prescription}/review-state', [PrescriptionController::class, 'reviewState'])->name('reviewState');
         Route::get( '/{prescription}/consent-status', [ConsentController::class,     'statusCheck'])->name('consentStatus');
         Route::get( '/{prescription}/consent-pdf',    [ConsentController::class,     'downloadPdf'])->name('consentPdf');
