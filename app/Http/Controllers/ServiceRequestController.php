@@ -46,16 +46,29 @@ class ServiceRequestController extends Controller
     {
         $data = $request->validate([
             'title'      => ['required', 'string', 'max:200'],
-            'content'    => ['required', 'string', 'max:5000'],
+            /* Quill 이 꾸밈을 이름표로 실어 오므로 5,000자로는 한 쪽도 못 담는다
+               (2026-10-01). 칸은 text(65,535바이트)라 여유가 있다 — 그 안쪽으로 둔다. */
+            'content'    => ['required', 'string', 'max:60000'],
             'category'   => ['required', 'in:' . implode(',', array_keys(ServiceRequest::CATEGORIES))],
             'priority'   => ['required', 'in:' . implode(',', array_keys(ServiceRequest::PRIORITIES))],
             'page_label' => ['nullable', 'string', 'max:100'],
             'page_url'   => ['nullable', 'string', 'max:300'],
         ]);
 
+        /* 담기 전에 거른다 — 담은 글은 화면에 innerHTML 로 서므로 글 안의 스크립트가
+           같은 화면을 보는 다른 담당자에게서 돈다(App\Support\RichText). */
+        $data['content'] = \App\Support\RichText::정리($data['content']);
+
+        if (\App\Support\RichText::빈가($data['content'])) {
+            return response()->json([
+                'success' => false,
+                'message' => '내용을 입력해 주십시오.',
+            ], 422);
+        }
+
         $sr = ServiceRequest::create($data + [
             'user_id' => Auth::id(),
-            'status'  => 'open',
+            'status'  => ServiceRequest::STATUS_DEFAULT,
         ]);
 
         activity()->causedBy(Auth::user())->log("SR 등록: {$sr->title}");
@@ -71,15 +84,25 @@ class ServiceRequestController extends Controller
     public function answer(Request $request, ServiceRequest $serviceRequest): JsonResponse
     {
         $data = $request->validate([
-            'answer' => ['required', 'string', 'max:5000'],
+            // 등록과 같은 까닭으로 늘린다 — Quill 이 이름표를 함께 싣는다
+            'answer' => ['required', 'string', 'max:60000'],
             'status' => ['nullable', 'in:' . implode(',', array_keys(ServiceRequest::STATUSES))],
         ]);
 
+        $답변 = \App\Support\RichText::정리($data['answer']);
+
+        if (\App\Support\RichText::빈가($답변)) {
+            return response()->json([
+                'success' => false,
+                'message' => '답변 내용을 입력해 주십시오.',
+            ], 422);
+        }
+
         $serviceRequest->update([
-            'answer'      => $data['answer'],
+            'answer'      => $답변,
             'answered_by' => Auth::id(),
             'answered_at' => now(),
-            'status'      => $data['status'] ?? 'answered',
+            'status'      => $data['status'] ?? ServiceRequest::STATUS_ANSWERED,
         ]);
 
         activity()->causedBy(Auth::user())->log("SR 답변: {$serviceRequest->title}");

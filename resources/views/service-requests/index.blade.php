@@ -80,10 +80,11 @@
      <head> 라서 특정성이 같으면 전역이 이긴다. 이름 그대로 두면 한 줄도 먹지 않는다. */
   .srx-meta .sr-badge { display:inline-flex; align-items:center; font-size:11px; font-weight:500; line-height:18px;
     padding:2px 6px; border-radius:6px; }
-  .srx-meta .sr-b-open        { background:var(--alert-100);   color:var(--alert-500); }
+  /* 진행 상태 — 신규ㆍ진행중ㆍ완료ㆍ대기 (2026-10-01 지시) */
+  .srx-meta .sr-b-new         { background:var(--alert-100);   color:var(--alert-500); }
   .srx-meta .sr-b-in_progress { background:var(--primary-100); color:var(--primary-600); }
-  .srx-meta .sr-b-answered    { background:var(--primary);     color:var(--gray-0); }
-  .srx-meta .sr-b-closed      { background:var(--gray-100);    color:var(--gray-600); }
+  .srx-meta .sr-b-done        { background:var(--primary);     color:var(--gray-0); }
+  .srx-meta .sr-b-hold        { background:var(--gray-100);    color:var(--gray-600); }
 </style>
 @endpush
 
@@ -221,7 +222,8 @@
     <div class="srx-sec">
       <h4>요청 내용</h4>
       <div class="srx-meta" id="srxMeta"></div>
-      <div class="srx-body" id="srxContentBox"></div>
+      {{-- 담긴 글은 담길 때 걸러진 것이다(App\Support\RichText) — 꾸밈을 그대로 그린다 --}}
+      <div class="srx-body ce-rich" id="srxContentBox"></div>
       <div id="srxPrevAnswer"></div>
     </div>
 
@@ -229,9 +231,9 @@
     <div class="srx-sec" style="margin-bottom:0;">
       <h4>답변</h4>
       <div class="srx-field">
-        <label for="srxAnswer">답변 내용</label>
-        <textarea id="srxAnswer" maxlength="5000"
-                  placeholder="처리 결과나 안내 사항을 입력해 주십시오."></textarea>
+        <label>답변 내용</label>
+        {{-- Quill 편집기 — 창을 처음 열 때 선다 (2026-10-01 지시) --}}
+        <div class="ce-quill"><div id="srxAnswer"></div></div>
       </div>
       <div class="srx-field" style="margin-bottom:0;max-width:220px;">
         <label for="srxStatus">상태</label>
@@ -261,7 +263,7 @@
 (function () {
   const BASE  = @json(url('sr'));
   const CSRF  = document.querySelector('meta[name=csrf-token]')?.content ?? '';
-  const CLS   = { open:'sr-b-open', in_progress:'sr-b-in_progress', answered:'sr-b-answered', closed:'sr-b-closed' };
+  const CLS   = { new:'sr-b-new', in_progress:'sr-b-in_progress', done:'sr-b-done', hold:'sr-b-hold' };
   const ME    = @json(Auth::user()?->name ?? '');
   let _rows = @json($gridData);
   let _sel  = null;
@@ -416,16 +418,23 @@
       · ${esc(r.categoryLabel)} · 우선순위 ${esc(r.priorityLabel)}
       · ${esc(r.created)}${r.page ? ' · 대상: ' + esc(r.page) : ''}`;
 
-    document.getElementById('srxContentBox').textContent = r.content || '';
+    document.getElementById('srxContentBox').innerHTML = r.content || '';
 
     document.getElementById('srxPrevAnswer').innerHTML = r.answer
       ? `<div class="srx-answer">
            <div class="lbl">담긴 답변 · ${esc(r.answerer)} · ${esc(r.answered_at)}</div>
-           <div class="srx-body" style="background:transparent;border:0;padding:0;max-height:none;">${esc(r.answer)}</div>
+           <div class="srx-body ce-rich" style="background:transparent;border:0;padding:0;max-height:none;">${r.answer}</div>
          </div>`
       : '';
 
-    const a = document.getElementById('srxAnswer'); if (a) a.value = r.answer || '';
+    /* 답변 편집기 — 처음 열 때 세우고, 담긴 글을 넣는다. 두 번째부터는
+       ceQuill.make 가 이미 선 것을 그대로 돌려준다. */
+    const a = document.getElementById('srxAnswer');
+    if (a) {
+      ceQuill.make(a, '처리 결과나 안내 사항을 입력해 주십시오.')
+             .then(q => ceQuill.set(q, r.answer))
+             .catch(() => showToast('편집기를 불러오지 못했습니다.', 'warning'));
+    }
     const s = document.getElementById('srxStatus'); if (s) s.value = r.status;
 
     srxPop.open('srxPopAnswer');
@@ -433,7 +442,7 @@
 
   window.srxSaveAnswer = async function () {
     if (!_sel) { showToast('서비스 요청을 먼저 선택해 주십시오.', 'warning'); return; }
-    const answer = document.getElementById('srxAnswer').value.trim();
+    const answer = ceQuill.html(document.getElementById('srxAnswer')?.__quill);
     if (!answer) { ceAlert('답변 내용을 입력해 주십시오.', { tone: 'warning' }); return; }
 
     const btn = document.getElementById('srxAnswerBtn');

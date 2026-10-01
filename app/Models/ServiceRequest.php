@@ -31,12 +31,28 @@ class ServiceRequest extends Model
         'urgent' => '긴급',
     ];
 
+    /**
+     * 진행 상태 (2026-10-01 지시).
+     *
+     * 전에는 접수ㆍ처리중ㆍ답변완료ㆍ종결이었다. 「답변완료」는 답변을 적었는가를
+     * 말하고 「완료」는 일이 끝났는가를 말한다 — 둘은 다르고, 담당자가 보는 것은
+     * 뒤쪽이다. 「종결」 자리에는 「대기」를 둔다. 대기는 끝난 것이 아니라 멈춰 둔
+     * 것이고, 끝난 건은 완료 하나로 족하다.
+     *
+     * 바꿀 때 service_requests 는 0줄이었다 — 옮길 자료가 없었다.
+     */
     public const STATUSES = [
-        'open'        => '접수',
-        'in_progress' => '처리중',
-        'answered'    => '답변완료',
-        'closed'      => '종결',
+        'new'         => '신규',
+        'in_progress' => '진행중',
+        'done'        => '완료',
+        'hold'        => '대기',
     ];
+
+    /** 새 SR 이 서는 자리 */
+    public const STATUS_DEFAULT = 'new';
+
+    /** 답변을 적으면 저절로 옮겨 가는 자리 — 담당자가 달리 고르면 그것을 따른다 */
+    public const STATUS_ANSWERED = 'done';
 
     public function user(): BelongsTo
     {

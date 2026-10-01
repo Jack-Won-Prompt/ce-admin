@@ -1788,7 +1788,9 @@
             @dsicon('dialogue', 'ds-icon menu-icon')
             <span>SR 관리</span>
             @php
-              try { $srOpen = \App\Models\ServiceRequest::whereIn('status', ['open','in_progress'])->count(); }
+              /* 손대야 하는 건만 센다 — 신규와 진행중이다 (2026-10-01 상태 교집).
+                 완료는 끝난 것이고, 대기는 멈춰 둔 것이라 띠에 세워 재촉하지 않는다. */
+              try { $srOpen = \App\Models\ServiceRequest::whereIn('status', ['new','in_progress'])->count(); }
               catch(\Throwable $e) { $srOpen = 0; }
             @endphp
             @if($srOpen > 0)
@@ -3170,6 +3172,112 @@ window.dsBindSelCount = function (grid, elId) {
 };
 </script>
 
+{{-- ═══════════════════════════════════════════════════════════
+     글 편집기 — Quill (2026-10-01 지시 「supportworks 의 Quill 만 가져오기」)
+
+     supportworks 와 **같은 판ㆍ같은 도구막대**다(resources/views/inquiry/index.blade.php
+     의 설정을 그대로 옮겼다). 거기 함께 있던 이미지 리사이즈ㆍ붙여넣기 업로드 조각
+     (_quill-image-resize)은 가져오지 않는다 — 지시가 「Quill 만」이다.
+
+     **쓸 때 한 번만 불러온다.** SR 패널은 모든 화면에 서므로, 머리에 박아 두면
+     편집기를 열지 않는 화면까지 220KB 를 함께 내려받는다.
+
+     쓰는 법 —
+       const q = await ceQuill.make('#자리', '안내말');
+       q.root.innerHTML = 담긴글;          // 담긴 것을 넣을 때
+       const 글 = ceQuill.html(q);         // 꺼낼 때 (빈 칸은 '' 로 돌려준다)
+═══════════════════════════════════════════════════════════ --}}
+<script>
+window.ceQuill = (function () {
+  const CSS = 'https://cdn.quilljs.com/1.3.7/quill.snow.css';
+  const JS  = 'https://cdn.quilljs.com/1.3.7/quill.min.js';
+
+  /* supportworks 의 도구막대 그대로 — 굵게ㆍ기울임ㆍ밑줄 / 번호ㆍ점 목록 / 링크ㆍ그림ㆍ지우기 */
+  const TOOLBAR = [
+    ['bold', 'italic', 'underline'],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    ['link', 'image', 'clean'],
+  ];
+
+  let 준비 = null;
+
+  function 불러오기() {
+    if (준비) return 준비;
+
+    준비 = new Promise((맞음, 틀림) => {
+      if (window.Quill) { 맞음(window.Quill); return; }
+
+      if (!document.querySelector(`link[href="${CSS}"]`)) {
+        const l = document.createElement('link');
+        l.rel = 'stylesheet'; l.href = CSS;
+        document.head.appendChild(l);
+      }
+
+      const s = document.createElement('script');
+      s.src = JS;
+      s.onload  = () => 맞음(window.Quill);
+      s.onerror = () => 틀림(new Error('편집기를 불러오지 못했습니다.'));
+      document.head.appendChild(s);
+    });
+
+    return 준비;
+  }
+
+  /** 자리 하나에 편집기를 세운다. 이미 선 자리면 그것을 그대로 돌려준다. */
+  async function make(자리, 안내말) {
+    const el = typeof 자리 === 'string' ? document.querySelector(자리) : 자리;
+    if (!el) return null;
+
+    if (el.__quill) return el.__quill;
+
+    const Q = await 불러오기();
+    if (!Q) return null;
+
+    const q = new Q(el, {
+      theme: 'snow',
+      placeholder: 안내말 || '',
+      modules: { toolbar: TOOLBAR },
+    });
+
+    el.__quill = q;
+    return q;
+  }
+
+  /** 담을 글 — 사람 눈에 빈 칸이면 '' 로 돌려준다 (Quill 은 빈 칸을 <p><br></p> 로 낸다) */
+  function html(q) {
+    if (!q) return '';
+    const 글 = q.root.innerHTML;
+    return q.getText().trim() === '' && !/<img/i.test(글) ? '' : 글;
+  }
+
+  /** 담긴 것을 넣는다 */
+  function set(q, 글) {
+    if (q) q.root.innerHTML = 글 || '';
+  }
+
+  return { make, html, set, load: 불러오기 };
+})();
+</script>
+
+<style>
+  /* 편집기 — 입력칸과 같은 테두리ㆍ둥글기로 맞춘다 */
+  .ce-quill { background: var(--gray-0, #fff); }
+  .ce-quill .ql-toolbar.ql-snow { border-color: var(--gray-200, #e5e7eb);
+    border-radius: 8px 8px 0 0; }
+  .ce-quill .ql-container.ql-snow { border-color: var(--gray-200, #e5e7eb);
+    border-radius: 0 0 8px 8px; font-family: inherit; }
+  .ce-quill .ql-editor { min-height: 140px; font-size: 13px; line-height: 21px; }
+  .ce-quill .ql-editor.ql-blank::before { font-style: normal; color: var(--gray-500, #9ca3af); }
+  .ce-quill .ql-editor img { max-width: 100%; }
+  /* 담긴 글을 보여 주는 자리 — 편집기가 낸 꼴을 그대로 그린다 */
+  .ce-rich { font-size: 13px; line-height: 21px; word-break: break-word; }
+  .ce-rich p { margin: 0 0 6px; }
+  .ce-rich p:last-child { margin-bottom: 0; }
+  .ce-rich ol, .ce-rich ul { margin: 0 0 6px; padding-left: 20px; }
+  .ce-rich img { max-width: 100%; height: auto; }
+  .ce-rich a { color: var(--primary, #2563eb); text-decoration: underline; }
+</style>
+
 @stack('scripts')
 
 {{-- ═══════════════════════════════════════════════════════════
@@ -3672,10 +3780,13 @@ input#chatFileInput { display: none; }
 }
 .sr-answer-box .lbl { font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 5px; }
 .sr-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
-.sr-b-open        { background: var(--warning-light); color: var(--warning); }
+/* 진행 상태 — 신규ㆍ진행중ㆍ완료ㆍ대기 (2026-10-01 지시).
+   손대야 하는 자리(신규)는 주의색, 도는 중은 기본색, 끝난 것은 성공색,
+   멈춰 둔 것(대기)은 회색이다. */
+.sr-b-new         { background: var(--warning-light); color: var(--warning); }
 .sr-b-in_progress { background: var(--primary-light);  color: var(--primary); }
-.sr-b-answered    { background: var(--success-light);  color: var(--success); }
-.sr-b-closed      { background: var(--border-light);   color: var(--text-muted); }
+.sr-b-done        { background: var(--success-light);  color: var(--success); }
+.sr-b-hold        { background: var(--border-light);   color: var(--text-muted); }
 
 </style>
 
@@ -3902,7 +4013,8 @@ input#chatFileInput { display: none; }
     </div>
     <div class="sr-field">
       <label>내용 <span style="color:var(--danger);">*</span></label>
-      <textarea id="srContent" maxlength="5000" placeholder="어떤 화면에서 무엇이 어떻게 되면 좋을지 입력해 주십시오."></textarea>
+      {{-- Quill 편집기 (2026-10-01 지시) — 패널을 처음 열 때 선다 --}}
+      <div class="ce-quill"><div id="srContent"></div></div>
     </div>
     <div class="sr-field">
       <label>대상 화면</label>
@@ -3924,7 +4036,7 @@ input#chatFileInput { display: none; }
     @perm('service-requests', 'update')
     <div class="sr-field">
       <label>답변</label>
-      <textarea id="srAnswer" maxlength="5000" placeholder="처리 결과나 안내 사항을 입력해 주십시오."></textarea>
+      <div class="ce-quill"><div id="srAnswer"></div></div>
     </div>
     <div class="sr-row2">
       <div class="sr-field">
@@ -3953,7 +4065,7 @@ input#chatFileInput { display: none; }
 const SrPanel = (() => {
   const LIST_URL  = BASE_URL + '/sr/list';
   const STORE_URL = BASE_URL + '/sr';
-  const STATUS_CLS = { open:'sr-b-open', in_progress:'sr-b-in_progress', answered:'sr-b-answered', closed:'sr-b-closed' };
+  const STATUS_CLS = { new:'sr-b-new', in_progress:'sr-b-in_progress', done:'sr-b-done', hold:'sr-b-hold' };
 
   let _grid = null, _rows = [], _sel = null, _loaded = false;
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -3970,6 +4082,15 @@ const SrPanel = (() => {
       _loaded = true;
       buildGrid();
       load();
+    }
+
+    /* 등록 편집기는 패널을 열 때 세운다 (2026-10-01).
+       머리에서 미리 세우면 편집기를 쓰지 않는 화면까지 Quill 을 내려받는다.
+       두 번째부터는 ceQuill.make 가 이미 선 것을 그대로 돌려준다. */
+    const 내용칸 = document.getElementById('srContent');
+    if (내용칸) {
+      ceQuill.make(내용칸, '어떤 화면에서 무엇이 어떻게 되면 좋을지 입력해 주십시오.')
+             .catch(() => showToast('편집기를 불러오지 못했습니다.', 'warning'));
     }
   }
   function close() {
@@ -4045,15 +4166,18 @@ const SrPanel = (() => {
           · ${esc(r.writer)} · ${esc(r.created)}
           ${r.page ? ' · 대상: ' + esc(r.page) : ''}
         </div>
-        <div class="body">${esc(r.content)}</div>
+        {{-- 담긴 글은 담길 때 걸러진 것이다(App\Support\RichText) — 꾸밈을 그대로 그린다.
+             글자로 내놓으면 편집기로 적은 굵게ㆍ목록ㆍ그림이 모두 사라진다. --}}
+        <div class="body ce-rich">${r.content || ''}</div>
         ${r.answer ? `<div class="sr-answer-box">
           <div class="lbl">답변 · ${esc(r.answerer)} · ${esc(r.answered_at)}</div>
-          <div class="body">${esc(r.answer)}</div>
+          <div class="body ce-rich">${r.answer}</div>
         </div>` : ''}
       </div>`;
 
+    /* 답변 편집기에 담긴 글을 넣는다 — 편집기가 아직 서지 않았으면 세우고서 넣는다 */
     const a = document.getElementById('srAnswer');
-    if (a) a.value = r.answer || '';
+    if (a) { ceQuill.make(a, '처리 결과나 안내 사항을 입력해 주십시오.').then(q => ceQuill.set(q, r.answer)); }
     const s = document.getElementById('srStatus');
     if (s) s.value = r.status;
 
@@ -4063,7 +4187,7 @@ const SrPanel = (() => {
 
   async function submit() {
     const title   = document.getElementById('srTitle').value.trim();
-    const content = document.getElementById('srContent').value.trim();
+    const content = ceQuill.html(document.getElementById('srContent')?.__quill);
     if (!title || !content) { ceAlert('제목과 내용을 모두 입력해 주십시오.', { tone: 'warning' }); return; }
 
     const btn = document.getElementById('srSubmitBtn');
@@ -4087,7 +4211,7 @@ const SrPanel = (() => {
       }
       showToast(d.message, 'success');
       document.getElementById('srTitle').value = '';
-      document.getElementById('srContent').value = '';
+      ceQuill.set(document.getElementById('srContent')?.__quill, '');
       await load();
       show('list');
     } catch (e) {
@@ -4097,7 +4221,7 @@ const SrPanel = (() => {
 
   async function saveAnswer() {
     if (!_sel) return;
-    const answer = document.getElementById('srAnswer').value.trim();
+    const answer = ceQuill.html(document.getElementById('srAnswer')?.__quill);
     if (!answer) { ceAlert('답변 내용을 입력해 주십시오.', { tone: 'warning' }); return; }
 
     const btn = document.getElementById('srAnswerBtn');
