@@ -884,6 +884,25 @@ Route::get('/dev/migrate-admin-invitations', function () {
 });
 
 // ── Dev: user_activity_logs 테이블 마이그레이션 ──
+/* Agent 가 스스로 고쳐 올리는지 보는 자리 (2026-10-02 지시).
+ *
+ * 잘못은 **한 줄로 고칠 수 있는 꼴**로 둔다 — 없는 열쇠를 읽는, 운영에서 가장 흔한
+ * 잘못이다. 고치는 법도 하나로 분명하다(?? 로 기본값을 두거나 열쇠를 넣는다).
+ * 결제ㆍ국세청ㆍ개인정보와 닿지 않는 자리라, Agent 가 「고쳐도 되는 갈래」로 읽어야 한다.
+ *
+ * admin@ce-admin.co.kr 만 열 수 있다. 한 바퀴를 본 뒤 걷는다.
+ */
+Route::get('/dev/agent-fix-test', function () {
+    abort_unless(auth()->user()?->email === 'admin@ce-admin.co.kr', 404);
+
+    $검수설정 = ['이름' => '파일 검수', '담당' => '관리자'];
+
+    return response()->json([
+        '이름'     => $검수설정['이름'],
+        '최소장수' => $검수설정['최소장수'],
+    ]);
+})->middleware('auth')->name('dev.agentFixTest');
+
 Route::get('/dev/migrate-activity-logs', function () {
     if (!\Illuminate\Support\Facades\Auth::check()) abort(403);
     if (!\Illuminate\Support\Facades\Schema::hasTable('user_activity_logs')) {
