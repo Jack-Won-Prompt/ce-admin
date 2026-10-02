@@ -10,9 +10,29 @@ use Illuminate\View\View;
 
 class ServiceSettingController extends Controller
 {
+    /**
+     * 이 묶음은 이 계정에만 보인다 (2026-10-02 지시).
+     *
+     * Agent 연계는 오류와 SR 을 밖으로 내보내는 자리다 — 그 짐에는 환자 이름ㆍ
+     * 주민등록번호가 보이는 캡처가 실릴 수 있다. 켜고 끄는 일을 한 사람에게만
+     * 둔다. 화면에서 가리는 것만으로는 닫은 것이 아니므로 저장도 함께 막는다.
+     */
+    private const 전용묶음 = ['agent' => 'admin@ce-admin.co.kr'];
+
+    /** 이 사람이 그 묶음을 다룰 수 있는가 */
+    private function 다룰수있나(string $group): bool
+    {
+        $주인 = self::전용묶음[$group] ?? null;
+
+        return $주인 === null || auth()->user()?->email === $주인;
+    }
+
     public function index(Request $request): View
     {
-        $schema = ServiceSettings::schema();
+        $schema = collect(ServiceSettings::schema())
+            ->filter(fn ($_, $group) => $this->다룰수있나($group))
+            ->all();
+
         $active = $request->query('tab');
         if (! isset($schema[$active])) {
             $active = array_key_first($schema);
@@ -34,6 +54,10 @@ class ServiceSettingController extends Controller
     {
         $def = ServiceSettings::group($group);
         abort_if(! $def, 404);
+
+        /* 화면에 없던 묶음은 저장도 받지 않는다 — 요청은 직접 보낼 수 있다.
+           없는 것처럼 404 로 답한다(있다는 것조차 알릴 까닭이 없다). */
+        abort_if(! $this->다룰수있나($group), 404);
 
         $rules = [];
         foreach ($def['fields'] as $key => $f) {
