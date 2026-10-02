@@ -907,6 +907,18 @@
   .rx-code-find:hover { background:var(--gray-50, #f9fafb); color:var(--primary, #2563eb); }
   .rx-code-find.is-empty { opacity:.45; }
   .rx-field-row.full { grid-column:1 / -1; }
+  /* 메모 줄은 **위로 맞춘다** (2026-10-02 지시 「처방전 목록 메모 등록하면 주문등록에서
+     이상하게 보임」).
+
+     `.rx-field-row` 는 세로 가운데 맞춤이다. 한 줄짜리 칸만 있을 때는 맞는 값이지만,
+     메모는 글이 길어지면 상자가 자란다 — 왼쪽 「검수 요청 메모」가 두세 줄이 되면
+     그 줄 전체가 높아지고, 오른쪽 「입력 검수 승인 메모」의 이름표가 **빈 자리 한가운데
+     떠 보였다.** 짝인 두 칸이 서로 다른 높이에서 시작하니 한 쌍으로 읽히지도 않는다.
+
+     이름표와 상자를 둘 다 맨 위에 붙인다. 이름표에는 상자의 안쪽 여백만큼(7px) 내려
+     첫 줄과 눈높이를 맞춘다. */
+  .rx-field-row.rx-top { align-items:flex-start; }
+  .rx-field-row.rx-top > .rx-field-label { padding-top:7px; }
   /* 3열이 되면 입력영역이 253 까지 좁아진다. flex 항목의 기본 최소 폭은 '내용 폭'이라
      선택지 글이 긴 select(사유·일일 도뇨 횟수)나 긴 placeholder 를 가진 입력이 줄지 않고
      버티면 카드를 가로로 넘긴다. 아코디언 안 입력은 전부 0 까지 줄게 둔다.
@@ -3650,7 +3662,7 @@ $calcDeposit  = $calcCopay;
                    곧 검수를 청하는 말이므로 칸을 하나로 모은다 (2026-09-14 지시).
 
                    여기서 고치지 않는다 — 올린 자리에서 적는 말이다. --}}
-              <div class="rx-field-row rx-row-start rx-w3">
+              <div class="rx-field-row rx-row-start rx-w3 rx-top">
                 <span class="rx-field-label">검수 요청 메모</span>
                 <div id="f-admin-note" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
                      padding:6px 10px;border:1px solid var(--border);border-radius:8px;
@@ -3668,7 +3680,7 @@ $calcDeposit  = $calcCopay;
 
                    파일 검수의 「검수 메모」는 아래에 그대로 둔다 — 그것은 올라온 이미지를
                    본 사람의 말이라 다른 일이다. --}}
-              <div class="rx-field-row rx-w3">
+              <div class="rx-field-row rx-w3 rx-top">
                 <span class="rx-field-label">입력 검수 승인 메모</span>
                 {{-- 적을 수 있게 열었다 (2026-10-02 지시).
 
@@ -3686,7 +3698,7 @@ $calcDeposit  = $calcCopay;
               @if($prescription->review_memo)
                 {{-- 검수자가 승인ㆍ반려하며 남긴 말 — 여기서 고치지 않는다.
                      참고 사항 안에 붙어 있던 것을 제 줄로 세운다. --}}
-                <div class="rx-field-row rx-row-start rx-w3">
+                <div class="rx-field-row rx-row-start rx-w3 rx-top">
                   <span class="rx-field-label">검수 메모</span>
                   <div id="f-review-memo" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
                        padding:6px 10px;border:1px solid var(--border);border-radius:8px;
