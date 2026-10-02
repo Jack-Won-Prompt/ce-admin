@@ -43,37 +43,21 @@ class AgentFixer
     private const 최대바뀐줄 = 40;
 
     /**
-     * 손대면 안 되는 자리 — **파일 이름에 이 낱말이 있으면 막는다** (2026-10-02 확인).
+     * 손대면 안 되는 자리 — 여기 적힌 것만 막는다 (2026-10-02 지시).
      *
-     * 처음에는 폴더 몇 개만 적어 두었는데, 같은 일을 하는 화면ㆍ컨트롤러ㆍ명령이
-     * 그 밖에 있었다 — 위드웍스는 아예 빠져 있었고, 팝빌도 서비스 폴더만 막혀
-     * 세금계산서ㆍ현금영수증 화면은 열려 있었다. 폴더로 세면 반드시 빠진다.
-     *
-     * 그래서 낱말로 막는다. 경로를 소문자로 내려 견주므로 `WithworksLink`ㆍ
-     * `app/Http/Controllers/Withworks…`ㆍ`withworks:sync` 가 한꺼번에 걸린다.
-     *
-     * 이 울타리 때문에 Agent 가 고칠 수 있는 자리는 좁다. 그것이 맞다 — 이 저장소의
-     * 큰 자리는 대개 돈이거나 신고이거나 환자 자료다.
+     * config/ 와 database/ 는 허용 목록에 없어 이미 밖이지만, 허용이 넓어지는
+     * 날을 대비해 적어 둔다. AgentFixer 와 AgentWorker 를 함께 막는다 — 고치는
+     * 자리와 「고쳐도 되는가」를 가리는 자리다.
      */
     private const 금지 = [
-        // 표 구조ㆍ설정ㆍ열쇠
-        'database/migrations/', 'config/', '.env',
-        // Agent 가 자기 자신을 고치는 일
-        'agent',
-        // 창고 연계 — 주문이 나가고 취소되는 길
-        'withworks',
-        // 국세청 신고 — 세금계산서ㆍ현금영수증ㆍ팝빌 전부
-        'popbill', 'taxinvoice', 'cashbill',
-        // 결제 — 토스ㆍ결제 링크ㆍ정산ㆍ입금ㆍ환불
-        'toss', 'payment', 'settlement', 'deposit', 'refund', 'finance',
-        // 공단 청구
-        'nhis',
-        // 환자 개인정보
-        'residentno', 'patient', 'consent', 'delegation',
-        // 한 번 나가면 거둘 수 없는 것 — 문자ㆍ알림톡ㆍ팩스ㆍ푸시
-        'message', 'kakao', 'fax', 'sms', 'fcm', 'notice', 'notif',
-        // 주문ㆍ교환반품 — 돈과 창고가 함께 걸린다
-        'order', 'return',
+        'app/Services/TossPayments/',      // 결제
+        'app/Services/Popbill/',           // 국세청 신고ㆍ문자ㆍ팩스 발송
+        'app/Services/WithworksLink.php',  // 창고로 보내는 길
+        'app/Support/ResidentNo.php',      // 주민등록번호
+        'app/Services/AgentFixer.php',     // 고치는 자리
+        'app/Services/AgentWorker.php',    // 고쳐도 되는가를 가리는 자리
+        'config/services.php',
+        'database/migrations/',
     ];
 
     /** 고칠 수 있는 자리 — 여기 아래만 본다 */
