@@ -898,6 +898,14 @@
   .pib-btn.is-paid { border-color:var(--primary-200,var(--primary)); }
 
   .rx-field-row { display:flex; align-items:center; gap:8px; min-width:0; }
+  /* 상병코드 옆 돋보기 — 입력칸과 키를 맞춘다. 코드가 비면 흐려진다. */
+  .rx-code-find { flex:0 0 auto; width:32px; height:32px; display:inline-flex;
+                  align-items:center; justify-content:center; cursor:pointer;
+                  border:1px solid var(--gray-200, #e5e7eb); border-radius:8px;
+                  background:var(--gray-0, #fff); color:var(--gray-600, #4b5563);
+                  font-size:16px; line-height:1; }
+  .rx-code-find:hover { background:var(--gray-50, #f9fafb); color:var(--primary, #2563eb); }
+  .rx-code-find.is-empty { opacity:.45; }
   .rx-field-row.full { grid-column:1 / -1; }
   /* 3열이 되면 입력영역이 253 까지 좁아진다. flex 항목의 기본 최소 폭은 '내용 폭'이라
      선택지 글이 긴 select(사유·일일 도뇨 횟수)나 긴 placeholder 를 가진 입력이 줄지 않고
@@ -3765,6 +3773,13 @@ $calcDeposit  = $calcCopay;
                 <span class="rx-field-label">상병코드</span>
                 <input type="text" class="form-control" id="f-disease-code"
                        value="{{ $prescription->disease_code ?? '' }}" placeholder="코드" style="flex:1;min-width:0;" />
+                {{-- 적어 둔 코드가 무슨 상병인지 저쪽 표에서 바로 본다 (2026-10-02 지시).
+                     새 창으로 연다 — 적던 내용을 두고 떠나면 안 된다. --}}
+                <button type="button" class="rx-code-find" id="btnDiseaseCode"
+                        title="국가표준질병사인분류에서 이 코드를 찾아봅니다 (새 창)"
+                        aria-label="상병코드 찾아보기">
+                  <i class="bx bx-search"></i>
+                </button>
               </div>
               <div class="rx-field-row">
                 {{-- 「1 · 2-1 · 2-2 · 3」 네 코드를 고르던 칸이었다. 그 목록이 틀렸고,
@@ -7357,6 +7372,35 @@ window.HELP_TOUR_STEPS = [
     const cur = existingOrder?.so_type;
     if (cur && SALE_SO_TYPES.includes(String(cur))) currentSoType = String(cur);
   });
+
+  /* 상병코드 옆 돋보기 — 적어 둔 코드를 국가표준질병사인분류에서 바로 본다
+     (2026-10-02 지시).
+
+     새 창으로 연다. 이 화면은 적다 만 내용을 품고 있어, 같은 창에서 떠나면
+     그 내용이 사라진다. */
+  (() => {
+    const 칸   = document.getElementById('f-disease-code');
+    const 단추 = document.getElementById('btnDiseaseCode');
+    if (!칸 || !단추) return;
+
+    /* 코드가 비면 눌러도 소용이 없다 — 보기만 해도 알 수 있게 흐려 둔다 */
+    const 흐리기 = () => 단추.classList.toggle('is-empty', 칸.value.trim() === '');
+    칸.addEventListener('input', 흐리기);
+    흐리기();
+
+    단추.addEventListener('click', () => {
+      const 코드 = 칸.value.trim();
+
+      if (!코드) {
+        ceAlert('상병코드를 먼저 입력해 주십시오.', { title: '상병코드 찾기' });
+        칸.focus();
+        return;
+      }
+
+      window.open('https://www.kcdcode.kr/codes/' + encodeURIComponent(코드),
+                  '_blank', 'noopener');
+    });
+  })();
 
   function clearShippingAddress() {
     ['shippingPostcode','shippingAddr','shippingAddrDetail','shippingRecipient'].forEach(id => {
