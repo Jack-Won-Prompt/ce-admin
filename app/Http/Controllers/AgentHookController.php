@@ -85,12 +85,58 @@ class AgentHookController extends Controller
             'bytes' => strlen($글),
         ]);
 
+        $this->일을띄운다($기록->id, $갈래);
+
         /* 받았다는 것만 답한다. 분석은 뒤에 붙는 작업자가 하고, 그 결과는 SR 의
            답변과 상태로 돌아간다 — 보내는 쪽은 그것을 기다리지 않는다. */
         return response()->json([
             'success'  => true,
             'received' => $기록->id,
         ]);
+    }
+
+    /**
+     * 받은 그 자리에서 작업자를 띄운다 (2026-10-02 지시).
+     *
+     * 스케줄로 1분마다 빈 표를 들여다보지 않는다 — 웹훅이 들어온 자리가 그 줄
+     * 번호를 들고 작업자를 띄운다.
+     *
+     * **기다리지 않는다.** Claude 는 1~2분이 걸리고, 보내는 쪽은 3초에 끊는다 —
+     * 여기서 기다리면 운영 쪽 웹훅이 늘 「보내지 못했습니다」가 된다. 그래서
+     * 명령을 떼어 내보내고(`&`) 우리는 곧바로 200 으로 답한다.
+     *
+     * 열쇠가 없으면 띄우지 않는다. 띄워도 아무 일도 하지 않을 것을 알기 때문이다.
+     */
+    private function 일을띄운다(int $자취번호, string $갈래): void
+    {
+        if (! in_array($갈래, ['error.raised', 'sr.created'], true)) {
+            return;
+        }
+
+        if ((string) config('services.agent.api_key') === '') {
+            return;
+        }
+
+        /* FPM 에서 PHP_BINARY 는 php-fpm 을 가리킨다 — CLI 를 따로 적어야 한다.
+           값은 설정에서 고칠 수 있게 둔다(서버마다 자리가 다를 수 있다). */
+        $php = (string) config('services.agent.php_bin', '/usr/bin/php');
+
+        $명령 = sprintf(
+            '%s %s agent:work --log=%d > /dev/null 2>&1 &',
+            escapeshellarg($php),
+            escapeshellarg(base_path('artisan')),
+            $자취번호
+        );
+
+        try {
+            // 떼어 내보낸다 — 이 요청이 끝나도 그쪽은 계속 돈다
+            exec($명령);
+        } catch (\Throwable $e) {
+            Log::warning('[Agent] 작업자를 띄우지 못했습니다', [
+                'log'   => $자취번호,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /** 무엇에 대한 짐인가 — 「sr:12」ㆍ「error:340」 */

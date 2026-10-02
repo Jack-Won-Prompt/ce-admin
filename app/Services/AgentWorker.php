@@ -50,7 +50,36 @@ class AgentWorker
     public const 사람몫 = ['money', 'nts', 'personal', 'migration'];
 
     /**
-     * 손대지 않은 짐을 집어 일한다.
+     * 그 줄 하나만 일한다 — 웹훅을 받은 자리가 이것을 띄운다 (2026-10-02 지시).
+     *
+     * 스케줄로 빈 표를 들여다보지 않는다. 받은 그 자리에서 그 줄만 본다.
+     *
+     * @return array{처리:int, 건너뜀:int, 글:array<string>}
+     */
+    public function 한줄만(int $자취번호): array
+    {
+        $열쇠 = (string) config('services.agent.api_key');
+
+        if ($열쇠 === '') {
+            return ['처리' => 0, '건너뜀' => 0, '글' => ['Claude 열쇠가 설정되지 않아 지나갑니다']];
+        }
+
+        $줄 = WebhookLog::where('id', $자취번호)
+            ->where('provider', 'agent')
+            ->where('direction', 'in')
+            ->whereIn('event_code', ['error.raised', 'sr.created'])
+            ->whereNull('response')
+            ->first();
+
+        if (! $줄) {
+            return ['처리' => 0, '건너뜀' => 0, '글' => ["#{$자취번호} — 이미 손댔거나 볼 줄이 아닙니다"]];
+        }
+
+        return $this->줄들을(collect([$줄]), $열쇠);
+    }
+
+    /**
+     * 손대지 않은 짐을 집어 일한다 — 손으로 확인할 때 쓴다.
      *
      * @return array{처리:int, 건너뜀:int, 글:array<string>}
      */
@@ -70,6 +99,12 @@ class AgentWorker
             ->take($한번에)
             ->get();
 
+        return $this->줄들을($줄들, $열쇠);
+    }
+
+    /** 집은 줄들을 차례로 일한다 */
+    private function 줄들을(\Illuminate\Support\Collection $줄들, string $열쇠): array
+    {
         $글 = [];
         $처리 = 0;
         $건너뜀 = 0;

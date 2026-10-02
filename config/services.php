@@ -182,6 +182,9 @@ return [
            (2026-10-02 지시). 여기 기본값은 비어 있다. */
         'api_key'       => null,
         'model'         => 'claude-opus-5',
+        /* 작업자를 띄울 때 쓰는 PHP (CLI). FPM 의 PHP_BINARY 는 php-fpm 을
+           가리켜 쓸 수 없다 — 서버의 CLI 자리를 적는다 (2026-10-02). */
+        'php_bin'       => env('AGENT_PHP_BIN', '/usr/bin/php'),
     ],
 
     /*
