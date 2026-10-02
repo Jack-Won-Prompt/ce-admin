@@ -249,9 +249,13 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
 /* 페이지네이션 — 그리드 카드 하단 줄(1568×52 · pad 12 · 상단 1px).
    버튼 28×28 · r6 · bd 1px #E8EAEC · bg #FFFFFF · 13/500 #101317 · 버튼 사이 gap 6.
    활성은 bg #E9F9FB · 글자 primary 이고 테두리는 그대로 #E8EAEC 다. */
-.hist-pager { padding:12px; border-top:1px solid var(--gray-200); display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.pager-info { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
-.pager-btns { display:flex; gap:6px; }
+/* 쪽 번호를 **가운데**에 둔다 (2026-10-02 지시) — 현금/카드영수증과 같은 얼개다.
+   양옆에 같은 몫의 빈 자리를 두어 가운데를 잡는다. 건수 글의 길이가 바뀌어도
+   쪽 번호가 흔들리지 않는다. */
+.hist-pager { padding:12px; border-top:1px solid var(--gray-200); display:flex; align-items:center; justify-content:center; gap:8px; }
+.pager-info { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); flex:1 1 0; min-width:0; }
+.pager-spacer { flex:1 1 0; min-width:0; }
+.pager-btns { display:flex; gap:6px; flex:none; }
 .pager-btn { height:28px; min-width:28px; padding:0 6px; border:1px solid var(--gray-200); border-radius:6px; background:var(--gray-0); font-size:13px; font-weight:500; line-height:21px; cursor:pointer; color:var(--gray-1000); transition:border-color .15s,background .15s; }
 .pager-btn:hover { border-color:var(--primary); color:var(--primary); }
 .pager-btn.active { background:var(--primary-50); color:var(--primary); border-color:var(--gray-200); }
@@ -589,6 +593,8 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
       <div class="hist-pager" id="hist-pager" style="display:none;">
         <div class="pager-info" id="pager-info"></div>
         <div class="pager-btns" id="pager-btns"></div>
+        {{-- 왼쪽 건수 글과 같은 몫의 빈 자리 — 쪽 번호가 가운데 선다 --}}
+        <div class="pager-spacer"></div>
       </div>
     </div>
 
@@ -1018,7 +1024,7 @@ async function loadHistory(page = 1) {
   const taxType = document.getElementById('f-tax-type').value;
   window.__taxGrid && window.__taxGrid.setData([]);
 
-  let url = `${TI_BASE}/search?corp_num=${cn}&mgt_key_type=SELL&start_date=${sd}&end_date=${ed}&page=${page}&per_page=15&order=D`;
+  let url = `${TI_BASE}/search?corp_num=${cn}&mgt_key_type=SELL&start_date=${sd}&end_date=${ed}&page=${page}&per_page=500&order=D`;
   if (taxType) url += `&tax_type_code[]=${encodeURIComponent(taxType)}`;
 
   /* 이름 (2026-09-22 확인요청 2쪽). 발행된 줄은 공급받는자 상호로, 아직 안 낸 대기
@@ -1122,9 +1128,13 @@ async function loadHistory(page = 1) {
 function renderPager(total, page, perPage) {
   const pager = document.getElementById('hist-pager');
   const pages = Math.ceil(total / perPage);
-  if (pages <= 1) { pager.style.display = 'none'; return; }
+
+  /* 쪽이 하나뿐이어도 건수는 보인다 (2026-10-02) — 쪽당 500건으로 늘린 뒤로는 한 쪽으로
+     끝나는 조회가 대부분인데, 줄 전체를 감추면 총 건수까지 사라진다. */
+  if (total === 0) { pager.style.display = 'none'; return; }
   pager.style.display = 'flex';
   document.getElementById('pager-info').textContent = `총 ${total.toLocaleString()}건`;
+  if (pages <= 1) { document.getElementById('pager-btns').innerHTML = ''; return; }
   const btns  = [];
   const start = Math.max(1, page-2), end = Math.min(pages, page+2);
   if (page > 1) btns.push(`<button class="pager-btn" onclick="loadHistory(${page-1})">‹</button>`);

@@ -110,7 +110,11 @@ class TaxinvoiceController extends Controller
             'start_date'   => 'required|date_format:Ymd',
             'end_date'     => 'required|date_format:Ymd',
             'page'         => 'nullable|integer|min:1',
-            'per_page'     => 'nullable|integer|min:1|max:100',
+            /* 상한을 1,000 으로 둔다 (2026-10-02 지시 「페이지당 500건」).
+               100 이면 화면이 보내는 500 에 걸려 422 가 난다. 이 조회는 팝빌이 아니라
+               우리 표(PopbillTaxinvoice)를 읽어 forPage 로 자르므로 상한을 낮게 둘
+               이유가 없다 — 현금영수증 조회도 같은 까닭으로 1,000 이다. */
+            'per_page'     => 'nullable|integer|min:1|max:1000',
         ]);
 
         $corpNum    = $request->query('corp_num', config('popbill.test.corp_num'));

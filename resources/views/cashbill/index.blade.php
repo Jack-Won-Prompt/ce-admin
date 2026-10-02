@@ -188,9 +188,16 @@
   /* 페이지네이션 — 그리드 카드 하단 줄. 시안 1568×52 · pad 12 · 위 1px gray-200,
      버튼 묶음은 오른쪽 끝. 버튼 28×28 · r6 · bd 1px gray-200 · 13/500 · 사이 6,
      현재 쪽은 bg primary-light · 글자 primary (단색 채움이 아니다). */
-  .hist-pager { padding:12px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px; flex-shrink:0; }
-  .pager-info { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
-  .pager-btns { display:flex; gap:6px; margin-left:auto; }
+  /* 쪽 번호를 **가운데**에 둔다 (2026-10-02 지시).
+
+     여태 오른쪽 끝에 붙어 있었다(`justify-content:space-between` ＋ `margin-left:auto`).
+     양옆에 같은 몫의 빈 자리를 두어 가운데를 잡는다 — 건수 글이 길어지거나 짧아져도
+     쪽 번호가 흔들리지 않는다. 자리를 절대 좌표로 잡으면 좁은 화면에서 건수 글과
+     겹친다. */
+  .hist-pager { padding:12px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0; }
+  .pager-info { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); flex:1 1 0; min-width:0; }
+  .pager-spacer { flex:1 1 0; min-width:0; }
+  .pager-btns { display:flex; gap:6px; flex:none; }
   .pager-btn { height:28px; min-width:28px; padding:0 6px; border:1px solid var(--gray-200); border-radius:6px; background:var(--gray-0); font-size:13px; font-weight:500; line-height:21px; cursor:pointer; color:var(--gray-1000); transition:var(--transition); }
   .pager-btn:hover { border-color:var(--primary); color:var(--primary); }
   .pager-btn.active { background:var(--primary-light); color:var(--primary); border-color:var(--gray-200); }
@@ -316,6 +323,8 @@
       <div class="hist-pager" id="hist-pager" style="display:none;">
         <div class="pager-info" id="pager-info"></div>
         <div class="pager-btns" id="pager-btns"></div>
+        {{-- 왼쪽 건수 글과 같은 몫의 빈 자리 — 쪽 번호가 가운데 선다 --}}
+        <div class="pager-spacer"></div>
       </div>
     </div>
 
@@ -771,7 +780,9 @@ async function loadHistory(page = 1) {
 
   try {
     // 팝빌 현금영수증 (DB 기반, 전체 조회 후 클라이언트 페이지네이션)
-    let popbillUrl = `${CB_BASE}/search?corp_num=${cn}&start_date=${sd}&end_date=${ed}&per_page=500&order=D`;
+    /* 쪽당 500건으로 늘렸으니 받아 오는 양도 늘린다 (2026-10-02 지시).
+       500만 받으면 둘째 쪽이 빈 채로 선다 — 우리 표를 읽는 조회라 상한(1,000)까지 쓴다. */
+    let popbillUrl = `${CB_BASE}/search?corp_num=${cn}&start_date=${sd}&end_date=${ed}&per_page=1000&order=D`;
 
     /* 요청서 6쪽의 두 가지. 숫자만 남겨 보낸다 — 붙임표를 넣고 치는 사람이 있는데
        팝빌이 준 값에는 붙임표가 없다. */
@@ -897,7 +908,9 @@ async function loadHistory(page = 1) {
 }
 
 function renderHistPage(page) {
-  const perPage = 15;
+  /* 쪽당 500건 (2026-10-02 지시). 이 화면은 한 해치를 받아 와 **화면에서** 쪽을
+     나눈다 — 받아 오는 양도 함께 늘렸다(아래 per_page). */
+  const perPage = 500;
   const start   = (page - 1) * perPage;
   const slice   = _allRows.slice(start, start + perPage);
 
@@ -1024,10 +1037,16 @@ async function syncFromPopbill() {
 function renderPager(total, page, perPage) {
   const pager = document.getElementById('hist-pager');
   const pages = Math.ceil(total / perPage);
-  if (pages <= 1) { pager.style.display = 'none'; return; }
+
+  /* 쪽이 하나뿐이어도 **건수는 보인다** (2026-10-02). 쪽당 500건으로 늘린 뒤로는
+     한 쪽으로 끝나는 조회가 대부분인데, 그때 줄 전체를 감추면 총 건수까지 사라진다.
+     아무것도 없을 때만 감춘다. */
+  if (total === 0) { pager.style.display = 'none'; return; }
 
   pager.style.display = 'flex';
   document.getElementById('pager-info').textContent = `총 ${total.toLocaleString()}건`;
+
+  if (pages <= 1) { document.getElementById('pager-btns').innerHTML = ''; return; }
 
   const btns  = [];
   const start = Math.max(1, page - 2);
