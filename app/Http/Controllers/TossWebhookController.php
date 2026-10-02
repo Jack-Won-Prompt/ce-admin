@@ -76,6 +76,22 @@ class TossWebhookController extends Controller
         $기록 = WebhookLogger::inbound('toss', $event, $request,
             $signature !== '' && config('toss.webhook_secret') ? true : null);
 
+        /* 매입 상태가 실려 왔으면 그 자리에서 적는다 (2026-10-02 지시
+           「30분마다 도는 것을 웹훅으로 처리 가능한가요」).
+
+           토스 웹훅 본문의 `data.card.acquireStatus` 에 값이 들어 있다 — 승인 웹훅
+           23건이 그랬다. 오는 것은 받아 적어 두면 그만큼 되묻지 않아도 된다.
+
+           **다만 이것만으로는 매입 완료를 알 수 없다.** 토스 웹훅은 결제 상태
+           (`status`)가 바뀔 때 우는데, 매입은 그 값을 바꾸지 않는다 — 승인도 DONE,
+           매입 완료도 DONE 이다. 우리 기록으로 확인했다: 카드 결제 25건이 받은 웹훅이
+           모두 1회씩 승인 그 순간뿐이고, 늦게 온 것이 하나도 없었다.
+
+           그래서 결제 화면이 여는 김에 다시 묻는 길은 그대로 둔다. 토스가 뒤에 매입
+           사건을 따로 보내 주게 되면, 그 본문에도 이 칸이 실릴 테니 여기서 저절로
+           잡힌다 — 사건 이름을 가리지 않고 본문만 본다. */
+        $this->매입상태적기($payload);
+
         /* 카드 결제는 결제창이 우리 화면으로 돌아오면서 마무리된다. 그런데 고객이
            그 화면을 닫거나 통신이 끊기면 돌아오지 않는다 — 돈은 나갔는데 우리는
            모르는 채로 남는다(테스트 시나리오 3.1).
@@ -144,6 +160,49 @@ class TossWebhookController extends Controller
      * 페이로드의 status 를 믿지 않는다. 서명이 없는 웹훅이라, paymentKey 로 토스에
      * 다시 물어 확인한 값으로만 움직인다(가상계좌 입금 웹훅과 같은 방식이다).
      */
+    /**
+     * 웹훅 본문에 실려 온 매입 상태를 적는다 — 없으면 아무것도 하지 않는다.
+     *
+     * 사건 이름을 가리지 않는다. 지금 오는 것은 `PAYMENT_STATUS_CHANGED` 뿐이지만,
+     * 토스가 뒤에 다른 사건을 보내 주어도 본문에 이 칸이 있으면 그대로 잡힌다.
+     *
+     * 터지지 않는다 — 웹훅을 받는 본래 일을 이것 때문에 그르치면 안 된다.
+     */
+    private function 매입상태적기(array $payload): void
+    {
+        try {
+            $값  = $payload['data']['card']['acquireStatus'] ?? null;
+            $열쇠 = $payload['data']['paymentKey'] ?? null;
+
+            if (! is_string($값) || $값 === '' || ! is_string($열쇠) || $열쇠 === '') {
+                return;
+            }
+
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('toss_payments', 'acquire_status')) {
+                return;   // 칸이 아직 없다(배포 중) — 다음 웹훅에 적힌다
+            }
+
+            $줄 = \App\Models\TossPayment::where('payment_key', $열쇠)->first();
+
+            if (! $줄) {
+                return;
+            }
+
+            $줄->forceFill([
+                'acquire_status'     => $값,
+                'acquire_checked_at' => now(),
+            ])->saveQuietly();
+
+            Log::info('[Toss] 매입 상태를 웹훅에서 적었다', [
+                'payment_key' => $열쇠, 'acquire' => $값,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[Toss] 매입 상태를 웹훅에서 적지 못했다', [
+                'error' => mb_substr($e->getMessage(), 0, 200),
+            ]);
+        }
+    }
+
     private function paymentStatusChanged(array $payload): \Illuminate\Http\JsonResponse
     {
         $key = $payload['data']['paymentKey'] ?? $payload['paymentKey'] ?? null;
