@@ -304,7 +304,32 @@ class AgentWorker
         return $짜인것;
     }
 
-    // ── 되돌려 적기 ──────────────────────────────────────
+    /**
+     * 고치는 걸음 — 설정을 켰고, 분석이 「자동으로 고쳐도 되는 갈래」일 때만.
+     *
+     * 글로 판단한 것만 믿고 올리지 않는다 — 세 겹으로 가린다.
+     *   ① 설정이 꺼져 있으면 들어오지 않는다 (기본 꺼짐)
+     *   ② 사람몫 갈래(결제ㆍ국세청ㆍ개인정보ㆍ표 구조)거나 확신이 높지 않으면 손대지 않는다
+     *   ③ AgentFixer 가 파일 경로로 다시 막고, 한 파일ㆍ40줄ㆍ문법 검사를 지난 것만 올린다
+     */
+    private function 고쳐볼까(array $짐, array $답, string $열쇠): ?string
+    {
+        if (! config('services.agent.auto_fix', false)) {
+            return null;
+        }
+
+        $위험 = (string) ($답['위험갈래'] ?? 'none');
+
+        if (! empty($답['사람확인필요']) || in_array($위험, self::사람몫, true)) {
+            return null;
+        }
+
+        if ((string) ($답['확신'] ?? '') !== '높음') {
+            return '확신이 높지 않아 고치지 않았습니다';
+        }
+
+        return app(AgentFixer::class)->고친다($짐, $답, $열쇠)['글'];
+    }
 
     private function 오류회신(string $자리, array $짐, array $답): string
     {
@@ -312,15 +337,24 @@ class AgentWorker
            (긴 글은 SR 쪽에만 쓴다 · 2026-10-02 확인). */
         $글 = $this->읽을글($답, 짧게: true);
 
+        /* 고치는 걸음 — 켜져 있고 갈래가 맞을 때만 돈다 */
+        $고친말 = $this->고쳐볼까($짐, $답, (string) config('services.agent.api_key'));
+
+        if ($고친말) {
+            $글 = mb_substr($글 . ' / ' . $고친말, 0, 495);
+        }
+
         $결과 = $this->보낸다($자리, 'error.memo', [
             'error_log_id' => $짐['error_log_id'] ?? null,
             'memo'         => $글,
-            // 고치지는 않았다 — 「확인」까지만 옮긴다
-            'status'       => 'checked',
+            /* 고쳐 올렸으면 「조치 완료」, 아니면 「확인」까지만 옮긴다 */
+            'status'       => $고친말 && str_contains($고친말, '고쳐 배포했습니다') ? 'fixed' : 'checked',
         ]);
 
-        return "오류 분석을 적었습니다 ({$결과}) · 토큰 " . ($답['_쓴토큰'] ?? 0);
+        return "오류 분석을 적었습니다 ({$결과})" . ($고친말 ? " · {$고친말}" : '')
+             . ' · 토큰 ' . ($답['_쓴토큰'] ?? 0);
     }
+
 
     private function sr회신(string $자리, array $짐, array $답): string
     {
