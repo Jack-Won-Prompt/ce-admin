@@ -114,7 +114,7 @@ class CommonCodeController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => "{$label} 을(를) 사용 안 함으로 바꿨습니다. 이미 올린 서류의 이름은 그대로 남습니다.",
+            'message' => "{$label} 을(를) 사용 안 함으로 변경했습니다. 이미 올린 서류의 이름은 그대로 남습니다.",
         ]);
     }
 

@@ -1638,7 +1638,7 @@ class PrescriptionController extends Controller
             'doc_type'  => $attachment->doc_type,
             'typeLabel' => $attachment->doc_type_label,
             'confirmed' => true,
-            'message'   => "서류 유형을 「{$옛것}」에서 「{$attachment->doc_type_label}」(으)로 바꿨습니다.",
+            'message'   => "서류 유형을 「{$옛것}」에서 「{$attachment->doc_type_label}」(으)로 변경했습니다.",
         ]);
     }
 
@@ -3074,7 +3074,7 @@ class PrescriptionController extends Controller
 
             activity()->causedBy(Auth::user())->performedOn($rx)->log(
                 $before
-                    ? "담당자를 {$before} 에서 {$to->name} (으)로 바꿨습니다"
+                    ? "담당자를 {$before} 에서 {$to->name} (으)로 변경했습니다"
                     : "담당자로 {$to->name} 을(를) 배정했습니다"
             );
 

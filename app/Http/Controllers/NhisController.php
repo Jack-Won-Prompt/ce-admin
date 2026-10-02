@@ -402,7 +402,7 @@ class NhisController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => '「' . Order::CLAIM_STATUS_LABELS[$data['status']] . '」으로 바꿨습니다.',
+            'message' => '「' . Order::CLAIM_STATUS_LABELS[$data['status']] . '」(으)로 변경했습니다.',
             'status'  => $data['status'],
             'label'   => Order::CLAIM_STATUS_LABELS[$data['status']],
         ]);

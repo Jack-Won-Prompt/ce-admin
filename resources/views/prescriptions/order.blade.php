@@ -6636,7 +6636,7 @@ async function saveDocType(attId, code, label) {
       딱지.classList.remove('is-unconfirmed');
       딱지.title = '서류 유형 — 눌러서 바꿉니다';
     }
-    showToast(out.message || '유형을 바꿨습니다.', 'success');
+    showToast(out.message || '유형을 변경했습니다.', 'success');
   } catch (err) {
     showToast('유형을 바꾸지 못했습니다 — ' + (err.message || ''), 'danger', 4000);
   }
@@ -8511,7 +8511,7 @@ window.HELP_TOUR_STEPS = [
       if (사람이) markOcrDirty();
 
       if (덮나) {
-        showToast(`청구처를 「${옛말}」에서 「${sel.options[sel.selectedIndex]?.text ?? ''}」로 바꿨습니다 — 자격에 따릅니다.`, 'info');
+        showToast(`청구처를 「${옛말}」에서 「${sel.options[sel.selectedIndex]?.text ?? ''}」(으)로 변경했습니다 — 자격에 따릅니다.`, 'info');
       }
     }
 
