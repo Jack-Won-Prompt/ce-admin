@@ -276,12 +276,19 @@ class AuthController extends Controller
      * Microsoft Entra ID SSO 리다이렉트 (플레이스홀더)
      * GET /auth/sso
      */
-    public function ssoRedirect(): RedirectResponse
+    public function ssoRedirect(Request $request): RedirectResponse
     {
         /* 설정에서 켜 두었으면 Entra 로 보낸다(지시서 LTL-UNICORN-20260909-02).
            켜지 않았으면 예전 그대로 「준비 중」이라 답한다 — 로그인 화면의 이 단추는
            진작부터 서 있었고, 그 자리를 지우지 않는다. */
         if (\App\Support\SsoSettings::usable()) {
+            /* 모바일에서 눌렀다는 표를 **여기서** 세션에 적는다 (2026-10-02 확인).
+               아래 redirect 는 주소만 넘기고 물음표 뒤(?from=m)는 떨어뜨린다 —
+               그래서 모바일 로그인에서 Microsoft 로 들어간 사람이 로그인을 마치고
+               관리자 대시보드에 떨어졌다. 세션에 적어 두면 Microsoft 를 다녀와도
+               남는다(EntraController::callback 이 그 표를 본다). */
+            $this->모바일인가($request);
+
             return redirect()->route('auth.entra.redirect');
         }
 
