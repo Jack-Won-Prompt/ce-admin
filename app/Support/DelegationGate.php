@@ -174,6 +174,28 @@ final class DelegationGate
      */
     public static function 공개동의서서명(Prescription $prescription): ?PrescriptionConsent
     {
+        /* **칸이 생기기 전에는 묻지 않는다.**
+
+           배포는 `git pull` 뒤에 `migrate` 를 돈다 — 그 사이에 이 코드는 이미 살아 있고
+           `signature_data` 칸은 아직 없다. 그대로 물으면 「Unknown column」이 나고,
+           이 관문은 주문 생성ㆍ위드웍스 연계ㆍ결제 안내의 앞문이라 **그 몇 초 동안
+           주문 저장이 모두 막힌다.**
+
+           한 번 보고 그 요청 동안 쥐고 있는다 — 관문은 한 화면에서 여러 번 불린다. */
+        static $칸있나 = null;
+
+        if ($칸있나 === null) {
+            try {
+                $칸있나 = \Illuminate\Support\Facades\Schema::hasColumn('privacy_consents', 'signature_data');
+            } catch (\Throwable) {
+                $칸있나 = false;
+            }
+        }
+
+        if (! $칸있나) {
+            return null;
+        }
+
         $동의 = \App\Models\PrivacyConsent::서명받은동의(
             $prescription->patient_id,
             $prescription->patient?->bare_name ?? $prescription->patient_name_ocr,
