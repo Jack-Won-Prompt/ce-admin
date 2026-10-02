@@ -126,8 +126,17 @@ class AgentReplyController extends Controller
         $예전 = trim((string) ($기록->memo ?? ''));
         $상태 = (string) ($짐['status'] ?? 'checked');
 
+        /* **이 칸은 500자뿐이다** (varchar(500) · 2026-10-02 확인). 넘겨 담으면
+           「Data too long for column 'memo'」로 터지고, 그 500 이 다시 Agent 로
+           넘어가 같은 일이 되풀이된다. 사람이 적어 둔 글을 앞에 두고 뒤를 자른다. */
+        $엮음 = $예전 === '' ? $글 : $예전 . "\n\n" . $글;
+
+        if (mb_strlen($엮음) > 500) {
+            $엮음 = mb_substr($엮음, 0, 497) . '...';
+        }
+
         $기록->forceFill([
-            'memo'       => $예전 === '' ? $글 : $예전 . "\n\n" . $글,
+            'memo'       => $엮음,
             'status'     => array_key_exists($상태, ErrorLog::상태) ? $상태 : 'checked',
             'checked_at' => now(),
         ])->save();

@@ -273,7 +273,9 @@ class AgentWorker
 
     private function 오류회신(string $자리, array $짐, array $답): string
     {
-        $글 = $this->읽을글($답);
+        /* 오류 기록의 메모 칸은 500자뿐이다 — 거기 맞춰 짧게 엮는다
+           (긴 글은 SR 쪽에만 쓴다 · 2026-10-02 확인). */
+        $글 = $this->읽을글($답, 짧게: true);
 
         $결과 = $this->보낸다($자리, 'error.memo', [
             'error_log_id' => $짐['error_log_id'] ?? null,
@@ -299,9 +301,27 @@ class AgentWorker
         return "SR 에 답을 적었습니다 ({$결과}) · 토큰 " . ($답['_쓴토큰'] ?? 0);
     }
 
-    /** 담당자가 읽을 글로 엮는다 */
-    private function 읽을글(array $답): string
+    /**
+     * 담당자가 읽을 글로 엮는다.
+     *
+     * `짧게` 는 오류 기록의 메모 칸(500자)에 들어가야 할 때다 — 머리글을 걷고
+     * 한 줄로 잇는다. SR 의 답변 칸은 text 라 넉넉하다.
+     */
+    private function 읽을글(array $답, bool $짧게 = false): string
     {
+        if ($짧게) {
+            $위험 = (string) ($답['위험갈래'] ?? 'none');
+            $사람 = ! empty($답['사람확인필요']) || in_array($위험, self::사람몫, true);
+
+            $줄 = '[Agent] 원인: ' . (string) ($답['원인'] ?? '-')
+                . ' / 고칠 자리: ' . (string) ($답['고칠자리'] ?? '-')
+                . ' / 고치는 법: ' . (string) ($답['고치는법'] ?? '-')
+                . ' / 확신 ' . (string) ($답['확신'] ?? '-')
+                . ($사람 ? ' / 사람 확인 필요' . ($위험 !== 'none' ? "({$위험})" : '') : ' / 자동 고침 가능');
+
+            return mb_strlen($줄) > 495 ? mb_substr($줄, 0, 492) . '...' : $줄;
+        }
+
         $위험 = (string) ($답['위험갈래'] ?? 'none');
         $사람 = ! empty($답['사람확인필요']) || in_array($위험, self::사람몫, true);
 
