@@ -1378,8 +1378,17 @@
 
 @push('scripts')
 <script>
-const ORDER_ID   = {{ $order->id }};
-const ORDER_URL  = BASE_URL + '/orders/' + ORDER_ID;
+/* 주문 관리의 「상세 내용」 칸은 같은 탭에 주문을 잇따라 끼운다 — 끼울 때마다
+   이 <script> 가 같은 바닥에서 다시 돈다. const 로 두면 두 번째 주문에서
+
+     Uncaught SyntaxError: Identifier 'ORDER_ID' has already been declared
+
+   가 나고, 그 자리에서 이 블록 **전체가 멈춘다.** 상태 변경ㆍ세금계산서ㆍ
+   현금영수증ㆍ인쇄가 그때부터 듣지 않는다(2026-10-01 하루에 네 사람이 여섯 번).
+   window 에 담으면 다시 선언하는 것이 아니라 덮어쓰는 것이라 막히지 않는다.
+   아래의 ORDER_ID ㆍ ORDER_URL 은 그대로 읽힌다 — window 의 것을 찾아간다. */
+window.ORDER_ID  = {{ $order->id }};
+window.ORDER_URL = BASE_URL + '/orders/' + window.ORDER_ID;
 
 /* 처방전 버튼 → 그 처방전의 주문 화면을 '새 탭'으로 연다(주문 상세는 그대로 유지).
    워크스페이스 밖이면 브라우저 새 탭으로 폴백. href 는 남겨 두어 가운데 클릭 등
