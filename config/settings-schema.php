@@ -534,6 +534,15 @@ return [
                            'help'  => '예: https://www.ceadmin.co.kr/agent/hook · 비어 있으면 위를 켜도 보내지 않습니다.'],
             'token'    => ['label' => 'Agent 공유 열쇠', 'config' => 'services.agent.token', 'type' => 'password',
                            'help'  => 'Agent 쪽에 같은 값이 들어가야 합니다. 이 값으로 들어오는 짐의 진위를 가립니다. 비어 있으면 보내지 않습니다.'],
+            /* 분석에서 멈추지 않고 고쳐 올릴지 (2026-10-02 지시).
+               **기본은 꺼짐이다.** 켜면 Agent 가 쓴 코드가 사람 손을 거치지 않고
+               main 에 올라가고, 올라가는 순간 Action 이 운영에 배포한다.
+               마이그레이션ㆍ결제ㆍ국세청ㆍ개인정보ㆍ설정 자리는 켜도 손대지 않는다
+               (AgentFixer 가 파일 경로로 막는다). */
+            'auto_fix' => ['label' => '오류를 고쳐 올리기', 'config' => 'services.agent.auto_fix', 'type' => 'bool', 'width' => 1,
+                           'help'  => '켜면 「자동으로 고쳐도 되는 갈래」로 판단되고 확신이 높은 오류를 Agent 가 고쳐 '
+                                    . '확인 자리에서 문법을 검사한 뒤 main 에 올립니다(올라가면 배포됩니다). '
+                                    . '한 파일ㆍ40줄 안쪽만 올리며, 마이그레이션ㆍ결제ㆍ국세청 신고ㆍ개인정보ㆍ설정 자리는 손대지 않습니다.'],
             'send_image' => ['label' => 'SR 의 화면 캡처까지 보내기', 'config' => 'services.agent.send_image', 'type' => 'bool', 'width' => 1,
                              'help'  => '끄면 글만 보내고 글 안의 그림은 떼어 냅니다. 캡처에 환자 정보가 보일 수 있으니, 필요할 때만 켭니다.'],
 

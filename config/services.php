@@ -185,6 +185,8 @@ return [
         /* 작업자를 띄울 때 쓰는 PHP (CLI). FPM 의 PHP_BINARY 는 php-fpm 을
            가리켜 쓸 수 없다 — 서버의 CLI 자리를 적는다 (2026-10-02). */
         'php_bin'       => env('AGENT_PHP_BIN', '/usr/bin/php'),
+        // 고친 것을 사람 확인 없이 올릴지 — 기본 꺼짐 (2026-10-02 지시)
+        'auto_fix'      => env('AGENT_AUTO_FIX', false),
     ],
 
     /*
