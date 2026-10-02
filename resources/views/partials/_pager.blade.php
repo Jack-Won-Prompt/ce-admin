@@ -23,8 +23,19 @@
 @endphp
 
 @if ($쪽->total() > 0)
-  <div class="pg-wrap {{ ($가운데 ?? false) ? 'pg-mid' : '' }}">
-    @if ($요약 ?? true)
+@php
+  /* 요약과 쪽 번호를 **한 줄에** 둘 때의 얼개 (2026-10-02 지시
+     「전체 건 하고 페이징이 한줄에 보이게」).
+
+     `pg-mid` 만으로는 요약까지 함께 가운데로 밀린다. 둘을 함께 보일 때는 양옆에
+     같은 몫의 빈 자리를 두어 **요약은 왼쪽, 단추는 가운데**에 세운다. */
+  $요약보일까 = $요약 ?? true;
+  $가운데둘까 = $가운데 ?? false;
+  $셋칸       = $요약보일까 && $가운데둘까;
+@endphp
+
+  <div class="pg-wrap {{ $가운데둘까 ? 'pg-mid' : '' }} {{ $셋칸 ? 'pg-3' : '' }}">
+    @if ($요약보일까)
       <div class="pg-sum">
         {{ number_format($쪽->total()) }}{{ $이름 ?? '줄' }} 가운데
         <b>{{ number_format($쪽->firstItem() ?? 0) }}~{{ number_format($쪽->lastItem() ?? 0) }}</b>
@@ -51,6 +62,11 @@
            href="{{ $지금 >= $끝 ? 'javascript:void(0)' : $쪽->url($끝) }}" title="맨 뒤">»</a>
       </nav>
     @endif
+
+    {{-- 왼쪽 요약과 같은 몫의 빈 자리 — 단추가 가운데 선다 --}}
+    @if ($셋칸)
+      <div class="pg-spacer"></div>
+    @endif
   </div>
 @endif
 
@@ -65,6 +81,11 @@
     /* 가운데에 두는 판 — 왼쪽 셈을 빼면 홀로 남으므로 밀지 않고 가운데로 */
     .pg-wrap.pg-mid     { justify-content:center; }
     .pg-wrap.pg-mid .pg { margin-left:0; }
+    /* 셈과 단추를 함께 보일 때 — 양옆에 같은 몫을 두어 단추만 가운데로
+       (2026-10-02). 셈 글의 길이가 바뀌어도 단추가 흔들리지 않는다. */
+    .pg-wrap.pg-3 .pg-sum,
+    .pg-wrap.pg-3 .pg-spacer { flex:1 1 0; min-width:0; }
+    .pg-wrap.pg-3 .pg        { flex:none; }
     .pg-b    { min-width:30px; height:30px; padding:0 8px; display:inline-flex;
                align-items:center; justify-content:center; font-size:12px;
                border:1px solid var(--border); border-radius:var(--radius);

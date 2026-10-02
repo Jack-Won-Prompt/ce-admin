@@ -361,7 +361,12 @@
            거래처가 12,604명이 되자 한 번에 다 그릴 수 없게 되었다. 앞의 오백 줄만
            그리고 「나머지는 찾아 보십시오」라고 적어 두었는데, 자르기만 해서는 뒤에
            있는 사람을 **볼 길이 없다.** 운영 데이터 화면과 같은 것을 쓴다. --}}
-      @include('partials._pager', ['쪽' => $쪽, '이름' => '명', '요약' => false, '가운데' => true])
+      {{-- 셈과 쪽 번호를 **한 줄에** 둔다 (2026-10-02 지시).
+
+           여태 셈을 끄고(`요약 => false`) 표의 아랫줄이 「전체 100건」을 적었는데,
+           그 100 은 **이 쪽에 실린 줄 수**라 전체 12,604명과 달라 읽는 사람을
+           헷갈리게 했다. 표 아랫줄을 끄고 여기서 둘을 함께 적는다. --}}
+      @include('partials._pager', ['쪽' => $쪽, '이름' => '명', '요약' => true, '가운데' => true])
     </div>
 
 {{-- ── 상세 내용 탭 — 환자 상세 화면을 그대로 들여온다 ──
@@ -447,7 +452,10 @@ document.addEventListener('keydown', (e) => {
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
     /* 쪽으로 넘기므로 줄 번호도 이어서 센다 — 3쪽 첫 줄은 201번이다 (2026-09-29) */
     rowNumberStart: {{ ($쪽->currentPage() - 1) * $쪽->perPage() }},
-    footer: { total: true, selected: false, modified: false },   // 시안에 하단 상태바가 없다. 전체·선택 건수는 상단 결과바로 옮겼다
+    /* 아랫줄을 끈다 (2026-10-02 지시 「전체 건 하고 페이징이 한줄에 보이게」).
+       이 화면은 서버가 쪽을 나누므로 표가 아는 것은 **이 쪽의 줄 수**뿐이다 —
+       「전체 100건」이라 적혀 전체 12,604명과 어긋났다. 쪽 줄이 둘을 함께 적는다. */
+    footer: false,
     columns: [
       { header: '사업부',     name: 'care_type',       width: 70, align: 'center', sortable: true },
       { header: '이름',       name: 'name',            width: 110, sortable: true },
