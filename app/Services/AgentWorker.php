@@ -227,7 +227,9 @@ class AgentWorker
             ->timeout(self::제한초)
             ->post('https://api.anthropic.com/v1/messages', [
                 'model'      => (string) config('services.agent.model', 'claude-opus-5'),
-                'max_tokens' => 1500,
+                /* 넉넉히 둔다 — 생각하는 덩이가 앞에 오고 그 길이도 이 셈에 든다.
+                   좁게 두면 답이 중간에 끊겨 JSON 이 깨진다. */
+                'max_tokens' => 4000,
                 'system'     => $틀,
                 'messages'   => [[
                     'role'    => 'user',
@@ -239,7 +241,13 @@ class AgentWorker
             throw new \RuntimeException('Claude 가 답하지 않았습니다 — ' . $답->status() . ' ' . mb_substr($답->body(), 0, 200));
         }
 
-        $글 = (string) ($답->json('content.0.text') ?? '');
+        /* **첫 덩이가 글이 아니다.** Opus 5 는 생각하는 덩이(thinking)를 앞에 보내므로
+           content[0].text 는 비어 있다 — 글 덩이만 골라 잇는다(2026-10-02 확인). */
+        $글 = collect($답->json('content') ?? [])
+            ->filter(fn ($덩이) => ($덩이['type'] ?? '') === 'text')
+            ->pluck('text')
+            ->implode("
+");
 
         /* 앞뒤에 울타리(```)가 붙어 오는 때가 있다 — 가운데만 꺼낸다 */
         if (preg_match('~\{.*\}~s', $글, $m)) {
@@ -249,7 +257,10 @@ class AgentWorker
         $짜인것 = json_decode($글, true);
 
         if (! is_array($짜인것)) {
-            throw new \RuntimeException('답을 읽을 수 없습니다 — ' . mb_substr($글, 0, 200));
+            $덩이들 = collect($답->json('content') ?? [])->pluck('type')->implode(', ');
+
+            throw new \RuntimeException('답을 읽을 수 없습니다 — 받은 덩이: [' . $덩이들 . '] · 글: '
+                . ($글 === '' ? '(빈 글)' : mb_substr($글, 0, 200)));
         }
 
         $짜인것['_쓴토큰'] = (int) ($답->json('usage.input_tokens') ?? 0)
