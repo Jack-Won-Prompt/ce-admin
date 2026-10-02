@@ -1566,6 +1566,16 @@
           </a>
         </div>
         @endif
+        {{-- 한 주문에 두 번 들어온 돈 — 토스에 물어 찾아 돌려준다 (2026-10-02 지시).
+             우리 표에는 뒤 결제가 앞 결제를 덮어 남지 않는다. --}}
+        @if($vis('duplicate-payments'))
+        <div class="menu-item {{ request()->routeIs('duplicate-payments*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="coin-hand" href="{{ route('duplicate-payments.index') }}" data-title="중복 결제">
+            @dsicon('coin-hand', 'ds-icon menu-icon')
+            <span>중복 결제</span>
+          </a>
+        </div>
+        @endif
         @if($vis('cashbill'))
         <div class="menu-item {{ request()->routeIs('cashbill*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="cash" href="{{ route('cashbill.index') }}" data-title="현금/카드영수증">
@@ -3238,6 +3248,16 @@ window.ceQuill = (function () {
   async function make(자리, 안내말) {
     const el = typeof 자리 === 'string' ? document.querySelector(자리) : 자리;
     if (!el) return null;
+
+    /* **Quill 이 제 손으로 만든 것은 편집기 자리가 아니다** (2026-10-02).
+     *
+     * Quill 은 세워지면서 도구막대를 감싼 자리 **안에** 끼워 넣는다. 그래서 「이
+     * 자리 안의 div 를 모두 편집기로 세운다」는 식으로 부르는 쪽은, 두 번째부터
+     * 그 도구막대까지 함께 넘긴다 — 빈 편집기가 하나씩 쌓인다(SR 답변 창이 그랬다).
+     *
+     * 부르는 쪽마다 걸러 내게 두면 새로 쓰는 화면에서 또 빠뜨린다. 받는 자리에서
+     * 한 번 막는다. */
+    if (el.classList.contains('ql-toolbar')) return null;
 
     if (el.__quill)       return el.__quill;
     if (el.__quill세우는중) return el.__quill세우는중;

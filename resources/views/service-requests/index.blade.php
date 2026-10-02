@@ -445,8 +445,24 @@
       자리세우기(el);
 
       /* 그 창에 편집기 자리가 있으면 세운다 — 열 때 세우므로 편집기를 쓰지 않는
-         사람은 Quill 을 내려받지 않는다. 두 번째부터는 이미 선 것을 돌려준다. */
-      el.querySelectorAll('.ce-quill > div').forEach((자리) => {
+         사람은 Quill 을 내려받지 않는다. 두 번째부터는 이미 선 것을 돌려준다.
+
+         **Quill 이 만들어 놓은 것은 고르지 않는다** (2026-10-02 「답변 항목에 빈
+         입력칸이 있고 아래 입력칸에 답변이 있음」).
+
+         여태 `.ce-quill > div` 를 그대로 돌았다. 그런데 Quill 은 세워지면서 제
+         도구막대를 **같은 자리 안에** 끼워 넣는다. 그래서 창을 두 번째로 열면 그
+         도구막대까지 편집기로 만들어, 빈 칸이 하나씩 쌓였다 —
+
+           한 번 열면   .ql-toolbar + #srxAnswer(.ql-container)        편집기 1
+           두 번 열면   .ql-toolbar + .ql-toolbar.ql-container + …     편집기 2
+           세 번 열면                                                   편집기 3
+
+         위에 선 빈 칸에 글을 적어도 저장되지 않는다. 저장은 #srxAnswer 의 것을
+         읽기 때문이다. 담긴 답변은 아래 칸에만 보인다 — 그것이 담당자가 본 모습이다.
+
+         Quill 이 붙이는 이름표(ql-toolbar · ql-container)를 빼고 고른다. */
+      el.querySelectorAll('.ce-quill > div:not(.ql-toolbar):not(.ql-container)').forEach((자리) => {
         window.ceQuill?.make(자리, 자리.dataset.ph || '')
           .catch(() => showToast('편집기를 불러오지 못했습니다.', 'warning'));
       });
