@@ -511,7 +511,8 @@ return [
     /**
      * 오류ㆍSR 을 Agent 에게 넘길지 (2026-10-02 지시).
      *
-     * **끄면 아무것도 보내지 않는다.** 기본값이 꺼짐인 까닭이 그것이다 — 이 길로
+     * **켜야만 보낸다.** SR 관리와 오류 기록을 따로 여닫는다(2026-10-02 지시).
+     * 기본값이 둘 다 꺼짐인 까닭은 이것이다 — 이 길로
      * 나가는 짐에는 담당자가 적은 글과 붙여넣은 화면 캡처가 실리고, 그 캡처에는
      * 환자 이름ㆍ주민등록번호가 보일 수 있다. 켜는 일은 사람이 고른 뒤에만 일어난다.
      *
@@ -522,16 +523,17 @@ return [
         'label' => 'Agent 연계',
         'desc'  => '오류와 SR 을 Agent 에게 넘겨 분석ㆍ수정하게 합니다',
         'fields' => [
-            'enabled'  => ['label' => 'Agent 사용', 'config' => 'services.agent.enabled', 'type' => 'bool',
-                           'help'  => '끄면 오류와 SR 을 Agent 로 보내지 않습니다. 주소나 열쇠가 비어 있으면 켜도 보내지 않습니다.'],
+            /* 쓰는 자리를 둘로 가른다 (2026-10-02 지시). 한쪽만 켜고 다른 쪽은
+               닫아 둘 수 있어야 한다 — SR 은 사람이 적어 보내는 것이고, 오류는
+               기계가 쏟아내는 것이라 성격이 다르다. 둘 다 기본은 꺼짐이다. */
+            'sr_enabled'    => ['label' => 'SR 관리 — Agent 사용', 'config' => 'services.agent.sr_enabled', 'type' => 'bool', 'width' => 1,
+                                'help'  => '켜면 SR(개선 요청ㆍ오류 신고)이 등록될 때 Agent 로 보냅니다. 끄면 한 건도 보내지 않습니다.'],
+            'error_enabled' => ['label' => '오류 기록 — Agent 사용', 'config' => 'services.agent.error_enabled', 'type' => 'bool', 'width' => 1,
+                                'help'  => '켜면 서버에서 잘못이 날 때 Agent 로 보냅니다. 같은 잘못은 하루 한 번만 보냅니다. 끄면 한 건도 보내지 않습니다.'],
             'url'      => ['label' => 'Agent 받는 주소', 'config' => 'services.agent.url', 'width' => 3,
-                           'help'  => '예: https://www.ceadmin.co.kr/agent/hook'],
+                           'help'  => '예: https://www.ceadmin.co.kr/agent/hook · 비어 있으면 위를 켜도 보내지 않습니다.'],
             'token'    => ['label' => 'Agent 공유 열쇠', 'config' => 'services.agent.token', 'type' => 'password',
-                           'help'  => 'Agent 쪽에 같은 값이 들어가야 합니다. 이 값으로 들어오는 짐의 진위를 가립니다.'],
-            'send_sr'  => ['label' => 'SR 등록 보내기', 'config' => 'services.agent.send_sr', 'type' => 'bool', 'width' => 1,
-                           'help'  => 'SR(개선 요청ㆍ오류 신고)이 등록되면 보냅니다.'],
-            'send_error' => ['label' => '오류 보내기', 'config' => 'services.agent.send_error', 'type' => 'bool', 'width' => 1,
-                             'help'  => '서버에서 잘못이 나면 보냅니다. 같은 잘못은 하루 한 번만 보냅니다.'],
+                           'help'  => 'Agent 쪽에 같은 값이 들어가야 합니다. 이 값으로 들어오는 짐의 진위를 가립니다. 비어 있으면 보내지 않습니다.'],
             'send_image' => ['label' => 'SR 의 화면 캡처까지 보내기', 'config' => 'services.agent.send_image', 'type' => 'bool', 'width' => 1,
                              'help'  => '끄면 글만 보내고 글 안의 그림은 떼어 냅니다. 캡처에 환자 정보가 보일 수 있으니, 필요할 때만 켭니다.'],
         ],

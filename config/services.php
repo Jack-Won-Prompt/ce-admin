@@ -171,12 +171,12 @@ return [
        값은 환경 설정 › Agent 연계에서 고친다 — 여기 기본값은 모두 꺼짐이다.
        열쇠(token)는 암호화해 담기므로 .env 에 두지 않는다. */
     'agent' => [
-        'enabled'    => env('AGENT_ENABLED', false),
-        'url'        => env('AGENT_URL'),
-        'token'      => env('AGENT_TOKEN'),
-        'send_sr'    => true,
-        'send_error' => true,
-        'send_image' => false,
+        // 쓰는 자리를 둘로 가른다 — SR 관리와 오류 기록 (2026-10-02 지시)
+        'sr_enabled'    => env('AGENT_SR_ENABLED', false),
+        'error_enabled' => env('AGENT_ERROR_ENABLED', false),
+        'url'           => env('AGENT_URL'),
+        'token'         => env('AGENT_TOKEN'),
+        'send_image'    => false,
     ],
 
     /*
