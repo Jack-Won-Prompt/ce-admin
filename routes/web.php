@@ -879,23 +879,6 @@ Route::get('/dev/migrate-admin-invitations', function () {
 });
 
 // ── Dev: user_activity_logs 테이블 마이그레이션 ──
-/* Agent 연계를 한 바퀴 돌려 보는 자리 (2026-10-02 지시).
- *
- * 오류가 났을 때 ① 오류 기록에 담기고 ② Agent 로 넘어가는지를 보려면 실제로
- * 한 번 터져야 한다. 업무 코드에서 일부러 터뜨리면 그 자리에 반쯤 처리된 자료가
- * 남을 수 있어, 아무것도 건드리지 않는 자리를 따로 둔다.
- *
- * **admin@ce-admin.co.kr 만 열 수 있다.** 다른 사람에게는 없는 길이다(404) —
- * 운영에서 아무나 500 을 만들 수 있는 자리를 두어서는 안 된다.
- *
- * 한 바퀴를 돌려 본 뒤에는 이 자리를 지운다. 그 지움이 곧 「해결 → 배포」다.
- */
-Route::get('/dev/agent-error-test', function () {
-    abort_unless(auth()->user()?->email === 'admin@ce-admin.co.kr', 404);
-
-    throw new \RuntimeException('[Agent 연계 시험] 일부러 낸 잘못입니다 — 등록ㆍ전송을 확인한 뒤 이 자리를 지웁니다.');
-})->middleware('auth')->name('dev.agentErrorTest');
-
 Route::get('/dev/migrate-activity-logs', function () {
     if (!\Illuminate\Support\Facades\Auth::check()) abort(403);
     if (!\Illuminate\Support\Facades\Schema::hasTable('user_activity_logs')) {
