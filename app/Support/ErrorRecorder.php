@@ -135,7 +135,9 @@ class ErrorRecorder
             return;
         }
 
-        ErrorLog::create([
+        /* 담은 뒤 Agent 에게도 넘긴다 (2026-10-02 지시) — 설정에서 켰을 때만 나간다.
+           여기서 터져도 담는 일을 덮지 않도록 AgentNotifier 안에서 모두 감쌌다. */
+        $담긴것 = ErrorLog::create([
             'fingerprint' => $열쇠,
             'source'      => 'server',
             'level'       => $상태 >= 500 ? 'critical' : 'error',
@@ -159,6 +161,8 @@ class ErrorRecorder
             'last_at'     => now(),
             'status'      => 'open',
         ]);
+
+        \App\Support\AgentNotifier::오류($e, $담긴것->id);
     }
 
     /**

@@ -73,6 +73,11 @@ class ServiceRequestController extends Controller
 
         activity()->causedBy(Auth::user())->log("SR 등록: {$sr->title}");
 
+        /* Agent 에게 넘긴다 (2026-10-02 지시) — 환경 설정 › Agent 연계에서 켰을
+           때만 나간다. 켜지 않으면 한 건도 보내지 않는다. 보내다 실패해도 등록은
+           이미 끝났다(AgentNotifier 안에서 모두 감쌌다). */
+        \App\Support\AgentNotifier::sr등록($sr->fresh(['user']));
+
         return response()->json([
             'success' => true,
             'message' => 'SR 이 등록되었습니다.',

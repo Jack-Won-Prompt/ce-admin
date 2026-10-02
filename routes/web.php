@@ -1591,6 +1591,11 @@ Route::get('/docs/purchase-confirm/{patient}',
 Route::get('/m/login', [\App\Http\Controllers\MobileWebController::class, 'login'])
     ->middleware('guest')->name('m.login');
 
+/* 운영에서 보낸 오류ㆍSR 을 받는 자리 (2026-10-02 지시).
+   로그인 밖이다 — 사람이 아니라 서버가 두드린다. 열쇠와 서명으로 가린다.
+   CSRF 는 밖에서 오는 짐이라 뺀다(bootstrap/app.php 의 except 목록). */
+Route::post('/agent/hook', \App\Http\Controllers\AgentHookController::class)->name('agent.hook');
+
 /* 앱이 표를 들고 들어오는 자리 (2026-10-02 지시). guest 를 붙이지 않는다 —
    앱이 다시 들어올 때 옛 세션이 남아 있을 수 있고, 그때도 표로 새로 세워야 한다. */
 Route::get('/m/enter', [\App\Http\Controllers\MobileWebController::class, 'enter'])
