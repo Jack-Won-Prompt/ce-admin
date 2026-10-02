@@ -24,7 +24,7 @@ class NginxMetrics
             $자리 = (string) config('monitoring.nginx_log');
 
             if (! is_readable($자리)) {
-                return $this->빈것('기록을 읽을 수 없습니다 — ' . $자리);
+                return $this->빈것('nginx 로그를 읽을 수 없습니다 — ' . $자리);
             }
 
             /* nginx 는 세계시로 적는다. 오늘이 어디까지인지도 그 눈으로 봐야 한다 */

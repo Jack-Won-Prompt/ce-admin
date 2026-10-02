@@ -394,7 +394,7 @@ return [
         /* 시스템 감시 — 기계ㆍDBㆍ웹ㆍAWS 과금 (2026-10-02 지시).
            AWS 신분(계정 번호ㆍ역할)과 과금 금액이 보이는 자리라 관리자만 연다. */
         'monitoring' => [
-            'label'      => '시스템 감시',
+            'label'      => '시스템 모니터링',
             'group'      => 'settings',
             'routes'     => ['monitoring'],
             'actions'    => ['view'],

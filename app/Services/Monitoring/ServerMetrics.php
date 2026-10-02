@@ -246,7 +246,7 @@ class ServerMetrics
 
             return [
                 'points' => $점,
-                'source' => $점 ? 'sar (10분 간격)' : 'sar 를 읽지 못했습니다',
+                'source' => $점 ? '서버 사용률 기록 (10분 간격)' : '서버 사용률 기록을 읽지 못했습니다',
             ];
         });
     }

@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', '시스템 감시')
-@section('page-title', '시스템 감시')
-@section('breadcrumb', '홈 - 설정 - 시스템 감시')
+@section('title', '시스템 모니터링')
+@section('page-title', '시스템 모니터링')
+@section('breadcrumb', '홈 - 설정 - 시스템 모니터링')
 
 @section('content')
 
@@ -153,9 +153,9 @@
   </div>
 </div>
 
-{{-- ④ 많이 불린 화면 --}}
+{{-- ④ 요청 상위 주소 --}}
 <div class="mon-card" style="margin-bottom:14px;">
-  <div class="mon-head">많이 불린 주소 (오늘)</div>
+  <div class="mon-head">요청 상위 주소 (오늘)</div>
   <div class="mon-wrap">
     <table class="mon-tbl" id="monTop">
       <thead><tr><th>주소</th><th style="width:110px; text-align:right;">요청 수</th></tr></thead>
@@ -173,7 +173,7 @@
 
 {{-- ⑥ 최근 장애 --}}
 <div class="mon-card" style="margin-bottom:14px;">
-  <div class="mon-head">최근 장애 <span class="sp"></span><span class="mon-sub">오류 기록에서 — 최근 3일</span></div>
+  <div class="mon-head">최근 장애 <span class="sp"></span><span class="mon-sub">오류 기록 기준 · 최근 3일</span></div>
   <div class="mon-wrap">
     <table class="mon-tbl" id="monInc">
       <thead><tr>
@@ -194,7 +194,7 @@
       <div class="mon-big" id="monCostTotal">—</div>
     </div>
     <div>
-      <div class="mon-sub">하루 평균</div>
+      <div class="mon-sub">일 평균</div>
       <div class="mon-big" id="monCostDay">—</div>
     </div>
     <div>
@@ -202,7 +202,7 @@
       <div class="mon-big" id="monCostFc">—</div>
     </div>
     <div>
-      <div class="mon-sub">지난 날수</div>
+      <div class="mon-sub">경과 일수</div>
       <div class="mon-big" id="monCostDays">—</div>
     </div>
   </div>
@@ -264,7 +264,7 @@
 
     if (!점들 || !점들.length) {
       svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle"
-        fill="var(--text-muted)" font-size="13">보여 줄 값이 없습니다</text>`;
+        fill="var(--text-muted)" font-size="13">결과가 없습니다</text>`;
       return;
     }
 
@@ -321,20 +321,20 @@
 
     $('monCpu').textContent  = 셈(s.cpu, 1);
     띠('monCpuBar', s.cpu, 선.cpu);
-    $('monCpuSub').textContent = s.cpu === null ? '/proc/stat 을 읽지 못했습니다'
-      : `이 기계에서 직접 (${s.at || ''})`;
+    $('monCpuSub').textContent = s.cpu === null ? '서버 CPU 정보를 읽지 못했습니다'
+      : `서버에서 직접 측정 (${s.at || ''})`;
 
     $('monMem').textContent  = 셈(s.memory?.percent, 1);
     띠('monMemBar', s.memory?.percent, 선.memory);
     $('monMemSub').textContent = s.memory?.total_mb
       ? `${셈(s.memory.used_mb)} / ${셈(s.memory.total_mb)} MB`
-      : '/proc/meminfo 을 읽지 못했습니다';
+      : '서버 메모리 정보를 읽지 못했습니다';
 
     $('monDisk').textContent = 셈(s.disk?.percent, 1);
     띠('monDiskBar', s.disk?.percent, 선.disk);
     $('monDiskSub').textContent = s.disk?.total_gb
       ? `${셈(s.disk.used_gb, 1)} / ${셈(s.disk.total_gb, 1)} GB (/)`
-      : 'df 를 쓸 수 없습니다';
+      : '디스크 정보를 읽지 못했습니다';
 
     /* ② 그래프 */
     그리기(d.series?.points);
@@ -344,14 +344,14 @@
     const b = d.db || {};
     $('monDbRole').textContent = b.read_only ? '읽기 전용' : '쓰기 노드';
     $('monDbRows').innerHTML =
-        줄('연결', b.connections === null ? null : `${셈(b.connections)} / ${셈(b.max_connections)}`
+        줄('연결 수', b.connections === null ? null : `${셈(b.connections)} / ${셈(b.max_connections)}`
             + (b.conn_percent !== null ? ` (${셈(b.conn_percent, 1)}%)` : ''))
-      + 줄('움직이는 질의', 셈(b.running))
-      + 줄('여태 최다 연결', 셈(b.max_used))
+      + 줄('실행 중 질의', 셈(b.running))
+      + 줄('최대 동시 연결', 셈(b.max_used))
       + 줄('초당 질의', 셈(b.qps, 1))
       + 줄('느린 질의', 셈(b.slow_queries))
       + 줄('버퍼 적중률', b.buffer_hit === null ? null : 셈(b.buffer_hit, 2), '%')
-      + 줄('담긴 양', b.size?.mb === null ? null : 셈(b.size?.mb, 1) + ' MB'
+      + 줄('데이터 용량', b.size?.mb === null ? null : 셈(b.size?.mb, 1) + ' MB'
             + (b.size?.tables ? ` · 표 ${셈(b.size.tables)}개` : ''))
       /* RDS 의 CPU 와 남은 저장 공간은 DB 안에서 알 수 없다 — CloudWatch 만 안다 */
       + 줄('DB CPU', awsOr(d, 'rds_cpu', (v) => 셈(v, 1) + '%'))
@@ -371,28 +371,28 @@
       + 줄('4xx 오류', 셈(w.by_class?.['4xx']))
       + 줄('정상(2xx)', 셈(w.by_class?.['2xx']))
       + 줄('평균 응답', r.avg === null ? null : 셈(r.avg) + ' ms')
-      + 줄('가장 느린 응답', r.max === null ? null : 셈(r.max) + ' ms');
+      + 줄('최대 응답 시간', r.max === null ? null : 셈(r.max) + ' ms');
     $('monWebSub').textContent = r.count
-      ? `평균 응답은 최근 1시간 ${셈(r.count)}건을 앱에서 직접 재어 낸 값입니다 — nginx 기본 기록에는 걸린 시간이 적히지 않습니다.`
-      : '평균 응답은 앱에서 재어 모읍니다 — 올린 뒤 몇 분 지나면 찹니다.';
+      ? `최근 1시간 ${셈(r.count)}건을 애플리케이션에서 직접 측정한 값입니다. nginx 기본 로그에는 응답 시간이 기록되지 않습니다.`
+      : '응답 시간은 애플리케이션에서 수집합니다. 배포 후 몇 분이 지나면 표시됩니다.';
 
     /* ④ 많이 불린 주소 */
     const top = Object.entries(w.top || {});
     $('monTop').querySelector('tbody').innerHTML = top.length
       ? top.map(([p, n]) => `<tr><td class="path">${ 안전(p) }</td><td class="num">${셈(n)}</td></tr>`).join('')
-      : `<tr><td colspan="2" class="mon-sub">${안전(w.note || '보여 줄 것이 없습니다')}</td></tr>`;
+      : `<tr><td colspan="2" class="mon-sub">${안전(w.note || '결과가 없습니다')}</td></tr>`;
 
     /* ⑤ AWS */
     const a = d.aws || {}, 신 = a.identity || {}, m = a.metrics || {};
     const aws딱 = $('monAwsState');
     aws딱.className = 'mon-chip ' + (신.ok ? (m.ok ? 'ok' : 'warn') : 'bad');
-    aws딱.textContent = 신.ok ? (m.ok ? '지표 읽는 중' : '신분만 확인됨') : '연결 안 됨';
+    aws딱.textContent = 신.ok ? (m.ok ? '지표 수집 중' : '인증만 확인됨') : '연결 안 됨';
 
     $('monAwsRows').innerHTML =
         줄('지역', 안전(신.region))
       + 줄('계정', 안전(신.account))
       + 줄('역할', 안전(신.role))
-      + 줄('이 기계', 안전(신.instance))
+      + 줄('인스턴스', 안전(신.instance))
       + 줄('EC2 CPU (CloudWatch)', awsOr(d, 'ec2_cpu', (v) => 셈(v, 1) + '%'))
       + 줄('로드밸런서 요청', awsOr(d, 'alb_req', (v) => 셈(v)));
 
@@ -403,21 +403,21 @@
     }
     if (m.denied || (d.cost && d.cost.denied)) {
       쪽지.push(`<div class="mon-note">`
-        + `AWS 수치를 채우려면 이 기계의 역할 <code>${안전(신.role || '-')}</code> 에 읽기 권한이 필요합니다.`
-        + ` 아래 네 가지면 이 화면이 모두 찹니다.<br>`
+        + `AWS 지표를 표시하려면 인스턴스 역할 <code>${안전(신.role || '-')}</code> 에 읽기 권한이 필요합니다.`
+        + ` 아래 권한을 부여하면 이 화면의 모든 항목이 표시됩니다.<br>`
         + `<code>cloudwatch:GetMetricData</code> · <code>cloudwatch:ListMetrics</code>`
         + ` · <code>ce:GetCostAndUsage</code> · <code>rds:DescribeDBClusters</code><br>`
-        + `권한이 붙으면 화면이 저절로 채워집니다 — 고칠 것이 없습니다.`
+        + `권한 부여 후 별도 작업 없이 자동으로 표시됩니다.`
         + `</div>`);
     }
     if (!신.instance) {
-      쪽지.push(`<div class="mon-note">볼 기계를 찾지 못했습니다. `
-        + `<code>MONITOR_EC2_INSTANCE</code> 에 적어 주면 그것을 봅니다.</div>`);
+      쪽지.push(`<div class="mon-note">대상 인스턴스를 확인하지 못했습니다. `
+        + `<code>MONITOR_EC2_INSTANCE</code> 에 지정하면 해당 인스턴스를 조회합니다.</div>`);
     }
     쪽지.push(`<div class="mon-note">`
-      + `로드밸런서는 <strong>세워져 있지 않습니다</strong> — nginx 가 80ㆍ443 을 직접 받습니다. `
-      + `그래서 요청 수ㆍ5xxㆍ평균 응답은 ALB 지표가 아니라 <strong>nginx 기록과 앱에서 잰 값</strong>입니다. `
-      + `앞에 ALB 를 세우면 <code>MONITOR_ALB</code> 에 꼬리표를 적어 그 칸을 살립니다.`
+      + `로드밸런서가 <strong>구성되어 있지 않습니다.</strong> nginx 가 80ㆍ443 포트를 직접 처리합니다. `
+      + `따라서 요청 수ㆍ5xxㆍ평균 응답은 ALB 지표가 아니라 <strong>nginx 로그와 애플리케이션 측정값</strong>입니다. `
+      + `ALB 를 도입하는 경우 <code>MONITOR_ALB</code> 에 식별자를 지정하면 해당 항목이 표시됩니다.`
       + `</div>`);
     $('monAwsNote').innerHTML = 쪽지.join('');
 
@@ -432,7 +432,7 @@
           <td class="num">${셈(i.hit)}</td>
           <td><span class="mon-chip ${안전(i.tone)}">${안전(i.state)}</span></td>
         </tr>`).join('')
-      : '<tr><td colspan="6" class="mon-sub">최근 3일 사이 쌓인 것이 없습니다</td></tr>';
+      : '<tr><td colspan="6" class="mon-sub">최근 3일 내 발생한 장애가 없습니다</td></tr>';
 
     /* ⑦ 과금 */
     const c = d.cost || {};
@@ -449,15 +449,15 @@
         .map(([n, v]) => `<tr><td>${안전(n)}</td><td class="num">${돈(v, c.currency)}</td></tr>`).join('');
 
       $('monCostNote').innerHTML = `<div class="mon-note">${안전(c.note || '')}<br>`
-        + `「월말 예상」은 지금까지 쓴 돈을 지난 날수로 나눠 이달 날수만큼 늘린 <strong>어림</strong>입니다. `
-        + `Cost Explorer 는 부를 때마다 0.01달러가 들어 여섯 시간에 한 번만 묻습니다.</div>`;
+        + `「월말 예상」은 현재까지 사용 금액을 경과 일수로 나눈 뒤 해당 월 일수를 곱한 <strong>추정치</strong>입니다. `
+        + `Cost Explorer 는 조회 1회당 0.01달러가 부과되어 6시간 간격으로만 조회합니다.</div>`;
     } else {
       ['monCostTotal', 'monCostDay', 'monCostFc', 'monCostDays'].forEach((k) => $(k).textContent = '—');
       $('monCostWrap').style.display = 'none';
       $('monCostNote').innerHTML = `<div class="mon-deny"><i class="fa-solid fa-lock"></i>`
         + `과금을 읽지 못했습니다 — ${안전(c.error || '알 수 없음')}</div>`
-        + `<div class="mon-note">금액을 보려면 역할에 <code>ce:GetCostAndUsage</code> 가 필요하고, `
-        + `결제 계정에서 <strong>Cost Explorer 를 한 번 켜 두어야</strong> 합니다(계정마다 한 번).</div>`;
+        + `<div class="mon-note">금액을 조회하려면 역할에 <code>ce:GetCostAndUsage</code> 권한이 필요하며, `
+        + `결제 계정에서 <strong>Cost Explorer 를 활성화</strong>해야 합니다(계정당 1회).</div>`;
     }
   }
 
@@ -491,7 +491,7 @@
       if (!res.ok) throw new Error('HTTP ' + res.status);
       채우기(await res.json());
     } catch (e) {
-      if (수동) showToast('수치를 읽지 못했습니다.', 'danger');
+      if (수동) showToast('지표를 불러오지 못했습니다.', 'danger');
     } finally {
       부르는중 = false;
       if (수동) { 단추.disabled = false; 단추.textContent = '새로고침'; }

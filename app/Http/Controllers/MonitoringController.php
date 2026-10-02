@@ -96,7 +96,7 @@ class MonitoringController extends Controller
         $견주기('CPU 사용률이 높습니다', $서버['cpu'] ?? null, $선['cpu']);
         $견주기('메모리 사용률이 높습니다', $서버['memory']['percent'] ?? null, $선['memory']);
         $견주기('디스크 사용률이 높습니다', $서버['disk']['percent'] ?? null, $선['disk']);
-        $견주기('DB 연결이 많습니다', $디비['conn_percent'] ?? null, $선['db_conn']);
+        $견주기('DB 연결 수가 많습니다', $디비['conn_percent'] ?? null, $선['db_conn']);
         $견주기('응답이 느립니다', $응답['avg'] ?? null, $선['response']);
         $견주기('서버 오류가 있습니다', $웹['by_class']['5xx'] ?? null, $선['error_5xx']);
 

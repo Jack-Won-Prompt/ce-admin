@@ -103,7 +103,7 @@ class AwsMetrics
 
             if (! $질의) {
                 return ['ok' => false, 'series' => [], 'latest' => [],
-                        'error' => '볼 자원을 찾지 못했습니다', 'action' => null];
+                        'error' => '조회할 자원을 확인하지 못했습니다', 'action' => null];
             }
 
             try {
@@ -270,7 +270,7 @@ class AwsMetrics
                 'days'       => $지난날,
                 'days_total' => $이달날수,
                 'services'   => array_slice($서비스, 0, 8, true),
-                'note'       => 'AWS 가 쓴 양을 모아 적는 데 하루쯤 걸립니다 — 오늘 몫은 아직 안 보일 수 있습니다.',
+                'note'       => 'AWS 사용량 집계에 약 1일이 소요되어 당일 사용 금액은 아직 반영되지 않을 수 있습니다.',
             ];
         });
     }
