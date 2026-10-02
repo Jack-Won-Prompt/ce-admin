@@ -23,6 +23,11 @@ Schedule::command('fax:sync-pending')->everyFiveMinutes()->withoutOverlapping();
    상태가 옛것으로 남아, 배송이 끝났는데도 청구 대상에서 빠진다. 그래서 우리가 훑는다. */
 Schedule::command('withworks:sync')->everyTenMinutes()->withoutOverlapping();
 
+/* 받아 둔 오류ㆍSR 을 Agent 가 읽고 회신한다 (2026-10-02 지시).
+   1분마다 보지만, 열쇠가 없거나 받은 짐이 없으면 아무 일도 하지 않는다.
+   겹쳐 돌지 않게 막는다 — 같은 짐을 두 번 물으면 값만 든다. */
+Schedule::command('agent:work')->everyMinute()->withoutOverlapping();
+
 /* 청구 준비 여부는 예약으로 훑지 않는다 (2026-09-18 지시).
 
    주문을 건드리지 않는 변화(처방전 그림ㆍ청구 기관ㆍ위임 등록일ㆍ서류함) 때문에 한

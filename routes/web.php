@@ -1596,6 +1596,11 @@ Route::get('/m/login', [\App\Http\Controllers\MobileWebController::class, 'login
    CSRF 는 밖에서 오는 짐이라 뺀다(bootstrap/app.php 의 except 목록). */
 Route::post('/agent/hook', \App\Http\Controllers\AgentHookController::class)->name('agent.hook');
 
+/* Agent 가 결과를 되돌려 적는 자리 — 보내는 길의 반대 방향 (2026-10-02 지시).
+   두 서버가 서로 다른 DB 를 써서, Agent 가 운영의 SRㆍ오류 기록을 직접 고칠 수
+   없다. 같은 열쇠와 서명으로 가린다. */
+Route::post('/agent/reply', \App\Http\Controllers\AgentReplyController::class)->name('agent.reply');
+
 /* 앱이 표를 들고 들어오는 자리 (2026-10-02 지시). guest 를 붙이지 않는다 —
    앱이 다시 들어올 때 옛 세션이 남아 있을 수 있고, 그때도 표로 새로 세워야 한다. */
 Route::get('/m/enter', [\App\Http\Controllers\MobileWebController::class, 'enter'])

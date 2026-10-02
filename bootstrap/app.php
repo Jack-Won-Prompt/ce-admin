@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'popbill/webhook/*',        // 팝빌 전송결과 알림 (2026-09-10)
             'webhooks/shop-order',
             'agent/hook',               // 운영이 보내는 오류ㆍSR (2026-10-02)
+            'agent/reply',              // Agent 가 되돌려 적는 결과 (2026-10-02)
             'consent/*/nice/callback',   // NICE 표준창 returnurl(외부 도메인 리다이렉트)
         ]);
         /* 세션이 끊긴 뒤 화면 탭(iframe)이 /login 으로 넘어가면 워크스페이스 안에 로그인
