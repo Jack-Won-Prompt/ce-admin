@@ -7,50 +7,39 @@
 
 @push('styles')
 <style>
-  /* 한 주문이 한 칸이고, 그 안에 결제가 줄로 선다 — 어느 쪽을 돌려줄지 사람이 고른다 */
-  .dp-card { border:1px solid var(--border-color); border-radius:10px; margin-bottom:12px;
-             background:var(--card-bg); overflow:hidden; }
-  .dp-head { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;
-             padding:12px 14px; background:var(--gray-50); border-bottom:1px solid var(--border-color); }
-  .dp-who  { font-weight:700; font-size:14px; }
-  .dp-sub  { font-size:12px; color:var(--text-muted); }
-  .dp-sums { display:flex; gap:16px; flex-wrap:wrap; font-size:13px; }
-  .dp-sums b { font-variant-numeric:tabular-nums; }
-  .dp-excess { color:var(--danger); font-weight:700; }
-
-  .dp-pay  { display:grid; grid-template-columns: 1fr 130px 110px 150px 160px; gap:10px;
-             align-items:center; padding:10px 14px; border-top:1px solid var(--border-color);
-             font-size:13px; }
-  .dp-pay:first-of-type { border-top:0; }
-  .dp-key  { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:12px; word-break:break-all; }
-  .dp-amt  { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
-  .dp-note { font-size:12px; color:var(--text-muted); }
-  .dp-ledger { font-size:12px; color:var(--text-muted); }
-
-  .dp-badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; }
-  .dp-badge.is-ledger  { background:var(--gray-100); color:var(--text-muted); }
+  /* 구분 배지 — 어느 쪽을 돌려줄 수 있는지가 한눈에 갈려야 한다 */
+  .dp-badge { display:inline-block; padding:2px 8px; border-radius:999px;
+              font-size:11px; font-weight:700; white-space:nowrap; }
+  .dp-badge.is-ledger  { background:var(--gray-100, #f3f4f6); color:var(--text-muted, #6b7280); }
   .dp-badge.is-extra   { background:#fdecea; color:#b3261e; }
   .dp-badge.is-waiting { background:#fff4e5; color:#8a5300; }
   .dp-badge.is-done    { background:#e7f5ec; color:#1b6b38; }
+  .dp-badge.is-failed  { background:#fdecea; color:#b3261e; }
 
-  .dp-empty { padding:28px; text-align:center; color:var(--text-muted); font-size:13px; }
-  .dp-sec-title { font-size:14px; font-weight:700; margin:22px 0 10px; }
-  .dp-wait-table { width:100%; border-collapse:collapse; font-size:13px; }
-  .dp-wait-table th, .dp-wait-table td { padding:9px 10px; border-bottom:1px solid var(--border-color); text-align:left; }
-  .dp-wait-table th { font-size:12px; color:var(--text-muted); font-weight:600; background:var(--gray-50); }
-  .dp-wait-table td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  /* 누를 수 있는 자리는 단추로 보여야 한다 — 글자만 두면 누르는 자리인지 모른다 */
+  .dp-act { display:inline-flex; align-items:center; gap:4px; cursor:pointer;
+            padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700;
+            border:1px solid transparent; }
+  .dp-act.is-refund  { background:#fdecea; color:#b3261e; border-color:#f5c2bd; }
+  .dp-act.is-approve { background:var(--primary-50, #eef2ff); color:var(--primary, #2563eb);
+                       border-color:#c7d2fe; }
+  .dp-act.is-reject  { background:var(--gray-100, #f3f4f6); color:var(--text-muted, #6b7280);
+                       border-color:var(--gray-200, #e5e7eb); margin-left:4px; }
+  .dp-act:hover { filter:brightness(0.97); }
+  .dp-act.is-busy { opacity:.5; pointer-events:none; }
 
-  @media (max-width: 900px) {
-    .dp-pay { grid-template-columns: 1fr; gap:4px; }
-    .dp-amt { text-align:left; }
-  }
+  .dp-hint { font-size:12px; color:var(--text-muted, #6b7280); padding:0 2px 10px; line-height:19px; }
+  .dp-sum  { font-size:13px; font-weight:600; padding:8px 2px; }
+  .dp-sum .n { font-variant-numeric:tabular-nums; }
+  .dp-sec   { margin-top:22px; }
+  .dp-sec-title { font-size:14px; font-weight:700; margin:0 0 10px; }
 </style>
 @endpush
 
 @section('content')
 
-{{-- 기간을 고르고 눌러야 토스에 간다. 화면을 열 때마다 저쪽을 부르면
-     하루에도 수십 번 묻게 되고, 그만큼 기다린다. --}}
+{{-- 기간을 고르고 눌러야 토스에 간다. 화면을 열 때마다 저쪽을 부르면 하루에도
+     수십 번 묻게 되고, 그만큼 담당자가 기다린다. --}}
 <div class="ds-filter-card">
   <div class="ds-filter-fields">
     <div class="ds-filter-field span-2">
@@ -66,78 +55,22 @@
       <button type="button" class="btn btn-primary" id="dpScanBtn">조회</button>
     </div>
   </div>
-  <div class="dp-sub" style="padding:0 14px 12px;">
-    토스에 직접 물어 한 주문에 두 번 이상 들어온 결제를 찾습니다. 우리 장부에는
-    뒤 결제가 앞 결제를 덮어 남지 않으므로, 이 화면이 보는 것은 토스의 기록입니다.
-    한 번에 31일까지 볼 수 있습니다.
-  </div>
 </div>
 
-<div id="dpResult"></div>
-
-@if($pending->isNotEmpty())
-<div class="dp-sec-title">승인 대기 {{ $pending->count() }}건</div>
-<div class="dp-card">
-  <table class="dp-wait-table">
-    <thead>
-      <tr>
-        <th>주문번호</th><th>고객</th><th class="num">환불 금액</th>
-        <th>결제키</th><th>올린 사람</th><th style="width:170px;">처리</th>
-      </tr>
-    </thead>
-    <tbody>
-      @foreach($pending as $p)
-      <tr data-refund="{{ $p->id }}">
-        <td>{{ $p->order?->order_number ?? '-' }}</td>
-        <td>{{ $p->order?->patient?->name ?? '-' }}</td>
-        <td class="num">{{ number_format((int) $p->amount) }}원</td>
-        <td class="dp-key">{{ $p->payment_key }}</td>
-        <td>{{ $p->requestedBy?->name ?? '-' }}<div class="dp-sub">{{ $p->requested_at?->format('m-d H:i') }}</div></td>
-        <td>
-          @if($canApprove)
-            <button type="button" class="btn btn-sm btn-primary dp-approve">승인·환불</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary dp-reject">반려</button>
-          @else
-            <span class="dp-note">최종승인자만 처리할 수 있습니다</span>
-          @endif
-        </td>
-      </tr>
-      @endforeach
-    </tbody>
-  </table>
+<div class="dp-hint">
+  한 주문에 두 번 이상 들어온 결제를 토스에 직접 물어 찾습니다. 우리 기록에는
+  뒤 결제가 앞 결제를 덮어 남지 않으므로, 이 목록이 보는 것은 토스의 거래 내역입니다.
+  <strong>「주문 결제」</strong>는 이 주문의 결제로 기록된 건이라 환불할 수 없고,
+  <strong>「초과 결제」</strong>가 중복으로 더 들어온 돈입니다. 한 번에 31일까지 조회합니다.
 </div>
-@endif
 
-@if($recent->isNotEmpty())
-<div class="dp-sec-title">최근 처리</div>
-<div class="dp-card">
-  <table class="dp-wait-table">
-    <thead>
-      <tr>
-        <th>주문번호</th><th>고객</th><th class="num">금액</th>
-        <th>상태</th><th>승인</th><th>고객 안내</th>
-      </tr>
-    </thead>
-    <tbody>
-      @foreach($recent as $p)
-      <tr>
-        <td>{{ $p->order?->order_number ?? '-' }}</td>
-        <td>{{ $p->order?->patient?->name ?? '-' }}</td>
-        <td class="num">{{ number_format((int) $p->amount) }}원</td>
-        <td>
-          <span class="dp-badge {{ $p->status === 'done' ? 'is-done' : ($p->status === 'rejected' ? 'is-ledger' : 'is-extra') }}">
-            {{ $p->상태말() }}
-          </span>
-          @if($p->reject_reason)<div class="dp-sub">{{ $p->reject_reason }}</div>@endif
-        </td>
-        <td>{{ $p->approvedBy?->name ?? '-' }}<div class="dp-sub">{{ $p->approved_at_by?->format('m-d H:i') }}</div></td>
-        <td class="dp-sub">{{ $p->notify_result ?: '-' }}</td>
-      </tr>
-      @endforeach
-    </tbody>
-  </table>
+<div class="dp-sum" id="dpSum" style="display:none;"></div>
+<div id="dpGrid"></div>
+
+<div class="dp-sec">
+  <div class="dp-sec-title">환불 처리 내역</div>
+  <div id="dpWorkGrid"></div>
 </div>
-@endif
 
 @endsection
 
@@ -146,21 +79,108 @@
 (() => {
   const SCAN_URL    = @json(route('duplicate-payments.scan'));
   const REQUEST_URL = @json(route('duplicate-payments.request'));
-  const CAN_REQUEST = @json((bool) $canRequest);
+  const CAN_APPROVE = @json((bool) $canApprove);
   const CSRF        = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
-  const box  = document.getElementById('dpResult');
-  const btn  = document.getElementById('dpScanBtn');
-  const 돈   = n => (Number(n) || 0).toLocaleString('ko-KR');
-  const 에스 = s => String(s ?? '').replace(/[&<>"']/g, c =>
-                  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const 돈 = n => (Number(n) || 0).toLocaleString('ko-KR');
 
-  const 때 = s => {
-    if (!s) return '-';
-    // 2026-10-01T13:34:27+09:00 → 10-01 13:34:27
-    const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2}:\d{2})/);
-    return m ? `${m[2]}-${m[3]} ${m[4]}` : s;
-  };
+  /* ── 칸을 그리는 함수들 — 서버는 이름만 주고 여기서 바꿔 끼운다 ──────── */
+
+  function dpKindBadge(value, row) {
+    const b = document.createElement('span');
+    b.className = 'dp-badge ' + (value === 'ledger' ? 'is-ledger' : 'is-extra');
+    b.textContent = row?.kind_label || (value === 'ledger' ? '주문 결제' : '초과 결제');
+    if (value === 'ledger') {
+      b.title = '이 주문의 결제로 기록된 건입니다. 무르면 결제 금액이 0으로 읽혀 '
+              + '정산과 증빙이 어긋나므로 환불할 수 없습니다.';
+    }
+    return b;
+  }
+
+  function dpStatusBadge(value, row) {
+    const 결 = { '환불 완료': 'is-done', '승인 대기': 'is-waiting',
+                 '환불 실패': 'is-failed', '반려': 'is-ledger' }[value] || 'is-waiting';
+    const b = document.createElement('span');
+    b.className = 'dp-badge ' + 결;
+    b.textContent = value || '-';
+    if (row?.reject) b.title = row.reject;
+    return b;
+  }
+
+  /* 환불 요청 — 세울 수 있는 줄인지는 서버가 정한다(act) */
+  function dpRefundBadge(value, row) {
+    if (!value) {
+      if (row?.refund_label) return dpStatusBadge(row.refund_label, row);
+      if (row?.kind === 'ledger') {
+        const s = document.createElement('span');
+        s.style.cssText = 'font-size:11px;color:var(--text-muted,#6b7280);';
+        s.textContent = '환불 불가';
+        return s;
+      }
+      return null;
+    }
+    const b = document.createElement('span');
+    b.className = 'dp-act is-refund';
+    b.innerHTML = '<i class="fa-solid fa-rotate-left"></i> 환불 요청';
+    return b;
+  }
+
+  /* 승인ㆍ반려 — 최종승인자에게만 세운다 */
+  function dpApproveBadge(value) {
+    if (!value || !CAN_APPROVE) {
+      if (value && !CAN_APPROVE) {
+        const s = document.createElement('span');
+        s.style.cssText = 'font-size:11px;color:var(--text-muted,#6b7280);';
+        s.textContent = '최종승인자만 처리';
+        return s;
+      }
+      return null;
+    }
+    const wrap = document.createElement('span');
+    const ok = document.createElement('span');
+    ok.className = 'dp-act is-approve';
+    ok.dataset.act = 'approve';
+    ok.innerHTML = '<i class="fa-solid fa-check"></i> 승인';
+    const no = document.createElement('span');
+    no.className = 'dp-act is-reject';
+    no.dataset.act = 'reject';
+    no.textContent = '반려';
+    wrap.append(ok, no);
+    return wrap;
+  }
+
+  /* ── 목록 둘 ────────────────────────────────────────────── */
+
+  const 조회칸 = @json($scanColumns).map(c => ({
+    ...c,
+    renderer: { dpKindBadge, dpRefundBadge, dpStatusBadge }[c.renderer] ?? c.renderer,
+  }));
+
+  const 처리칸 = @json($workColumns).map(c => ({
+    ...c,
+    renderer: { dpApproveBadge, dpStatusBadge }[c.renderer] ?? c.renderer,
+  }));
+
+  const grid = new wwGrid({
+    el: document.getElementById('dpGrid'),
+    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
+    footer: { total: true, selected: false, modified: false },
+    columns: 조회칸,
+    data: [],
+  });
+
+  const workGrid = new wwGrid({
+    el: document.getElementById('dpWorkGrid'),
+    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
+    footer: { total: true, selected: false, modified: false },
+    columns: 처리칸,
+    data: @json($workData),
+  });
+
+  /* ── 조회 ──────────────────────────────────────────────── */
+
+  const btn = document.getElementById('dpScanBtn');
+  const 요약 = document.getElementById('dpSum');
 
   async function 조회() {
     const from = document.getElementById('dpFrom').value;
@@ -171,7 +191,8 @@
     btn.disabled = true;
     const 옛글 = btn.textContent;
     btn.textContent = '토스에 묻는 중…';
-    box.innerHTML = '<div class="dp-card"><div class="dp-empty">토스에서 거래를 가져오는 중입니다. 몇 초 걸립니다.</div></div>';
+    요약.style.display = '';
+    요약.textContent = '토스에서 거래를 가져오는 중입니다. 몇 초 걸립니다.';
 
     try {
       const res  = await fetch(`${SCAN_URL}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
@@ -179,106 +200,68 @@
       const data = await res.json();
 
       if (!data.success) {
-        box.innerHTML = `<div class="dp-card"><div class="dp-empty">${에스(data.message)}</div></div>`;
+        grid.setData([]);
+        요약.textContent = data.message || '조회하지 못했습니다.';
         return;
       }
 
-      그리기(data);
+      grid.setData(data.rows);
+
+      const 중복금액 = data.rows
+        .filter(r => r.kind === 'extra')
+        .reduce((s, r) => s + (Number(r.amount) || 0), 0);
+
+      요약.innerHTML = data.rows.length
+        ? `중복 결제 <span class="n">${data.orders}</span>건 · `
+          + `중복 결제 금액 <span class="n" style="color:var(--danger,#dc2626);">${돈(중복금액)}원</span>`
+          + ` <span style="font-weight:400;color:var(--text-muted,#6b7280);">`
+          + `(토스 거래 ${돈(data.scanned)}건을 보고 ${돈(data.queried)}건을 자세히 확인했습니다)</span>`
+        : `중복으로 들어온 결제가 없습니다. `
+          + `<span style="font-weight:400;color:var(--text-muted,#6b7280);">`
+          + `(토스 거래 ${돈(data.scanned)}건 확인)</span>`;
     } catch (e) {
-      box.innerHTML = '<div class="dp-card"><div class="dp-empty">조회하지 못했습니다. 잠시 뒤 다시 눌러 주십시오.</div></div>';
+      grid.setData([]);
+      요약.textContent = '조회하지 못했습니다. 잠시 뒤 다시 눌러 주십시오.';
     } finally {
       btn.disabled = false;
       btn.textContent = 옛글;
     }
   }
 
-  function 그리기(data) {
-    if (!data.rows.length) {
-      box.innerHTML = `<div class="dp-card"><div class="dp-empty">
-        중복으로 들어온 결제가 없습니다.<br>
-        <span style="font-size:12px;">토스 거래 ${data.scanned}건을 보고, 그 가운데 ${data.queried}건을 자세히 확인했습니다.</span>
-      </div></div>`;
-      return;
-    }
+  btn.addEventListener('click', 조회);
 
-    box.innerHTML = data.rows.map(r => `
-      <div class="dp-card">
-        <div class="dp-head">
-          <div>
-            <div class="dp-who">${에스(r.patient)} · ${에스(r.order_number)}</div>
-            <div class="dp-sub">처방 ${에스(r.rx_number)}</div>
-          </div>
-          <div class="dp-sums">
-            <span>받을 돈 <b>${돈(r.expected)}원</b></span>
-            <span>토스에 살아 있는 승인 <b>${돈(r.paid_sum)}원</b></span>
-            <span>우리 장부 <b>${돈(r.ledger_sum)}원</b></span>
-            <span class="dp-excess">더 들어온 돈 ${돈(r.excess)}원</span>
-          </div>
-        </div>
-        ${r.payments.map(p => 결제줄(r, p)).join('')}
-      </div>`).join('');
-  }
+  /* ── 환불 요청 ─────────────────────────────────────────── */
 
-  function 결제줄(r, p) {
-    /* 장부가 아는 결제는 돌려줄 수 없다 — 무르면 받은 돈이 0으로 읽혀
-       정산과 증빙이 어긋난다. 버튼 자체를 세우지 않는다. */
-    let 오른쪽;
+  document.getElementById('dpGrid').addEventListener('click', async (e) => {
+    const 단추 = e.target.closest('.dp-act.is-refund');
+    if (!단추) return;
 
-    if (p.in_ledger) {
-      오른쪽 = `<span class="dp-ledger">주문의 결제로 장부에 적혀 있어 환불할 수 없습니다</span>`;
-    } else if (p.refund_status) {
-      오른쪽 = `<span class="dp-badge ${p.refund_status === 'done' ? 'is-done' : 'is-waiting'}">${에스(p.refund_label)}</span>`;
-    } else if (!CAN_REQUEST) {
-      오른쪽 = `<span class="dp-note">환불을 요청할 권한이 없습니다</span>`;
-    } else {
-      오른쪽 = `<button type="button" class="btn btn-sm btn-danger dp-req"
-                  data-order="${r.order_id}" data-key="${에스(p.payment_key)}"
-                  data-toss="${에스(p.toss_order_id)}" data-method="${에스(p.method)}"
-                  data-amount="${p.amount}" data-approved="${에스(p.approved_at)}"
-                  data-who="${에스(r.patient)}">환불 요청</button>`;
-    }
+    const cell = 단추.closest('[data-row-index]');
+    if (!cell) return;
 
-    return `
-      <div class="dp-pay">
-        <div class="dp-key">${에스(p.payment_key)}</div>
-        <div>${때(p.approved_at)}</div>
-        <div class="dp-amt">${돈(p.amount)}원</div>
-        <div>
-          <span class="dp-badge ${p.in_ledger ? 'is-ledger' : 'is-extra'}">
-            ${p.in_ledger ? '장부에 있음' : '장부에 없음'}
-          </span>
-          <span class="dp-note">${에스(p.method || '')}</span>
-        </div>
-        <div>${오른쪽}</div>
-      </div>`;
-  }
-
-  box.addEventListener('click', async (e) => {
-    const b = e.target.closest('.dp-req');
-    if (!b) return;
-
-    const 금액 = Number(b.dataset.amount) || 0;
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (!row || !row.act) return;
 
     const 예 = await ceConfirm(
-      `${b.dataset.who}님의 중복 결제 ${돈(금액)}원을 환불 요청합니다.\n\n` +
-      `최종승인자가 승인해야 실제로 환불됩니다.\n결제키 ${b.dataset.key}`,
+      `${row.patient}님의 초과 결제 ${돈(row.amount)}원을 환불 요청합니다.\n\n`
+      + `최종승인자가 승인해야 실제로 환불됩니다.\n`
+      + `승인 ${row.approved_at} · 결제키 ${row.payment_key}`,
       { title: '환불 요청', tone: 'warning', confirmText: '요청' });
 
     if (!예) return;
 
-    b.disabled = true;
+    단추.classList.add('is-busy');
 
     try {
       const res = await fetch(REQUEST_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
         body: JSON.stringify({
-          order_id:      Number(b.dataset.order),
-          payment_key:   b.dataset.key,
-          toss_order_id: b.dataset.toss || null,
-          method:        b.dataset.method || null,
-          amount:        금액,
-          approved_at:   b.dataset.approved || null,
+          order_id:      Number(row.order_id),
+          payment_key:   row.payment_key,
+          toss_order_id: row.toss_order_id || null,
+          method:        row.method === '-' ? null : row.method,
+          amount:        Number(row.amount),
         }),
       });
       const data = await res.json();
@@ -286,35 +269,38 @@
       await ceAlert(data.message, { title: '환불 요청', tone: data.success ? 'default' : 'warning' });
 
       if (data.success) location.reload();
-      else b.disabled = false;
+      else 단추.classList.remove('is-busy');
     } catch (err) {
-      b.disabled = false;
+      단추.classList.remove('is-busy');
       ceAlert('요청하지 못했습니다.', { title: '환불 요청', tone: 'warning' });
     }
   });
 
-  /* 승인ㆍ반려 — 최종승인자에게만 단추가 서 있다 */
-  document.addEventListener('click', async (e) => {
-    const 승인 = e.target.closest('.dp-approve');
-    const 반려 = e.target.closest('.dp-reject');
-    if (!승인 && !반려) return;
+  /* ── 승인ㆍ반려 ────────────────────────────────────────── */
 
-    const tr = e.target.closest('tr[data-refund]');
-    const id = tr?.dataset.refund;
-    if (!id) return;
+  document.getElementById('dpWorkGrid').addEventListener('click', async (e) => {
+    const 단추 = e.target.closest('.dp-act[data-act]');
+    if (!단추) return;
 
-    if (승인) {
+    const cell = 단추.closest('[data-row-index]');
+    if (!cell) return;
+
+    const row = workGrid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (!row?.id) return;
+
+    if (단추.dataset.act === 'approve') {
       const 예 = await ceConfirm(
-        `지금 토스에서 실제로 환불이 나갑니다. 되돌릴 수 없습니다.\n\n` +
-        `환불이 끝나면 고객에게 안내가 함께 발송됩니다.`,
+        `${row.patient}님의 ${돈(row.amount)}원을 지금 환불합니다.\n\n`
+        + `토스에서 실제로 돈이 나가며 되돌릴 수 없습니다.\n`
+        + `환불이 끝나면 고객에게 안내가 함께 발송됩니다.`,
         { title: '환불 승인', tone: 'danger', confirmText: '승인하고 환불' });
 
       if (!예) return;
 
-      승인.disabled = true;
-      const res  = await fetch(`/duplicate-payments/${id}/approve`, {
-        method: 'POST',
-        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
+      단추.classList.add('is-busy');
+
+      const res  = await fetch(`/duplicate-payments/${row.id}/approve`, {
+        method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
       });
       const data = await res.json();
       await ceAlert(data.message, { title: '환불 승인', tone: data.success ? 'default' : 'warning' });
@@ -322,10 +308,11 @@
       return;
     }
 
-    const 까닭 = await cePrompt('반려하는 까닭', { placeholder: '예) 고객이 추가 주문으로 쓰기로 함', confirmText: '반려' });
+    const 까닭 = await cePrompt('반려하는 까닭', {
+      placeholder: '예) 고객이 추가 주문으로 쓰기로 함', confirmText: '반려' });
     if (!까닭) return;
 
-    const res  = await fetch(`/duplicate-payments/${id}/reject`, {
+    const res  = await fetch(`/duplicate-payments/${row.id}/reject`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
       body: JSON.stringify({ reason: 까닭 }),
@@ -334,8 +321,6 @@
     await ceAlert(data.message, { title: '환불 반려', tone: data.success ? 'default' : 'warning' });
     location.reload();
   });
-
-  btn.addEventListener('click', 조회);
 })();
 </script>
 @endpush
