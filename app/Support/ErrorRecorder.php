@@ -39,6 +39,15 @@ class ErrorRecorder
         \Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class,
         \Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException::class,
         \Illuminate\Database\Eloquent\ModelNotFoundException::class,
+
+        /* tinker 가 내는 것은 우리 잘못이 아니다 (2026-10-02 확인).
+
+           `artisan tinker --execute=…` 로 운영을 들여다볼 때 명령 한 글자가 틀리면
+           psysh 가 ParseErrorException 을 던지는데, 그것이 500 으로 담겨 담당자
+           목록에 섞였다(오류 기록 #11ㆍ#12). 화면ㆍ업무와 아무 관계가 없다.
+           ParseErrorException 뿐 아니라 BreakExceptionㆍRuntimeException 등
+           tinker 안에서만 뜻이 있는 것이 여럿이라 뼈대 되는 인터페이스로 거른다. */
+        \Psy\Exception\Exception::class,
     ];
 
     /** 값이 이런 이름으로 오면 가린다 — 로그는 담당자가 보는 자리다 */
@@ -86,6 +95,24 @@ class ErrorRecorder
         }
     }
 
+    /**
+     * 「조치 완료」라 해 둔 것이 또 나면 「미확인」으로 되살린다 (2026-10-02 지시).
+     *
+     * 같은 잘못이 또 나도 여태 `hit` 만 올렸다. 그래서 고쳤다고 적어 둔 뒤에 되살아난
+     * 것이 **아무 데도 드러나지 않았다** — 목록은 「조치 완료」로 보이고, 담당자가
+     * 보는 「미확인」 셈에도 들지 않는다. 고친 것이 풀렸다면 그것이야말로 먼저 봐야
+     * 할 일이다.
+     *
+     * 「보류」는 되살리지 않는다. 일부러 두기로 한 것이라, 또 나는 것이 당연하다.
+     *
+     * 적어 둔 메모와 누가 언제 보았는지는 지우지 않는다 — 무엇을 했는데 되살아났는지
+     * 알아야 다음을 짚을 수 있다.
+     */
+    private static function 되살릴까(ErrorLog $이미): array
+    {
+        return $이미->status === 'fixed' ? ['status' => 'open'] : [];
+    }
+
     private static function 넘길까(Throwable $e): bool
     {
         foreach (self::넘길것 as $갈래) {
@@ -130,7 +157,7 @@ class ErrorRecorder
                 'url'     => self::주소(),
                 'user_id' => Auth::id(),
                 'user_name' => Auth::user()?->name,
-            ])->saveQuietly();
+            ] + self::되살릴까($이미))->saveQuietly();
 
             return;
         }

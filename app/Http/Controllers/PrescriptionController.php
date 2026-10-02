@@ -3123,7 +3123,17 @@ class PrescriptionController extends Controller
         }
 
         $prescription->load(['patient', 'assignedUser', 'creator', 'reviewer', 'updater', 'order.tossPayment', 'items', 'memos.user', 'attachments', 'documents.creator', 'billingOffice']);
-        $patients = Patient::orderBy('name')->get();
+
+        /* 예전에 여기서 환자를 **전부** 담았다 — `Patient::orderBy('name')->get()`.
+           그려 내는 `prescriptions.order` 는 그 값을 한 번도 읽지 않는데, 환자가
+           12,624명ㆍ64칸까지 자라 **68MB** 를 먹었다. php-fpm 한도가 128MB 이고 이 화면
+           한 장이 꼭대기 88MB 를 쓰므로, 그 줄이 그대로면 남는 자리가 거의 없다.
+
+             Allowed memory size of 134217728 bytes exhausted
+
+           2026-10-01 10:34:58ㆍ59 에 두 사람이 연달아 이 벽을 맞았다(오류 기록 #3ㆍ#4).
+           읽는 자리가 없으니 담지 않는다. 환자를 고르는 자리는 서버에서 찾는
+           `patientPickerList()` 를 쓰는 업로드 화면에만 있다. */
 
         /* 어느 주문을 보고 있는가 (2026-09-14 확인요청 4쪽).
 
@@ -3426,7 +3436,7 @@ class PrescriptionController extends Controller
         $남은수량 = max(0, $처방총계 - $이미주문);
 
         return view('prescriptions.order', compact(
-            'prescription', 'patients', 'prevId', 'nextId', 'repurchaseBlock', 'testPhones', 'payState',
+            'prescription', 'prevId', 'nextId', 'repurchaseBlock', 'testPhones', 'payState',
             '주문줄들', '처방총계', '이미주문', '남은수량', '원주문품목',
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',

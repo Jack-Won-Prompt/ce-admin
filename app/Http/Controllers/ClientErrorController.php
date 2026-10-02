@@ -71,7 +71,15 @@ class ClientErrorController extends Controller
            브라우저에 맡긴다 — 흰 화면이 끼지 않는다. 앞 넘김이 끝나기 전에 다음으로
            옮기면 브라우저가 앞것을 접으며 이 말을 낸다. 우리가 부르는 자리가 없어
            잡을 수도 없고, 빨리 옮길수록 자주 난다. 담지 않는다. */
-        if (str_contains($글월, 'Transition was skipped')) {
+        /* 같은 말을 브라우저가 두 가지로 적는다 (2026-10-02 확인).
+
+             Transition was skipped
+             Transition was aborted because of invalid state. ViewTransition opt-in disabled
+
+           「skipped」만 걸러 두어 「aborted」 쪽이 그대로 쌓였다 — 10-01~10-02 이틀에
+           32번(오류 기록 #1). 둘 다 같은 갈래이므로 함께 거른다. */
+        if (str_contains($글월, 'Transition was skipped')
+            || str_contains($글월, 'Transition was aborted')) {
             return response()->json(['success' => true, 'skipped' => 'view_transition']);
         }
 
@@ -88,13 +96,17 @@ class ClientErrorController extends Controller
             ->first();
 
         if ($이미) {
+            /* 「조치 완료」라 해 둔 것이 또 났으면 「미확인」으로 되살린다 — 서버 쪽과
+               같은 잣대다(ErrorRecorder::되살릴까). 「보류」는 일부러 둔 것이라 그대로. */
+            $되살림 = $이미->status === 'fixed' ? ['status' => 'open'] : [];
+
             $이미->forceFill([
                 'hit'       => $이미->hit + 1,
                 'last_at'   => now(),
                 'url'       => mb_substr((string) ($값['url'] ?? ''), 0, 500) ?: $이미->url,
                 'user_id'   => Auth::id(),
                 'user_name' => Auth::user()?->name,
-            ])->saveQuietly();
+            ] + $되살림)->saveQuietly();
 
             return response()->json(['success' => true, 'merged' => $이미->id]);
         }
