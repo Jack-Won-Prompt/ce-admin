@@ -14570,6 +14570,22 @@ window.HELP_TOUR_STEPS = [
      「있다」와 「보낼 수 있다」를 나눠 적는다 — 만들어져 있어도 첨부가 아니면 안 나간다. */
   let faxGenDelegation = {{ $prescription->documents->where('type', 'delegation')->isNotEmpty() ? 'true' : 'false' }};
 
+  /* 첨부가 아닌 **생성 서류** — 공단 밖으로 보낼 때 고를 수 있게 세운다 (2026-10-02 지시).
+
+     여태 공단 밖으로 보낼 때는 첨부만 세웠다. 그래서 왼쪽 서류 칸에는 있는
+     요양비위임장ㆍ세금계산서가 「보낼 서류」에는 비치지 않아, 담당자가 빠진 줄 알았다.
+
+     요양비위임장은 **고르지 않아도 늘 함께 나간다**(아래 `docs` 가 그렇게 짓는다) —
+     그래서 고르는 칸이 아니라 「함께 나갑니다」로 적는다. 나머지는 고르게 둔다. */
+  const FAX_GEN_DOCS = @json(array_values(array_filter([
+      $prescription->order?->tax_invoice_status === 'issued'
+          ? ['key' => 'tax_invoice',  'label' => '세금계산서'] : null,
+      $prescription->order?->cash_receipt_status === 'issued'
+          ? ['key' => 'cash_receipt', 'label' => '현금영수증'] : null,
+      $prescription->image_path
+          ? ['key' => 'prescription', 'label' => '처방전 이미지'] : null,
+  ])));
+
   /* 미성년자 건에는 법정대리인 신분증도 공단에 낸다(2026-09-04 확정).
      이 파일은 첨부가 아니라 개인정보동의에 딸려 들어온다 — 그래서 첨부 목록에는
      비치지 않았고, 창에는 넷만 서서 「다 갖췄다」로 읽혔다. 따로 세운다. */
@@ -14648,6 +14664,18 @@ window.HELP_TOUR_STEPS = [
       ALL_DOCS.filter(d => d.id > 0 && !used.has(d.id))
               .forEach(d => rows.push({ label: d.typeLabel || d.type || '첨부',
                                         att: d, state: 'ok' }));
+
+      /* 첨부가 아닌 생성 서류도 세운다 (2026-10-02 지시).
+
+         왼쪽 서류 칸에는 있는데 「보낼 서류」에 비치지 않아 빠진 줄로 읽혔다.
+         요양비위임장은 고르지 않아도 늘 나가므로 알리기만 하고, 나머지는 고르게 둔다. */
+      if (faxGenDelegation) {
+        rows.push({ label: '요양비위임장', att: null, state: 'gen' });
+      }
+
+      FAX_GEN_DOCS.forEach(g => {
+        rows.push({ label: g.label, att: null, state: 'doc', doc: g.key });
+      });
     }
 
     return rows;
@@ -14672,19 +14700,32 @@ window.HELP_TOUR_STEPS = [
         </div>`;
     }
 
-    /* 첨부가 아닌 서류 — 고르면 documents 로 나간다(법정대리인 신분증ㆍ신분증 링크) */
+    /* 첨부가 아닌 서류 — 고르면 documents 로 나간다(신분증ㆍ생성 서류) */
     if (r.state === 'doc') {
-      /* 어디서 받아 둔 것인지 적는다 — 담당자가 이 줄만 보고 「첨부에 없는데 왜 나가나」
-         를 묻지 않게 한다. 신분증 링크로 받은 것과 개인정보동의에 딸린 것이 다르다. */
-      const 온곳  = r.doc === 'patient_id' ? '신분증 링크' : '동의 첨부';
-      const 설명 = r.doc === 'patient_id'
-        ? '신분증 링크로 받아 둔 파일이 그대로 나갑니다'
-        : '개인정보동의에 받아 둔 파일이 그대로 나갑니다';
+      /* 어디서 온 것인지 적는다 — 담당자가 이 줄만 보고 「첨부에 없는데 왜 나가나」를
+         묻지 않게 한다. 받아 둔 것(신분증)과 시스템이 만든 것(세금계산서 따위)이 다르다. */
+      const 갈래 = {
+        patient_id:   { 온곳: '신분증 링크', 설명: '신분증 링크로 받아 둔 파일이 그대로 나갑니다',
+                        아이콘: 'fa-regular fa-id-card', 처음: true },
+        guardian_id:  { 온곳: '동의 첨부',   설명: '개인정보동의에 받아 둔 파일이 그대로 나갑니다',
+                        아이콘: 'fa-regular fa-id-card', 처음: true },
+        tax_invoice:  { 온곳: '생성 서류',   설명: '발행된 세금계산서를 함께 보냅니다',
+                        아이콘: 'fa-regular fa-file-lines', 처음: false },
+        cash_receipt: { 온곳: '생성 서류',   설명: '발행된 현금영수증을 함께 보냅니다',
+                        아이콘: 'fa-regular fa-receipt', 처음: false },
+        prescription: { 온곳: '처방전',      설명: '올려 둔 처방전 그림을 함께 보냅니다',
+                        아이콘: 'fa-regular fa-image', 처음: false },
+      }[r.doc] ?? { 온곳: '서류', 설명: '함께 보냅니다', 아이콘: 'fa-regular fa-file-lines', 처음: false };
+
+      /* 신분증은 공단에 꼭 내야 하는 것이라 처음부터 골라 둔다. 세금계산서처럼 덧붙이는
+         것은 비워 둔다 — 고르지 않은 것이 따라 나가면 남의 서류가 섞인다. */
+      const 온곳  = 갈래.온곳;
+      const 설명 = 갈래.설명;
 
       return `
         <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);
                       border-radius:var(--radius);cursor:pointer;font-size:12px;margin-bottom:3px;">
-          <input type="checkbox" class="fax-doc-chk" value="${esc(r.doc)}" style="accent-color:var(--primary);" checked>
+          <input type="checkbox" class="fax-doc-chk" value="${esc(r.doc)}" style="accent-color:var(--primary);" ${갈래.처음 ? 'checked' : ''}>
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:6px;">
               <span style="font-weight:500;">${esc(r.label)}</span>
@@ -14692,7 +14733,7 @@ window.HELP_TOUR_STEPS = [
             </div>
             <div style="font-size:10px;color:var(--text-muted);">${esc(설명)}</div>
           </div>
-          <i class="fa-regular fa-id-card" style="color:var(--text-muted);font-size:18px;flex-shrink:0;"></i>
+          <i class="${갈래.아이콘}" style="color:var(--text-muted);font-size:18px;flex-shrink:0;"></i>
         </label>`;
     }
 
