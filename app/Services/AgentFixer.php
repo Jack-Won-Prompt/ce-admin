@@ -42,18 +42,38 @@ class AgentFixer
     /** 한 번에 고칠 수 있는 크기 — 넘으면 사람에게 넘긴다 */
     private const 최대바뀐줄 = 40;
 
-    /** 손대면 안 되는 자리 — 경로로 막는다 */
+    /**
+     * 손대면 안 되는 자리 — **파일 이름에 이 낱말이 있으면 막는다** (2026-10-02 확인).
+     *
+     * 처음에는 폴더 몇 개만 적어 두었는데, 같은 일을 하는 화면ㆍ컨트롤러ㆍ명령이
+     * 그 밖에 있었다 — 위드웍스는 아예 빠져 있었고, 팝빌도 서비스 폴더만 막혀
+     * 세금계산서ㆍ현금영수증 화면은 열려 있었다. 폴더로 세면 반드시 빠진다.
+     *
+     * 그래서 낱말로 막는다. 경로를 소문자로 내려 견주므로 `WithworksLink`ㆍ
+     * `app/Http/Controllers/Withworks…`ㆍ`withworks:sync` 가 한꺼번에 걸린다.
+     *
+     * 이 울타리 때문에 Agent 가 고칠 수 있는 자리는 좁다. 그것이 맞다 — 이 저장소의
+     * 큰 자리는 대개 돈이거나 신고이거나 환자 자료다.
+     */
     private const 금지 = [
-        'database/migrations/',
-        'config/',
-        '.env',
-        'app/Services/Agent',          // Agent 가 자기 자신을 고치는 일
-        'app/Http/Controllers/Agent',
-        'app/Support/AgentNotifier',
-        'app/Services/Popbill',        // 국세청 신고
-        'app/Services/Toss',           // 결제
-        'app/Support/ResidentNo',       // 주민등록번호
-        'app/Services/OrderCancelService', // 돈을 무르는 자리
+        // 표 구조ㆍ설정ㆍ열쇠
+        'database/migrations/', 'config/', '.env',
+        // Agent 가 자기 자신을 고치는 일
+        'agent',
+        // 창고 연계 — 주문이 나가고 취소되는 길
+        'withworks',
+        // 국세청 신고 — 세금계산서ㆍ현금영수증ㆍ팝빌 전부
+        'popbill', 'taxinvoice', 'cashbill',
+        // 결제 — 토스ㆍ결제 링크ㆍ정산ㆍ입금ㆍ환불
+        'toss', 'payment', 'settlement', 'deposit', 'refund', 'finance',
+        // 공단 청구
+        'nhis',
+        // 환자 개인정보
+        'residentno', 'patient', 'consent', 'delegation',
+        // 한 번 나가면 거둘 수 없는 것 — 문자ㆍ알림톡ㆍ팩스ㆍ푸시
+        'message', 'kakao', 'fax', 'sms', 'fcm', 'notice', 'notif',
+        // 주문ㆍ교환반품 — 돈과 창고가 함께 걸린다
+        'order', 'return',
     ];
 
     /** 고칠 수 있는 자리 — 여기 아래만 본다 */
@@ -147,8 +167,11 @@ class AgentFixer
     /** 손대면 안 되는 자리인가 */
     private function 막혔나(string $자리): ?string
     {
+        /* 소문자로 내려 견준다 — 파일 이름의 대소문자에 기대지 않는다 */
+        $낮춘자리 = mb_strtolower($자리);
+
         foreach (self::금지 as $막을것) {
-            if (str_contains($자리, $막을것)) {
+            if (str_contains($낮춘자리, mb_strtolower($막을것))) {
                 return "손대지 않는 자리입니다 ({$막을것}) — 사람이 보아야 합니다";
             }
         }
