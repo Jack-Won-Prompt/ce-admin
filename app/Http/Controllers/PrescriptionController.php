@@ -4246,7 +4246,7 @@ class PrescriptionController extends Controller
      */
     public function updateAdminNote(Request $request, Prescription $prescription): JsonResponse
     {
-        abort_unless(perm('prescriptions', 'update'), 403, '검수 메모를 적을 권한이 없습니다.');
+        abort_unless(perm('prescriptions', 'update'), 403, '검수 메모 입력 권한이 없습니다.');
 
         $data = $request->validate([
             'memo' => ['nullable', 'string', 'max:500'],
@@ -4256,18 +4256,18 @@ class PrescriptionController extends Controller
         $새것 = trim((string) ($data['memo'] ?? ''));
 
         if ($옛것 === $새것) {
-            return response()->json(['success' => true, 'message' => '바뀐 내용이 없습니다.', 'memo' => $새것]);
+            return response()->json(['success' => true, 'message' => '변경된 내용이 없습니다.', 'memo' => $새것]);
         }
 
         $prescription->update(['admin_note' => $새것 !== '' ? $새것 : null]);
 
         activity()->causedBy(Auth::user())->performedOn($prescription)->log(
-            $새것 === '' ? '검수 메모를 지웠습니다' : '검수 메모: ' . mb_substr($새것, 0, 100)
+            $새것 === '' ? '검수 메모를 삭제했습니다' : '검수 메모: ' . mb_substr($새것, 0, 100)
         );
 
         return response()->json([
             'success' => true,
-            'message' => $새것 === '' ? '검수 메모를 지웠습니다.' : '검수 메모를 저장했습니다.',
+            'message' => $새것 === '' ? '검수 메모를 삭제했습니다.' : '검수 메모를 저장했습니다.',
             'memo'    => $새것,
         ]);
     }

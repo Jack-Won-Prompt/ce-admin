@@ -52,7 +52,23 @@
   .rx-memo.is-editable { cursor:pointer; }
   .rx-memo.is-editable:hover { text-decoration:underline; }
   .rx-memo.is-empty { color:var(--gray-400, #9ca3af); }
-  .rx-memo.is-editable.is-empty:hover { color:var(--primary, #2563eb); }
+
+  /* 빈 자리는 배지로 세운다 (2026-10-02 지시) — 글자만 두면 누를 수 있는
+     자리인지 보이지 않는다. 적힌 메모는 내용을 읽어야 하므로 글자 그대로 둔다. */
+  .rx-memo.is-editable.is-empty {
+    display:inline-flex; align-items:center; gap:4px;
+    height:22px; padding:0 9px; border-radius:999px;
+    font-size:11px; font-weight:700; line-height:20px; white-space:nowrap;
+    color:var(--primary, #2563eb); background:var(--primary-50, #eef2ff);
+    border:1px solid var(--primary-200, #c7d2fe);
+    user-select:none; text-decoration:none;
+    transition:background .12s, border-color .12s, color .12s;
+  }
+  .rx-memo.is-editable.is-empty:hover {
+    background:var(--primary, #2563eb); border-color:var(--primary, #2563eb);
+    color:var(--gray-0, #fff); text-decoration:none;
+  }
+  .rx-memo.is-editable.is-empty i { font-size:10px; }
 
   .rx-memo-pop { position:fixed; z-index:9000; width:300px; padding:12px;
                  background:var(--gray-0, #fff); border:1px solid var(--gray-200, #e5e7eb);
@@ -420,9 +436,15 @@ window.HELP_TOUR_STEPS = [
     const s = document.createElement('span');
     s.className = 'rx-memo' + (MEMO_CAN_EDIT ? ' is-editable' : '') + (글 ? '' : ' is-empty');
     /* 한 줄로 줄여 보인다 — 긴 글은 창을 열어야 다 읽힌다 */
-    s.textContent = 글 ? (글.length > 14 ? 글.slice(0, 14) + '…' : 글) : (MEMO_CAN_EDIT ? '+ 메모' : '—');
+    if (글) {
+      s.textContent = 글.length > 14 ? 글.slice(0, 14) + '…' : 글;
+    } else if (MEMO_CAN_EDIT) {
+      s.innerHTML = '<i class="fa-solid fa-plus"></i> 메모 입력';
+    } else {
+      s.textContent = '—';
+    }
     if (글) s.title = 글;
-    else if (MEMO_CAN_EDIT) s.title = '눌러서 검수 메모를 적습니다';
+    else if (MEMO_CAN_EDIT) s.title = '클릭하여 검수 메모를 입력합니다';
     return s;
   };
 
@@ -453,8 +475,8 @@ window.HELP_TOUR_STEPS = [
     창.innerHTML =
       `<div class="rx-memo-ttl">검수 메모 · ${row.rx_number ?? ''}</div>`
       + `<textarea class="form-control" rows="4" maxlength="500"`
-      + ` placeholder="검수할 때 보아야 할 내용을 적습니다"></textarea>`
-      + `<div class="rx-memo-hint">주문 등록 화면의 「검수 요청 메모」에 그대로 보입니다.</div>`
+      + ` placeholder="검수 시 확인이 필요한 내용을 입력합니다"></textarea>`
+      + `<div class="rx-memo-hint">주문 등록 화면의 「검수 요청 메모」에 동일하게 표시됩니다.</div>`
       + `<div class="rx-memo-ft">`
       + `<button type="button" class="ds-btn" data-act="cancel">닫기</button>`
       + `<button type="button" class="ds-btn ds-btn-primary" data-act="save">저장</button></div>`;
@@ -487,7 +509,7 @@ window.HELP_TOUR_STEPS = [
         const data = await res.json();
 
         if (!data.success) {
-          ceAlert(data.message || '저장하지 못했습니다.', { title: '검수 메모', tone: 'warning' });
+          ceAlert(data.message || '저장에 실패했습니다.', { title: '검수 메모', tone: 'warning' });
           b.disabled = false;
           return;
         }
@@ -498,7 +520,7 @@ window.HELP_TOUR_STEPS = [
         showToast(data.message, 'success');
       } catch (err) {
         b.disabled = false;
-        ceAlert('저장하지 못했습니다.', { title: '검수 메모', tone: 'warning' });
+        ceAlert('저장에 실패했습니다.', { title: '검수 메모', tone: 'warning' });
       }
     });
   });

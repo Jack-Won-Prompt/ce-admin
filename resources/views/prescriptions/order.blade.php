@@ -3677,7 +3677,7 @@ $calcDeposit  = $calcCopay;
                      승인 메모가 그대로 바뀐다. --}}
                 <textarea id="f-input-review-memo" class="form-control" rows="2" maxlength="1000"
                      style="flex:1;min-width:0;font-size:12px;line-height:1.6;resize:vertical;"
-                     placeholder="입력 검수를 확인한 내용을 적습니다"
+                     placeholder="입력 검수 확인 내용을 입력합니다"
                      title="입력 검수를 승인한 사람이 남긴 말입니다">{{ $prescription->input_review_memo }}</textarea>
               </div>
               {{-- 참고 사항은 걷었다 (2026-09-14 지시). 담긴 값(reference_note)은
