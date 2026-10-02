@@ -38,8 +38,14 @@ class AcquireStatusRefresher
     /** 이 사이에 물어본 것은 다시 묻지 않는다 (분) */
     private const 다시묻는틈 = 30;
 
-    /** 한 번에 물을 수 있는 건수 */
-    private const 한번에 = 15;
+    /**
+     * 한 번에 물을 수 있는 건수.
+     *
+     * 토스 한 번이 0.3초쯤이라 열다섯이면 첫 열람이 **4.1초** 걸렸다(2026-10-02 실측).
+     * 여덟으로 줄인다 — 남은 것은 다음에 열 때 채워지고, 매입이 끝나면 다시 묻지
+     * 않으므로 밀린 것은 한 번 지나가면 사라진다.
+     */
+    private const 한번에 = 8;
 
     public function __construct(private TossClient $toss)
     {
@@ -134,15 +140,15 @@ class AcquireStatusRefresher
 
         $값 = $답['card']['acquireStatus'] ?? null;
 
-        /* 카드가 아닌 건(가상계좌ㆍ간편결제)은 `card` 가 없다. 물어본 사실만 적어
-           두어 다음 열 때 또 묻지 않게 한다 — 값은 비운다. */
+        /* 값이 오지 않는 건이 있다 (2026-10-02 확인).
+
+           `method` 는 CARD 인데 토스 응답에 `card` 가 통째로 없는 줄이 운영에 둘 있다.
+           비워 두면 화면이 「알 수 없음」이라 적고, 끝나지 않은 것으로 보여 30분마다
+           영영 다시 묻는다. **물어봤는데 없더라**를 값으로 적어 둔다. */
         $적을것 = [
             'acquire_checked_at' => now(),
+            'acquire_status'     => (is_string($값) && $값 !== '') ? $값 : 'NONE',
         ];
-
-        if (is_string($값) && $값 !== '') {
-            $적을것['acquire_status'] = $값;
-        }
 
         /* 상태도 함께 따라온다 — 매입을 물으러 간 길에 취소된 것을 알게 되는 일이 있다.
            다만 **우리가 적어 둔 취소 자취는 덮지 않는다**(toss_payments 는 한 주문 한

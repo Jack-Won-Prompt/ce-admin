@@ -51,6 +51,13 @@ class TossPayment extends Model
         'COMPLETED'        => ['매입 완료',  'success'],
         'CANCEL_REQUESTED' => ['매입 취소 요청', 'info'],
         'CANCELED'         => ['매입 취소',  'secondary'],
+
+        /* 토스가 카드 정보를 주지 않는 건 (2026-10-02 확인).
+
+           `method` 는 CARD 인데 응답에 `card` 가 없는 줄이 운영에 둘 있다. 물어봐도
+           값이 없으므로 「알 수 없음」이라 적어 두면 담당자가 고장으로 읽고, 30분마다
+           영영 다시 묻게 된다. 물어본 사실을 이 값으로 적어 두고 더 묻지 않는다. */
+        'NONE'             => ['매입 정보 없음', 'muted'],
     ];
 
     /** 카드로 받은 건인가 — 가상계좌ㆍ간편결제에는 매입이라는 걸음이 없다 */
@@ -100,7 +107,8 @@ class TossPayment extends Model
             return false;
         }
 
-        return ! in_array(strtoupper((string) $this->acquire_status), ['COMPLETED', 'CANCELED'], true);
+        return ! in_array(strtoupper((string) $this->acquire_status),
+            ['COMPLETED', 'CANCELED', 'NONE'], true);
     }
 
     /** 상태 한글 레이블 */
