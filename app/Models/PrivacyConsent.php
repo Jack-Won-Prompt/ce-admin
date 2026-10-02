@@ -22,11 +22,14 @@ class PrivacyConsent extends Model
         'agree_marketing', 'agree_marketing_sensitive', 'agree_third_sensitive',
         'agree_ads',
         'extra', 'ip', 'user_agent', 'admin_memo', 'submitted_at',
+        // 공개 동의서에서 받은 서명 (2026-10-02 지시)
+        'signature_data', 'signed_at', 'source_ref', 'source_host',
     ];
 
     protected $casts = [
         'extra'        => 'array',
         'submitted_at' => 'datetime',
+        'signed_at'    => 'datetime',
     ];
 
     public function patient(): \Illuminate\Database\Eloquent\Relations\BelongsTo
@@ -44,6 +47,9 @@ class PrivacyConsent extends Model
         'mobile' => '모바일 동의',
         'paper'  => '서면 동의',
         'phone'  => '유선 동의',
+        /* 공개 동의서 링크에서 서명까지 받은 것 (2026-10-02 지시).
+           이 갈래만 위임 증빙으로도 쓴다 — 서명이 있기 때문이다. */
+        'web'    => '공개 동의서 서명',
     ];
 
     public function getTypeLabelAttribute(): string
@@ -63,6 +69,25 @@ class PrivacyConsent extends Model
     }
 
     /** 필수 동의 완료 여부 */
+    /**
+     * 서명이 담겨 있는가 (2026-10-02 지시).
+     *
+     * 체크만 있는 동의와 서명이 있는 동의는 **증빙의 무게가 다르다.** 위임까지
+     * 인정하는 것은 서명이 있을 때뿐이라, 묻는 자리를 하나로 둔다.
+     *
+     * 빈 글자도 없는 것으로 본다 — 서명판을 그리지 않고 보내면 빈 글자가 온다.
+     */
+    public function 서명있나(): bool
+    {
+        return trim((string) $this->signature_data) !== '';
+    }
+
+    /** 서명까지 받은 동의 — 위임 관문이 이것만 인정한다 */
+    public function scope서명받은(\Illuminate\Database\Eloquent\Builder $q): \Illuminate\Database\Eloquent\Builder
+    {
+        return $q->whereNotNull('signature_data')->where('signature_data', '!=', '');
+    }
+
     public function getRequiredAgreedAttribute(): bool
     {
         $required = $this->type === 'stoma'
@@ -156,6 +181,41 @@ class PrivacyConsent extends Model
      * 전자서명이 안 되는 환자가 있다. 그때는 인쇄해 서명받아 올린다. 동의는 사람에게
      * 한 번 받으면 끝이라, 그 사람의 처방전 어느 것에 올렸든 받은 것으로 센다.
      */
+    /**
+     * 서명까지 받은 공개 동의서 — 없으면 null (2026-10-02 지시).
+     *
+     * 위임 관문이 이것을 본다. `findFor` 와 같은 잣대(거래처 번호, 또는 이름＋전화)로
+     * 찾되 **서명이 담긴 줄만** 고른다. 한 사람이 여러 번 냈으면 마지막 것을 쓴다 —
+     * 뒤에 낸 것이 지금 뜻이다.
+     */
+    public static function 서명받은동의(?int $patientId, ?string $name = null, ?string $phone = null): ?self
+    {
+        $숫자 = preg_replace('/\D/', '', (string) $phone);
+        $맨이름 = trim(preg_replace('/^\s*\(E\)\s*/u', '', (string) $name));
+        $이름전화로 = $맨이름 !== '' && $숫자 !== '';
+
+        if (! $patientId && ! $이름전화로) {
+            return null;
+        }
+
+        return static::query()
+            ->whereNotNull('signature_data')
+            ->where('signature_data', '!=', '')
+            ->where(function ($q) use ($patientId, $맨이름, $숫자, $이름전화로) {
+                if ($patientId) {
+                    $q->orWhere('patient_id', $patientId);
+                }
+                if ($이름전화로) {
+                    $q->orWhere(function ($w) use ($맨이름, $숫자) {
+                        $w->where('name', $맨이름)
+                          ->whereRaw("REPLACE(REPLACE(REPLACE(phone,'-',''),' ',''),'+','') = ?", [$숫자]);
+                    });
+                }
+            })
+            ->latest('signed_at')
+            ->first();
+    }
+
     public static function paperFor(?int $patientId): ?\App\Models\PrescriptionAttachment
     {
         if (!$patientId) {
@@ -309,6 +369,12 @@ class PrivacyConsent extends Model
             }
         }
 
+        /* 서명이 담겨 있으면 **위임까지 함께 확인된 것**이다 (2026-10-02 지시).
+           공개 동의서 링크에서 서명을 받으면 그 한 번으로 둘이 끝난다 — 화면은
+           「서명확인완료(위임ㆍ개인정보)」로 적는다. 체크만 있는 동의는 그대로
+           「개인정보 동의」까지만이다. */
+        $서명 = $c->서명있나();
+
         return [
             'exists'    => true,
             'agreed'    => $c->required_agreed,
@@ -318,6 +384,9 @@ class PrivacyConsent extends Model
             'source'    => $c->source_label,
             'at'        => $c->submitted_at?->format('Y-m-d H:i'),
             'marketing' => $c->agree_marketing === '동의함',
+            'signed'    => $서명,
+            'signed_at' => $c->signed_at?->format('Y-m-d H:i'),
+            'covers_delegation' => $서명,
             'info'      => $info,
             'items'     => $items,
         ];

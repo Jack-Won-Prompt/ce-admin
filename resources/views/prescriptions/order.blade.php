@@ -1347,7 +1347,7 @@ $calcDeposit  = $calcCopay;
              단추는 그대로 두고 받지 않아도 되는 건이라는 것만 옆에 적는다. --}}
         <span id="consentNotNeeded" style="display:none;align-self:center;flex-direction:column;gap:1px;font-size:11px;color:var(--text-muted);white-space:nowrap;"
               title="환자가 보험사ㆍ근로복지공단에 직접 청구하는 건이라 급여 위임이 필요하지 않습니다.&#10;다만 개인정보 수집ㆍ이용 동의는 처음 오는 거래처라면 받아야 합니다 — 같은 링크로 함께 받습니다.">
-          <span>위임 해당 없음</span>
+          <span id="consentNotNeededLabel">위임 해당 없음</span>
           {{-- 위임이 없다고 개인정보 동의까지 없는 것이 아니다. 「해당 없음」만 보고
                건너뛰기 쉬워, 무엇이 남았는지 한 줄로 적는다(2026-09-08 · 3차 5회 문채아). --}}
           <span id="consentPrivacyStill" style="color:var(--warning);font-weight:600;">개인정보 동의는 받습니다</span>
@@ -8660,9 +8660,26 @@ window.HELP_TOUR_STEPS = [
     /* PRIVACY_STATE 는 아래쪽에서 let 으로 선다 — 이 함수가 먼저 돌 수 있어
        typeof 로도 가릴 수 없다(TDZ). 못 읽으면 「아직 안 받았다」로 본다. */
     let 개인정보받아둠 = false;
-    try { 개인정보받아둠 = !!PRIVACY_STATE?.agreed; } catch (e) {}
+    let 서명으로확인 = false;
+    try {
+      개인정보받아둠 = !!PRIVACY_STATE?.agreed;
+      서명으로확인  = !!(PRIVACY_STATE?.agreed && PRIVACY_STATE?.signed);
+    } catch (e) {}
     const still = document.getElementById('consentPrivacyStill');
     if (still) still.style.display = 개인정보받아둠 ? 'none' : '';
+
+    /* 서명까지 받아 두었으면 「위임 해당 없음」이 아니라 **확인됐다**고 적는다
+       (2026-10-02 지시 「서명확인완료(위임, 개인정보 모두)로 보이게」).
+
+       처방외는 위임을 받을 일이 없어 여태 「해당 없음」이라고만 적었다. 그런데 공개
+       동의서 링크에서 서명을 받으면 그 한 번으로 둘이 끝난 것이므로, 담당자가 더 받을
+       것이 없다는 것을 그 자리에서 알아야 한다. */
+    const 없음표 = document.getElementById('consentNotNeededLabel');
+    if (없음표) {
+      없음표.textContent = 서명으로확인 ? '서명확인완료' : '위임 해당 없음';
+      없음표.style.color = 서명으로확인 ? 'var(--primary)' : '';
+      없음표.style.fontWeight = 서명으로확인 ? '700' : '';
+    }
 
     /* 「지난 서명을 사용합니다」도 같은 잣대로 여닫는다 (2026-09-26 CASE 6 시험).
 
@@ -16734,20 +16751,33 @@ window.HELP_TOUR_STEPS = [
 
     /* 「서명 동의」 창 안의 한 줄도 함께 맞춘다 (2026-09-10 지시) */
     const line = document.getElementById('sdPrivacyState');
+
+    /* 서명이 담긴 동의는 **위임까지 함께 확인된 것**이다 (2026-10-02 지시).
+       공개 동의서 링크에서 서명을 받으면 그 한 번으로 둘이 끝난다 — 처방을 끼지 않고
+       사는 사람은 그 링크 하나로 구매까지 간다. 체크만 있는 동의는 그대로
+       「개인정보동의 완료」까지만 적는다. */
+    const 서명확인 = !!(state.agreed && state.signed);
+
     if (line) {
-      line.textContent = state.agreed
-        ? ('받음' + (state.at ? ' · ' + state.at : ''))
-        : (state.exists ? '받는 중' : '아직 없음');
+      line.textContent = 서명확인
+        ? ('서명확인완료' + (state.signed_at || state.at ? ' · ' + (state.signed_at || state.at) : ''))
+        : (state.agreed
+            ? ('받음' + (state.at ? ' · ' + state.at : ''))
+            : (state.exists ? '받는 중' : '아직 없음'));
       line.style.color = state.agreed ? 'var(--primary)' : 'var(--warning)';
     }
 
     if (state.agreed) {
-      text.textContent = '개인정보동의 완료';
+      text.textContent = 서명확인 ? '서명확인완료' : '개인정보동의 완료';
       btn.style.background  = 'var(--primary-50)';
       btn.style.borderColor = 'var(--primary-200)';
       btn.style.color       = 'var(--primary)';
       btn.querySelector('i').className = 'fa-solid fa-circle-check';
-      btn.title = `${state.at ?? ''} · ${state.source ?? ''}`.trim();
+      btn.title = 서명확인
+        ? `위임 동의ㆍ개인정보 수집·이용 동의 모두 서명으로 확인되었습니다.
+`
+          + `${state.signed_at || state.at || ''} · ${state.source ?? ''}`.trim()
+        : `${state.at ?? ''} · ${state.source ?? ''}`.trim();
     } else {
       text.textContent = '개인정보동의';
       btn.style.background  = '';

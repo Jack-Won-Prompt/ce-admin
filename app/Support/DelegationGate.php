@@ -145,7 +145,86 @@ final class DelegationGate
     {
         return self::이건서명($prescription)
             ?? self::지난서명($prescription)
-            ?? self::옮겨온서명동의($prescription);
+            ?? self::옮겨온서명동의($prescription)
+            ?? self::공개동의서서명($prescription);
+    }
+
+    /**
+     * 공개 동의서 링크에서 받은 서명 (2026-10-02 지시).
+     *
+     * 「개인정보동의서에 서명내용 있으면 서명확인완료(위임, 개인정보 모두)로 보이게 /
+     *  처방 구매 안 하는 사람들은 저 링크에서만 서명동의 받아서 구매 진행」
+     *
+     * 공개 동의서(`/privacy`)는 다른 자리(www.ceadmin.co.kr)에 있고, 거기서 받은 서명이
+     * 웹훅으로 건너와 `privacy_consents.signature_data` 에 담긴다. 그 서명을 **위임
+     * 서명으로도 인정한다** — 2026-10-02 결정이다.
+     *
+     * ## 받을 조건은 우리 서명과 같다
+     *
+     * 서명 그림이 있어야 하고, 필수 동의를 모두 받았어야 하고, 위임기간이 남아 있어야
+     * 한다. 셋 중 하나라도 어긋나면 받지 않는다 — 빈 서명란으로 위임장이 공단에
+     * 나가는 일을 막는 잣대는 어느 길로 들어온 서명이든 같아야 한다.
+     *
+     * ## 다만 본인확인은 이름ㆍ전화번호뿐이다
+     *
+     * 토큰 링크(`/consent/{token}`)는 NICE 본인인증을 거치는데, 공개 링크는 적어 넣은
+     * 이름과 전화번호로 거래처를 찾는다(2026-10-02 결정). 동명이인이면 담당자가
+     * 확인해야 하므로, 화면은 이 서명을 **「공개 동의서 서명」이라 그대로 적는다** —
+     * 어느 길로 받은 증빙인지 숨기면 확인할 기회가 사라진다.
+     */
+    public static function 공개동의서서명(Prescription $prescription): ?PrescriptionConsent
+    {
+        $동의 = \App\Models\PrivacyConsent::서명받은동의(
+            $prescription->patient_id,
+            $prescription->patient?->bare_name ?? $prescription->patient_name_ocr,
+            $prescription->patient?->mobile    ?? $prescription->mobile_ocr,
+        );
+
+        if (! $동의 || ! $동의->required_agreed) {
+            return null;
+        }
+
+        $줄 = self::공개동의를동의로($동의, $prescription);
+
+        if (blank($줄->signature_data)) {
+            return null;
+        }
+
+        /* 위임기간이 지났으면 다시 받아야 한다 — 우리 서명과 같은 잣대다 */
+        $끝 = self::유효기간($줄, $prescription->patient);
+
+        return ($끝 && $끝->gte(now())) ? $줄 : null;
+    }
+
+    /**
+     * 공개 동의서의 서명을 동의 줄 **꼴로만** 만든다 — **담지 않는다**.
+     *
+     * 옮겨 온 서명과 같은 길이다(`서명을동의로`). 위임장을 그리는 자리ㆍ서명 그림을
+     * 내려 주는 자리ㆍ문서 목록이 모두 동의 줄의 네 칸만 읽으므로, 그 넷을 채운 줄을
+     * 건네면 그 자리들을 고치지 않아도 된다.
+     *
+     * `exists` 를 false 로 두어 실수로 `save()` 해도 새 줄이 생기지 않게 한다.
+     */
+    private static function 공개동의를동의로(
+        \App\Models\PrivacyConsent $동의,
+        Prescription $prescription
+    ): PrescriptionConsent {
+        $그림 = trim((string) $동의->signature_data);
+
+        /* 받는 쪽은 data URI 를 그대로 <img src> 에 넣는다 — 알맹이만 왔으면 꼴을 맞춘다 */
+        if ($그림 !== '' && ! str_starts_with($그림, 'data:')) {
+            $그림 = 'data:image/png;base64,' . $그림;
+        }
+
+        $줄 = new PrescriptionConsent();
+        $줄->prescription_id = $prescription->id;
+        $줄->patient_name    = $동의->name;
+        $줄->status         = 'agreed';
+        $줄->signature_data = $그림;
+        $줄->responded_at   = $동의->signed_at ?? $동의->submitted_at;
+        $줄->exists         = false;
+
+        return $줄;
     }
 
     /**

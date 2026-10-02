@@ -29,6 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'agent/hook',               // 운영이 보내는 오류ㆍSR (2026-10-02)
             'agent/reply',              // Agent 가 되돌려 적는 결과 (2026-10-02)
             'consent/*/nice/callback',   // NICE 표준창 returnurl(외부 도메인 리다이렉트)
+            'webhooks/privacy-consent',   // 공개 개인정보 동의서 (2026-10-02) — 다른 서버가 부른다
+            'webhooks/privacy-consent/*',
         ]);
         /* 세션이 끊긴 뒤 화면 탭(iframe)이 /login 으로 넘어가면 워크스페이스 안에 로그인
            화면이 조각처럼 박힌다. 창 전체를 옮기도록 가로챈다. 리다이렉트를 보고 판단하므로

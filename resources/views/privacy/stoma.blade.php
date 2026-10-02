@@ -195,6 +195,8 @@
     </div>
   </div>
 
+  @include('privacy._signature')
+
   <button type="submit" class="btn btn-primary">동의서 작성 완료</button>
   <p class="note">* 표시는 필수 입력·동의 항목입니다.</p>
 </form>
