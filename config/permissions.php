@@ -198,6 +198,17 @@ return [
             'routes'  => ['deposits'],
             'actions' => ['view', 'update'],
         ],
+        /* 한 주문에 두 번 들어온 돈을 찾아 돌려준다 (2026-10-02 지시).
+
+           환불은 되돌릴 수 없고 곧 돈이 나가는 일이라 **요청과 승인을 나눈다** —
+           create 로 올리고 final_approve 로 승인한다. 한 사람에게 둘 다 주면
+           결재가 뜻을 잃는다(반품 결재와 같은 결). */
+        'duplicate-payments' => [
+            'label'   => '중복 결제',
+            'group'   => 'billing',
+            'routes'  => ['duplicate-payments'],
+            'actions' => ['view', 'create', 'final_approve'],
+        ],
         /* 재무가 보는 여섯 목록(요청서 14~19쪽) — 통합주문ㆍ환자결제ㆍ공단지자체ㆍ
            미정산ㆍ반품환불ㆍ부가세신고. 보고 내려받는 자리라 손댈 것이 없다. */
         'finance' => [

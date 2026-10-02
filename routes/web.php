@@ -272,6 +272,20 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{deposit}/close',     [\App\Http\Controllers\DepositController::class, 'close'])->name('close');
     });
 
+    /* 중복 결제 — 한 주문에 두 번 들어온 돈을 찾아 돌려준다 (2026-10-02 지시).
+
+       찾는 일은 토스에 묻는다. 우리 표에는 남지 않기 때문이다
+       (까닭은 DuplicatePaymentFinder 의 글에 적었다).
+
+       돌려주는 일은 요청과 승인을 나눈다 — 되돌릴 수 없고 곧 돈이 나간다. */
+    Route::prefix('duplicate-payments')->name('duplicate-payments.')->group(function () {
+        Route::get('/',       [\App\Http\Controllers\DuplicatePaymentController::class, 'index'])->name('index');
+        Route::get('/scan',   [\App\Http\Controllers\DuplicatePaymentController::class, 'scan'])->name('scan');
+        Route::post('/request', [\App\Http\Controllers\DuplicatePaymentController::class, 'request'])->name('request');
+        Route::post('/{refund}/approve', [\App\Http\Controllers\DuplicatePaymentController::class, 'approve'])->name('approve');
+        Route::post('/{refund}/reject',  [\App\Http\Controllers\DuplicatePaymentController::class, 'reject'])->name('reject');
+    });
+
     Route::prefix('order-returns')->name('order-returns.')->group(function () {
         Route::get('/',                [\App\Http\Controllers\OrderReturnController::class, 'index'])->name('index');
         Route::get('/order-search',    [\App\Http\Controllers\OrderReturnController::class, 'orderSearch'])->name('orderSearch');

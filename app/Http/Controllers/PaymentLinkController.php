@@ -170,6 +170,28 @@ class PaymentLinkController extends Controller
             $link->update(['status' => 'expired']);
         }
 
+        /* **이미 받은 건은 결제창을 열지 않는다** (2026-10-02 지시).
+         *
+         * 여태 이 자리는 기한만 보았다. 그래서 결제를 마친 고객이 문자를 다시 열면
+         * 결제창이 또 섰고, 한 번 더 내면 **같은 주문에 두 번 결제**됐다.
+         * 2026-10-01 (E)윤채우 건이 그랬다 — 81,000원이 13:33:15 와 13:34:27 두 번
+         * 승인됐고, toss_payments 는 한 주문 한 줄이라 앞 결제가 덮여 **장부에서
+         * 사라졌다.** 우리 쪽 어디에도 자취가 남지 않아 토스에 묻기 전에는 알 수 없었다.
+         *
+         * 링크의 상태뿐 아니라 **주문이 다 받았는가**로도 가린다 — 가상계좌 링크를
+         * 보내 두고 카드로 따로 받는 길이 있어, 링크만 보면 지나간다.
+         *
+         * 정정으로 금액이 늘어 차액이 남은 건은 `다받았나()` 가 거짓이라 그대로 열린다. */
+        if ($link->status === 'paid' || $link->order?->다받았나()) {
+            return view('pay.done', [
+                'link'    => $link,
+                'ok'      => true,
+                'waiting' => false,
+                'message' => '이미 결제가 끝난 건입니다. 다시 결제하실 필요가 없습니다.',
+                'toss'    => $link->order?->tossPayment?->raw_response ?? [],
+            ]);
+        }
+
         return view('pay.show', [
             'link'      => $link,
             'order'     => $link->order,
@@ -313,6 +335,30 @@ class PaymentLinkController extends Controller
 
            새로고침으로 다시 들어오는 길도 같다 — 낸 뒤에 화면을 다시 열면 실패로
            보였다. */
+        /* **이미 받은 건에 새 결제키가 달려 오면 승인하지 않는다** (2026-10-02 지시).
+         *
+         * 승인(confirm)을 부르지 않으면 돈은 나가지 않는다 — 토스는 이 자리에서
+         * 우리가 confirm 을 불러야 비로소 승인한다. 그러니 여기가 중복 결제를 막는
+         * 마지막이자 확실한 자리다.
+         *
+         * 같은 결제키로 다시 들어오는 길은 막지 않는다(새로고침). 그때는 아래의
+         * 「이미 낸 건」으로 떨어진다. */
+        if ($link->status === 'paid' && $paymentKey && $paymentKey !== $link->payment_key) {
+            Log::warning('[결제전송] 이미 받은 건에 새 결제가 들어와 승인하지 않았다', [
+                'link' => $link->id, 'order' => $link->order?->order_number,
+                'had'  => $link->payment_key, 'got' => $paymentKey, 'amount' => $amount,
+            ]);
+
+            return view('pay.done', [
+                'link'    => $link,
+                'ok'      => true,
+                'waiting' => false,
+                'message' => '이미 결제가 끝난 건이라 이번 결제는 진행하지 않았습니다. '
+                           . '카드에서 빠져나간 금액은 없습니다.',
+                'toss'    => $link->order?->tossPayment?->raw_response ?? [],
+            ]);
+        }
+
         if ($link->status === 'paid' && ! $paymentKey) {
             return view('pay.done', [
                 'link' => $link, 'ok' => true, 'waiting' => false, 'message' => null,
