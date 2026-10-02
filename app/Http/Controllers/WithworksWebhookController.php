@@ -626,7 +626,7 @@ class WithworksWebhookController extends Controller
     private function announce(array $data, Order $order): void
     {
         $tell = [
-            'so.confirmed' => ['창고가 주문을 확정했습니다', 'info'],
+            'so.confirmed' => ['창고에서 주문을 확정했습니다', 'info'],
             'so.invoiced'  => ['송장이 붙었습니다',  'info'],
             'so.shipped'   => ['출고되었습니다',      'success'],
             'so.cancelled' => ['주문이 취소되었습니다', 'danger'],

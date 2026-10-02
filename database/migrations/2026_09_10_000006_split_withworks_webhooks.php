@@ -22,7 +22,7 @@ return new class extends Migration
 {
     /** 판매 — 창고가 주문을 처리하며 알려 오는 차례 */
     private const 판매 = [
-        'so.confirmed' => ['확정',      '창고가 주문을 확정했습니다.', 210],
+        'so.confirmed' => ['확정',      '창고에서 주문을 확정했습니다.', 210],
         'so.allocated' => ['할당',      '재고가 할당되었습니다.', 220],
         'so.picked'    => ['피킹',      '창고에서 물건을 집었습니다.', 230],
         'so.invoiced'  => ['송장',      '송장이 붙었습니다 — 송장번호가 함께 옵니다.', 240],
