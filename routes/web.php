@@ -884,6 +884,26 @@ Route::get('/dev/migrate-admin-invitations', function () {
 });
 
 // ── Dev: user_activity_logs 테이블 마이그레이션 ──
+/* Agent 를 한 바퀴 돌려 보는 자리 (2026-10-02 지시 · 두 번째).
+ *
+ * 이번에는 작업자까지 붙은 채로 돈다 — 오류 기록에 담기고, Agent 로 넘어가고,
+ * Claude 가 읽어 분석을 되돌려 적는지까지 본다.
+ *
+ * **잘못은 일부러 「고칠 수 있는 꼴」로 낸다.** 아무 뜻 없는 예외를 던지면
+ * 분석할 것이 없어, 작업자가 쓸 만한지 가릴 수 없다. 배열에 없는 열쇠를 읽는
+ * 흔한 잘못으로 둔다.
+ *
+ * admin@ce-admin.co.kr 만 열 수 있고(다른 사람에게는 404), 확인 뒤 지운다.
+ */
+Route::get('/dev/agent-error-test', function () {
+    abort_unless(auth()->user()?->email === 'admin@ce-admin.co.kr', 404);
+
+    $설정 = ['이름' => '검수 기준', '값' => 3];
+
+    // 있지도 않은 열쇠를 읽는다 — 운영에서 흔히 나는 꼴이다
+    return response()->json(['기준' => $설정['최소장수']]);
+})->middleware('auth')->name('dev.agentErrorTest');
+
 Route::get('/dev/migrate-activity-logs', function () {
     if (!\Illuminate\Support\Facades\Auth::check()) abort(403);
     if (!\Illuminate\Support\Facades\Schema::hasTable('user_activity_logs')) {
