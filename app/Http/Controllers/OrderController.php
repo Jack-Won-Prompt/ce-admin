@@ -148,7 +148,7 @@ class OrderController extends Controller
                    담당자가 찾아 나서게 된다. */
                 'claim_done'  => (($o->prescription?->claim_agency ?? '') === 'none')
                     ? '해당 없음'
-                    : (in_array($o->nhis_claim_status, ['submitted', 'approved'], true) ? '청구 완료' : '미청구'),
+                    : ($o->청구상태() === 'completed' ? '청구 완료' : '미청구'),
                 'product'   => $o->product_name ?? '',
                 'qty'       => (int) ($o->quantity ?? 1),
                 'copay'     => (int) $o->patient_copay,

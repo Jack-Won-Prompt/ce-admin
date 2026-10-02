@@ -22,7 +22,7 @@ class DashboardController extends Controller
             /* 상담만 적어 둔 건은 세지 않는다 — 주문 목록에서 뺐으므로 여기 수도
                같아야 한다. 어긋나면 「목록엔 없는데 숫자엔 있다」가 된다 (2026-09-14). */
             'orders_pending' => Order::withoutCounselOnly()->where('status', 'pending')->count(),
-            'nhis_pending'        => Order::where('nhis_claim_status', 'pending')->count(),
+            'nhis_pending'        => Order::where('nhis_claim_status', Order::CLAIM_NEW)->count(),
             'repurchase_today'    => Prescription::whereNotNull('repurchase_date')
                                         ->whereDate('repurchase_date', today())->count(),
             'repurchase_upcoming' => Prescription::whereNotNull('repurchase_date')
@@ -55,7 +55,7 @@ class DashboardController extends Controller
                기다리는지 적히고(입금 대기ㆍ출고 대기), 보냈으면 어디까지 왔는지 적힌다
                (주문 확정ㆍ재고 할당ㆍ송장 출력ㆍ출고 완료…). */
             'order'     => $rx->order?->status_label ?? '주문 대기',
-            'claim'     => $rx->order?->nhis_claim_status === 'approved' ? '청구완료' : '청구대기',
+            'claim'     => $rx->order?->청구상태() === 'completed' ? '청구완료' : '청구대기',
             'manager'   => $rx->assignedUser?->name ?? '-',
         ])->values();
 

@@ -2099,7 +2099,7 @@ class PrescriptionController extends Controller
                그 말은 아직 안 냈다는 뜻이라 담당자가 찾아 나서게 된다. */
             'claim_done' => (($rx?->claim_agency ?? '') === 'none')
                 ? '해당 없음'
-                : (in_array($o->nhis_claim_status, ['submitted', 'approved'], true) ? '청구 완료' : '미청구'),
+                : ($o->청구상태() === 'completed' ? '청구 완료' : '미청구'),
             /* 「청구 진행」 단추가 증빙을 어디로 보낼지 정하는 값이다 */
             'send_mobile' => \App\Support\PhoneNo::format($o->patient?->mobile),
             'send_email'  => $o->patient?->email ?? '',

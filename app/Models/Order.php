@@ -1255,15 +1255,46 @@ class Order extends Model
      * 「우리가 아직 손대지 않았다」이고 보류는 「내고 나서 멈췄다」라, 섞으면 무엇을
      * 살펴봐야 하는지가 묻힌다.
      */
+    /** 처음 선 주문이 서 있는 자리 — 담당자가 손대기 전이다 */
+    public const CLAIM_NEW = 'new';
+
     public const CLAIM_STATUS_LABELS = [
-        'pending'    => '청구 전',
-        'submitting' => '청구중',
-        'submitted'  => '청구완료',
-        'approved'   => '승인',
-        'rejected'   => '반려',
-        'on_hold'    => '보류',
-        'cancelled'  => '취소',
+        self::CLAIM_NEW => '신규',
+        'doc_check'     => '서류확인',
+        'registered'    => '청구등록',
+        'rejected'      => '청구반려',
+        'cancelled'     => '청구취소',
+        'completed'     => '청구완료',
     ];
+
+    /**
+     * 예전 값을 지금 값으로 옮기는 표 (2026-10-02 지시로 갈아 끼웠다).
+     *
+     * 「승인」과 「보류」를 따로 두지 않는다 — 공단이 인정한 것은 청구완료에 담고,
+     * 판단을 미룬 것은 아직 청구등록에 머문 것으로 본다. 갈아 끼울 때 담겨 있던
+     * 것은 청구 전(pending) 143건뿐이라 옮기며 잃는 자취가 없었다.
+     */
+    public const CLAIM_STATUS_MIGRATION = [
+        'pending'    => self::CLAIM_NEW,
+        'submitting' => 'registered',
+        'submitted'  => 'completed',
+        'approved'   => 'completed',
+        'on_hold'    => 'registered',
+        'rejected'   => 'rejected',
+        'cancelled'  => 'cancelled',
+    ];
+
+    /** 담긴 값이 옛 이름이어도 읽히게 한다 — 어딘가 남아 있을 수 있다 */
+    public static function 청구상태값(?string $값): string
+    {
+        $v = (string) $값;
+
+        if (isset(self::CLAIM_STATUS_LABELS[$v])) {
+            return $v;
+        }
+
+        return self::CLAIM_STATUS_MIGRATION[$v] ?? self::CLAIM_NEW;
+    }
 
     /**
      * 반려 뒤의 걸음 (요청서 13쪽).
@@ -1279,7 +1310,13 @@ class Order extends Model
 
     public function claimStatusLabel(): string
     {
-        return self::CLAIM_STATUS_LABELS[$this->nhis_claim_status] ?? (string) $this->nhis_claim_status;
+        return self::CLAIM_STATUS_LABELS[self::청구상태값($this->nhis_claim_status)];
+    }
+
+    /** 지금 서 있는 자리 — 담긴 값이 비었거나 옛 이름이어도 하나로 읽힌다 */
+    public function 청구상태(): string
+    {
+        return self::청구상태값($this->nhis_claim_status);
     }
 
     /** 신환 · 구환 */

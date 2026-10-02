@@ -213,7 +213,7 @@ class FinanceController extends Controller
             : 0;
 
         // 기관이 준 돈 — 승인된 건만 받은 것으로 본다
-        $agencyPaid = $o->nhis_claim_status === 'approved'
+        $agencyPaid = $o->청구상태() === 'completed'
             ? (int) ($o->nhis_reimbursement ?: $nhis)
             : 0;
 
@@ -565,7 +565,7 @@ class FinanceController extends Controller
                     ->whereNull('deposit_confirmed_at')
                     ->whereDoesntHave('tossPayment', fn ($t) => $t->where('status', 'DONE')))
                 ->orWhere(fn ($w) => $w->where('nhis_amount', '>', 0)
-                    ->where('nhis_claim_status', '!=', 'approved')));
+                    ->where('nhis_claim_status', '!=', 'completed')));
     }
 
     /**

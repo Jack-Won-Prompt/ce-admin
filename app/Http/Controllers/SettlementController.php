@@ -166,7 +166,7 @@ class SettlementController extends Controller
 
     private function buildSettlementGrid($orders): array
     {
-        $nhisMap = ['pending' => '대기', 'submitted' => '청구완료', 'approved' => '승인', 'rejected' => '반려'];
+        $nhisMap = \App\Models\Order::CLAIM_STATUS_LABELS;
 
         /* 네 화면이 함께 쓰던 칸을 여기에도 세운다(요청서 3쪽). 동의 두 가지는 사람에
            붙어, 줄마다 물으면 서른 줄에 예순을 더 묻는다 — 미리 모아 둔다. */
@@ -263,7 +263,7 @@ class SettlementController extends Controller
                 'card_url'     => ($것 = $전표[$order->prescription_id] ?? null)
                                     ? \Illuminate\Support\Facades\Storage::disk('public')->url($것->file_path)
                                     : null,
-                'nhis_claim'   => $nhisMap[$order->nhis_claim_status ?? 'pending'] ?? '대기',
+                'nhis_claim'   => $nhisMap[$order->청구상태()] ?? '신규',
                 'created'      => $order->created_at?->format('Y-m-d') ?? '-',
                 // 상세 팝오버 URL (컬럼 아님 — 외부 버튼에서 사용)
                 'rx_url'       => $order->prescription ? route('settlement.prescription-detail', $order->prescription) : null,
@@ -565,13 +565,13 @@ class SettlementController extends Controller
         $order->load(['patient', 'creator', 'tossPayment']);
 
         $statusLabel = ['label' => $order->status_label, 'badge' => $order->status_badge];
-        $nhisMap     = ['pending' => '대기', 'submitted' => '청구완료', 'approved' => '승인', 'rejected' => '반려'];
+        $nhisMap     = \App\Models\Order::CLAIM_STATUS_LABELS;
 
         return response()->json([
             'order_number'    => $order->order_number,
             'status_label'    => $statusLabel['label'],
             'status_badge'    => $statusLabel['badge'],
-            'nhis_status'     => $nhisMap[$order->nhis_claim_status ?? 'pending'] ?? '대기',
+            'nhis_status'     => $nhisMap[$order->청구상태()] ?? '신규',
             'created_at'      => $order->created_at->format('Y-m-d H:i'),
             'delivered_at'    => $order->delivered_at?->format('Y-m-d H:i'),
             // 환자

@@ -126,14 +126,10 @@ class NhisController extends Controller
             }
         }
 
-        // 청구 상태 이름은 모델이 한 벌만 갖는다(Order::CLAIM_STATUS_LABELS)
-        $nhisStatusLabels = Order::CLAIM_STATUS_LABELS + [
-            'pending'   => '청구 전',
-            'submitted' => '청구완료',
-            'approved'  => '승인',
-            'rejected'  => '반려',
-            'cancelled' => '주문취소',
-        ];
+        /* 청구 상태 이름은 모델이 한 벌만 갖는다(Order::CLAIM_STATUS_LABELS).
+           여기서 덧붙이던 옛 이름들은 걷었다 — 두 벌이 서로 다른 말을 했다
+           (2026-10-02 지시로 여섯 자리로 갈아 끼우며). */
+        $nhisStatusLabels = Order::CLAIM_STATUS_LABELS;
 
         /* 네 화면이 함께 쓰던 칸을 여기에도 세운다(요청서 3쪽). 동의 두 가지는 사람에
            붙어 줄마다 물으면 서른 줄에 예순을 더 묻는다 — 미리 한 번에 모아 둔다. */
@@ -148,9 +144,9 @@ class NhisController extends Controller
         // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)
         $gridData = $rows->flatMap(function ($o) use ($nhisStatusLabels, $extras, $정정) {
             // 승인/거부 결과 텍스트
-            if ($o->nhis_claim_status === 'approved') {
+            if ($o->청구상태() === 'completed') {
                 $result = number_format((int) $o->nhis_reimbursement) . '원';
-            } elseif ($o->nhis_claim_status === 'rejected') {
+            } elseif ($o->청구상태() === 'rejected') {
                 $result = '거부';
             } else {
                 $result = '-';
@@ -168,7 +164,9 @@ class NhisController extends Controller
                 'nhis_amount'  => (int) $o->nhis_amount,
                 'patient_copay'=> (int) $o->patient_copay,
                 'status'       => $o->status_label,
-                'nhis_status'  => $nhisStatusLabels[$o->nhis_claim_status] ?? $o->nhis_claim_status,
+                'nhis_status'  => $nhisStatusLabels[$o->청구상태()],
+                /* 고를 때 지금 자리를 짚어 주려면 이름이 아니라 열쇠가 있어야 한다 */
+                'nhis_status_key' => $o->청구상태(),
                 'submitted_at' => $o->nhis_submitted_at?->format('Y-m-d H:i') ?? '',
                 /* 왜 반려됐는가. 칸은 진작 있었는데 목록에 세우지 않아, 반려된 건을
                    다시 내려면 한 건씩 열어 봐야 했다(요청서 10쪽). */
@@ -332,7 +330,7 @@ class NhisController extends Controller
 
         // 지금 바로 청구할 수 있는 건수 — 상단 카드에 쓴다
         $readyCount = Order::whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM)
-            ->where('nhis_claim_status', 'pending')
+            ->where('nhis_claim_status', \App\Models\Order::CLAIM_NEW)
             ->where('claim_ready', true)
             ->count();
 
@@ -343,12 +341,12 @@ class NhisController extends Controller
             ->pluck('cnt', 'nhis_claim_status');
 
         // 이번 달 청구 합계
-        $monthlyTotal = Order::where('nhis_claim_status', 'submitted')
+        $monthlyTotal = Order::where('nhis_claim_status', 'completed')
             ->whereMonth('nhis_submitted_at', now()->month)
             ->whereYear('nhis_submitted_at', now()->year)
             ->sum('nhis_amount');
 
-        $monthlyApproved = Order::where('nhis_claim_status', 'approved')
+        $monthlyApproved = Order::where('nhis_claim_status', 'completed')
             ->whereMonth('nhis_approved_at', now()->month)
             ->whereYear('nhis_approved_at', now()->year)
             ->sum('nhis_reimbursement');
@@ -367,6 +365,49 @@ class NhisController extends Controller
      * 담당자가 공단 사이트에서 결과를 확인하고 옮겨 적는다. 예전에는 팩스 발송 이력에
      * 결과를 매달았는데, 청구를 팩스로 보내지 않으므로 주문에 바로 적는다.
      */
+    /**
+     * 목록에서 청구 상태를 바꾼다 (2026-10-02 지시).
+     *
+     * 「청구」 단추 옆 칸을 눌러 여섯 자리 가운데 하나를 고른다. 공단이 답한 결과를
+     * 적는 자리(recordResult)와는 다르다 — 그쪽은 승인일ㆍ지급액ㆍ사유까지 함께
+     * 적는 일이고, 이쪽은 우리 쪽 일이 어디까지 갔는지만 옮긴다.
+     *
+     * 정정으로 물러난 줄은 목록에서 단추를 세우지 않으므로 여기까지 오지 않는다.
+     */
+    public function updateClaimStatus(Request $request, Order $order): \Illuminate\Http\JsonResponse
+    {
+        abort_unless(perm('nhis', 'update'), 403, '청구 상태를 바꿀 권한이 없습니다.');
+
+        $data = $request->validate([
+            'status' => ['required', Rule::in(array_keys(Order::CLAIM_STATUS_LABELS))],
+        ]);
+
+        $옛 = $order->청구상태();
+
+        if ($옛 === $data['status']) {
+            return response()->json([
+                'success' => true,
+                'message' => '이미 「' . Order::CLAIM_STATUS_LABELS[$옛] . '」입니다.',
+                'status'  => $옛,
+                'label'   => Order::CLAIM_STATUS_LABELS[$옛],
+            ]);
+        }
+
+        $order->update(['nhis_claim_status' => $data['status']]);
+
+        activity()->causedBy(Auth::user())->performedOn($order)->log(
+            '청구 상태 변경: ' . Order::CLAIM_STATUS_LABELS[$옛]
+            . ' → ' . Order::CLAIM_STATUS_LABELS[$data['status']]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => '「' . Order::CLAIM_STATUS_LABELS[$data['status']] . '」으로 바꿨습니다.',
+            'status'  => $data['status'],
+            'label'   => Order::CLAIM_STATUS_LABELS[$data['status']],
+        ]);
+    }
+
     public function recordResult(Request $request, Order $order): \Illuminate\Http\JsonResponse
     {
         $data = $request->validate([
@@ -377,17 +418,25 @@ class NhisController extends Controller
             'nhis_message'    => 'nullable|string|max:500',
         ]);
 
-        $status = $data['nhis_result'] === 'partial' ? 'approved' : $data['nhis_result'];
+        /* 승인ㆍ부분승인은 「청구완료」로, 보류는 아직 「청구등록」에 머문 것으로 본다
+           (2026-10-02 지시로 상태를 여섯 자리로 갈아 끼웠다). 공단이 무엇이라 답했는지는
+           아래 승인일ㆍ지급액ㆍ사유에 그대로 남는다 — 상태 한 칸으로 다 말하지 않는다. */
+        $status = match ($data['nhis_result']) {
+            'approved', 'partial' => 'completed',
+            'on_hold'             => 'registered',
+            default               => $data['nhis_result'],   // rejected
+        };
+        $보류인가 = $data['nhis_result'] === 'on_hold';
 
         $order->update([
             'nhis_claim_status'  => $status,
             /* 보류는 아직 결론이 아니다 — 승인일을 찍으면 정산이 그 날을 받은 날로 읽는다 */
-            'nhis_approved_at'   => $status === 'on_hold' ? $order->nhis_approved_at : now(),
-            'nhis_reimbursement' => $status === 'on_hold'
+            'nhis_approved_at'   => $보류인가 ? $order->nhis_approved_at : now(),
+            'nhis_reimbursement' => $보류인가
                                         ? $order->nhis_reimbursement
                                         : ($data['approved_amount'] ?? $order->nhis_amount),
             // 사유는 반려ㆍ보류일 때만 남긴다 — 승인 건에 남아 있으면 읽는 사람이 헷갈린다
-            'nhis_rejection_reason' => in_array($status, ['rejected', 'on_hold'], true)
+            'nhis_rejection_reason' => ($status === 'rejected' || $보류인가)
                                         ? ($data['nhis_message'] ?? null) : null,
             // 반려 뒤의 걸음은 반려일 때만 뜻이 있다
             'nhis_reject_stage'  => $status === 'rejected' ? ($data['reject_stage'] ?? null) : null,
@@ -487,7 +536,7 @@ class NhisController extends Controller
      */
     private static function dday(Order $o, ?\Carbon\Carbon $due): string
     {
-        if (!$due || $o->nhis_claim_status !== 'pending') {
+        if (!$due || $o->청구상태() !== \App\Models\Order::CLAIM_NEW) {
             return '';
         }
 

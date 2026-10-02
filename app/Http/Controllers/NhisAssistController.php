@@ -125,7 +125,7 @@ class NhisAssistController extends Controller
 
         // 보냈으면 청구한 것이다. 공단 건과 같은 칸을 쓰되 지자체라는 것은 처방전이 안다.
         $order->update([
-            'nhis_claim_status' => 'submitted',
+            'nhis_claim_status' => 'completed',
             'nhis_submitted_at' => $data['sent_date'],
         ]);
 
@@ -150,12 +150,12 @@ class NhisAssistController extends Controller
             'memo'         => 'nullable|string|max:500',
         ]);
 
-        if ($order->nhis_claim_status === 'submitted' || $order->nhis_claim_status === 'approved') {
+        if ($order->청구상태() === 'completed') {
             return back()->with('status', '이미 청구한 건입니다.');
         }
 
         $order->update([
-            'nhis_claim_status' => 'submitted',
+            'nhis_claim_status' => 'completed',
             /* 비워 두면 지금이다. validate 가 nullable 이라 키 자체가 없을 수 있어
                ?? 로 받는다 — 메모 없이 누르면 그 자리에서 500 으로 죽었다. */
             'nhis_submitted_at' => ($data['submitted_at'] ?? null) ?: now(),

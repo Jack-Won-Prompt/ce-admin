@@ -44,6 +44,35 @@
      이 화면만 열한 자리로 나눈다 — 기간은 날짜 두 칸이 서야 해서 세 자리를 쓴다
      (1 + 2 + 1 + 1 + 3 + 1 + 1 + 1 = 11). */
   .ds-filter-card .ds-filter-fields { grid-template-columns: repeat(11, minmax(0, 1fr)); }
+
+  /* 청구 상태 칩 — 자리마다 빛깔을 달리해 어디가 멈춰 있는지 훑어 보이게 한다 */
+  .claim-chip { display:inline-block; padding:2px 10px; border-radius:999px;
+                font-size:11px; font-weight:700; white-space:nowrap;
+                border:1px solid transparent; }
+  .claim-chip.is-editable { cursor:pointer; }
+  .claim-chip.is-editable:hover { filter:brightness(0.96); }
+  .claim-chip.is-new   { background:var(--gray-100, #f3f4f6); color:var(--gray-700, #374151); }
+  .claim-chip.is-doing { background:#fff4e5; color:#8a5300; }
+  .claim-chip.is-done  { background:#e7f5ec; color:#1b6b38; }
+  .claim-chip.is-bad   { background:#fdecea; color:#b3261e; }
+  .claim-chip.is-off   { background:var(--gray-100, #f3f4f6); color:var(--gray-500, #6b7280);
+                         text-decoration:line-through; }
+
+  /* 고르는 창 — 목록 위에 떠서 줄을 가리지 않을 만큼만 */
+  .claim-pop { position:fixed; z-index:9000; min-width:140px; padding:4px;
+               background:var(--gray-0, #fff); border:1px solid var(--gray-200, #e5e7eb);
+               border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12); }
+  .claim-pop-item { display:flex; align-items:center; gap:8px; width:100%;
+                    padding:7px 10px; border:0; background:none; cursor:pointer;
+                    font-size:13px; color:var(--gray-800, #1f2937); border-radius:7px;
+                    text-align:left; }
+  .claim-pop-item:hover { background:var(--gray-50, #f9fafb); }
+  .claim-pop-item.is-cur { font-weight:700; background:var(--primary-50, #eef2ff); }
+  .claim-dot { width:8px; height:8px; border-radius:50%; flex:0 0 auto; background:var(--gray-300,#d1d5db); }
+  .claim-dot.is-doing { background:#f59e0b; }
+  .claim-dot.is-done  { background:#1b6b38; }
+  .claim-dot.is-bad   { background:#b3261e; }
+  .claim-dot.is-off   { background:var(--gray-400, #9ca3af); }
   /* 패널 탭(목록/상세보기) — 그리드 카드 안 상단.
      Figma 282:2299: h44 · pad 0/16 · gap 16 · 하단 1px, 활성 밑줄 1px primary */
 
@@ -382,6 +411,106 @@
 <script>
 (function () {
   const DETAIL_BASE = @json(url('orders'));
+  /* ── 청구 상태 칩과 고르는 창 (2026-10-02 지시) ──────────────────────
+     목록에서 바로 자리를 옮긴다. 「청구」 단추로 공단 사이트에 옮겨 적고 온 뒤,
+     그 자리에서 상태를 바꾸는 흐름이라 둘을 나란히 둔다. */
+  const CLAIM_STATUSES = @json(\App\Models\Order::CLAIM_STATUS_LABELS);
+  const CLAIM_CAN_EDIT = @json(perm('nhis', 'update'));
+  const CLAIM_URL      = @json(url('nhis')) + '/';
+
+  /* 자리마다 빛깔을 달리한다 — 훑을 때 어디가 멈춰 있는지 눈에 들어와야 한다 */
+  const CLAIM_TONE = {
+    new:        'is-new',
+    doc_check:  'is-doing',
+    registered: 'is-doing',
+    rejected:   'is-bad',
+    cancelled:  'is-off',
+    completed:  'is-done',
+  };
+
+  function claimStatusChip(row) {
+    const 키   = row.nhis_status_key || 'new';
+    const 이름 = CLAIM_STATUSES[키] || row.nhis_status || '-';
+
+    const chip = document.createElement('span');
+    chip.className = 'claim-chip ' + (CLAIM_TONE[키] || 'is-new') + (CLAIM_CAN_EDIT ? ' is-editable' : '');
+    chip.textContent = 이름;
+    chip.dataset.orderId = row.id;
+    chip.dataset.status  = 키;
+    if (CLAIM_CAN_EDIT) chip.title = '눌러서 청구 상태를 바꿉니다';
+    return chip;
+  }
+
+  /* 고르는 창은 한 벌만 둔다 — 줄마다 만들면 목록을 굴릴 때마다 쌓인다 */
+  let 열린창 = null;
+
+  function 창닫기() {
+    if (열린창) { 열린창.remove(); 열린창 = null; }
+  }
+
+  document.addEventListener('click', (e) => {
+    const chip = e.target.closest('.claim-chip.is-editable');
+
+    if (!chip) { 창닫기(); return; }
+
+    const 이미 = 열린창 && 열린창.dataset.orderId === chip.dataset.orderId;
+    창닫기();
+    if (이미) return;
+
+    const 창 = document.createElement('div');
+    창.className = 'claim-pop';
+    창.dataset.orderId = chip.dataset.orderId;
+    창.innerHTML = Object.entries(CLAIM_STATUSES).map(([k, v]) =>
+      `<button type="button" class="claim-pop-item${k === chip.dataset.status ? ' is-cur' : ''}" data-key="${k}">`
+      + `<span class="claim-dot ${CLAIM_TONE[k] || ''}"></span>${v}</button>`).join('');
+
+    document.body.appendChild(창);
+
+    /* 줄 옆에 붙인다. 아래가 모자라면 위로 띄운다 — 마지막 줄에서 잘리지 않게. */
+    const r = chip.getBoundingClientRect();
+    const h = 창.offsetHeight;
+    창.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 창.offsetWidth - 8)) + 'px';
+    창.style.top  = (r.bottom + h + 8 > window.innerHeight ? r.top - h - 4 : r.bottom + 4) + 'px';
+    열린창 = 창;
+
+    창.addEventListener('click', async (ev) => {
+      const 고른것 = ev.target.closest('.claim-pop-item');
+      if (!고른것) return;
+
+      const 키 = 고른것.dataset.key;
+      창닫기();
+
+      if (키 === chip.dataset.status) return;
+
+      try {
+        const res = await fetch(CLAIM_URL + chip.dataset.orderId + '/claim-status', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                     'X-CSRF-TOKEN': CSRF_TOKEN },
+          body: JSON.stringify({ status: 키 }),
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          ceAlert(data.message || '바꾸지 못했습니다.', { title: '청구 상태', tone: 'warning' });
+          return;
+        }
+
+        /* 그 줄만 고쳐 다시 그린다 — 목록을 통째로 불러오면 굴린 자리가 맨 위로 간다 */
+        const 자료 = grid.getData();
+        const i = 자료.findIndex(x => String(x.id) === String(chip.dataset.orderId));
+        if (i >= 0) {
+          /* 열쇠를 먼저 바꾼다 — 칸을 다시 그릴 때 칩이 그 값을 보고 빛깔을 고른다 */
+          자료[i].nhis_status_key = data.status;
+          grid.setValue(i, 'nhis_status', data.label);
+        }
+        showToast(data.message, 'success');
+      } catch (err) {
+        ceAlert('바꾸지 못했습니다.', { title: '청구 상태', tone: 'warning' });
+      }
+    });
+  });
+
   const grid = new wwGrid({
     el: document.getElementById('nhisGrid'),
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true,
@@ -391,7 +520,6 @@
       { header: '주문번호',    name: 'order_no',      width: 120, sortable: true },
       { header: '이름',      name: 'patient',       width: 90,  sortable: true },
       { header: '주문상태',    name: 'status',        width: 90,  align: 'center', sortable: true },
-      { header: '청구상태',    name: 'nhis_status',   width: 90,  align: 'center', sortable: true },
       {
         /* 공단이냐 지자체냐 — 서류도 보내는 법도 다르다.
            그 아래에 어느 지사ㆍ어느 부서로 보내는지 함께 적는다. 「건강보험공단」만
@@ -477,6 +605,16 @@
           : nhisAssistBtn(row.id, { agency: row.agency_code, sent: row.local_sent,
                                                        ready: row.claim_ready_flag, missing: row.claim_missing,
                                                        name: row.patient, mobile: row.send_mobile, email: row.send_email }),
+      },
+
+      /* 청구가 어디까지 갔는가 — 「청구」 단추 바로 옆에 둔다 (2026-10-02 지시).
+         눌러 온 뒤 그 자리에서 자리를 옮기므로, 둘이 떨어져 있으면 눈이 오간다.
+         누르면 여섯 자리를 보여 주고 고른 것을 그 줄에 적는다. */
+      {
+        header: '청구 상태', name: 'nhis_status', width: 110, align: 'center', sortable: true,
+        renderer: (v, row) => row.amend_line
+          ? document.createTextNode(String(v ?? ''))
+          : claimStatusChip(row),
       },
 
       /* 네 화면이 함께 쓰던 칸을 여기에도 세운다(요청서 3쪽 — 「모든 화면의 항목이
