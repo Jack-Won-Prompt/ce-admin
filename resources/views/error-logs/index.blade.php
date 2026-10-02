@@ -25,6 +25,20 @@
               max-height:340px; overflow:auto; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; }
   .el-label { font-size:12px; font-weight:700; color:var(--primary); margin:0 0 5px; }
   .el-sum   { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+  /* 목록에서 바로 처리 상태를 바꾼다 (2026-10-02 지시) — 딱지를 누르면 고르는 창이 뜬다 */
+  .el-chip.el-pick { cursor:pointer; gap:4px; }
+  .el-chip.el-pick:hover { filter:brightness(.94); }
+  .el-chip.el-pick i { font-size:8px; opacity:.65; }
+  .el-pop   { position:fixed; z-index:1200; min-width:132px; padding:5px;
+              background:var(--bg-card); border:1px solid var(--border);
+              border-radius:10px; box-shadow:0 10px 28px rgba(0,0,0,.16); }
+  .el-pop button { display:flex; align-items:center; gap:7px; width:100%; padding:7px 9px;
+                   border:none; background:none; border-radius:7px; cursor:pointer;
+                   font-size:12px; color:var(--text-main); text-align:left; }
+  .el-pop button:hover { background:var(--gray-100); }
+  .el-pop button.on { font-weight:700; color:var(--primary); }
+  .el-pop .dot { width:8px; height:8px; border-radius:999px; flex:none; }
 </style>
 @endpush
 
@@ -140,11 +154,24 @@
   const ROWS   = @json($rows);
   const 상태표 = @json($상태표);
 
-  const 딱지 = (v) => {
+  const 고칠수있나 = @json($고칠수있나);
+
+  const 반 = { '미확인': 'el-open', '확인': 'el-check', '조치 완료': 'el-fixed', '보류': 'el-ign' };
+
+  /* 보이는 글에서 저장할 코드를 되찾는 표 — 상태를 바꾼 뒤 다시 그릴 때 쓴다.
+     wwGrid 의 renderer 는 getData() 가 떠 준 사본을 받으므로 row 에 담긴
+     state_key 는 처음 값에 머문다. 칸에 적힌 글이 지금 값이다. */
+  const 코드찾기 = {};
+  Object.entries(상태표).forEach(([k, v]) => { 코드찾기[v] = k; });
+
+  const 딱지 = (v, row) => {
     const s = document.createElement('span');
-    const 반 = { '미확인': 'el-open', '확인': 'el-check', '조치 완료': 'el-fixed', '보류': 'el-ign' };
-    s.className = 'el-chip ' + (반[v] || 'el-ign');
+    s.className = 'el-chip ' + (반[v] || 'el-ign') + (고칠수있나 ? ' el-pick' : '');
     s.textContent = v;
+    if (고칠수있나) {
+      s.dataset.elId = row.id;
+      s.insertAdjacentHTML('beforeend', ' <i class="fa-solid fa-chevron-down"></i>');
+    }
     return s;
   };
 
@@ -186,11 +213,85 @@
 
   /* 줄을 겹누르면 온 내용을 편다 */
   document.getElementById('elGrid').addEventListener('dblclick', (e) => {
+    if (e.target.closest('.el-pick')) return;   // 상태 딱지는 고르는 자리다
     const 줄 = e.target.closest('[data-row-index]');
     if (!줄) return;
     const r = ROWS[Number(줄.dataset.rowIndex)];
     if (r) elOpen(r.id);
   });
+
+  /* ── 목록에서 처리 상태 바꾸기 (2026-10-02 지시) ───────────────────────────
+     고친 오류의 줄을 창까지 열지 않고 바로 「조치 완료」로 돌려놓을 수 있어야 한다. */
+  let 열린창 = null;
+
+  const 창닫기 = () => { 열린창?.remove(); 열린창 = null; };
+
+  document.addEventListener('click', async (e) => {
+    const 고르기 = e.target.closest('.el-pop button');
+    if (고르기) {
+      const 창 = 고르기.closest('.el-pop');
+      await 상태저장(Number(창.dataset.elId), 고르기.dataset.key, 창.__칸);
+      창닫기();
+      return;
+    }
+
+    const 딱 = e.target.closest('.el-chip.el-pick');
+    if (! 딱) { 창닫기(); return; }
+
+    const 이미 = 열린창 && 열린창.dataset.elId === 딱.dataset.elId;
+    창닫기();
+    if (이미) return;   // 같은 딱지를 다시 누르면 닫는다
+
+    const 칸  = 딱.closest('[data-row-index]');
+    const 지금 = 코드찾기[딱.textContent.trim()] || 'open';
+
+    const 창 = document.createElement('div');
+    창.className = 'el-pop';
+    창.dataset.elId = 딱.dataset.elId;
+    창.__칸 = 칸;
+    창.innerHTML = Object.entries(상태표).map(([k, v]) => `
+      <button type="button" data-key="${k}" class="${k === 지금 ? 'on' : ''}">
+        <span class="dot" style="background:var(--${{open:'danger',checked:'warning',fixed:'primary',ignored:'text-muted'}[k]});"></span>
+        <span>${v}</span>
+      </button>`).join('');
+    document.body.appendChild(창);
+
+    /* 화면 밖으로 넘지 않게 — 아래가 좁으면 딱지 위로 올려 띄운다 */
+    const 자리 = 딱.getBoundingClientRect();
+    const 높이 = 창.offsetHeight;
+    창.style.left = Math.min(자리.left, window.innerWidth - 창.offsetWidth - 12) + 'px';
+    창.style.top  = (자리.bottom + 높이 + 12 > window.innerHeight ? 자리.top - 높이 - 6 : 자리.bottom + 6) + 'px';
+
+    열린창 = 창;
+  });
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') 창닫기(); });
+  window.addEventListener('resize', 창닫기);
+
+  async function 상태저장(id, 코드, 칸) {
+    const res = await fetch(`/settings/error-logs/${id}/mark`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
+      },
+      body: JSON.stringify({ status: 코드 }),   // 메모는 보내지 않는다 — 창에서 적은 것을 지우지 않게
+    });
+
+    if (! res.ok) { showToast('처리 상태를 저장하지 못했습니다.', 'danger'); return; }
+    const d = await res.json();
+    if (! d.success) { showToast('처리 상태를 저장하지 못했습니다.', 'danger'); return; }
+
+    /* 그려 둔 칸을 그 자리에서 고친다 — 다시 읽지 않는다 */
+    if (칸) {
+      const i = Number(칸.dataset.rowIndex);
+      grid.setValue(i, 'state', d.state);
+      const r = ROWS[i];
+      if (r) { r.state = d.state; r.state_key = 코드; }
+    }
+    showToast(d.message, 'success');
+  }
 
   const 토막 = (제목, 값, 홑 = false) => {
     if (값 === null || 값 === undefined || 값 === '') return '';

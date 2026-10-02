@@ -64,6 +64,9 @@ class ErrorLogController extends Controller
             'user'    => $r->user_name ?? '-',
             'hit'     => $r->hit,
             'state'   => $r->status_label,
+            /* 목록에서 바로 상태를 바꾸려면 저장할 코드가 함께 있어야 한다 —
+               보이는 글(「조치 완료」)만으로는 어느 코드인지 되찾을 수 없다. */
+            'state_key' => $r->status,
             'url'     => $r->url,
         ])->values();
 
@@ -95,6 +98,7 @@ class ErrorLogController extends Controller
             '출처표'  => ErrorLog::출처,
             'q'       => $검색,
             '상태표'  => ErrorLog::상태,
+            '고칠수있나' => perm('error-logs', 'update'),
         ]);
     }
 
@@ -134,17 +138,26 @@ class ErrorLogController extends Controller
     /** 살펴본 자취를 남긴다 — 누가 언제 무엇으로 보았는지 */
     public function mark(Request $request, ErrorLog $errorLog)
     {
+        abort_unless(perm('error-logs', 'update'), 403);
+
         $request->validate([
             'status' => 'required|in:open,checked,fixed,ignored',
             'memo'   => 'nullable|string|max:500',
         ]);
 
-        $errorLog->update([
+        $바꿀것 = [
             'status'     => $request->input('status'),
-            'memo'       => $request->input('memo'),
             'checked_by' => Auth::id(),
             'checked_at' => now(),
-        ]);
+        ];
+
+        /* 메모는 보내 온 때만 적는다 — 목록의 상태 딱지는 상태만 보내므로,
+           없는 것을 빈 값으로 읽으면 창에서 적어 둔 메모가 지워진다. */
+        if ($request->has('memo')) {
+            $바꿀것['memo'] = $request->input('memo');
+        }
+
+        $errorLog->update($바꿀것);
 
         return response()->json([
             'success' => true,
