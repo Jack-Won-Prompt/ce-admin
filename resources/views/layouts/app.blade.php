@@ -3173,6 +3173,9 @@ document.addEventListener('click', (e) => {
 <script src="@assetv('vendor/wwgrid/wwGrid.js')"></script>
 {{-- 날짜 칸에 직접 쳐 넣기ㆍ붙여넣기. 칸의 종류를 바꾸지 않아 달력은 그대로 쓴다. --}}
 <script src="@assetv('vendor/ce/date-input.js')"></script>
+{{-- 목록 표의 쪽 나누기 (2026-10-02 지시) — 모든 목록 화면이 한 가지 모양으로 쓴다.
+     wwGrid 뒤에 실어야 한다(표를 감싸 쓰므로). cePager.붙이기(grid, {el}) 한 줄이다. --}}
+<script src="@assetv('vendor/ce/ww-pager.js')"></script>
 
 {{-- 시안대로 그리드 하단 상태바(footer)를 끈 화면에서, 결과바의 ‘선택 N건’ 표시를
      그리드 선택 상태에 맞춘다. 그리드가 선택이 바뀔 때마다 부르는 지점에

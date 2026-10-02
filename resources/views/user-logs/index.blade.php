@@ -157,6 +157,9 @@ window.HELP_TOUR_STEPS = [
   // 결과바의 '엑셀 저장' 버튼이 이 인스턴스를 부른다.
   // 체크박스가 없는 그리드라 '선택 N건'은 두지 않았고 dsBindSelCount 도 부르지 않는다.
   window.__userlogsGrid = grid;
+  /* 쪽 나누기 — 모든 목록 화면이 한 모양으로 쓴다 (2026-10-02 지시).
+     표 바로 아래에 줄이 선다. 합계ㆍ엑셀ㆍ정렬은 전체 기준을 지킨다. */
+  cePager.붙이기(grid);
 })();
 </script>
 @endpush

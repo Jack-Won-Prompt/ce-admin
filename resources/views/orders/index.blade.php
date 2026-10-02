@@ -812,6 +812,9 @@ window.HELP_TOUR_STEPS = [
   }
 
   window.__orderGrid = grid;
+  /* 쪽 나누기 — 모든 목록 화면이 한 모양으로 쓴다 (2026-10-02 지시).
+     표 바로 아래에 줄이 선다. 합계ㆍ엑셀ㆍ정렬은 전체 기준을 지킨다. */
+  cePager.붙이기(grid);
   window.dsBindSelCount(grid, 'orderSelCount');
 
   // 패널 탭 전환(조회결과/상세내용)

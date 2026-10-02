@@ -324,6 +324,9 @@
   });
   // 결과바의 '엑셀 저장' 버튼이 부를 수 있게 인스턴스를 노출한다(그리드 내장 툴바 대체).
   window.__documentGrid  = grid;
+  /* 쪽 나누기 — 모든 목록 화면이 한 모양으로 쓴다 (2026-10-02 지시).
+     표 바로 아래에 줄이 선다. 합계ㆍ엑셀ㆍ정렬은 전체 기준을 지킨다. */
+  cePager.붙이기(grid);
   window.__documentsGrid = grid;   // 표준 이름(화면 slug) 별칭
   window.dsBindSelCount(grid, 'docSelCount');
 

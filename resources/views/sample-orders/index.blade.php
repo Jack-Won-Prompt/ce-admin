@@ -308,6 +308,9 @@
     data: @json($gridData),
   });
   window.__smpGrid = grid;
+  /* 쪽 나누기 — 모든 목록 화면이 한 모양으로 쓴다 (2026-10-02 지시).
+     이 화면의 **주 표**에만 붙인다. 아래쪽 보조 표는 그대로 둔다. */
+  cePager.붙이기(grid);
 
   /* 목록 · 상세 내용 · 신규 등록 세 판을 오간다 */
   window.smpPane = function (which) {

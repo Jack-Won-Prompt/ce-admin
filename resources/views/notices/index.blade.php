@@ -83,6 +83,10 @@ window.HELP_TOUR_STEPS = [
     ],
     data: @json($gridData),
   });
+  
+  /* 쪽 나누기 — 모든 목록 화면이 한 모양으로 쓴다 (2026-10-02 지시).
+     표 바로 아래에 줄이 선다. 합계ㆍ엑셀ㆍ정렬은 전체 기준을 지킨다. */
+  cePager.붙이기(grid);
   window.__noticeGrid = grid;                      // 결과바의 엑셀 저장 버튼이 이걸 부른다
   window.dsBindSelCount(grid, 'noticeSelCount');   // 결과바 '선택 N건' 표시를 연결한다
   window.noticeViewDetail = function () {

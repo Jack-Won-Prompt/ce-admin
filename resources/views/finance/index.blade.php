@@ -175,6 +175,9 @@
   };
 
   window.__financeGrid = 표만들기(COLS, @json($gridData), @json($tab !== 'pg'));
+  /* 쪽 나누기 (2026-10-02 지시). 탭을 바꾸면 표를 다시 세우므로 그때마다 붙인다 —
+     쪽 줄은 표 아래의 같은 자리를 다시 쓴다(cePager 가 이미 선 줄을 찾아 쓴다). */
+  cePager.붙이기(window.__financeGrid);
 
   /* ── 탭 ──
 
@@ -203,6 +206,9 @@
         칸.innerHTML = '';
         숨길것 = new Set(d.hidden || []);   // 탭마다 감출 칸이 다르다
         window.__financeGrid = 표만들기(돈칸으로(d.columns), d.rows, d.tab !== 'pg');
+        /* 쪽 나누기 (2026-10-02 지시). 탭을 바꾸면 표를 다시 세우므로 그때마다 붙인다 —
+     쪽 줄은 표 아래의 같은 자리를 다시 쓴다(cePager 가 이미 선 줄을 찾아 쓴다). */
+        cePager.붙이기(window.__financeGrid);
 
         // 걸린 탭과 건수를 옮긴다
         document.querySelectorAll('.pnl-tabs .pnl-tab[data-tab]').forEach(a => {

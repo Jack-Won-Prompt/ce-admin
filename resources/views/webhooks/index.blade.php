@@ -250,6 +250,9 @@
     data: ROWS,
   });
   window.__whGrid = grid;
+  /* 쪽 나누기 — 모든 목록 화면이 한 모양으로 쓴다 (2026-10-02 지시).
+     표 바로 아래에 줄이 선다. 합계ㆍ엑셀ㆍ정렬은 전체 기준을 지킨다. */
+  cePager.붙이기(grid);
 
   /* 줄을 더블클릭하면 고치는 창이 열린다 — 다른 목록과 같은 손놀림이다 */
   document.getElementById('whGrid').addEventListener('dblclick', (e) => {

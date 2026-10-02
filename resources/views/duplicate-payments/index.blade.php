@@ -194,6 +194,10 @@
     columns: 조회칸,
     data: [],
   });
+  
+  /* 쪽 나누기 — 모든 목록 화면이 한 모양으로 쓴다 (2026-10-02 지시).
+     조회 결과 표에만 붙인다. 아래 「결제 취소 내역」은 그대로 둔다. */
+  cePager.붙이기(grid);
 
   const workGrid = new wwGrid({
     el: document.getElementById('dpWorkGrid'),
