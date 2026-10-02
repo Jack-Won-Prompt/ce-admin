@@ -20,7 +20,7 @@
   .dp-act { display:inline-flex; align-items:center; gap:4px; cursor:pointer;
             padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700;
             border:1px solid transparent; }
-  .dp-act.is-refund  { background:#fdecea; color:#b3261e; border-color:#f5c2bd; }
+  .dp-act.is-cancel  { background:#fdecea; color:#b3261e; border-color:#f5c2bd; }
   .dp-act.is-approve { background:var(--primary-50, #eef2ff); color:var(--primary, #2563eb);
                        border-color:#c7d2fe; }
   .dp-act.is-reject  { background:var(--gray-100, #f3f4f6); color:var(--text-muted, #6b7280);
@@ -60,15 +60,15 @@
 <div class="dp-hint">
   한 주문에 두 번 이상 들어온 결제를 토스 거래 내역에서 찾습니다. 우리 기록에는
   뒤 결제가 앞 결제를 덮어 남지 않으므로, 이 목록이 보는 것은 토스의 거래 내역입니다.
-  <strong>「주문 결제」</strong>는 이 주문의 결제로 기록된 건이라 환불할 수 없고,
-  <strong>「초과 결제」</strong>가 중복으로 더 들어온 돈입니다. 한 번에 31일까지 조회합니다.
+  <strong>「주문 결제」</strong>는 이 주문의 결제로 기록된 건이라 취소할 수 없고,
+  <strong>「중복 결제」</strong>가 더 들어온 돈입니다. 한 번에 31일까지 조회합니다.
 </div>
 
 <div class="dp-sum" id="dpSum" style="display:none;"></div>
 <div id="dpGrid"></div>
 
 <div class="dp-sec">
-  <div class="dp-sec-title">환불 처리 내역</div>
+  <div class="dp-sec-title">결제 취소 내역</div>
   <div id="dpWorkGrid"></div>
 </div>
 
@@ -110,17 +110,17 @@
   function dpKindBadge(value, row) {
     const b = document.createElement('span');
     b.className = 'dp-badge ' + (value === 'ledger' ? 'is-ledger' : 'is-extra');
-    b.textContent = row?.kind_label || (value === 'ledger' ? '주문 결제' : '초과 결제');
+    b.textContent = row?.kind_label || (value === 'ledger' ? '주문 결제' : '중복 결제');
     if (value === 'ledger') {
       b.title = '이 주문의 결제로 기록된 건입니다. 무르면 결제 금액이 0으로 읽혀 '
-              + '정산과 증빙이 어긋나므로 환불할 수 없습니다.';
+              + '정산과 증빙이 어긋나므로 취소할 수 없습니다.';
     }
     return b;
   }
 
   function dpStatusBadge(value, row) {
-    const 결 = { '환불 완료': 'is-done', '승인 대기': 'is-waiting',
-                 '환불 실패': 'is-failed', '반려': 'is-ledger' }[value] || 'is-waiting';
+    const 결 = { '취소 완료': 'is-done', '승인 대기': 'is-waiting',
+                 '취소 실패': 'is-failed', '반려': 'is-ledger' }[value] || 'is-waiting';
     const b = document.createElement('span');
     b.className = 'dp-badge ' + 결;
     b.textContent = value || '-';
@@ -128,21 +128,21 @@
     return b;
   }
 
-  /* 환불 요청 — 세울 수 있는 줄인지는 서버가 정한다(act) */
-  function dpRefundBadge(value, row) {
+  /* 결제 취소 요청 — 세울 수 있는 줄인지는 서버가 정한다(act) */
+  function dpCancelBadge(value, row) {
     if (!value) {
       if (row?.refund_label) return dpStatusBadge(row.refund_label, row);
       if (row?.kind === 'ledger') {
         const s = document.createElement('span');
         s.style.cssText = 'font-size:11px;color:var(--text-muted,#6b7280);';
-        s.textContent = '환불 불가';
+        s.textContent = '취소 불가';
         return s;
       }
       return null;
     }
     const b = document.createElement('span');
-    b.className = 'dp-act is-refund';
-    b.innerHTML = '<i class="fa-solid fa-rotate-left"></i> 환불 요청';
+    b.className = 'dp-act is-cancel';
+    b.innerHTML = '<i class="fa-solid fa-ban"></i> 취소 요청';
     return b;
   }
 
@@ -174,7 +174,7 @@
 
   const 조회칸 = @json($scanColumns).map(c => ({
     ...c,
-    renderer: { dpKindBadge, dpRefundBadge, dpStatusBadge, dpOrderLink }[c.renderer] ?? c.renderer,
+    renderer: { dpKindBadge, dpCancelBadge, dpStatusBadge, dpOrderLink }[c.renderer] ?? c.renderer,
   }));
 
   const 처리칸 = @json($workColumns).map(c => ({
@@ -188,7 +188,7 @@
 
   const grid = new wwGrid({
     el: document.getElementById('dpGrid'),
-    height: 420, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
+    height: 620, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
     emptyText: 처음말,
     columns: 조회칸,
@@ -197,9 +197,9 @@
 
   const workGrid = new wwGrid({
     el: document.getElementById('dpWorkGrid'),
-    height: 300, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
+    height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
-    emptyText: '환불 처리 내역이 없습니다.',
+    emptyText: '결제 취소 내역이 없습니다.',
     columns: 처리칸,
     data: @json($workData),
   });
@@ -262,10 +262,10 @@
 
   btn.addEventListener('click', 조회);
 
-  /* ── 환불 요청 ─────────────────────────────────────────── */
+  /* ── 결제 취소 요청 ─────────────────────────────────────────── */
 
   document.getElementById('dpGrid').addEventListener('click', async (e) => {
-    const 단추 = e.target.closest('.dp-act.is-refund');
+    const 단추 = e.target.closest('.dp-act.is-cancel');
     if (!단추) return;
 
     const cell = 단추.closest('[data-row-index]');
@@ -275,10 +275,10 @@
     if (!row || !row.act) return;
 
     const 예 = await ceConfirm(
-      `${row.patient}님의 초과 결제 ${돈(row.amount)}원을 환불 요청합니다.\n\n`
-      + `최종승인자가 승인해야 실제로 환불됩니다.\n`
+      `${row.patient}님의 중복 결제 ${돈(row.amount)}원을 취소 요청합니다.\n\n`
+      + `최종승인자가 승인해야 실제로 취소됩니다.\n`
       + `승인 ${row.approved_at} · 결제키 ${row.payment_key}`,
-      { title: '환불 요청', tone: 'warning', confirmText: '요청' });
+      { title: '결제 취소 요청', tone: 'warning', confirmText: '요청' });
 
     if (!예) return;
 
@@ -298,13 +298,13 @@
       });
       const data = await res.json();
 
-      await ceAlert(data.message, { title: '환불 요청', tone: data.success ? 'default' : 'warning' });
+      await ceAlert(data.message, { title: '결제 취소 요청', tone: data.success ? 'default' : 'warning' });
 
       if (data.success) location.reload();
       else 단추.classList.remove('is-busy');
     } catch (err) {
       단추.classList.remove('is-busy');
-      ceAlert('요청하지 못했습니다.', { title: '환불 요청', tone: 'warning' });
+      ceAlert('요청하지 못했습니다.', { title: '결제 취소 요청', tone: 'warning' });
     }
   });
 
@@ -322,10 +322,10 @@
 
     if (단추.dataset.act === 'approve') {
       const 예 = await ceConfirm(
-        `${row.patient}님의 ${돈(row.amount)}원을 지금 환불합니다.\n\n`
-        + `토스에서 실제로 돈이 나가며 되돌릴 수 없습니다.\n`
-        + `환불이 끝나면 고객에게 안내가 함께 발송됩니다.`,
-        { title: '환불 승인', tone: 'danger', confirmText: '승인하고 환불' });
+        `${row.patient}님의 ${돈(row.amount)}원 결제를 지금 취소합니다.\n\n`
+        + `토스에서 실제로 취소되며 되돌릴 수 없습니다.\n`
+        + `취소가 끝나면 고객에게 안내가 함께 발송됩니다.`,
+        { title: '결제 취소 승인', tone: 'danger', confirmText: '승인하고 취소' });
 
       if (!예) return;
 
@@ -335,7 +335,7 @@
         method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
       });
       const data = await res.json();
-      await ceAlert(data.message, { title: '환불 승인', tone: data.success ? 'default' : 'warning' });
+      await ceAlert(data.message, { title: '결제 취소 승인', tone: data.success ? 'default' : 'warning' });
       location.reload();
       return;
     }
@@ -350,7 +350,7 @@
       body: JSON.stringify({ reason: 까닭 }),
     });
     const data = await res.json();
-    await ceAlert(data.message, { title: '환불 반려', tone: data.success ? 'default' : 'warning' });
+    await ceAlert(data.message, { title: '결제 취소 반려', tone: data.success ? 'default' : 'warning' });
     location.reload();
   });
 })();

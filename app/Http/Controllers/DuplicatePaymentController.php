@@ -74,7 +74,7 @@ class DuplicatePaymentController extends Controller
             ['header' => '중복 결제 금액', 'name' => 'excess',     'width' => 120, 'align' => 'right', 'editor' => 'number'],
 
             ['header' => '결제키',   'name' => 'payment_key',  'width' => 240],
-            ['header' => '환불',     'name' => 'act',          'width' => 120, 'align' => 'center',
+            ['header' => '결제 취소', 'name' => 'act',          'width' => 130, 'align' => 'center',
              'renderer' => 'dpRefundBadge'],
         ];
     }
@@ -288,7 +288,7 @@ class DuplicatePaymentController extends Controller
                 /* 「주문 결제」는 이 주문의 결제로 적혀 있는 것이다. 무르면 받은 돈이
                    0으로 읽혀 정산ㆍ증빙이 어긋나므로 환불 대상이 아니다. */
                 'kind'       => $p['in_ledger'] ? 'ledger' : 'extra',
-                'kind_label' => $p['in_ledger'] ? '주문 결제' : '초과 결제',
+                'kind_label' => $p['in_ledger'] ? '주문 결제' : '중복 결제',
 
                 'refund_status' => $환불?->status,
                 'refund_label'  => $환불?->상태말(),
@@ -298,7 +298,7 @@ class DuplicatePaymentController extends Controller
                     $p['in_ledger']                => '',
                     $환불 !== null                  => '',
                     ! perm(self::페이지, 'create') => '',
-                    default                        => '환불 요청',
+                    default                        => '취소 요청',
                 },
             ];
         }

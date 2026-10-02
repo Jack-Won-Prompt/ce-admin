@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * 중복으로 받은 돈을 돌려준다 — **요청과 승인을 나눈다** (2026-10-02 지시).
  *
- * 환불은 되돌릴 수 없고 곧 돈이 나가는 일이다. 담당자가 올리고 최종승인자가
+ * 결제 취소는 되돌릴 수 없고 곧 돈이 오가는 일이다. 담당자가 올리고 최종승인자가
  * 승인해야 저쪽에 간다. 반품 결재(OrderReturn::APPROVAL_PERMS)와 같은 결이다.
  *
  * ## 장부에 있는 결제는 무를 수 없다
@@ -43,7 +43,8 @@ class DuplicatePaymentRefundService
     /** 마스터에 유형이 없을 때 쓰는 말 */
     public static function 기본문구(): string
     {
-        return "[콜로플라스트] #{고객명}님, 중복으로 결제된 #{환불금액}원을 환불해 드렸습니다.\n"
+        return "[콜로플라스트] #{고객명}님, 중복으로 결제된 #{취소금액}원의 결제를 취소했습니다.
+"
              . "주문번호: #{주문번호}\n"
              . '카드 취소는 카드사에 따라 영업일 기준 3~5일이 걸릴 수 있습니다.';
     }
@@ -87,10 +88,10 @@ class DuplicatePaymentRefundService
         ]);
 
         activity()->performedOn($order)->causedBy(Auth::user())->log(
-            '중복 결제 환불 요청 — ' . number_format((int) $건->amount) . '원 (결제키 ' . $키 . ')'
+            '중복 결제 취소 요청 — ' . number_format((int) $건->amount) . '원 (결제키 ' . $키 . ')'
         );
 
-        return ['ok' => true, 'message' => '환불 요청을 올렸습니다. 최종승인자의 승인이 필요합니다.', 'refund' => $건];
+        return ['ok' => true, 'message' => '결제 취소 요청을 올렸습니다. 최종승인자의 승인이 필요합니다.', 'refund' => $건];
     }
 
     /* ── 걸음 ② 승인하고 실제로 무르기 ───────────── */
@@ -134,18 +135,18 @@ class DuplicatePaymentRefundService
                 'toss_response' => $상세,
             ]);
 
-            return ['ok' => true, 'message' => '이미 전액 환불된 결제였습니다 — 그대로 완료로 적었습니다.'];
+            return ['ok' => true, 'message' => '이미 전액 취소된 결제였습니다 — 그대로 완료로 적었습니다.'];
         }
 
         /* 가상계좌로 받은 돈은 왔던 길로 돌아가지 않는다 — 돌려줄 계좌가 있어야
            한다. 지금 화면은 그 계좌를 받지 않으므로 여기서 멈추고 알린다. */
         if (($상세['method'] ?? '') === '가상계좌' || ($건->method ?? '') === '가상계좌') {
-            return ['ok' => false, 'message' => '가상계좌로 받은 건은 환불 계좌가 있어야 합니다 — 정산/회계에서 처리해 주십시오.'];
+            return ['ok' => false, 'message' => '가상계좌로 받은 건은 돌려줄 계좌가 있어야 합니다 — 정산/회계에서 처리해 주십시오.'];
         }
 
         try {
             $res = $this->toss->post('/v1/payments/' . $건->payment_key . '/cancel', [
-                'cancelReason' => '중복 결제 환불',
+                'cancelReason' => '중복 결제 취소',
                 'cancelAmount' => min($남은것, (int) $건->amount),
             ]);
         } catch (\Throwable $e) {
@@ -156,11 +157,11 @@ class DuplicatePaymentRefundService
                 'toss_response'  => ['error' => mb_substr($e->getMessage(), 0, 500)],
             ]);
 
-            Log::warning('[중복결제] 환불 실패', [
+            Log::warning('[중복결제] 결제 취소 실패', [
                 'refund' => $건->id, 'key' => $건->payment_key, 'error' => $e->getMessage(),
             ]);
 
-            return ['ok' => false, 'message' => '토스가 환불을 거절했습니다 — ' . mb_substr($e->getMessage(), 0, 150)];
+            return ['ok' => false, 'message' => '토스가 결제 취소를 거절했습니다 — ' . mb_substr($e->getMessage(), 0, 150)];
         }
 
         $건->update([
@@ -182,21 +183,21 @@ class DuplicatePaymentRefundService
                 'amount'          => -(int) $건->amount,
                 'occurred_at'     => now(),
                 'payment_key'     => $건->payment_key,
-                'note'            => '중복 결제 환불',
+                'note'            => '중복 결제 취소',
             ]);
         } catch (\Throwable $e) {
             Log::warning('[중복결제] 걸음을 적지 못함', ['refund' => $건->id, 'error' => $e->getMessage()]);
         }
 
         activity()->performedOn($order)->causedBy(Auth::user())->log(
-            '중복 결제 환불 승인·처리 — ' . number_format((int) $건->amount) . '원 (결제키 ' . $건->payment_key . ')'
+            '중복 결제 취소 승인·처리 — ' . number_format((int) $건->amount) . '원 (결제키 ' . $건->payment_key . ')'
         );
 
         $알림 = $this->안내($건);
 
         return [
             'ok'      => true,
-            'message' => number_format((int) $건->amount) . '원을 환불했습니다. ' . $알림['message'],
+            'message' => number_format((int) $건->amount) . '원 결제를 취소했습니다. ' . $알림['message'],
         ];
     }
 
@@ -216,7 +217,7 @@ class DuplicatePaymentRefundService
         ]);
 
         activity()->performedOn($건->order)->causedBy(Auth::user())->log(
-            '중복 결제 환불 반려 — ' . number_format((int) $건->amount) . '원 · ' . $까닭
+            '중복 결제 취소 반려 — ' . number_format((int) $건->amount) . '원 · ' . $까닭
         );
 
         return ['ok' => true, 'message' => '반려했습니다.'];
@@ -237,7 +238,7 @@ class DuplicatePaymentRefundService
         return null;
     }
 
-    /** 환불했음을 고객에게 알린다 — 못 보내도 환불은 이미 끝난 일이다 */
+    /** 결제를 취소했음을 고객에게 알린다 — 못 보내도 취소는 이미 끝난 일이다 */
     private function 안내(DuplicatePaymentRefund $건): array
     {
         $order  = $건->order;
@@ -258,6 +259,8 @@ class DuplicatePaymentRefundService
             '#{고객명}'   => $name,
             '#{이름}'     => $name,
             '#{주문번호}' => (string) $order->order_number,
+            '#{취소금액}' => number_format((int) $건->amount),
+            /* 옛 이름도 받아 준다 — 담당자가 고쳐 둔 문구가 이 이름을 쓸 수 있다 */
             '#{환불금액}' => number_format((int) $건->amount),
         ]);
 
@@ -283,7 +286,7 @@ class DuplicatePaymentRefundService
 
                 $건->update(['notified_at' => now(), 'notify_result' => $이름들 . ' 발송']);
 
-                activity()->performedOn($order)->log("중복 결제 환불 안내 발송 → {$mobile}");
+                activity()->performedOn($order)->log("중복 결제 취소 안내 발송 → {$mobile}");
 
                 return ['sent' => true, 'message' => '고객에게 ' . $이름들 . '으로 안내했습니다.'];
             }
@@ -291,13 +294,13 @@ class DuplicatePaymentRefundService
             $까닭 = implode(' / ', $못보낸말) ?: '보내지 못했습니다.';
             $건->update(['notify_result' => mb_substr($까닭, 0, 255)]);
 
-            Log::warning('[중복결제] 환불 안내를 보내지 못했다', [
+            Log::warning('[중복결제] 취소 안내를 보내지 못했다', [
                 'refund' => $건->id, 'error' => $까닭,
             ]);
 
             return ['sent' => false, 'message' => '안내를 보내지 못했습니다 — ' . $까닭];
         } catch (\Throwable $e) {
-            Log::warning('[중복결제] 환불 안내 실패', ['refund' => $건->id, 'error' => $e->getMessage()]);
+            Log::warning('[중복결제] 취소 안내 실패', ['refund' => $건->id, 'error' => $e->getMessage()]);
             $건->update(['notify_result' => mb_substr($e->getMessage(), 0, 255)]);
 
             return ['sent' => false, 'message' => '안내를 보내지 못했습니다.'];

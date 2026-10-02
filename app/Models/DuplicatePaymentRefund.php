@@ -22,8 +22,8 @@ class DuplicatePaymentRefund extends Model
     public const 상태이름 = [
         self::요청 => '승인 대기',
         self::승인 => '승인됨',
-        self::완료 => '환불 완료',
-        self::실패 => '환불 실패',
+        self::완료 => '취소 완료',
+        self::실패 => '취소 실패',
         self::반려 => '반려',
     ];
 
