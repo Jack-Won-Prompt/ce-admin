@@ -205,6 +205,11 @@ class PrescriptionController extends Controller
                 /* 다시 올리기를 물어 둔 것이 있나 (2026-09-12 지시). 파일 검수
                    바로 옆에 세운다 — 「검수했나」와 「되물었나」는 잇대어 읽는 값이다. */
                 'reupload'   => $rx->open_reuploads_count,
+
+                /* 검수 메모 — 「요청 여부」 옆에서 바로 적는다 (2026-10-02 지시).
+                   주문 등록 화면의 「검수 요청 메모」와 같은 칸이다(admin_note) —
+                   목록에서 적은 말이 그 화면에 그대로 선다. */
+                'admin_note' => (string) ($rx->admin_note ?? ''),
             ];
         });
         $total = $gridData->count();
@@ -3577,6 +3582,9 @@ class PrescriptionController extends Controller
             'insurance_price'  => 'nullable|numeric|min:0',
             'patient_id'       => 'nullable|exists:patients,id',
             'admin_note'       => 'nullable|string',
+            /* 승인한 사람이 남긴 말. 여태 승인 창에서만 적을 수 있어, 뒤에 덧붙일
+               일이 생기면 승인을 다시 눌러야 했다 (2026-10-02 지시). */
+            'input_review_memo' => 'nullable|string|max:1000',
             'items'                   => 'nullable|array|max:20',
             'items.*.product_name'    => 'nullable|string|max:200',
             'items.*.product_code'    => 'nullable|string|max:50',
@@ -3672,6 +3680,7 @@ class PrescriptionController extends Controller
             'daily_count', 'total_days', 'total_count', 'issued_date', 'repurchase_date',
             'product_name', 'product_code', 'quantity', 'nhis_status',
             'product_price', 'insurance_price', 'patient_id', 'admin_note',
+            'input_review_memo',
         ]);
 
         // 주민번호는 화면에 마스킹으로만 보인다. 담당자가 '표시'를 눌러 원문을 불러오지 않았으면
@@ -4226,6 +4235,43 @@ class PrescriptionController extends Controller
      * 그런데 입력은 파일 검수 **뒤에** 하는 일이라, 정상 흐름에서는 누를 창이 없었다.
      * 이제 파일 검수 상태를 보지 않는다.
      */
+    /**
+     * 목록에서 검수 메모를 적는다 (2026-10-02 지시).
+     *
+     * 담기는 칸은 `admin_note` — 주문 등록 화면의 「검수 요청 메모」가 읽는 그 칸이다.
+     * 처방자료를 올리며 적던 말과 한 자리를 쓴다. 두 칸으로 나누면 어느 쪽을 읽어야
+     * 하는지 또 갈린다(2026-09-14 에 셋을 둘로 모은 까닭과 같다).
+     *
+     * 비우는 것도 적는 일이다 — 잘못 적은 말을 지울 수 있어야 한다.
+     */
+    public function updateAdminNote(Request $request, Prescription $prescription): JsonResponse
+    {
+        abort_unless(perm('prescriptions', 'update'), 403, '검수 메모를 적을 권한이 없습니다.');
+
+        $data = $request->validate([
+            'memo' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $옛것 = (string) ($prescription->admin_note ?? '');
+        $새것 = trim((string) ($data['memo'] ?? ''));
+
+        if ($옛것 === $새것) {
+            return response()->json(['success' => true, 'message' => '바뀐 내용이 없습니다.', 'memo' => $새것]);
+        }
+
+        $prescription->update(['admin_note' => $새것 !== '' ? $새것 : null]);
+
+        activity()->causedBy(Auth::user())->performedOn($prescription)->log(
+            $새것 === '' ? '검수 메모를 지웠습니다' : '검수 메모: ' . mb_substr($새것, 0, 100)
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => $새것 === '' ? '검수 메모를 지웠습니다.' : '검수 메모를 저장했습니다.',
+            'memo'    => $새것,
+        ]);
+    }
+
     public function requestInputReview(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
         if ($prescription->입력검수승인했나()) {

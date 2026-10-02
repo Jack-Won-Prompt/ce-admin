@@ -145,6 +145,11 @@ Route::middleware(['auth'])->group(function () {
         /* 입력 검수 — 파일 검수(위 request-review·approve)와 다른 일이다 (2026-09-16 지시).
            그쪽은 올라온 이미지를 보고, 이쪽은 주문 등록에 적어 넣은 값을 본다.
            한 주소를 함께 쓰던 때에는 파일만 승인해도 입력이 승인된 것으로 보였다. */
+        /* 목록에서 검수 메모를 적는다 (2026-10-02 지시) — 주문 등록의
+           「검수 요청 메모」와 같은 칸(admin_note)이다. */
+        Route::patch('/{prescription}/admin-note',
+            [PrescriptionController::class, 'updateAdminNote'])->name('adminNote');
+
         Route::post('/{prescription}/input-review/request',
             [PrescriptionController::class, 'requestInputReview'])->name('input-review.request');
         Route::post('/{prescription}/input-review/approve',

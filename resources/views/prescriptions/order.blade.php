@@ -3670,11 +3670,15 @@ $calcDeposit  = $calcCopay;
                    본 사람의 말이라 다른 일이다. --}}
               <div class="rx-field-row rx-w3">
                 <span class="rx-field-label">입력 검수 승인 메모</span>
-                <div id="f-input-review-memo" style="flex:1;min-width:0;font-size:12px;line-height:1.6;
-                     padding:6px 10px;border:1px solid var(--border);border-radius:8px;
-                     background:var(--gray-50);white-space:pre-wrap;min-height:32px;
-                     color:{{ $prescription->input_review_memo ? 'var(--gray-700)' : 'var(--text-muted)' }};"
-                     title="입력 검수를 승인한 사람이 남긴 말입니다">{{ $prescription->input_review_memo ?: '아직 입력 검수 승인 메모가 없습니다.' }}</div>
+                {{-- 적을 수 있게 열었다 (2026-10-02 지시).
+
+                     여태 읽기만 하는 자리였다. 승인 창에서만 적을 수 있어, 승인한
+                     뒤에 덧붙일 말이 생기면 승인을 다시 눌러야 했다. 저장하면 이 건의
+                     승인 메모가 그대로 바뀐다. --}}
+                <textarea id="f-input-review-memo" class="form-control" rows="2" maxlength="1000"
+                     style="flex:1;min-width:0;font-size:12px;line-height:1.6;resize:vertical;"
+                     placeholder="입력 검수를 확인한 내용을 적습니다"
+                     title="입력 검수를 승인한 사람이 남긴 말입니다">{{ $prescription->input_review_memo }}</textarea>
               </div>
               {{-- 참고 사항은 걷었다 (2026-09-14 지시). 담긴 값(reference_note)은
                    지우지 않는다 — 화면에서 내릴 뿐이라 되돌릴 때 그대로 있다.
@@ -10453,6 +10457,8 @@ window.HELP_TOUR_STEPS = [
       // ── 처방 수량·상병 ─────────────────────────────────────
       disease_name:     strOrNull('f-disease'),
       disease_code:     strOrNull('f-disease-code'),
+      /* 입력 검수 승인 메모 — 이 화면에서 적을 수 있게 열었다(2026-10-02 지시) */
+      input_review_memo: strOrNull('f-input-review-memo'),
       sb_sci:           strOrNull('f-sb-sci'),
       uro_date:         strOrNull('f-uro-date'),
       daily_count:      intOrNull('f-daily'),
@@ -10704,11 +10710,12 @@ window.HELP_TOUR_STEPS = [
 
     const 언제 = (t, 누가) => t ? `${t}${누가 ? ' · ' + 누가 : ''}` : '';
 
-    /* 승인 메모 칸도 함께 고쳐 세운다 — 화면을 다시 읽지 않는다 */
+    /* 승인 메모 칸도 함께 고쳐 세운다 — 화면을 다시 읽지 않는다.
+       적을 수 있는 칸이 되었으므로 값으로 넣는다(2026-10-02). 빈 안내문을 글자로
+       넣으면 저장할 때 그 문장이 메모로 담긴다. */
     const 메모칸 = document.getElementById('f-input-review-memo');
     if (메모칸) {
-      메모칸.textContent = 상태.memo || '아직 입력 검수 승인 메모가 없습니다.';
-      메모칸.style.color = 상태.memo ? 'var(--gray-700)' : 'var(--text-muted)';
+      메모칸.value = 상태.memo || '';
     }
 
     if (상태.status === 'approved') {

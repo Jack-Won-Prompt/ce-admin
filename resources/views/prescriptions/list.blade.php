@@ -44,6 +44,24 @@
 @push('styles')
 <style>
   .filter-bar .form-control { height: 32px; font-size: 13px; }
+
+  /* 검수 메모 — 목록에서 바로 적는다 (2026-10-02) */
+  .rx-memo { display:inline-block; max-width:100%; font-size:11.5px; line-height:18px;
+             overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+             color:var(--gray-700, #374151); }
+  .rx-memo.is-editable { cursor:pointer; }
+  .rx-memo.is-editable:hover { text-decoration:underline; }
+  .rx-memo.is-empty { color:var(--gray-400, #9ca3af); }
+  .rx-memo.is-editable.is-empty:hover { color:var(--primary, #2563eb); }
+
+  .rx-memo-pop { position:fixed; z-index:9000; width:300px; padding:12px;
+                 background:var(--gray-0, #fff); border:1px solid var(--gray-200, #e5e7eb);
+                 border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.14); }
+  .rx-memo-pop .rx-memo-ttl { font-size:12px; font-weight:700; margin-bottom:8px;
+                              color:var(--gray-800, #1f2937); }
+  .rx-memo-pop textarea { width:100%; font-size:12.5px; line-height:1.6; resize:vertical; }
+  .rx-memo-pop .rx-memo-hint { font-size:11px; color:var(--text-muted, #6b7280); margin-top:6px; }
+  .rx-memo-pop .rx-memo-ft { display:flex; justify-content:flex-end; gap:6px; margin-top:10px; }
   .filter-bar .btn { height: 32px; white-space: nowrap; }
 
   /* ── Vuexy pill status tabs ── */
@@ -392,6 +410,99 @@ window.HELP_TOUR_STEPS = [
     return s;
   };
 
+  /* ── 검수 메모 (2026-10-02 지시) ──────────────────────────────────
+     「요청 여부」 옆에서 바로 적는다. 담기는 칸은 admin_note 로, 주문 등록 화면의
+     「검수 요청 메모」가 읽는 그 칸이다 — 여기서 적은 말이 그 화면에 그대로 선다. */
+  const MEMO_CAN_EDIT = @json(perm('prescriptions', 'update'));
+
+  const 메모칸 = (v) => {
+    const 글 = String(v || '').trim();
+    const s = document.createElement('span');
+    s.className = 'rx-memo' + (MEMO_CAN_EDIT ? ' is-editable' : '') + (글 ? '' : ' is-empty');
+    /* 한 줄로 줄여 보인다 — 긴 글은 창을 열어야 다 읽힌다 */
+    s.textContent = 글 ? (글.length > 14 ? 글.slice(0, 14) + '…' : 글) : (MEMO_CAN_EDIT ? '+ 메모' : '—');
+    if (글) s.title = 글;
+    else if (MEMO_CAN_EDIT) s.title = '눌러서 검수 메모를 적습니다';
+    return s;
+  };
+
+  let 메모창 = null;
+  const 메모창닫기 = () => { if (메모창) { 메모창.remove(); 메모창 = null; } };
+
+  document.addEventListener('click', (e) => {
+    const 칸 = e.target.closest('.rx-memo.is-editable');
+
+    if (!칸) {
+      /* 창 안을 누른 것이면 닫지 않는다 — 글을 적는 중이다 */
+      if (!e.target.closest('.rx-memo-pop')) 메모창닫기();
+      return;
+    }
+
+    const cell = 칸.closest('[data-row-index]');
+    if (!cell) return;
+    const row = grid.getData()[parseInt(cell.dataset.rowIndex, 10)];
+    if (!row?.id) return;
+
+    const 이미 = 메모창 && 메모창.dataset.rxId === String(row.id);
+    메모창닫기();
+    if (이미) return;
+
+    const 창 = document.createElement('div');
+    창.className = 'rx-memo-pop';
+    창.dataset.rxId = String(row.id);
+    창.innerHTML =
+      `<div class="rx-memo-ttl">검수 메모 · ${row.rx_number ?? ''}</div>`
+      + `<textarea class="form-control" rows="4" maxlength="500"`
+      + ` placeholder="검수할 때 보아야 할 내용을 적습니다"></textarea>`
+      + `<div class="rx-memo-hint">주문 등록 화면의 「검수 요청 메모」에 그대로 보입니다.</div>`
+      + `<div class="rx-memo-ft">`
+      + `<button type="button" class="ds-btn" data-act="cancel">닫기</button>`
+      + `<button type="button" class="ds-btn ds-btn-primary" data-act="save">저장</button></div>`;
+
+    document.body.appendChild(창);
+    const 글칸 = 창.querySelector('textarea');
+    글칸.value = String(row.admin_note || '');
+
+    const r = 칸.getBoundingClientRect();
+    const h = 창.offsetHeight, w = 창.offsetWidth;
+    창.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+    창.style.top  = (r.bottom + h + 8 > window.innerHeight ? Math.max(8, r.top - h - 4) : r.bottom + 4) + 'px';
+    메모창 = 창;
+    글칸.focus();
+
+    창.addEventListener('click', async (ev) => {
+      const b = ev.target.closest('[data-act]');
+      if (!b) return;
+
+      if (b.dataset.act === 'cancel') { 메모창닫기(); return; }
+
+      b.disabled = true;
+      try {
+        const res = await fetch(`/prescriptions/${row.id}/admin-note`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                     'X-CSRF-TOKEN': CSRF_TOKEN },
+          body: JSON.stringify({ memo: 글칸.value }),
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          ceAlert(data.message || '저장하지 못했습니다.', { title: '검수 메모', tone: 'warning' });
+          b.disabled = false;
+          return;
+        }
+
+        메모창닫기();
+        const i = grid.getData().findIndex(x => String(x.id) === String(row.id));
+        if (i >= 0) grid.setValue(i, 'admin_note', data.memo);
+        showToast(data.message, 'success');
+      } catch (err) {
+        b.disabled = false;
+        ceAlert('저장하지 못했습니다.', { title: '검수 메모', tone: 'warning' });
+      }
+    });
+  });
+
   const grid = new wwGrid({
     el: document.getElementById('rxGrid'),
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 동일).
@@ -421,6 +532,10 @@ window.HELP_TOUR_STEPS = [
       /* 검수 바로 옆 — 「검수했나」와 「되물었나」는 잇대어 읽는 값이다 (2026-09-12 지시) */
       { header: '요청 여부',     name: 'reupload',   width: 100, align: 'center',
         sortable: true, renderer: 요청칸 },
+      /* 검수 메모 — 「요청 여부」 바로 옆 (2026-10-02 지시). 눌러서 적는다.
+         주문 등록의 「검수 요청 메모」와 같은 칸이다. */
+      { header: '검수 메모',     name: 'admin_note', width: 140,
+        sortable: true, renderer: 메모칸 },
       { header: '처방유형',      name: 'acc_type',   width: 110, align: 'center', sortable: true },
       { header: '판매유형',      name: 'so_type',    width: 90,  align: 'center', sortable: true },
       { header: '주문번호',      name: 'order_no',   width: 140, sortable: true },
