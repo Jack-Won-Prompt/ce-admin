@@ -7383,16 +7383,46 @@ window.HELP_TOUR_STEPS = [
     const 단추 = document.getElementById('btnDiseaseCode');
     if (!칸 || !단추) return;
 
-    /* 코드가 비면 눌러도 소용이 없다 — 보기만 해도 알 수 있게 흐려 둔다 */
-    const 흐리기 = () => 단추.classList.toggle('is-empty', 칸.value.trim() === '');
+    /* **점을 넣어 보낸다** (2026-10-02 운영에서 드러남).
+
+       적힌 꼴이 한결같지 않다. 지금 담긴 것을 세어 보면 점이 빠진 것이 14,705장
+       이다(N319 7,706 · N318 1,140 · N312 901 · T093 619 · Q059 552 · G822 303 …).
+       저쪽은 점이 있어야 찾으므로, 그대로 보내면 「Unexpected Application Error」
+       화면이 뜬다.
+
+       KCD 코드는 영문 한 자 + 숫자 두 자, 그 뒤에 숫자가 더 있으면 점으로 끊는다. */
+    const 다듬기 = (값) => {
+      const t = String(값 || '').trim().toUpperCase().replace(/\s+/g, '');
+      const m = t.match(/^([A-Z]\d{2})(\d{1,2})$/);
+      return m ? m[1] + '.' + m[2] : t;
+    };
+
+    /* 코드 꼴인가 — 「확인불가」(24,434장)ㆍ「확인중」ㆍ「G82.x」 같은 값이 섞여 있다.
+       그런 것을 보내면 저쪽에서 오류 화면을 보게 되므로 우리가 먼저 가린다. */
+    const 코드인가 = (값) => /^[A-Z]\d{2}(\.\d{1,2})?$/.test(값);
+
+    /* 열 수 없는 자리면 흐려 둔다 — 눌러 보기 전에 알 수 있어야 한다 */
+    const 흐리기 = () => 단추.classList.toggle('is-empty', ! 코드인가(다듬기(칸.value)));
     칸.addEventListener('input', 흐리기);
     흐리기();
 
     단추.addEventListener('click', () => {
-      const 코드 = 칸.value.trim();
+      const 적힌것 = 칸.value.trim();
 
-      if (!코드) {
+      if (!적힌것) {
         ceAlert('상병코드를 먼저 입력해 주십시오.', { title: '상병코드 찾기' });
+        칸.focus();
+        return;
+      }
+
+      const 코드 = 다듬기(적힌것);
+
+      if (! 코드인가(코드)) {
+        ceAlert('「' + 적힌것 + '」은(는) 상병코드 꼴이 아니라 분류표에서 찾을 수 없습니다.
+
+'
+              + 'N31.9 처럼 영문 한 자와 숫자로 적어 주십시오.',
+                { title: '상병코드 찾기', tone: 'warning' });
         칸.focus();
         return;
       }
