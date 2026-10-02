@@ -5552,6 +5552,9 @@ class PrescriptionController extends Controller
 
     public function sendFax(Request $request, Prescription $prescription): \Illuminate\Http\JsonResponse
     {
+        /* 그림을 줄이는 동안만 메모리를 넓힌다 — 24.5MP 사진 한 장이 93MB 다 */
+        $this->메모리넓히기();
+
         $request->validate([
             'recipient_type'  => 'required|string|max:50',
             'fax_no'          => ['required', 'string', 'max:20', 'regex:/^[0-9\-]+$/'],
@@ -6091,6 +6094,9 @@ class PrescriptionController extends Controller
      */
     public function downloadDocsMerged(Prescription $prescription)
     {
+        /* 그림을 줄이는 동안만 메모리를 넓힌다 — 24.5MP 사진 한 장이 93MB 다 */
+        $this->메모리넓히기();
+
         $prescription->load(['patient', 'attachments']);
 
         $조각 = [];
@@ -6325,6 +6331,64 @@ class PrescriptionController extends Controller
      * 깨졌다고 묶음 전체를 못 내려받게 하면, 담당자는 어느 것이 문제인지 모른 채
      * 아무것도 얻지 못한다.
      */
+    /**
+     * 팩스에 담을 만큼으로 그림을 줄인다 — 줄인 GD 그림, 줄일 것이 없으면 null.
+     *
+     * **팩스에만 쓴다** (2026-10-02 지시 「묶음 내려받기는 원본으로 두고 팩스만 줄이게」).
+     * 서류 묶음 내려받기는 보관ㆍ제출용이라 원본 화질을 그대로 둔다.
+     *
+     * 팩스는 A4 를 200dpi 로 보낸다(1,654×2,339). 긴 쪽 2,400 이면 그보다 넉넉하고,
+     * 그보다 촘촘한 화소는 **보내는 쪽에서 어차피 버려진다** — 용량만 키운다.
+     *
+     * 받은 그림은 **부르는 쪽이 놓는다**(여기서 놓지 않는다) — 줄이지 않았을 때
+     * 원본을 그대로 쓰는 길과 꼴을 맞추기 위해서다.
+     */
+    private static function 팩스용으로줄이기(\GdImage $src): ?\GdImage
+    {
+        $긴쪽한도 = 2400;
+        $w = imagesx($src);
+        $h = imagesy($src);
+        $긴쪽 = max($w, $h);
+
+        if ($긴쪽 <= $긴쪽한도 || ! function_exists('imagescale')) {
+            return null;                       // 이미 넉넉하거나 줄일 길이 없다
+        }
+
+        $비율 = $긴쪽한도 / $긴쪽;
+        $작은것 = @imagescale($src, (int) round($w * $비율), (int) round($h * $비율));
+
+        return $작은것 ?: null;
+    }
+
+    /**
+     * 서류를 묶는 동안만 메모리를 넓힌다 (2026-10-02 「팩스 전송 에러」).
+     *
+     * 그림 한 장을 펼치는 데 24.5MP 면 약 93MB 다. php-fpm 한도가 128M 이라 그 한 장에서
+     * 이미 넘쳤다. 줄이고 나면 묶음 전체가 가벼워지지만, **줄이는 그 순간만**은 넓은
+     * 자리가 있어야 한다.
+     *
+     * 요청이 끝나면 되돌아간다 — 이 자리에서만 넓히고 다른 화면에는 영향이 없다.
+     * 이미 그보다 넓거나 한도가 없으면(-1) 건드리지 않는다.
+     */
+    private function 메모리넓히기(string $얼마 = '512M'): void
+    {
+        $지금 = trim((string) ini_get('memory_limit'));
+
+        if ($지금 === '' || $지금 === '-1') {
+            return;
+        }
+
+        $바이트 = fn (string $v) => (int) $v * match (strtoupper(substr($v, -1))) {
+            'G' => 1024 ** 3, 'M' => 1024 ** 2, 'K' => 1024, default => 1,
+        };
+
+        if ($바이트($지금) >= $바이트($얼마)) {
+            return;
+        }
+
+        @ini_set('memory_limit', $얼마);
+    }
+
     private function 파일을PDF로(?string $path, string $disk): ?string
     {
         if (! $path || ! Storage::disk($disk)->exists($path)) {
@@ -6347,6 +6411,14 @@ class PrescriptionController extends Controller
             if (! $size) {
                 return null;
             }
+
+            /* **여기서는 줄이지 않는다** (2026-10-02 지시 「묶음 내려받기는 원본으로
+               두고 팩스만 줄이게」).
+
+               서류 묶음은 보관ㆍ제출용이라 원본 화질이 그대로 있어야 한다. 대신 메모리로
+               터지던 것은 `메모리넓히기` 로 푼다 — 사진 열넷이 50MB 라 128M 한도를
+               넘었다(오류 기록 #23). 줄이는 일은 팩스 쪽에만 둔다
+               (`rxImageToPortraitDataUri`). */
 
             /* 가로가 길면 눕혀 담는다 — 세로 쪽에 억지로 넣으면 글씨가 작아진다 */
             $눕힐까 = $size[0] > $size[1];
@@ -6587,6 +6659,38 @@ class PrescriptionController extends Controller
             // GD로 열 수 없으면 원본 그대로
             $mime = mime_content_type($absPath) ?: 'image/jpeg';
             return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        }
+
+        /* 팩스에 담을 만큼으로 줄인다 (2026-10-02 「팩스 전송 에러」).
+
+           휴대폰으로 찍어 올린 사진이 **5712×4284(24.5MP)** 로 들어온다. 한 장이 4MB 쯤
+           이고 base64 로 바꾸면 5.3MB 다 — 열넷이면 75MB 라, 담다가 **128MB 한도를 넘어
+           터졌다**(오류 기록 #22).
+
+           팩스는 A4 를 200dpi 로 보낸다(1,654×2,339). 그보다 촘촘한 화소는 **보내는
+           쪽에서 어차피 버려진다** — 용량만 키우고 읽기 쉬워지지 않는다.
+
+           서류 묶음 내려받기는 원본 그대로 둔다(2026-10-02 지시) — 그쪽은 보관ㆍ제출용
+           이라 화질이 남아 있어야 한다. */
+        if ($작은것 = self::팩스용으로줄이기($src)) {
+            imagedestroy($src);
+            $src = $작은것;
+
+            /* 줄였으면 원본 바이트를 그대로 보낼 수 없다 — 아래 「돌릴 것도 입힐 것도
+               없다」 길로 새지 않도록, 줄인 그림을 구워 내보낸다. */
+            self::imageTune($src, $bright, $contrast);
+
+            if (imagesx($src) > imagesy($src)) {
+                $rotated = imagerotate($src, -90, 0);
+                imagedestroy($src);
+                $src = $rotated;
+            }
+
+            ob_start();
+            imagejpeg($src, null, 85);
+            imagedestroy($src);
+
+            return 'data:image/jpeg;base64,' . base64_encode((string) ob_get_clean());
         }
 
         $w = imagesx($src);
