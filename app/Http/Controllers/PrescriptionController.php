@@ -4585,6 +4585,26 @@ class PrescriptionController extends Controller
 
         activity()->causedBy(Auth::user())->performedOn($prescription)->log('검수 승인');
 
+        /* **여기서 주문 줄을 세운다** (2026-10-02 지시).
+
+           이 단추의 이름이 「주문등록 이동」이다 — 누르면 그 건이 주문 등록의 주문
+           목록에 선다. 그 뜻을 밝히는 자리가 여기다.
+
+           2026-09-22 에는 주문 등록 화면에서 **유형을 고르는 순간** 세웠다. 그런데
+           둘러보다 유형만 건드린 건에도 주문번호가 났다 — 김봉식 건이 그랬다
+           (2026-10-02 17:45:14 · 품목 0줄). 주문번호는 위드웍스ㆍ토스ㆍ팝빌ㆍ공단으로
+           나가는 대외 식별자라, 화면을 만지는 동안 저절로 태울 번호가 아니다.
+
+           유형이나 거래처가 아직이면 `OrderSync::ensure` 가 세우지 않는다 — 그때는
+           주문 등록 화면에서 채운 뒤 저장하면 선다(OrderSync::seed). 승인 자체는
+           막지 않는다. 서류 검수와 주문 진행은 다른 걸음이다. */
+        $주문 = \App\Support\OrderSync::ensure($prescription->refresh());
+
+        if ($주문) {
+            activity()->causedBy(Auth::user())->performedOn($prescription)
+                ->log('주문등록 이동 — 주문 ' . $주문->order_number . ' 세움');
+        }
+
         /* 요청한 담당자에게 되돌려 알린다 — 승인됐는지도 목록을 다시 봐야 알았다 */
         app(\App\Services\ReviewNotice::class)->tellApproved($prescription->refresh());
 

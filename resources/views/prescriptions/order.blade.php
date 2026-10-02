@@ -8790,60 +8790,19 @@ window.HELP_TOUR_STEPS = [
   document.getElementById('f-benefit-class')?.addEventListener('change', bsSyncFromSource);
   bsSyncFromSource();
 
-  /* ── 유형을 고르면 상세목록에 오더라인을 세운다 (2026-09-22 확인요청 2쪽) ──
+  /* ── 유형을 골라도 주문 줄을 세우지 않는다 (2026-10-02 지시) ──
 
-     「신규등록을 누르면 상세목록에서 새로 오더라인이 생성되어야 한다(예: 처방외 등)」는
-     요청이다. 여태 신규등록은 빈 초안만 만들고 주문번호는 병원ㆍ처방을 적어 저장할
-     때에야 났다 — 담당자는 신규등록을 누르고도 상세목록에 아무 변화가 없는 화면을
-     보았다.
+     2026-09-22 에는 유형을 고르는 것이 「이 건을 주문으로 진행한다」고 밝히는 걸음이라
+     보고, 그 자리에서 곧바로 줄을 세웠다. 그런데 실제로는 **둘러보다 유형만 건드린
+     건에도 주문번호가 났다** — 김봉식 건이 그랬다. 「주문등록 이동」을 누른 적이
+     없는데 품목 0줄짜리 주문이 상세목록에 섰다(2026-10-02 17:45:14).
 
-     유형을 고르는 것이 「이 건은 처방전인가 처방외인가」를 정하는 걸음이므로 그때
-     세운다. 이미 주문이 선 건은 다시 세우지 않는다 — 유형만 고쳐 둔다.
+     주문번호는 위드웍스ㆍ토스ㆍ팝빌ㆍ공단으로 나가는 **대외 식별자**다. 화면을 만지는
+     동안 저절로 태울 번호가 아니다. 이제 처방전 목록의 **「주문등록 이동」** 이
+     그 뜻을 밝히는 자리다(PrescriptionController::approve).
 
-     거래처가 아직이면 서버가 세우지 않고 그 까닭을 돌려준다(주문번호는 대외
-     식별자라 누구 것인지 모르는 채 태우지 않는다 · 2026-09-20 지시). */
-  let _olSeeding = false;
+     유형은 그대로 저장된다 — 값만 담기고 주문은 서지 않는다. */
 
-  document.getElementById('f-acc-add-type')?.addEventListener('change', async (ev) => {
-    const 유형 = ev.target.value;
-    if (!유형 || _olSeeding || existingOrder?.order_number) return;
-
-    _olSeeding = true;
-    try {
-      const res = await apiRequest(`/prescriptions/${RX_NUMBER}/order-line`, 'POST',
-                                   { counsel_acc_add_type: 유형 });
-
-      if (!res.success) {
-        if (res.message) showToast(res.message, 'warning', 6000);
-        return;
-      }
-
-      /* 화면이 제 주문을 알아야 한다 — 배송 정보 저장ㆍ정정ㆍ취소가 모두
-         existingOrder.id 로 주소를 만든다. 번호만 담으면 그 자리들이 깨진다. */
-      if (res.order_number) {
-        existingOrder = {
-          ...(existingOrder ?? {}),
-          id:           res.order_id ?? res.row?.id ?? existingOrder?.id ?? null,
-          order_number: res.order_number,
-        };
-      }
-
-      /* 세운 줄을 상세목록 맨 위에 얹는다. OL_ROWS 는 거르기가 딛는 바탕이라
-         함께 고친다 — 안 그러면 검색 한 번에 되돌아간다. */
-      if (res.row) {
-        const i = OL_ROWS.findIndex(r => r.order_no === res.row.order_no);
-        if (i >= 0) OL_ROWS.splice(i, 1);
-        OL_ROWS.unshift(res.row);
-        if (olGrid) olGrid.setData(OL_ROWS);
-      }
-
-      if (res.seeded && res.message) showToast(res.message, 'success', 5000);
-    } catch (e) {
-      console.error('[오더라인] 생성 실패', e);
-    } finally {
-      _olSeeding = false;
-    }
-  });
 
   /* ── 산재ㆍ자동차보험 재구매 건의 담당 의사명 ─────────────────────────
      (2026-09-14 확인요청 5쪽)
