@@ -1878,6 +1878,14 @@
           </a>
         </div>
         @endif
+        @if($vis('hospitals'))
+        <div class="menu-item {{ request()->routeIs('hospitals*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="police-station" href="{{ route('hospitals.index') }}" data-title="병원 관리">
+            @dsicon('police-station', 'ds-icon menu-icon')
+            <span>병원 관리</span>
+          </a>
+        </div>
+        @endif
         @if($vis('monitoring'))
         <div class="menu-item {{ request()->routeIs('monitoring*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="presentation-03" href="{{ route('monitoring.index') }}" data-title="시스템 모니터링">

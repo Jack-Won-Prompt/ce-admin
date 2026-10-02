@@ -409,7 +409,12 @@ Route::middleware(['auth'])->group(function () {
 
     /* 병원은 처방전마다 손으로 치던 값이다 — 조회해서 고르고, 없으면 그 자리에서
        만들어 고른다(거래처 등록 팝업과 같은 결). */
+    /* 병원 관리 (2026-10-02 지시) — 여태 조회ㆍ등록뿐이라 고칠 길이 없었다.
+       search 는 주문 등록 화면이 부르므로 /hospitals 보다 먼저 세운다. */
     Route::get( '/hospitals/search', [\App\Http\Controllers\HospitalController::class, 'search'])->name('hospitals.search');
+    Route::get( '/hospitals',        [\App\Http\Controllers\HospitalController::class, 'index'])->name('hospitals.index');
+    Route::put( '/hospitals/{hospital}', [\App\Http\Controllers\HospitalController::class, 'update'])->name('hospitals.update');
+    Route::post('/hospitals/merge',  [\App\Http\Controllers\HospitalController::class, 'merge'])->name('hospitals.merge');
     Route::post('/hospitals',        [\App\Http\Controllers\HospitalController::class, 'store'])->name('hospitals.store');
     Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
     /* 품번들의 RB(박스당 낱개 수) — 이미 저장된 줄의 박스 환산에 쓴다 */

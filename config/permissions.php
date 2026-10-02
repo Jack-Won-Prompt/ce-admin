@@ -391,6 +391,14 @@ return [
             'actions'    => ['view', 'create', 'update', 'delete'],
             'admin_only' => true,
         ],
+        /* 병원 관리 (2026-10-02 지시) — 요양기관번호가 겹치면 청구가 남의 병원으로
+           간다. 고치는 일은 담당자만 하게 두고, 보는 것은 주문을 다루는 사람에게 연다. */
+        'hospitals' => [
+            'label'   => '병원 관리',
+            'group'   => 'settings',
+            'routes'  => ['hospitals'],
+            'actions' => ['view', 'update'],
+        ],
         /* 시스템 감시 — 기계ㆍDBㆍ웹ㆍAWS 과금 (2026-10-02 지시).
            AWS 신분(계정 번호ㆍ역할)과 과금 금액이 보이는 자리라 관리자만 연다. */
         'monitoring' => [

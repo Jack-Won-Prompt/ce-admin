@@ -10125,6 +10125,9 @@ window.HELP_TOUR_STEPS = [
     if (개시 && 종료) {
       showToast(`급여 종료일을 ${종료} 로 다시 계산했습니다.`, 'info', 4000);
     }
+
+    /* 사용 시작일이 바뀌면 다음 재구매 가능일도 다시 선다 (2026-10-02 지시) */
+    if (typeof calc다음재구매 === 'function') { calc다음재구매(); }
   };
 
   // ── 종료일·다음재구매일 자동계산 ──
@@ -10167,26 +10170,48 @@ window.HELP_TOUR_STEPS = [
     const 보임 = document.getElementById('disp-renew-date');
     if (보임) 보임.textContent = fmt(nextDate);
 
-    /* 위쪽 칸이 **비어 있을 때만** 같은 값을 채운다 (2026-10-02 지시
-       「다음 재구매 가능일이 빨간 네모칸과 연결되어, 파란 네모칸으로 연결」).
+    /* 위쪽 칸은 **여기서 적지 않는다** (2026-10-02 지시).
 
-       ## 2026-09-30 결정을 어디까지 되돌리는가
+       셈이 다르다 — 위쪽은 「사용 시작일 ＋ 총 처방일수」이고, 이 함수가 세는 것은
+       「처방전 발행일 ＋ 처방기간」이다. 한때 아래쪽 값을 위쪽에 채워 넣었으나
+       그것은 **다른 날짜를 같은 칸에 적는 일**이라 걷어 냈다.
 
-       그때 이 함수가 위쪽 칸에 적던 것을 아래쪽으로 옮겼다. 까닭은 **덮어썼기**
-       때문이다 — 사용 개시일과 상관없는 날짜가 담당자가 정한 값 위에 얹혔다.
-
-       이번에는 **비어 있을 때만** 적는다. 손으로 적어 둔 값은 건드리지 않으므로
-       그때의 문제는 돌아오지 않는다. 비어 있는 칸은 어차피 재구매 제한이
-       `next_repurchase ?: repurchase_date` 로 아래쪽 값을 보고 있어
-       (RepurchaseWindow), 화면에만 안 보이던 것을 보이게 하는 셈이다.
-
-       실제로 (E)이명섭A 의 건이 그랬다 — 위쪽은 비어 있고 아래쪽만 2026-12-22 이라,
-       담당자는 재구매일이 없는 줄 알았다. */
-    const 위칸 = document.getElementById('f-next-repurchase');
-    if (위칸 && !위칸.value) {
-      위칸.value = fmt(nextDate);
-    }
+       위쪽 칸은 `calc다음재구매()` 가 맡는다. */
+    calc다음재구매();
   }
+
+  /**
+   * 다음 재구매 가능일 = **사용 시작일(사용 개시일) ＋ 총 처방일수** (2026-10-02 지시).
+   *
+   * 「하나라도 없으면 나오면 안 된다」 — 둘 중 하나라도 비어 있으면 칸을 비운다.
+   * 지어낸 날짜가 서 있으면 담당자는 그것을 공단 기준으로 읽고, 재구매 제한도 그 값을
+   * 본다(RepurchaseWindow 가 `next_repurchase` 를 먼저 본다). 모르는 것을 적어 두면
+   * 그 뒤의 판단이 모두 그 위에 선다.
+   *
+   * 손으로 고쳐 둔 값도 덮는다 — 이 칸은 두 값에서 **자동으로 서는 칸**이라고 정했다
+   * (2026-10-02). 담당자가 따로 정할 일이 있으면 두 값을 고치면 된다.
+   */
+  function calc다음재구매() {
+    const 칸 = document.getElementById('f-next-repurchase');
+    if (!칸) return;
+
+    const 시작 = document.getElementById('f-use-start')?.value;
+    const 일수 = parseInt(document.getElementById('f-days')?.value ?? '', 10);
+
+    if (!시작 || !일수 || 일수 < 1) {
+      칸.value = '';            // 하나라도 없으면 비운다
+      return;
+    }
+
+    const d = new Date(시작);
+    if (isNaN(d.getTime())) { 칸.value = ''; return; }
+
+    d.setDate(d.getDate() + 일수);
+
+    const 두자리 = (n) => String(n).padStart(2, '0');
+    칸.value = `${d.getFullYear()}-${두자리(d.getMonth() + 1)}-${두자리(d.getDate())}`;
+  }
+  window.calc다음재구매 = calc다음재구매;
 
   // ── OCR 저장 ─────────────────────────────────────────
   let _saving = false;
@@ -10234,6 +10259,9 @@ window.HELP_TOUR_STEPS = [
     if (refDaily) refDaily.textContent = daily || '-';
     if (refDays)  refDays.textContent  = days  || '-';
     if (refTotal) refTotal.textContent = total || '-';
+
+    /* 총 처방일수가 바뀌면 다음 재구매 가능일도 다시 선다 (2026-10-02 지시) */
+    if (typeof calc다음재구매 === 'function') { calc다음재구매(); }
   }
 
   /** 올릴 때 적어 둔 검수 요청 메모 — 없으면 빈 글자 */
