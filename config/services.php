@@ -177,6 +177,11 @@ return [
         'url'           => env('AGENT_URL'),
         'token'         => env('AGENT_TOKEN'),
         'send_image'    => false,
+        /* Agent 작업자의 열쇠와 모델 — 값은 DB(환경 설정 › Agent 연계)에 담는다.
+           .env 에 두지 않는 까닭은 서버를 만지지 않고 바꿀 수 있어야 하기 때문이다
+           (2026-10-02 지시). 여기 기본값은 비어 있다. */
+        'api_key'       => null,
+        'model'         => 'claude-opus-5',
     ],
 
     /*

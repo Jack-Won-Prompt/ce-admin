@@ -536,6 +536,19 @@ return [
                            'help'  => 'Agent 쪽에 같은 값이 들어가야 합니다. 이 값으로 들어오는 짐의 진위를 가립니다. 비어 있으면 보내지 않습니다.'],
             'send_image' => ['label' => 'SR 의 화면 캡처까지 보내기', 'config' => 'services.agent.send_image', 'type' => 'bool', 'width' => 1,
                              'help'  => '끄면 글만 보내고 글 안의 그림은 떼어 냅니다. 캡처에 환자 정보가 보일 수 있으니, 필요할 때만 켭니다.'],
+
+            /* Agent 작업자가 쓰는 열쇠 — .env 가 아니라 여기 담는다 (2026-10-02 지시).
+               비밀값이라 암호화해 담고 화면에는 되돌려 보내지 않는다. 이 묶음 자체가
+               admin@ce-admin.co.kr 에게만 보이므로, 그 사람 말고는 칸도 보지 못한다. */
+            'api_key'  => ['label' => 'Claude API 키', 'config' => 'services.agent.api_key', 'type' => 'password', 'width' => 3,
+                           'help'  => 'Agent 작업자가 Claude 를 부를 때 씁니다. 저장한 뒤에는 화면에 다시 나오지 않습니다 — 바꿀 때만 새로 적으십시오.'],
+            'model'    => ['label' => '쓰는 모델', 'config' => 'services.agent.model', 'type' => 'select', 'width' => 1,
+                           'options' => [
+                               'claude-opus-5'   => 'Opus 5 (가장 똑똑함)',
+                               'claude-sonnet-5' => 'Sonnet 5 (빠르고 값싸다)',
+                               'claude-haiku-4-5-20251001' => 'Haiku 4.5 (가장 값싸다)',
+                           ],
+                           'help'  => '코드를 고치는 일은 Opus 5, 분석만 하거나 건수가 많을 때는 Sonnet 5 를 권합니다.'],
         ],
     ],
     'login' => [
