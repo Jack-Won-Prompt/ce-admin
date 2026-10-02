@@ -35,6 +35,10 @@ return Application::configure(basePath: dirname(__DIR__))
            다른 미들웨어보다 바깥에 서야 한다. */
         $middleware->prependToGroup('web', \App\Http\Middleware\BreakFrameOnGuest::class);
         $middleware->appendToGroup('web', \App\Http\Middleware\LogUserActivity::class);
+        /* 응답이 얼마나 걸렸나를 분마다 모은다 (2026-10-02 지시) — 감시 화면의 「평균 응답」.
+           nginx 기본 기록 꼴에는 걸린 시간이 적히지 않아, nginx 설정을 건드리지 않고
+           우리 쪽에서 잰다. 적는 일은 응답을 내보낸 뒤(terminate)에 한다. */
+        $middleware->appendToGroup('web', \App\Http\Middleware\ResponseTimeRecorder::class);
         // 권한 그룹 기반 페이지·액션 차단 (config/permissions.php 레지스트리 기준)
         $middleware->appendToGroup('web', \App\Http\Middleware\CheckPagePermission::class);
         $middleware->alias(['admin' => \App\Http\Middleware\AdminOnly::class]);

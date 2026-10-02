@@ -667,6 +667,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/settings/withworks-source/import', [\App\Http\Controllers\WithworksSourceController::class, 'import'])->name('withworks-source.import');
     Route::get( '/settings/withworks-source/test/{갈래}', [\App\Http\Controllers\WithworksSourceController::class, 'test'])->name('withworks-source.test');
 
+    /* 시스템 감시 — 기계ㆍDBㆍ웹ㆍAWS 과금을 한 화면에서 본다 (2026-10-02 지시).
+       data 는 화면이 스스로 다시 읽는 자리다. 12초마다 읽지 않는다 — 기본 60초. */
+    Route::get('/settings/monitoring',      [\App\Http\Controllers\MonitoringController::class, 'index'])->name('monitoring.index');
+    Route::get('/settings/monitoring/data', [\App\Http\Controllers\MonitoringController::class, 'data'])->name('monitoring.data');
+
     /* 오류 기록 — 서버에서 난 잘못을 화면에서 본다 (2026-09-11 지시).
        purge 를 {errorLog} 보다 먼저 세운다 — 뒤에 두면 「purge」를 id 로 읽는다. */
     Route::get( '/settings/error-logs',              [\App\Http\Controllers\ErrorLogController::class, 'index'])->name('error-logs.index');

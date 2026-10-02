@@ -391,6 +391,15 @@ return [
             'actions'    => ['view', 'create', 'update', 'delete'],
             'admin_only' => true,
         ],
+        /* 시스템 감시 — 기계ㆍDBㆍ웹ㆍAWS 과금 (2026-10-02 지시).
+           AWS 신분(계정 번호ㆍ역할)과 과금 금액이 보이는 자리라 관리자만 연다. */
+        'monitoring' => [
+            'label'      => '시스템 감시',
+            'group'      => 'settings',
+            'routes'     => ['monitoring'],
+            'actions'    => ['view'],
+            'admin_only' => true,
+        ],
         /* 오류 기록 — 서버에서 난 잘못 (2026-09-11 지시).
            보낸 값과 쌓인 자취가 담겨 있어 아무나 볼 자리가 아니다. */
         'error-logs' => [

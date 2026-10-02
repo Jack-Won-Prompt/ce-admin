@@ -1878,6 +1878,14 @@
           </a>
         </div>
         @endif
+        @if($vis('monitoring'))
+        <div class="menu-item {{ request()->routeIs('monitoring*') ? 'active' : '' }}">
+          <a class="menu-link" data-icon="presentation-03" href="{{ route('monitoring.index') }}" data-title="시스템 감시">
+            @dsicon('presentation-03', 'ds-icon menu-icon')
+            <span>시스템 감시</span>
+          </a>
+        </div>
+        @endif
         @if($vis('error-logs'))
         <div class="menu-item {{ request()->routeIs('error-logs*') ? 'active' : '' }}">
           <a class="menu-link" data-icon="wrench" href="{{ route('error-logs.index') }}" data-title="오류 기록">
