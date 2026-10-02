@@ -6,6 +6,7 @@ use App\Models\InstitutionalNotice;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class InstitutionalNoticeCrawlerService
 {
@@ -32,6 +33,26 @@ class InstitutionalNoticeCrawlerService
 
     public function crawlAll(): array
     {
+        /* **담을 표가 없으면 긁지 않는다** (2026-10-02).
+
+           기관 공지는 표를 세우지 않은 채 메뉴와 권한만 감춰 두었는데, 긁어 오는
+           쪽은 로그인마다 그대로 돌았다. 한 사람이 들어올 때마다 공지 수십 줄이
+           「institutional_notices 가 없다」로 실패해 로그를 덮었다 — 10-02 하루에만
+           187줄이다. 그만큼 다른 오류가 묻힌다.
+
+           표를 세우면 저절로 다시 돈다. 여기서 막는 것은 「담을 곳이 없는데 굳이
+           밖에 나가 긁어 오는 일」뿐이다. */
+        if (! Schema::hasTable('institutional_notices')) {
+            Log::info('[기관 공지] institutional_notices 표가 없어 수집을 건너뜁니다');
+
+            return [
+                'MOHW' => 0, 'HIRA' => 0, 'NHIS' => 0,
+                'errors'    => ['표가 없어 수집하지 않았습니다'],
+                'from_date' => $this->fromDate->toDateString(),
+                'skipped'   => true,
+            ];
+        }
+
         $results = [
             'MOHW'      => 0,
             'HIRA'      => 0,
