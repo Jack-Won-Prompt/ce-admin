@@ -58,7 +58,7 @@
 </div>
 
 <div class="dp-hint">
-  한 주문에 두 번 이상 들어온 결제를 토스에 직접 물어 찾습니다. 우리 기록에는
+  한 주문에 두 번 이상 들어온 결제를 토스 거래 내역에서 찾습니다. 우리 기록에는
   뒤 결제가 앞 결제를 덮어 남지 않으므로, 이 목록이 보는 것은 토스의 거래 내역입니다.
   <strong>「주문 결제」</strong>는 이 주문의 결제로 기록된 건이라 환불할 수 없고,
   <strong>「초과 결제」</strong>가 중복으로 더 들어온 돈입니다. 한 번에 31일까지 조회합니다.
@@ -161,18 +161,24 @@
     renderer: { dpApproveBadge, dpStatusBadge }[c.renderer] ?? c.renderer,
   }));
 
+  /* 높이를 숫자로 준다 — 줄이 없어도 목록 자리가 그대로 선다(2026-10-02 지시).
+     'fit' 은 화면 아래까지 채우는 값이라, 한 화면에 목록이 둘이면 서로 다툰다. */
+  const 처음말 = '기간을 고르고 [조회]를 눌러 주십시오.';
+
   const grid = new wwGrid({
     el: document.getElementById('dpGrid'),
-    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
+    height: 420, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
+    emptyText: 처음말,
     columns: 조회칸,
     data: [],
   });
 
   const workGrid = new wwGrid({
     el: document.getElementById('dpWorkGrid'),
-    height: 'fit', editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
+    height: 300, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
+    emptyText: '환불 처리 내역이 없습니다.',
     columns: 처리칸,
     data: @json($workData),
   });
@@ -190,9 +196,9 @@
 
     btn.disabled = true;
     const 옛글 = btn.textContent;
-    btn.textContent = '토스에 묻는 중…';
+    btn.textContent = '조회 중…';
     요약.style.display = '';
-    요약.textContent = '토스에서 거래를 가져오는 중입니다. 몇 초 걸립니다.';
+    요약.textContent = '조회 중입니다. 몇 초 걸립니다.';
 
     try {
       const res  = await fetch(`${SCAN_URL}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
@@ -200,11 +206,15 @@
       const data = await res.json();
 
       if (!data.success) {
+        grid.emptyText = 처음말;
         grid.setData([]);
         요약.textContent = data.message || '조회하지 못했습니다.';
         return;
       }
 
+      /* 빈 표에 적을 말도 그때그때 바꾼다 — 「조회를 눌러 주십시오」가 조회한
+         뒤에도 남아 있으면, 찾아봤는데 없는 것인지 아직 안 찾은 것인지 모른다. */
+      grid.emptyText = '중복으로 들어온 결제가 없습니다.';
       grid.setData(data.rows);
 
       const 중복금액 = data.rows
@@ -220,6 +230,7 @@
           + `<span style="font-weight:400;color:var(--text-muted,#6b7280);">`
           + `(토스 거래 ${돈(data.scanned)}건 확인)</span>`;
     } catch (e) {
+      grid.emptyText = 처음말;
       grid.setData([]);
       요약.textContent = '조회하지 못했습니다. 잠시 뒤 다시 눌러 주십시오.';
     } finally {
