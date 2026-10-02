@@ -83,6 +83,25 @@ class AcquireStatusRefresher
      */
     public function 물어볼까(TossPayment $줄): bool
     {
+        /* **칸이 생기기 전에는 묻지 않는다.**
+
+           배포는 `git pull` 뒤에 `migrate` 를 돈다 — 그 사이에 이 코드는 이미 살아
+           있고 `acquire_checked_at` 칸은 아직 없다. 그대로 두면 토스를 열다섯 번 부른
+           뒤 적지 못하고 버린다. 한 번 보고 그 요청 동안 쥐고 있는다. */
+        static $칸있나 = null;
+
+        if ($칸있나 === null) {
+            try {
+                $칸있나 = \Illuminate\Support\Facades\Schema::hasColumn('toss_payments', 'acquire_checked_at');
+            } catch (\Throwable) {
+                $칸있나 = false;
+            }
+        }
+
+        if (! $칸있나) {
+            return false;
+        }
+
         if (blank($줄->payment_key) || ! $줄->매입더볼까()) {
             return false;
         }
