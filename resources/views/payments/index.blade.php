@@ -77,6 +77,52 @@
     return s;
   };
 
+  /* 카드 매입 상태 배지 (2026-10-02 지시).
+
+     취소에 걸리는 시간이 여기서 갈려서, 담당자가 「지금 취소하면 바로 되는가」를
+     한눈에 봐야 한다(토스 고객센터 안내).
+
+       매입 전 취소(전체) : 결제 당일에만 가능 · 즉시
+       매입 전 취소(부분) : 영업일 3~4일
+       매입 후 취소       : 영업일 3~4일
+
+     언제 물어본 값인지는 도움말로 붙인다 — 토스에 다시 물어 받은 값이라,
+     오래된 것을 「지금 그렇다」고 읽지 않게 한다. */
+  /* 도움말의 줄바꿈 — 글 안에 그대로 적으면 블레이드를 지나 JS 가 깨진다
+     (2026-10-02 11:26 에 주문등록 화면을 2분 멈춰 세운 그 자리다). */
+  const BR = String.fromCharCode(10);
+
+  const 매입칸 = (v, row) => {
+    const s = document.createElement('span');
+
+    if (!v || v === '해당 없음') {
+      s.textContent = '—';
+      s.style.color = 'var(--text-muted)';
+      return s;
+    }
+
+    const 빛 = {
+      warning:   ['var(--warning-light, #FFF4E5)', 'var(--warning)'],
+      success:   ['var(--primary-50)',             'var(--primary)'],
+      info:      ['var(--primary-50)',             'var(--primary)'],
+      secondary: ['var(--gray-100)',               'var(--gray-700)'],
+      muted:     ['var(--gray-100)',               'var(--text-muted)'],
+    }[row.acquire_tone] || ['var(--gray-100)', 'var(--text-muted)'];
+
+    s.textContent = v;
+    s.style.cssText = 'display:inline-flex;align-items:center;height:22px;padding:0 9px;'
+      + 'border-radius:999px;font-size:11px;font-weight:700;'
+      + 'background:' + 빛[0] + ';color:' + 빛[1] + ';';
+
+    s.title = row.acquire_at
+      ? ('토스에 ' + row.acquire_at + ' 에 물어본 값입니다.' + BR
+         + '매입 전 전체 취소는 결제 당일에만 가능하며 즉시 처리됩니다.' + BR
+         + '매입 후 취소와 부분 취소는 영업일 기준 3~4일이 걸립니다.')
+      : '아직 토스에 물어보지 않았습니다. 목록을 다시 열면 채워집니다.';
+
+    return s;
+  };
+
   const grid = new wwGrid({
     el: document.getElementById('paymentGrid'),
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
@@ -87,6 +133,7 @@
       { header: '이름',       name: 'patient',   width: 90,  sortable: true },
       { header: '결제수단',   name: 'method',    width: 100, align: 'center', sortable: true },
       { header: '상태',       name: 'status',    width: 90,  align: 'center', sortable: true },
+      { header: '매입 상태',  name: 'acquire',   width: 100, align: 'center', sortable: true, renderer: 매입칸 },
       { header: '금액',       name: 'amount',    width: 110, align: 'right', sortable: true, renderer: money },
       // 가상계좌로 받은 건만 값이 선다 — 카드는 계좌가 없다
       { header: '가상계좌은행', name: 'bank',    width: 100 },

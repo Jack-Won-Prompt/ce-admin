@@ -17,6 +17,8 @@ class TossPayment extends Model
         'status', 'amount', 'bank', 'account_number', 'customer_name',
         'due_date', 'deposited_at', 'raw_response',
         'canceled_at', 'cancel_amount', 'cancel_reason',
+        // 카드 매입 상태 (2026-10-02 지시) — 토스에 다시 물어 받은 값
+        'acquire_status', 'acquire_checked_at',
     ];
 
     protected $casts = [
@@ -26,11 +28,79 @@ class TossPayment extends Model
         'cancel_amount'=> 'integer',
         'raw_response' => 'array',
         'amount'       => 'integer',
+        'acquire_checked_at' => 'datetime',
     ];
 
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * 카드 매입 상태 — 토스가 주는 코드와 우리 말ㆍ빛깔 (2026-10-02 지시).
+     *
+     * 취소에 걸리는 시간이 여기서 갈린다(토스 고객센터 안내).
+     *
+     *   매입 전 취소(전체) : 결제 **당일에만** 가능 · 즉시
+     *   매입 전 취소(부분) : 영업일 3~4일
+     *   매입 후 취소       : 영업일 3~4일
+     */
+    public const 매입 = [
+        'READY'            => ['매입 전',    'warning'],
+        'REQUESTED'        => ['매입 요청',  'info'],
+        'COMPLETED'        => ['매입 완료',  'success'],
+        'CANCEL_REQUESTED' => ['매입 취소 요청', 'info'],
+        'CANCELED'         => ['매입 취소',  'secondary'],
+    ];
+
+    /** 카드로 받은 건인가 — 가상계좌ㆍ간편결제에는 매입이라는 걸음이 없다 */
+    public function 카드인가(): bool
+    {
+        return in_array(strtoupper((string) $this->method), ['CARD', '카드'], true)
+            || ! empty(($this->raw_response['card'] ?? null));
+    }
+
+    /**
+     * 화면에 적을 매입 상태.
+     *
+     * 아직 물어본 적이 없으면 「확인 전」이라 적는다. 승인할 때 받아 둔 사본은
+     * **바뀌지 않으므로**(운영 카드 23건이 모두 READY 였다) 그 값을 「지금 그렇다」고
+     * 읽으면 한 달 전 결제도 영영 「매입 전」이 된다.
+     *
+     * @return array{label: string, tone: string, at: ?string, stale: bool}
+     */
+    public function 매입상태(): array
+    {
+        if (! $this->카드인가()) {
+            return ['label' => '해당 없음', 'tone' => 'muted', 'at' => null, 'stale' => false];
+        }
+
+        if (! $this->acquire_checked_at) {
+            return ['label' => '확인 전', 'tone' => 'muted', 'at' => null, 'stale' => true];
+        }
+
+        [$말, $빛] = self::매입[strtoupper((string) $this->acquire_status)] ?? ['알 수 없음', 'muted'];
+
+        return [
+            'label' => $말,
+            'tone'  => $빛,
+            'at'    => $this->acquire_checked_at->format('Y-m-d H:i'),
+            'stale' => false,
+        ];
+    }
+
+    /**
+     * 더 물어볼 것이 남았나 — 매입이 끝나거나 취소되면 더 바뀌지 않는다.
+     *
+     * 끝난 값까지 되물으면 결제가 쌓일수록 토스를 부르는 횟수만 늘어난다.
+     */
+    public function 매입더볼까(): bool
+    {
+        if (! $this->카드인가()) {
+            return false;
+        }
+
+        return ! in_array(strtoupper((string) $this->acquire_status), ['COMPLETED', 'CANCELED'], true);
     }
 
     /** 상태 한글 레이블 */

@@ -51,6 +51,21 @@ class PaymentController extends Controller
         }
 
         $rows   = $query->get();
+
+        /* 카드 매입 상태를 토스에 다시 묻는다 (2026-10-02 지시).
+
+           승인할 때 받아 둔 사본은 바뀌지 않아, 그 값을 그대로 적으면 한 달 전 결제도
+           「매입 전」이라 보인다. 한 번에 몇 건만 묻고(기본 15), 매입이 끝난 건과
+           방금 물어본 건은 건너뛴다 — 목록을 열 때마다 토스를 수십 번 부르면 화면이
+           그만큼 늦는다. 못 물어도 목록은 그대로 선다. */
+        try {
+            app(\App\Services\TossPayments\AcquireStatusRefresher::class)->여럿($rows);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[토스 매입상태] 목록에서 새로 고치지 못했다', [
+                'error' => mb_substr($e->getMessage(), 0, 200),
+            ]);
+        }
+
         $extras = OrderGridExtras::forPatients($rows->pluck('order.patient_id'));
 
         $gridData = $rows->map(function (TossPayment $t) use ($extras) {
@@ -63,6 +78,12 @@ class PaymentController extends Controller
                 'patient'    => $o?->patient?->name ?? '',
                 'method'     => $t->method_label,
                 'status'     => $t->status_label,
+                /* 카드 매입 상태 — 취소에 걸리는 시간이 여기서 갈린다 (2026-10-02 지시).
+                   매입 전 전체 취소는 결제 당일에만 되고 즉시 끝난다. 매입 뒤에는
+                   영업일로 사나흘 걸린다. 언제 물어본 값인지도 함께 싣는다. */
+                'acquire'     => $t->매입상태()['label'],
+                'acquire_tone' => $t->매입상태()['tone'],
+                'acquire_at'  => $t->매입상태()['at'] ?? '',
                 'amount'     => (int) $t->amount,
                 // 가상계좌로 받은 건만 값이 선다 — 카드는 계좌가 없다
                 'bank'       => $t->bank_name,
