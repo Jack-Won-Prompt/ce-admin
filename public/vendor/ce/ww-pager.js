@@ -87,6 +87,18 @@
     let 전체 = Array.isArray(grid.data) ? grid.data.slice() : [];
     let 쪽   = 1;
 
+    /* 표가 아랫줄에 「전체 N건」을 이미 적는가 (2026-10-02 지시
+       「거래처 관리 화면 페이징 전체가 두줄로 보임」).
+
+       wwGrid 는 `footer` 가 꺼져 있지 않으면 아랫줄에 전체 건수를 적는다. 그 위에
+       쪽 줄이 또 적으면 **같은 말이 두 줄로 선다** — 담당자가 두 숫자를 견주려다
+       같은 값임을 알고서야 넘어간다.
+
+       표가 적는 쪽은 그대로 두고(이미 전체 기준으로 고쳐 두었다), 쪽 줄은 그때
+       **쪽 자리만** 적는다. 표가 아랫줄을 끈 화면에서는 쪽 줄이 건수까지 맡는다. */
+    const 표가건수적나 = grid.footer !== false
+        && (grid.footer === true || grid.footer == null || grid.footer.total !== false);
+
     const 나 = {
       get 전체수() { return 전체.length; },
       get 쪽번호() { return 쪽; },
@@ -178,9 +190,14 @@
 
       if (전체.length === 0) { 자리.style.display = 'none'; return; }
 
+      /* 표가 건수를 적고 쪽도 하나뿐이면 쪽 줄이 할 말이 없다 — 통째로 물러난다 */
+      if (표가건수적나 && 쪽수 <= 1) { 자리.style.display = 'none'; return; }
+
       자리.style.display = 'flex';
-      건수칸.textContent = '전체 ' + 전체.length.toLocaleString('ko-KR') + '건'
-        + (쪽수 > 1 ? ' · ' + 쪽 + '/' + 쪽수 + '쪽' : '');
+      건수칸.textContent = 표가건수적나
+        ? (쪽수 > 1 ? 쪽 + '/' + 쪽수 + '쪽' : '')
+        : ('전체 ' + 전체.length.toLocaleString('ko-KR') + '건'
+           + (쪽수 > 1 ? ' · ' + 쪽 + '/' + 쪽수 + '쪽' : ''));
 
       if (쪽수 <= 1) { 단추칸.innerHTML = ''; return; }
 
