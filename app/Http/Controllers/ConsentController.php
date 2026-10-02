@@ -176,6 +176,13 @@ class ConsentController extends Controller
                 ),
                 default => abort(404),
             };
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
+            /* abort() 가 정한 뜻을 그대로 보낸다 (2026-10-02).
+
+               여태 모두 삼켜 500 으로 바꿨다. 그래서 「없는 서류」(404)도 서버가
+               고장 난 것처럼 보였고, 로그에는 까닭이 빈 줄로 남아 무엇이 없는지
+               알 수 없었다. */
+            throw $e;
         } catch (\Throwable $e) {
             \Log::warning('[서명 동의] 서류를 그리지 못했습니다', [
                 'doc' => $doc, 'error' => $e->getMessage(), 'at' => $e->getFile() . ':' . $e->getLine(),
