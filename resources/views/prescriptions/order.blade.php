@@ -10166,6 +10166,26 @@ window.HELP_TOUR_STEPS = [
 
     const 보임 = document.getElementById('disp-renew-date');
     if (보임) 보임.textContent = fmt(nextDate);
+
+    /* 위쪽 칸이 **비어 있을 때만** 같은 값을 채운다 (2026-10-02 지시
+       「다음 재구매 가능일이 빨간 네모칸과 연결되어, 파란 네모칸으로 연결」).
+
+       ## 2026-09-30 결정을 어디까지 되돌리는가
+
+       그때 이 함수가 위쪽 칸에 적던 것을 아래쪽으로 옮겼다. 까닭은 **덮어썼기**
+       때문이다 — 사용 개시일과 상관없는 날짜가 담당자가 정한 값 위에 얹혔다.
+
+       이번에는 **비어 있을 때만** 적는다. 손으로 적어 둔 값은 건드리지 않으므로
+       그때의 문제는 돌아오지 않는다. 비어 있는 칸은 어차피 재구매 제한이
+       `next_repurchase ?: repurchase_date` 로 아래쪽 값을 보고 있어
+       (RepurchaseWindow), 화면에만 안 보이던 것을 보이게 하는 셈이다.
+
+       실제로 (E)이명섭A 의 건이 그랬다 — 위쪽은 비어 있고 아래쪽만 2026-12-22 이라,
+       담당자는 재구매일이 없는 줄 알았다. */
+    const 위칸 = document.getElementById('f-next-repurchase');
+    if (위칸 && !위칸.value) {
+      위칸.value = fmt(nextDate);
+    }
   }
 
   // ── OCR 저장 ─────────────────────────────────────────
@@ -14577,14 +14597,21 @@ window.HELP_TOUR_STEPS = [
 
      요양비위임장은 **고르지 않아도 늘 함께 나간다**(아래 `docs` 가 그렇게 짓는다) —
      그래서 고르는 칸이 아니라 「함께 나갑니다」로 적는다. 나머지는 고르게 둔다. */
-  const FAX_GEN_DOCS = @json(array_values(array_filter([
-      $prescription->order?->tax_invoice_status === 'issued'
-          ? ['key' => 'tax_invoice',  'label' => '세금계산서'] : null,
-      $prescription->order?->cash_receipt_status === 'issued'
-          ? ['key' => 'cash_receipt', 'label' => '현금영수증'] : null,
-      $prescription->image_path
-          ? ['key' => 'prescription', 'label' => '처방전 이미지'] : null,
-  ])));
+  @php
+    /* `@json(...)` 안에 여러 줄 배열을 그대로 넣었다가 블레이드가 깨졌다
+       (2026-10-02 17:33 · 주문 등록 500). 먼저 PHP 로 세우고 그 변수만 넘긴다. */
+    $팩스생성서류 = [];
+    if (($prescription->order?->tax_invoice_status ?? '') === 'issued') {
+        $팩스생성서류[] = ['key' => 'tax_invoice', 'label' => '세금계산서'];
+    }
+    if (($prescription->order?->cash_receipt_status ?? '') === 'issued') {
+        $팩스생성서류[] = ['key' => 'cash_receipt', 'label' => '현금영수증'];
+    }
+    if ($prescription->image_path) {
+        $팩스생성서류[] = ['key' => 'prescription', 'label' => '처방전 이미지'];
+    }
+  @endphp
+  const FAX_GEN_DOCS = @json($팩스생성서류);
 
   /* 미성년자 건에는 법정대리인 신분증도 공단에 낸다(2026-09-04 확정).
      이 파일은 첨부가 아니라 개인정보동의에 딸려 들어온다 — 그래서 첨부 목록에는
