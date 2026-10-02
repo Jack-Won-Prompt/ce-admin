@@ -1581,6 +1581,11 @@ Route::get('/docs/purchase-confirm/{patient}',
 Route::get('/m/login', [\App\Http\Controllers\MobileWebController::class, 'login'])
     ->middleware('guest')->name('m.login');
 
+/* 앱이 표를 들고 들어오는 자리 (2026-10-02 지시). guest 를 붙이지 않는다 —
+   앱이 다시 들어올 때 옛 세션이 남아 있을 수 있고, 그때도 표로 새로 세워야 한다. */
+Route::get('/m/enter', [\App\Http\Controllers\MobileWebController::class, 'enter'])
+    ->name('m.enter');
+
 Route::middleware(['auth'])->prefix('m')->name('m.')->group(function () {
     $c = \App\Http\Controllers\MobileWebController::class;
 

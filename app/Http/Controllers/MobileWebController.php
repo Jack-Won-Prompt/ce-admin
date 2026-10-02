@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 /**
@@ -28,6 +33,77 @@ class MobileWebController extends Controller
             'sso'      => \App\Support\SsoSettings::usable(),
             'password' => (bool) config('auth.password_login.web', true),
         ]);
+    }
+
+    /**
+     * 앱이 들고 온 표로 세션을 세우고 모바일 화면으로 들여보낸다 (2026-10-02 지시).
+     *
+     * 앱 화면에 결함이 나면 서버 설정(모바일 앱 › 앱 화면 방식)을 「모바일 웹」으로
+     * 두어 버틴다. 그때 앱은 자기 화면 대신 이 자리를 WebView 로 연다 — 앱은 앱
+     * 토큰을 들고 있고 `/m` 은 웹 세션을 보므로, 그 사이를 한 번 쓰는 표로 잇는다
+     * (표는 POST /api/auth/web-ticket 이 낸다).
+     *
+     * 표는 꺼내는 순간 사라진다. 뒤에 붙는 `to` 는 /m 아래만 받는다 — 밖을 받으면
+     * 남의 주소로 보내는 문이 된다.
+     */
+    public function enter(Request $request): RedirectResponse
+    {
+        $표 = (string) $request->query('ticket', '');
+        $담긴것 = $표 !== '' ? Cache::pull("m:ticket:{$표}") : null;
+
+        $user = $담긴것 ? User::find($담긴것['user_id'] ?? 0) : null;
+
+        if (! $user || ! $user->is_active) {
+            return redirect()->route('m.login')->withErrors([
+                'email' => '로그인 표가 만료되었습니다. 앱에서 다시 들어와 주십시오.',
+            ]);
+        }
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        /* 나갈 때 모바일 로그인으로 돌아가게 표를 남긴다 — 관리자 로그인 화면은
+           앱 안에서 더 낯설다(AuthController::모바일인가 와 같은 자리). */
+        $request->session()->put('login_from', 'm');
+
+        $this->남긴다($user, $request);
+
+        return redirect()->to($this->갈곳((string) $request->query('to', '')));
+    }
+
+    /** 표를 들고 들어온 자취 — 「누가 언제 앱에서 웹 화면으로 들어왔나」 */
+    private function 남긴다(User $user, Request $request): void
+    {
+        try {
+            \App\Models\UserActivityLog::create([
+                'user_id'     => $user->id,
+                'type'        => 'auth',
+                'action'      => 'app_web_enter',
+                'reason_text' => '앱에서 모바일 웹 화면으로 들어옴',
+                'menu_name'   => '모바일 웹',
+                'route_name'  => $request->route()?->getName(),
+                'url'         => \App\Models\UserActivityLog::safeUrl($request->fullUrl()),
+                'ip_address'  => $request->ip(),
+                'user_agent'  => \App\Models\UserActivityLog::safeAgent($request->userAgent()),
+            ]);
+        } catch (\Throwable $e) {
+            // 자취를 못 남겨도 들여보내는 일은 막지 않는다
+        }
+    }
+
+    /** 들여보낼 자리 — /m 아래가 아니면 모바일 첫 화면으로 */
+    private function 갈곳(string $적힌곳): string
+    {
+        if ($적힌곳 === '' || ! str_starts_with($적힌곳, '/m')) {
+            return route('m.home');
+        }
+
+        // 「//남의주소」ㆍ「/m\…」 처럼 밖으로 나가는 꼴을 막는다
+        if (str_starts_with($적힌곳, '//') || str_contains($적힌곳, '\\')) {
+            return route('m.home');
+        }
+
+        return url($적힌곳);
     }
 
     /**

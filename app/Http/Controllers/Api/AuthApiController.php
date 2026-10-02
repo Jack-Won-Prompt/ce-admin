@@ -18,6 +18,9 @@ class AuthApiController extends Controller
     private const OTP_TTL_MINUTES  = 5;
     private const OTP_MAX_ATTEMPTS = 5;
 
+    /** 모바일 웹으로 들어갈 표가 사는 시간 — 앱이 곧바로 쓰므로 짧게 둔다 */
+    private const WEB_TICKET_TTL = 120;
+
     // ── POST /api/auth/login ──────────────────────────────
     // 이메일/비밀번호 검증. 그다음은 서버 설정(설정 › 서비스 연동 설정 › 로그인)이 가른다.
     //   문자 인증 켬 → {otp_required: true, pending_token, masked_phone} (202)
@@ -170,6 +173,43 @@ class AuthApiController extends Controller
                번호를 기다린다. 서버가 알려 주어 화면이 그때만 적게 한다. */
             'otp_login'      => (bool) config('auth.otp_enabled', false),
             'chat_visible'   => ! (bool) config('mobile.chat_hidden', false),
+            /* 화면을 네이티브로 그릴지, 서버의 모바일 웹을 띄울지 (2026-10-02 지시).
+               앱 화면에 결함이 나면 스토어 심사를 기다리는 동안 이 값으로 버틴다 —
+               「web」이면 앱이 /m 화면을 WebView 로 띄우고, 고친 것은 서버 배포만으로
+               닿는다. 값이 없으면 네이티브다 — 기본은 늘 네이티브여야 한다. */
+            'ui_mode'        => config('mobile.ui_mode') === 'web' ? 'web' : 'native',
+        ]);
+    }
+
+    // ── POST /api/auth/web-ticket ─────────────────────────
+    /**
+     * 모바일 웹으로 들어갈 표를 낸다 (2026-10-02 지시).
+     *
+     * 앱은 앱 토큰(Sanctum)을 들고 있고, `/m` 화면은 **웹 세션 쿠키**를 본다.
+     * 토큰을 WebView 에 끼워 넣을 수는 없으므로, 한 번만 쓰는 표를 내어 주고
+     * WebView 가 그 표를 들고 `/m/enter` 를 열면 그 자리에서 세션이 선다.
+     *
+     * 표는 두 분만 살고 꺼내는 순간 사라진다. 가로채도 두 번은 쓸 수 없다.
+     * 로그인 자체는 앱이 하던 대로 한다 — Microsoft 는 앱 안에 띄운 WebView
+     * 로그인을 막으므로, 그 길을 WebView 에 옮기지 않는다.
+     */
+    public function webTicket(Request $request): JsonResponse
+    {
+        $갈곳 = (string) $request->input('to', '');
+
+        $표 = Str::random(64);
+
+        \Illuminate\Support\Facades\Cache::put("m:ticket:{$표}", [
+            'user_id' => $request->user()->id,
+        ], self::WEB_TICKET_TTL);
+
+        return response()->json([
+            'success'    => true,
+            'url'        => route('m.enter', array_filter([
+                'ticket' => $표,
+                'to'     => $갈곳 !== '' ? $갈곳 : null,
+            ])),
+            'expires_in' => self::WEB_TICKET_TTL,
         ]);
     }
 

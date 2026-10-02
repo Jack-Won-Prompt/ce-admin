@@ -78,6 +78,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout',    [AuthApiController::class, 'logout']);
         Route::get('/me',         [AuthApiController::class, 'me']);
         Route::post('/fcm-token', [AuthApiController::class, 'updateFcmToken']);
+        /* 모바일 웹 화면으로 들어갈 한 번 쓰는 표 (2026-10-02 지시) —
+           앱 화면 방식이 「모바일 웹」일 때 WebView 가 이 표로 /m/enter 를 연다 */
+        Route::post('/web-ticket', [AuthApiController::class, 'webTicket']);
     });
 
     // 주문
