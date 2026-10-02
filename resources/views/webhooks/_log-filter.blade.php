@@ -11,12 +11,15 @@
   <input type="hidden" name="tab" value="logs">
 
   <div class="ds-filter-fields">
-    <div class="ds-filter-field">
+    {{-- 기간은 두 칸을 쓴다 — 날짜 둘과 「~」가 한 칸에 들어가면 서로 눌려
+         「2026-06-01」과 달력 아이콘이 잘린다(2026-10-02 지시).
+         폭을 손으로 적지 않고 표준 틀(ds-field-range)에 맡긴다. --}}
+    <div class="ds-filter-field span-2">
       <label class="ds-field-label">기간</label>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <input type="date" name="log_from" value="{{ $logFrom }}" class="form-control" style="width:150px;">
+      <div class="ds-field-range">
+        <input type="date" name="log_from" value="{{ $logFrom }}" class="form-control">
         <span class="ds-field-sep">~</span>
-        <input type="date" name="log_to" value="{{ $logTo }}" class="form-control" style="width:150px;">
+        <input type="date" name="log_to" value="{{ $logTo }}" class="form-control">
       </div>
     </div>
     <div class="ds-filter-field">
@@ -45,7 +48,9 @@
         <option value="fail" @selected($logResult === 'fail')>실패</option>
       </select>
     </div>
-    <div class="ds-filter-field" style="flex:1;min-width:200px;">
+    {{-- 필터 줄은 아홉 칸 그리드다 — flex:1 은 아무 일도 하지 않아 검색어가
+         한 칸(1/9)으로 눌려 있었다. 칸 수로 적는다. --}}
+    <div class="ds-filter-field span-3">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="log_search" value="{{ $logSearch }}" class="form-control"
              placeholder="이벤트 · 주문번호 · 주소 · 본문">

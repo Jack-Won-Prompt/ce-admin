@@ -47,7 +47,8 @@
         @endforeach
       </select>
     </div>
-    <div class="ds-filter-field" style="flex:1;min-width:220px;">
+    {{-- 아홉 칸 그리드라 flex:1 은 먹지 않는다 — 칸 수로 적는다 --}}
+    <div class="ds-filter-field span-3">
       <label class="ds-field-label">검색어</label>
       <input type="text" name="search" value="{{ $search }}" class="form-control"
              placeholder="웹훅 명 · 이벤트 · 주소">
@@ -69,13 +70,13 @@
     {{-- 로그는 옆 탭이다 (2026-09-10 지시). 낱장으로 넘어가지 않고 이 자리에 박힌다 —
          정의를 고치다 「그래서 실제로 왔나」를 볼 때 화면을 떠나지 않아도 된다. --}}
     <div class="pnl-tabs">
-      <button type="button" id="whTabList" class="pnl-tab {{ $tab === 'logs' ? '' : 'active' }}" onclick="whTab('list')">
-        <i class="fa-solid fa-arrows-rotate"></i> 웹훅 목록
-        <span class="pnl-tab-cnt">(총 {{ count($gridData) }}건)</span>
-      </button>
       <button type="button" id="whTabLogs" class="pnl-tab {{ $tab === 'logs' ? 'active' : '' }}" onclick="whTab('logs')">
         <i class="fa-solid fa-clock-rotate-left"></i> 전송·수신 로그
         <span class="pnl-tab-cnt">(총 {{ $logCounts['all'] }}건)</span>
+      </button>
+      <button type="button" id="whTabList" class="pnl-tab {{ $tab === 'logs' ? '' : 'active' }}" onclick="whTab('list')">
+        <i class="fa-solid fa-arrows-rotate"></i> 웹훅 목록
+        <span class="pnl-tab-cnt">(총 {{ count($gridData) }}건)</span>
       </button>
       <span style="margin-left:auto;gap:6px;align-items:center;display:{{ $tab === 'logs' ? 'none' : 'flex' }};" id="whListTools">
         @perm('webhooks', 'create')
