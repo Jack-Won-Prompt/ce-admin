@@ -53,7 +53,10 @@ class DuplicatePaymentController extends Controller
     private static function 조회칸(): array
     {
         return [
-            ['header' => '주문번호',  'name' => 'order_number', 'width' => 160],
+            /* 맨 앞에 둔다 — 누르면 주문 관리가 새 탭으로 열리며 그 주문만 조회된다
+               (2026-10-02 지시). 그리는 일은 화면이 한다(dpOrderLink). */
+            ['header' => '주문번호',  'name' => 'order_number', 'width' => 170,
+             'renderer' => 'dpOrderLink'],
             ['header' => '고객',      'name' => 'patient',      'width' => 100, 'sortable' => true],
             ['header' => '승인 시각', 'name' => 'approved_at',  'width' => 130, 'sortable' => true],
             ['header' => '수단',      'name' => 'method',       'width' => 90,  'align' => 'center'],
@@ -81,7 +84,8 @@ class DuplicatePaymentController extends Controller
     {
         return [
             ['header' => '올린 때',   'name' => 'requested_at', 'width' => 130, 'sortable' => true],
-            ['header' => '주문번호',  'name' => 'order_number', 'width' => 160],
+            ['header' => '주문번호',  'name' => 'order_number', 'width' => 170,
+             'renderer' => 'dpOrderLink'],
             ['header' => '고객',      'name' => 'patient',      'width' => 100, 'sortable' => true],
             ['header' => '금액',      'name' => 'amount',       'width' => 100, 'align' => 'right', 'editor' => 'number'],
             ['header' => '상태',      'name' => 'status_label', 'width' => 100, 'align' => 'center',

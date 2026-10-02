@@ -86,6 +86,27 @@
 
   /* ── 칸을 그리는 함수들 — 서버는 이름만 주고 여기서 바꿔 끼운다 ──────── */
 
+  /* 주문번호를 누르면 주문 관리가 새 탭으로 열리며 그 주문만 조회된다
+     (2026-10-02 지시).
+
+     `data-ce-tab` 을 붙이면 워크스페이스가 가로채 탭을 연다 — 지금 보던 목록이
+     그대로 남는다(layouts/app 의 위임 처리). 액자 밖이면 브라우저 새 탭이 된다.
+
+     날짜는 주지 않는다. 주문 관리는 date 가 있으면 그날로 좁히는데, 중복 결제는
+     며칠 지난 건도 올라오므로 날짜를 걸면 빈 목록이 나온다. */
+  function dpOrderLink(value) {
+    if (!value || value === '-') return null;
+
+    const a = document.createElement('a');
+    a.href = '/orders?q=' + encodeURIComponent(value);
+    a.dataset.ceTab  = '주문 관리 · ' + value;
+    a.dataset.ceIcon = 'bx-cart';
+    a.textContent = value;
+    a.style.cssText = 'color:var(--primary,#2563eb);text-decoration:underline;cursor:pointer;';
+    a.title = '주문 관리에서 이 주문을 엽니다';
+    return a;
+  }
+
   function dpKindBadge(value, row) {
     const b = document.createElement('span');
     b.className = 'dp-badge ' + (value === 'ledger' ? 'is-ledger' : 'is-extra');
@@ -153,12 +174,12 @@
 
   const 조회칸 = @json($scanColumns).map(c => ({
     ...c,
-    renderer: { dpKindBadge, dpRefundBadge, dpStatusBadge }[c.renderer] ?? c.renderer,
+    renderer: { dpKindBadge, dpRefundBadge, dpStatusBadge, dpOrderLink }[c.renderer] ?? c.renderer,
   }));
 
   const 처리칸 = @json($workColumns).map(c => ({
     ...c,
-    renderer: { dpApproveBadge, dpStatusBadge }[c.renderer] ?? c.renderer,
+    renderer: { dpApproveBadge, dpStatusBadge, dpOrderLink }[c.renderer] ?? c.renderer,
   }));
 
   /* 높이를 숫자로 준다 — 줄이 없어도 목록 자리가 그대로 선다(2026-10-02 지시).
