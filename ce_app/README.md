@@ -20,14 +20,24 @@ A new Flutter project.
 
 꾸러미 이름이 달라 **한 폰에 둘을 같이 두고 오갈 수 있다.**
 
-```bash
-# 운영판 — 스토어에 올릴 것
-flutter build appbundle --release --flavor prod \
-  --dart-define=API_BASE_URL=https://www.ceadmin.co.kr/api
+엔드포인트는 **75.2.99.52 하나를 쓴다** (2026-10-02 지시). `constants.dart` 의
+기본값도 그것이라, `--dart-define` 을 빠뜨려도 운영을 본다.
 
-# 개발판 — 사내 시험용
+```bash
+# 찍기 전에 반드시 — 지우지 않으면 AGP 가 옛 libapp.so 를 그대로 담는다
+rm -rf android/.gradle
+
+# 운영판
+flutter build apk --release --flavor prod \
+  --dart-define=API_BASE_URL=https://75.2.99.52/api
+
+# 스토어에 올릴 때(도메인이 정해지면 그 주소로)
+flutter build appbundle --release --flavor prod \
+  --dart-define=API_BASE_URL=https://75.2.99.52/api
+
+# 개발판 — 사내 시험용(같은 서버를 보되 꾸러미와 스킴만 다르다)
 flutter build apk --release --flavor dev \
-  --dart-define=API_BASE_URL=https://www.ceadmin.co.kr/api \
+  --dart-define=API_BASE_URL=https://75.2.99.52/api \
   --dart-define=SSO_SCHEME=ceadmin-dev
 ```
 

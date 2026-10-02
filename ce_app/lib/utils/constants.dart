@@ -4,18 +4,21 @@
 class AppConstants {
 
   // ── API ──────────────────────────────────────────
-  /// 개발·검증 서버. 운영 도메인은 아직 정해지지 않았다.
-  static const String baseUrlDev = 'https://www.ceadmin.co.kr/api';
+  /// 앱이 붙을 서버의 기본값 — **운영**이다 (2026-10-02 지시: 모두 75.2.99.52 사용).
+  ///
+  /// 여태 이 자리가 `www.ceadmin.co.kr` 이었다. 그러면 `--dart-define` 을 빠뜨린
+  /// 빌드가 **조용히 다른 서버를 보는 판**이 된다 — 폰에서는 멀쩡해 보이고,
+  /// 자료가 없다는 것만 이상하게 비친다. 기본값을 쓰는 서버로 맞춰 둔다.
+  static const String baseUrlDev = 'https://75.2.99.52/api';
 
   /// 앱이 붙을 서버.
   ///
-  /// 빌드할 때 골라 넣는다. 아무것도 넣지 않으면 개발 서버로 간다 —
-  /// 운영 도메인이 정해지기 전까지 그것이 유일한 서버이기 때문이다.
+  /// 빌드할 때 골라 넣을 수 있다. 넣지 않으면 위의 기본값(운영)으로 간다.
   ///
-  ///   flutter build appbundle --release   ///     --dart-define=API_BASE_URL=https://{운영도메인}/api
+  ///   flutter build apk --release --flavor prod   ///     --dart-define=API_BASE_URL=https://75.2.99.52/api
   ///
-  /// 예전에는 이 값이 코드에 박혀 있었다. 그러면 스토어에 올린 앱은 서버가
-  /// 바뀌어도 옛 주소를 계속 본다 — 새 판을 올려야만 옮겨진다.
+  /// 코드에 박아 두지 않는 까닭은, 스토어에 올린 앱이 서버가 바뀌어도 옛 주소를
+  /// 계속 보기 때문이다 — 그때는 새 판을 올려야만 옮겨진다.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: baseUrlDev,
