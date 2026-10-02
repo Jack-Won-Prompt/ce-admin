@@ -65,6 +65,7 @@ class MobileWebController extends Controller
         /* 나갈 때 모바일 로그인으로 돌아가게 표를 남긴다 — 관리자 로그인 화면은
            앱 안에서 더 낯설다(AuthController::모바일인가 와 같은 자리). */
         $request->session()->put('login_from', 'm');
+        $request->session()->put('ui', 'm');
 
         $this->남긴다($user, $request);
 

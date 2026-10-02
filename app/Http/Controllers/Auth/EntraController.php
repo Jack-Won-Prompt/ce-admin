@@ -236,6 +236,9 @@ class EntraController extends Controller
             return redirect()->intended(route('dashboard'));
         }
 
+        /* 나갈 때까지 남는 표 — 로그아웃이 리퍼러에 기대지 않게 한다 (2026-10-02 지시) */
+        $request->session()->put('ui', 'm');
+
         $가려던곳 = (string) $request->session()->pull('url.intended', '');
 
         return redirect()->to(
@@ -280,7 +283,8 @@ class EntraController extends Controller
         /* 끊기 전에 어디서 쓰던 사람인지 봐 둔다 (2026-09-30 지시).
            Microsoft 로그아웃은 미리 등록해 둔 한 주소(관리자 로그인)로만 돌아올 수
            있다. 그 자리에서 모바일 로그인으로 넘겨주려면 표가 하나 있어야 한다. */
-        $모바일 = $request->session()->get('login_from') === 'm'
+        $모바일 = $request->session()->get('ui') === 'm'
+            || $request->session()->get('login_from') === 'm'
             || str_starts_with((string) $request->headers->get('referer'), url('/m'));
 
         Auth::logout();

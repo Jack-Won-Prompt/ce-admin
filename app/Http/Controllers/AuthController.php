@@ -73,6 +73,11 @@ class AuthController extends Controller
             return redirect()->intended(route('workspace'));
         }
 
+        /* 모바일로 들어왔다는 표를 세션에 남긴다 (2026-10-02 지시).
+           나갈 때 모바일 로그인으로 돌려보내려면 그때까지 남아 있어야 한다 —
+           리퍼러만 보면 그것이 없는 브라우저ㆍ설정에서 관리자 로그인으로 떨어진다. */
+        $request->session()->put('ui', 'm');
+
         $가려던곳 = (string) $request->session()->pull('url.intended', '');
 
         return redirect()->to(
@@ -323,7 +328,8 @@ class AuthController extends Controller
         /* 모바일 웹에서 나갔으면 모바일 로그인으로 돌려보낸다 (2026-09-30 지시).
            SSO 길은 EntraController::logout 이 같은 일을 한다 — 두 길이 갈리면
            한쪽만 고쳐져 어긋난다. */
-        $모바일 = $request->session()->get('login_from') === 'm'
+        $모바일 = $request->session()->get('ui') === 'm'
+            || $request->session()->get('login_from') === 'm'
             || str_starts_with((string) $request->headers->get('referer'), url('/m'));
 
         Auth::logout();
