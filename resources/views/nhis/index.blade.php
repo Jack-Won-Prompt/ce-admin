@@ -428,9 +428,14 @@
     completed:  'is-done',
   };
 
-  function claimStatusChip(row) {
-    const 키   = row.nhis_status_key || 'new';
-    const 이름 = CLAIM_STATUSES[키] || row.nhis_status || '-';
+  /* 이름으로도 자리를 되찾는다 — 바꾼 뒤 그 줄만 다시 그릴 때, 칸에 담기는 것은
+     이름뿐이다. 열쇠만 보고 그리면 바꾼 것이 화면에 비치지 않는다. */
+  const CLAIM_KEY_BY_LABEL = Object.fromEntries(
+    Object.entries(CLAIM_STATUSES).map(([k, v]) => [v, k]));
+
+  function claimStatusChip(row, v) {
+    const 키   = CLAIM_KEY_BY_LABEL[v] || row.nhis_status_key || 'new';
+    const 이름 = CLAIM_STATUSES[키] || v || row.nhis_status || '-';
 
     const chip = document.createElement('span');
     chip.className = 'claim-chip ' + (CLAIM_TONE[키] || 'is-new') + (CLAIM_CAN_EDIT ? ' is-editable' : '');
@@ -500,8 +505,8 @@
         const 자료 = grid.getData();
         const i = 자료.findIndex(x => String(x.id) === String(chip.dataset.orderId));
         if (i >= 0) {
-          /* 열쇠를 먼저 바꾼다 — 칸을 다시 그릴 때 칩이 그 값을 보고 빛깔을 고른다 */
-          자료[i].nhis_status_key = data.status;
+          /* 칸에 이름을 적으면 칩이 그 이름으로 자리를 되찾아 빛깔까지 다시 고른다
+             (CLAIM_KEY_BY_LABEL). 손에 쥔 자료는 복사본일 수 있어 믿지 않는다. */
           grid.setValue(i, 'nhis_status', data.label);
         }
         showToast(data.message, 'success');
@@ -614,7 +619,7 @@
         header: '청구 상태', name: 'nhis_status', width: 110, align: 'center', sortable: true,
         renderer: (v, row) => row.amend_line
           ? document.createTextNode(String(v ?? ''))
-          : claimStatusChip(row),
+          : claimStatusChip(row, v),
       },
 
       /* 네 화면이 함께 쓰던 칸을 여기에도 세운다(요청서 3쪽 — 「모든 화면의 항목이
