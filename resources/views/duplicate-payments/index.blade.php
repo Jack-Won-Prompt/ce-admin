@@ -188,7 +188,7 @@
 
   const grid = new wwGrid({
     el: document.getElementById('dpGrid'),
-    height: 620, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
+    height: 780, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
     emptyText: 처음말,
     columns: 조회칸,
@@ -197,7 +197,7 @@
 
   const workGrid = new wwGrid({
     el: document.getElementById('dpWorkGrid'),
-    height: 360, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
+    height: 240, editable: false, rowCheckbox: false, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
     emptyText: '결제 취소 내역이 없습니다.',
     columns: 처리칸,
