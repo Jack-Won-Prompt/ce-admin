@@ -75,7 +75,7 @@ class DuplicatePaymentController extends Controller
 
             ['header' => '결제키',   'name' => 'payment_key',  'width' => 240],
             ['header' => '결제 취소', 'name' => 'act',          'width' => 130, 'align' => 'center',
-             'renderer' => 'dpRefundBadge'],
+             'renderer' => 'dpCancelBadge'],
         ];
     }
 
