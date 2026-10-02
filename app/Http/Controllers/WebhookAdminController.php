@@ -81,7 +81,9 @@ class WebhookAdminController extends Controller
             'provider'  => $request->input('provider', ''),
             'direction' => $request->input('direction', ''),
             'search'    => $request->input('search'),
-            'tab'       => $request->input('tab') === 'logs' ? 'logs' : 'list',
+            /* 처음 열면 전송·수신 로그가 선다 (2026-10-02 지시) — 이 화면에서
+               자주 보는 것은 「그래서 실제로 왔나」이고, 웹훅 정의는 어쩌다 고친다. */
+            'tab'       => $request->input('tab') === 'list' ? 'list' : 'logs',
         ] + $this->로그자료($request));
     }
 

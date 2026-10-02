@@ -55,7 +55,8 @@
     </div>
   </div>
   <div class="ds-filter-actions">
-    <a href="{{ route('webhooks.index') }}" class="ds-btn">초기화</a>
+    {{-- 기본 탭이 로그라, tab 을 달지 않으면 초기화가 다른 탭으로 데려간다 --}}
+    <a href="{{ route('webhooks.index', ['tab' => 'list']) }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     <button type="button" class="ds-btn" onclick="window.__whGrid?.downloadExcel()">엑셀 다운</button>
   </div>

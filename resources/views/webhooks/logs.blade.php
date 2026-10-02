@@ -14,7 +14,9 @@
 <div class="ds-grid-section">
   <div class="ds-grid-card">
     <div class="pnl-tabs">
-      <a href="{{ route('webhooks.index') }}" class="pnl-tab"
+      {{-- 기본 탭이 로그가 되었다 — tab 을 달지 않으면 「웹훅 목록」을 눌러도
+           로그로 돌아온다 (2026-10-02). --}}
+      <a href="{{ route('webhooks.index', ['tab' => 'list']) }}" class="pnl-tab"
          style="text-decoration:none;">
         <i class="fa-solid fa-arrows-rotate"></i> 웹훅 목록
       </a>
