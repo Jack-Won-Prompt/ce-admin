@@ -524,6 +524,38 @@ window.HELP_TOUR_STEPS = [
       },
 
       {
+        /* 공단 팩스 — 보냈는가, 닿았는가 (2026-10-03 지시).
+
+           여태 이 목록에 팩스 자리가 없었다. 「공단 팩스 전송한 상태가 주문 관리에서
+           확인 가능한가요?」 — 가능하지 않았다. 보냈는지 알려면 건마다 상세로 들어가
+           팩스 창을 열거나 발송 이력 화면으로 건너가야 했다.
+
+           「보냈다」가 아니라 **「닿았다」**를 적는다. 팝빌은 상태 3(완료)이라도
+           결과코드 100 이라야 닿은 것이다 — 보낸 것만 세면 실패한 건이 보낸 것으로
+           읽힌다.
+
+           **두 번 넘게 닿은 건은 주황으로 세운다.** 같은 서류가 여러 곳에 나간 일이
+           실제로 있었다((E)최우용 · 2026-10-02 · 중구지사ㆍ마포지사ㆍ그리고 지사 표에
+           없는 번호 하나). 등록신청서에는 주민등록번호와 서명이 들어간다. */
+        header: '공단 팩스', name: 'nhis_fax', width: 190, sortable: true,
+        renderer: (v, row) => {
+          const s = document.createElement('span');
+          s.textContent = v || '';
+
+          if (!v) { s.style.color = 'var(--gray-400)'; return s; }
+
+          s.style.fontWeight = '600';
+          if (row.nhis_fax_state === 'many')      { s.style.color = '#B54708'; }  // 여러 곳에 나갔다
+          else if (row.nhis_fax_state === 'fail') { s.style.color = 'var(--danger)'; }
+          else                                    { s.style.color = 'var(--primary)'; }
+
+          /* 칸보다 긴 글은 오른쪽이 잘린다 — 마우스를 얹으면 전문이 보이게 둔다 */
+          s.title = v;
+          return s;
+        },
+      },
+
+      {
         /* 파일 — 몇 장인지 세우고, 누르면 골라 팩스로 보낸다.
            여태 건마다 상세로 들어가야 했다. 위드웍스 차례(ceWwCols) 앞에 둔다 —
            그 뒤는 여섯 화면이 같은 순서로 쓰는 자리라 끼어들면 약속이 흔들린다.

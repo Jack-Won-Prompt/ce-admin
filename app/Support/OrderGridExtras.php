@@ -976,6 +976,76 @@ class OrderGridExtras
     }
 
     /**
+     * 「공단 팩스」 칸의 값 — 처방전마다 한 번에 센다 (2026-10-03 지시).
+     *
+     * 「공단 팩스 전송한 상태가 주문 관리에서 확인 가능한가요?」 — 보이지 않았다.
+     * 주문 관리에는 팩스 칸이 아예 없었고, `orders.latest_fax_log_id` 는 다른 표
+     * (`nhis_fax_logs`)를 가리키는 데다 적는 코드도 없다.
+     *
+     * 팩스 이력은 **처방전에 붙는다**(`fax_histories` 에 `order_id` 칸이 없다).
+     * 공단에 내는 서류가 처방전에 딸린 것이라 그렇다. 그래서 처방전으로 모아
+     * 주문 줄에 얹는다 — 한 처방전에 원 주문과 추가 주문이 함께 서면 둘 다 같은
+     * 값을 든다. 같은 서류가 그 처방전에서 나간 것이니 맞다.
+     *
+     * **닿았는지는 결과코드가 정한다.** 팝빌은 상태 3(완료)이라도 결과코드 100 이라야
+     * 닿은 것이다 — 2026-09-30 에 성공을 실패로 적었던 그 잣대다.
+     *
+     * @param  iterable  $처방번호들
+     * @return array<int, array{state: string, text: string}>
+     */
+    public static function 공단팩스칸($처방번호들): array
+    {
+        $ids = collect($처방번호들)->filter()->unique()->values();
+
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        $표 = [];
+
+        foreach (\App\Models\FaxHistory::whereIn('prescription_id', $ids)
+                    ->orderBy('id')->get() as $f) {
+            $pid = (int) $f->prescription_id;
+            $닿음 = (int) $f->popbill_result === 100;
+
+            $표[$pid] ??= ['ok' => 0, 'fail' => 0, 'last' => null, 'lastOk' => null];
+            $표[$pid][$닿음 ? 'ok' : 'fail']++;
+            $표[$pid]['last'] = $f;
+            if ($닿음) {
+                $표[$pid]['lastOk'] = $f;
+            }
+        }
+
+        $값 = [];
+
+        foreach ($표 as $pid => $것) {
+            /* 닿은 것이 있으면 그것이 답이다. 하나도 못 닿았으면 실패로 적는다 —
+               「보냈다」가 아니라 「닿았다」가 담당자가 알아야 하는 것이다. */
+            $기준 = $것['lastOk'] ?? $것['last'];
+            $때   = $기준?->created_at?->format('m-d H:i') ?? '';
+            $곳   = (string) ($기준?->fax_no ?: collect($기준?->receivers)->pluck('rcv')->implode(', '));
+
+            if ($것['ok'] > 0) {
+                /* 두 번 넘게 닿은 건은 눈에 띄어야 한다 — 같은 서류가 여러 곳에 나간
+                   일이 실제로 있었다((E)최우용 · 2026-10-02 · 세 곳). */
+                $값[$pid] = [
+                    'state' => $것['ok'] > 1 ? 'many' : 'ok',
+                    'text'  => ($것['ok'] > 1 ? '전송 ' . $것['ok'] . '건 · ' : '전송 완료 · ')
+                             . $때 . ($곳 !== '' ? ' · ' . $곳 : ''),
+                ];
+                continue;
+            }
+
+            $값[$pid] = [
+                'state' => 'fail',
+                'text'  => '전송 실패 · ' . $때 . ($곳 !== '' ? ' · ' . $곳 : ''),
+            ];
+        }
+
+        return $값;
+    }
+
+    /**
      * 「파일」ㆍ「파일 상세」 두 칸의 값 — 처방전마다 한 번에 센다 (2026-09-30 지시).
      *
      * 주문 관리 목록에만 있던 셈이다. 주문 등록 화면의 「주문 목록」 탭에도 같은 칸을

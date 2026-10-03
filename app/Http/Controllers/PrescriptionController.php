@@ -3205,6 +3205,30 @@ class PrescriptionController extends Controller
             ->latest()
             ->first();
 
+        /* 이미 **닿은** 전송 (2026-10-03 지시).
+         *
+         * 같은 건을 거듭 보내는 일이 있었다. (E)최우용 건(RX-20261002-071)이 그랬다 —
+         * 16:44 에 공단 번호로 보냈다가 실패(513)하자, 손으로 번호를 바꿔 세 번 더
+         * 보냈고 **세 번 다 닿았다**. 중구지사ㆍ마포지사ㆍ그리고 지사 표에 없는 번호
+         * 하나다. 등록신청서에는 주민번호와 서명이 들어간다.
+         *
+         * 보내기 전에 「이미 닿은 전송이 있다」고 알린다. 막지는 않는다 — 두 곳에
+         * 내야 하는 건이 있을 수 있고, 그것을 가릴 잣대가 우리에게 없다.
+         *
+         * **닿은 것만 센다.** 팝빌은 상태 3(완료)이라도 결과코드 100 이라야 닿은
+         * 것이다(2026-09-30 에 바로잡은 그 잣대다). 실패한 전송을 세면 번호를 고쳐
+         * 다시 보내는 정상 걸음마다 물어, 담당자가 확인창을 눈으로 넘기게 된다. */
+        $닿은팩스 = \App\Models\FaxHistory::where('prescription_id', $prescription->id)
+            ->where('popbill_result', 100)
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($f) => [
+                'at'    => $f->created_at?->format('m-d H:i'),
+                'no'    => (string) ($f->fax_no ?: collect($f->receivers)->pluck('rcv')->implode(', ')),
+                'who'   => (string) (collect($f->receivers)->pluck('rcvnm')->filter()->implode(', ') ?: '기타'),
+                'docs'  => (string) $f->title,
+            ])->values();
+
         /* tuneKey 가 있는 문서만 밝기ㆍ명암을 맞출 수 있다. 우리가 받아 둔 그림이라야
            고쳐 적을 자리가 있다 — 시스템이 만든 서류나 서명 그림에는 그 자리가 없다.
 
@@ -3440,7 +3464,7 @@ class PrescriptionController extends Controller
             '주문줄들', '처방총계', '이미주문', '남은수량', '원주문품목',
             'tossConfigured', 'kakaoConfigured', 'kakaoTemplates', 'smsTemplates',
             'memosData', 'prevCounselings', 'prevCounselingsData',
-            'lastFaxHistory', 'attachmentsJson', 'allDocsJson', 'patientsJson',
+            'lastFaxHistory', '닿은팩스', 'attachmentsJson', 'allDocsJson', 'patientsJson',
             'orderManagers', 'assignables', 'privacyState',
             'orderListRows', 'orderListTotal', 'orderListLimit',
             '입력검수'

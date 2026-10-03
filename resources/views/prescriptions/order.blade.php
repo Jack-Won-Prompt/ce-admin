@@ -14640,6 +14640,16 @@ window.HELP_TOUR_STEPS = [
   @endphp
   const FAX_GEN_DOCS = @json($팩스생성서류);
 
+  /* 이 건에서 **이미 닿은** 팩스 (2026-10-03 지시).
+
+     보내기 전에 「이미 보냈다」고 알리는 데 쓴다(sendFax). 닿은 것만 담는다 —
+     결과코드 100 이라야 닿은 것이다. 보내고 나면 이 자리에 한 줄을 더해, 창을
+     닫지 않고 또 보내는 걸음에도 같은 물음이 선다. */
+  const FAX_SENT_OK = @json($닿은팩스 ?? []);
+
+  /** 번호를 숫자만 남겨 견준다 — 「02-3275-8350」과 「0232758350」은 같은 곳이다 */
+  const _숫자만 = (v) => String(v ?? '').replace(/[^0-9]/g, '');
+
   /* 미성년자 건에는 법정대리인 신분증도 공단에 낸다(2026-09-04 확정).
      이 파일은 첨부가 아니라 개인정보동의에 딸려 들어온다 — 그래서 첨부 목록에는
      비치지 않았고, 창에는 넷만 서서 「다 갖췄다」로 읽혔다. 따로 세운다. */
@@ -15011,6 +15021,60 @@ window.HELP_TOUR_STEPS = [
     const recipientType = activeBtn?.dataset?.recipientType ?? 'custom';
     const recipientName = activeBtn?.querySelector('div > div:first-child')?.textContent?.trim() ?? '기타';
 
+    /* **이미 닿은 전송이 있으면 묻는다** (2026-10-03 지시).
+
+       (E)최우용 건(RX-20261002-071)이 그랬다 — 16:44 에 공단 번호로 보냈다가
+       실패(513)하자 손으로 번호를 바꿔 세 번 더 보냈고 **세 번 다 닿았다**.
+       중구지사ㆍ마포지사ㆍ그리고 지사 표에 없는 번호 하나다. 등록신청서에는
+       주민번호와 서명이 들어간다.
+
+       막지 않고 묻기만 한다 — 두 곳에 내야 하는 건이 있을 수 있고, 그것을 가릴
+       잣대가 우리에게 없다. 사람이 보고 정한다.
+
+       **닿은 것만 센다.** 실패한 전송까지 세면, 번호를 고쳐 다시 보내는 정상
+       걸음마다 물어 확인창을 눈으로 넘기게 된다. */
+    if (FAX_SENT_OK.length) {
+      const 같은곳 = FAX_SENT_OK.some(f => _숫자만(f.no) === _숫자만(faxNo));
+      const 줄들 = FAX_SENT_OK.map(f => '  · ' + f.at + '  ' + f.no + '  (' + f.who + ')').join(String.fromCharCode(10));
+
+      /* **무엇을 기준으로 센 물음인지 먼저 적는다** (2026-10-03 지시).
+
+         공단에 내는 서류는 처방전에 딸린 것이라 전송 이력도 처방전에 붙는다
+         (`fax_histories` 에는 `order_id` 칸이 아예 없다). 그런데 담당자는 주문번호로
+         생각한다 — 「같은 주문번호로 여러 건 발송된 듯」이 그 말이었다.
+
+         둘을 나란히 적어 둔다. 처방전 한 장에 원 주문과 추가 주문이 함께 서면 그
+         둘을 묶어 센다는 것도 이 줄로 드러난다. */
+      const 머리 = '처방전 ' + (typeof RX_NUMBER !== 'undefined' && RX_NUMBER ? RX_NUMBER : '-')
+                 + (typeof VIEW_ORDER_NO !== 'undefined' && VIEW_ORDER_NO
+                      ? ' (주문 ' + VIEW_ORDER_NO + ')' : '');
+
+      /* 창은 글자를 그대로 내보낸다(이스케이프) — 꾸밈 기호를 쓰면 그대로 보인다.
+         줄바꿈만 살아난다. */
+      const 물음 = [
+        머리,
+        '',
+        '이 건은 이미 ' + FAX_SENT_OK.length + '번 전송되어 받는 곳에 닿았습니다.',
+        '',
+        줄들,
+        '',
+        (같은곳
+          ? '지금 보내려는 번호 ' + faxNo + ' 는 이미 닿은 곳과 같습니다.'
+          : '지금 보내려는 곳 : ' + faxNo + ' (' + recipientName + ')'),
+        '',
+        '공단 서류에는 주민등록번호와 서명이 들어갑니다. 그대로 보내시겠습니까?',
+      ].join(String.fromCharCode(10));
+
+      const 갈까 = await ceConfirm(물음, {
+        title: '이미 보낸 건입니다',
+        tone: 'warning',
+        confirmText: '그래도 보냅니다',
+        cancelText: '보내지 않습니다',
+      });
+
+      if (!갈까) { return; }
+    }
+
     const btn = document.getElementById('btnFaxSend');
     BtnState.loading(btn, '전송 중...');
 
@@ -15031,6 +15095,22 @@ window.HELP_TOUR_STEPS = [
       });
       const data = await res.json();
       if (data.success) {
+        /* 보낸 자취를 그 자리에서 더한다 (2026-10-03 지시).
+
+           창을 닫지 않고 번호만 바꿔 또 보내는 걸음이 실제로 있었다 — 그때도
+           「이미 보냈다」가 떠야 한다. 화면을 새로 고칠 때까지 기다리면 늦다.
+
+           팝빌이 「접수」했다는 것이지 아직 닿았다는 뜻은 아니다. 다만 이 자리는
+           **더 보낼지 묻는 잣대**라, 접수된 것도 세는 편이 안전하다 — 덜 묻는
+           것보다 한 번 더 묻는 쪽이 낫다. */
+        FAX_SENT_OK.push({
+          at:   new Date().toLocaleString('ko-KR', { month: '2-digit', day: '2-digit',
+                                                     hour: '2-digit', minute: '2-digit', hour12: false }),
+          no:   faxNo,
+          who:  recipientName,
+          docs: '',
+        });
+
         showFaxResultModal(data, [...docLabels, ...attLabels]);
       } else {
         showToast(data.message || '팩스 전송 실패', 'danger');

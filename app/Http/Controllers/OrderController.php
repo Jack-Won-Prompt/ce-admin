@@ -96,6 +96,10 @@ class OrderController extends Controller
         $attCounts = $파일['count'];
         $서류이름  = $파일['names'];
 
+        /* 「공단 팩스」 칸 (2026-10-03 지시) — 처방전마다 한 번에 센다.
+           셈은 OrderGridExtras::공단팩스칸() 한 곳에 있다. */
+        $공단팩스 = \App\Support\OrderGridExtras::공단팩스칸($orders->pluck('prescription_id'));
+
         /* 정정한 주문은 **세 줄**로 편다 (2026-09-30 지시).
 
            청구 관리ㆍ정산/회계ㆍFinance 는 진작 세 줄인데 주문 관리만 지금 값 한 줄이라,
@@ -103,7 +107,7 @@ class OrderController extends Controller
            (App\Support\OrderAmendLines). */
         $정정 = \App\Support\OrderAmendLines::모으기($orders);
 
-        $gridData = $orders->flatMap(function ($o) use ($extras, $attCounts, $서류이름, $정정) {
+        $gridData = $orders->flatMap(function ($o) use ($extras, $attCounts, $서류이름, $정정, $공단팩스) {
             /* 유형 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류.
                여러 건이 붙었으면 몇 건인지 함께 적는다. 상세로 들어가 보라는 신호다.
                어디까지 진행됐는지는 옆 칸(등록 상태)에서 따로 본다 — 한 칸에 둘을 섞으면
@@ -134,6 +138,10 @@ class OrderController extends Controller
                 'att_count' => (int) ($attCounts[$o->prescription_id] ?? 0),
                 /* 무슨 서류인가 — 옆 칸이 세운 수의 내역이다. 같은 이름은 한 번만. */
                 'doc_types' => $서류이름[$o->prescription_id] ?? '',
+                /* 공단에 팩스로 냈는가 (2026-10-03 지시). 이력은 처방전에 붙으므로
+                   같은 처방전의 주문은 같은 값을 든다. */
+                'nhis_fax'       => $공단팩스[$o->prescription_id]['text']  ?? '',
+                'nhis_fax_state' => $공단팩스[$o->prescription_id]['state'] ?? '',
                 'rx_no'     => $o->prescription?->rx_number ?? '',
                 'deal'      => $deal,
                 // 교환·반품·취소 건만 진행 상태가 있다. 판매는 옆의 '상태'가 그 자리다.
