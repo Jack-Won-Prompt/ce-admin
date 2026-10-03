@@ -2786,6 +2786,15 @@ $calcDeposit  = $calcCopay;
               <span style="flex:1;"></span>
               <button type="button" class="btn btn-outline btn-sm" onclick="olAsClose()">✕</button>
             </div>
+            {{-- 무엇에 배정되는지 한 줄로 못박는다 (2026-10-03 지시).
+
+                 「목록에서 체크한 건만 바뀐다」가 이 창의 전부인데, 여태 머리에 작은
+                 글씨로 건수만 적혀 있어 읽히지 않았다. 체크하지 않은 줄도 함께
+                 바뀌는 것으로 읽은 담당자가 있었다. --}}
+            <div id="olAsScope"
+                 style="margin:12px 16px 0;padding:9px 11px;border-radius:8px;
+                        background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.22);
+                        font-size:12.5px;line-height:1.5;color:var(--text);"></div>
             <div style="padding:12px 16px 4px;">
               <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:4px;">담당자</label>
               <select id="olAsUser" class="form-control form-select">
@@ -2798,6 +2807,7 @@ $calcDeposit  = $calcCopay;
             <div id="olAsBody" style="padding:8px 16px 14px;overflow-y:auto;font-size:13px;"></div>
             <div style="padding:11px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
               <button type="button" class="btn btn-outline btn-sm" onclick="olAsClose()">닫기</button>
+              {{-- 단추에도 건수를 적는다 — 누르기 직전 마지막으로 눈에 드는 자리다 --}}
               <button type="button" id="olAsGo" class="btn btn-primary btn-sm" onclick="olAsSubmit()">배정하기</button>
             </div>
           </div>
@@ -15506,7 +15516,12 @@ window.HELP_TOUR_STEPS = [
          wwGrid 의 기본값이 곧 이것이지만, 여기서는 없어서는 안 되는 칸이라 적어 둔다 —
          적지 않으면 나중에 「toolbar 처럼 꺼도 되는 것」으로 보인다. */
       rowCheckbox: true,
-      footer: { total: true, selected: false, modified: false },
+      /* 「선택 N건」을 세운다 (2026-10-03 지시).
+
+         여태 껐다. 그래서 담당자 배정을 누르기 전에 **몇 건을 골랐는지 화면 어디에도
+         없었다** — 머리의 「전체 선택」 한 번이면 보이지 않는 줄까지 다 골라지는데,
+         그것을 확인할 자리가 없으니 제가 아는 것과 다른 수가 넘어갔다. */
+      footer: { total: true, selected: true, modified: false },
       columns: [
         { header: '주문번호',  name: 'order_no',  width: 110, sortable: true },
         { header: '처방번호',  name: 'rx_number', width: 150, sortable: true },
@@ -15715,11 +15730,27 @@ window.HELP_TOUR_STEPS = [
     olAsThen = then || null;
 
     if (!olAsRows.length) {
-      showToast('담당자를 배정할 건을 목록에서 선택해 주십시오.', 'warning');
+      showToast('담당자를 배정할 건을 목록에서 체크해 주십시오.', 'warning');
       return;
     }
 
     document.getElementById('olAsCount').textContent = olAsRows.length + '건';
+
+    /* 무엇에 배정되는지 못박는다 (2026-10-03 지시).
+       한 줄로 세우고, 목록 전체를 고른 경우에는 그렇다고 따로 말한다 — 머리의
+       「전체 선택」은 화면에 보이지 않는 줄까지 다 고르기 때문이다. */
+    const 안내 = document.getElementById('olAsScope');
+    if (안내) {
+      const 전체 = (window.__olGrid?.getData?.() ?? []).length;
+      const 한줄건 = !!(rows && rows.length === 1);
+      안내.innerHTML = 한줄건
+        ? '이 건 <b>1건</b>의 담당자를 바꿉니다. 목록의 다른 줄은 바뀌지 않습니다.'
+        : ('목록에서 <b>체크한 ' + olAsRows.length + '건</b>에만 담당자를 배정합니다. '
+           + '체크하지 않은 줄은 바뀌지 않습니다.'
+           + (전체 && olAsRows.length >= 전체
+                ? '<br><b style="color:#B54708;">지금 목록의 ' + 전체 + '건이 모두 체크되어 있습니다.</b>'
+                : ''));
+    }
 
     const 줄 = r => `
       <div style="padding:8px 0;border-bottom:1px solid var(--border-light);display:flex;
@@ -15732,13 +15763,19 @@ window.HELP_TOUR_STEPS = [
         </span>
       </div>`;
 
-    /* 열 줄까지만 세운다. 그 아래는 수로 적는다 — 백 줄을 다 세우면 담당자 고르는
-       칸과 단추가 화면 밖으로 밀려 무엇을 누를지가 안 보인다. */
-    document.getElementById('olAsBody').innerHTML =
-      olAsRows.slice(0, 10).map(줄).join('')
-      + (olAsRows.length > 10
-          ? `<div style="padding:9px 0;font-size:12px;color:var(--text-muted);">외 ${olAsRows.length - 10}건</div>`
-          : '');
+    /* 고른 것을 **다 세운다** (2026-10-03 지시).
+
+       여태 열 줄만 세우고 나머지는 「외 N건」으로 적었다. 담당자를 한 번에 넘기는
+       자리에서 그 N건이 무엇인지 볼 길이 없으면, 엉뚱한 줄이 딸려 가도 누를 때까지
+       모른다 — 이 창을 세운 까닭이 바로 그것을 막는 데 있었다.
+
+       창이 밀리지는 않는다. 이 칸만 굴러가고(overflow-y:auto) 담당자 고르는 칸과
+       단추는 위아래에 붙박여 있다. */
+    document.getElementById('olAsBody').innerHTML = olAsRows.map(줄).join('');
+
+    /* 단추에도 건수를 적는다 — 누르기 직전 마지막으로 눈에 드는 자리다 */
+    const 갈단추 = document.getElementById('olAsGo');
+    if (갈단추) { 갈단추.textContent = olAsRows.length + '건 배정하기'; }
 
     document.getElementById('olAsWrap').style.display = 'block';
   };
@@ -15807,7 +15844,10 @@ window.HELP_TOUR_STEPS = [
     } catch (err) {
       showToast(err.message || '배정하지 못했습니다.', 'danger');
     } finally {
-      b.disabled = false; b.textContent = '배정하기';
+      /* 건수를 그대로 되돌린다 — 「배정하기」로 되돌리면 몇 건짜리였는지가 사라져
+         다시 눌러야 할 때 무엇을 누르는지 모른다 */
+      b.disabled = false;
+      b.textContent = (olAsRows.length ? olAsRows.length + '건 ' : '') + '배정하기';
     }
   };
 

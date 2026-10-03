@@ -2616,6 +2616,7 @@ class wwGrid {
     // 정렬 후 수정/선택 상태 초기화 (단순화)
     this._modifiedRows.clear();
     this._checkedRows.clear();
+    this._머리체크끄기();
     this._renderBody();
     this._renderSummary();
     this._updateFooter();
@@ -2730,6 +2731,7 @@ class wwGrid {
       });
 
     this._checkedRows.clear();
+    this._머리체크끄기();
     this._renderBody();
     this._renderSummary();
     this._updateFooter();
@@ -2742,6 +2744,7 @@ class wwGrid {
     this.originalData = JSON.parse(JSON.stringify(this._initialData));
     this._modifiedRows.clear();
     this._checkedRows.clear();
+    this._머리체크끄기();
     this._addedRows  = [];
     this._deletedRows = [];
     this._renderBody();
@@ -2892,6 +2895,22 @@ class wwGrid {
     this._tfootEl.appendChild(tr);
   }
 
+  /**
+   * 머리의 「전체 선택」을 푼다 (2026-10-03 지시).
+   *
+   * 고른 것을 비우는 자리가 넷인데(setDataㆍ정렬ㆍ고른 줄 지우기ㆍ되돌리기) 어느
+   * 자리도 머리의 체크를 풀지 않았다. 그래서 **고른 것은 없는데 머리는 켜져 있는**
+   * 꼴이 된다 — 거르기를 걸거나 검색을 누른 뒤가 늘 그랬다.
+   *
+   * 담당자 배정처럼 「고른 것」을 한 번에 처리하는 자리에서는 이것이 그대로 사고가
+   * 된다. 사람은 머리가 켜져 있으니 다 골라져 있다고 읽고, 실제로는 아무것도
+   * 골라져 있지 않거나 제가 아는 것과 다른 것이 골라져 있다.
+   */
+  _머리체크끄기() {
+    const 머리 = this._theadEl?.querySelector('.cg-header-check');
+    if (머리) 머리.checked = false;
+  }
+
   _updateFooter() {
     if (this.footer === false) {
       this._footerEl.style.display = 'none';
@@ -2921,6 +2940,7 @@ class wwGrid {
     this._initialData = JSON.parse(JSON.stringify(data));
     this._modifiedRows.clear();
     this._checkedRows.clear();
+    this._머리체크끄기();
     this._addedRows = [];
     this._deletedRows = [];
 
