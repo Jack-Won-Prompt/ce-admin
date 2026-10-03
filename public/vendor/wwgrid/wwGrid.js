@@ -1476,6 +1476,7 @@ class wwGrid {
   _redrawColumns() {
     this._buildColgroup();
     this._renderHeader();
+    this._못박기다시();
     this._renderBody();
     if (typeof this._renderSummary === 'function') this._renderSummary();
   }
@@ -1567,6 +1568,7 @@ class wwGrid {
 
     this._buildColgroup();
     this._renderHeader();
+    this._못박기다시();
     this._renderBody();
   }
 
@@ -1577,7 +1579,20 @@ class wwGrid {
 
     const colDef = this.columns.find(c => c.name === colName);
     const colEl  = this._colMap[colName];
-    if (colEl) colEl.style.width = colDef && colDef.width ? colDef.width + 'px' : '';
+    if (!colEl) return;
+
+    /* 되돌릴 때도 **이 칸만** 달라져야 한다 (2026-10-03 지시).
+
+       표 너비를 못박아 둔 뒤라면, 이 칸만 좁히는 순간 남는 자리가 생겨 나머지 칸이
+       고루 넓어진다 — 끌 때와 같은 일이다. 못박기를 한 번 더 돌려 다른 칸을 지금
+       너비에 묶는다. */
+    if (colDef && colDef.width) {
+      this._칸너비못박기(colName, colDef.width);
+      return;
+    }
+
+    colEl.style.width = '';
+    this._못박기다시();
   }
 
   /* ── Colgroup (컬럼 너비 관리) ──────────────── */
@@ -2076,7 +2091,21 @@ class wwGrid {
         안내.remove();
 
         if (colEl) {
-          colEl.style.width = 마지막너비 + 'px';          // 재배치는 여기 한 번뿐이다
+          /* **끈 칸만 달라진다** (2026-10-03 지시 「그리드 컬럼 가로 사이즈 조절하면
+             다른 컬럼도 조절되고 있음」).
+
+             여태 끈 칸 하나만 적었다. 그런데 표는 `table-layout: fixed` 에
+             `width: 100%` 다 — 적어 둔 칸 너비의 합이 판보다 좁으면 브라우저가 남는
+             자리를 **모든 칸에 고루** 나눈다. 그래서 한 칸을 끌면 남는 자리가 달라지고
+             **나머지 칸이 전부 따라 움직였다.**
+
+             여기서 **모든 칸을 지금 그려진 너비로 못박고** 표 너비도 그 합으로 못박는다.
+             지금 너비 그대로 적는 것이라 화면은 튀지 않는다. 그 뒤로는 끈 칸만
+             달라지고, 표 너비가 그만큼 늘거나 준다(늘면 가로로 굴러간다).
+
+             못박는 일은 한 번이면 된다 — 두 번째부터는 합이 이미 표 너비와 같아
+             나눌 남는 자리가 없다. */
+          this._칸너비못박기(colName, 마지막너비);
 
           const colDef = this.columns.find(c => c.name === colName);
           if (colDef) colDef.width = 마지막너비;
@@ -2600,6 +2629,7 @@ class wwGrid {
 
     this._buildColgroup();
     this._renderHeader();
+    this._못박기다시();
     this._renderBody();
     this._renderSummary();
   }
@@ -2906,6 +2936,85 @@ class wwGrid {
    * 된다. 사람은 머리가 켜져 있으니 다 골라져 있다고 읽고, 실제로는 아무것도
    * 골라져 있지 않거나 제가 아는 것과 다른 것이 골라져 있다.
    */
+  /**
+   * 모든 칸을 지금 그려진 너비로 못박는다 (2026-10-03 지시).
+   *
+   * `table-layout: fixed` 에 `width: 100%` 인 표는, 적어 둔 칸 너비의 합이 판보다
+   * 좁으면 남는 자리를 **모든 칸에 고루** 나눈다. 그래서 한 칸만 고쳐도 나머지가
+   * 따라 움직인다 — 칸 너비를 끌 때 그것이 그대로 드러났다.
+   *
+   * 지금 **그려진** 너비를 그대로 적으므로 화면은 튀지 않는다. 적고 나면 합이 표
+   * 너비와 같아져 나눌 남는 자리가 없어지고, 그 뒤로는 고친 칸만 달라진다.
+   *
+   * @param {string} [바꿀이름] 이 칸만 새 너비로 적는다
+   * @param {number} [새너비]
+   */
+  _칸너비못박기(바꿀이름, 새너비) {
+    if (!this._theadEl || !this._tableEl) return;
+
+    /* **못박은 뒤에는 다시 재지 않는다.**
+
+       재서 적고, 그 적은 것을 다시 재어 또 적으면 값이 조금씩 밀린다 — 표가
+       `border-collapse: collapse` 라 잰 너비(테두리 포함)와 `<col>` 에 적는 너비가
+       딱 같지 않기 때문이다. 좁힐 때마다 끌지 않은 칸이 0.1~0.5px 씩 넓어졌다.
+
+       그래서 **처음 한 번만 재고**, 그 뒤로는 내가 적어 둔 값을 그대로 쓴다. */
+    const 이미못박았나 = !!this._tableEl.style.width;
+
+    const 지금 = {};
+
+    if (이미못박았나) {
+      Object.keys(this._colMap).forEach(이름 => {
+        const w = parseFloat(this._colMap[이름]?.style.width);
+        if (w > 0) 지금[이름] = w;
+      });
+    }
+
+    /* 처음이거나, 적어 둔 값이 없는 칸은 지금 그려진 너비로 잰다.
+       머리 칸이 제 이름을 들고 있다(.cg-th-inner[data-col-name]) — `<col>` 에는
+       잰 너비가 없으므로 그 칸을 잰다. 소수점까지 쓴다. */
+    this._theadEl.querySelectorAll('.cg-th-inner[data-col-name]').forEach(inner => {
+      const 이름 = inner.dataset.colName;
+      if (지금[이름] > 0) return;
+      const th = inner.closest('th');
+      if (th) 지금[이름] = th.getBoundingClientRect().width;
+    });
+
+    if (바꿀이름 && 새너비 > 0) 지금[바꿀이름] = 새너비;
+
+    let 합 = 0;
+
+    Object.keys(this._colMap).forEach(이름 => {
+      const el = this._colMap[이름];
+      const w  = 지금[이름];
+      if (el && w > 0) { el.style.width = w + 'px'; 합 += w; }
+    });
+
+    if (!합) return;
+
+    /* 고르는 칸ㆍ줄번호 칸은 _colMap 에 없다 — 그 몫까지 더해야 표 너비가 맞는다.
+       이 둘은 사람이 끌 수 없어 늘 코드에 적힌 너비 그대로다(40ㆍ60). */
+    this._theadEl.querySelectorAll('th.cg-col-check, th.cg-col-rownum').forEach(th => {
+      합 += th.getBoundingClientRect().width;
+    });
+
+    this._tableEl.style.width = 합 + 'px';
+  }
+
+  /**
+   * 칸을 다시 세운 뒤 — 못박아 두었던 표 너비를 지금 모습으로 다시 맞춘다.
+   *
+   * 칸을 숨기거나 차례를 바꾸면 `colgroup` 이 통째로 다시 선다. 그때 옛 표 너비가
+   * 그대로 남아 있으면 칸 수가 달라진 표에 옛 너비가 걸려 어긋난다. 한 번 풀어
+   * 지금 모습을 재고 다시 못박는다 — 못박은 적이 없으면 아무것도 하지 않는다.
+   */
+  _못박기다시() {
+    if (!this._tableEl || !this._tableEl.style.width) return;
+
+    this._tableEl.style.width = '';   // 100% 로 되돌려 지금 모습을 잰다
+    this._칸너비못박기();
+  }
+
   _머리체크끄기() {
     const 머리 = this._theadEl?.querySelector('.cg-header-check');
     if (머리) 머리.checked = false;

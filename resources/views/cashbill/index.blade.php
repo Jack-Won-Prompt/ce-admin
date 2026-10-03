@@ -533,7 +533,12 @@
     // 그러면 15행이 뷰포트를 넘는 화면(높이 1073 미만 — 1080p·노트북 전부)에서
     // 표가 아니라 페이지 전체가 스크롤되고 머리행 고정도 풀린다. 기준값 460 을 남긴다.
     height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
-    footer: { total: true, selected: false, modified: false },
+    /* 표의 아랫줄은 끈다 (2026-10-03 지시 「전체 건수와 페이징이 분리되어 있음」).
+
+       서버가 한 쪽씩 내려 주므로 표가 세는 「전체 N건」은 **보고 있는 쪽의 줄 수**다.
+       참된 건수는 서버가 함께 주는 `total` 이고, 그것은 아래 쪽 줄이 적는다. 켜 두면
+       같은 말이 두 줄로 서고, 그나마 위 줄은 틀린 수다. */
+    footer: false,
     columns: [
       // 시안 324:4656 x479 머리글은 '거래 일시' 다 — 띄어쓰기가 있다(name·width 는 그대로)
       { header: '거래 일시', name: 'tradeDt',  width: 150, sortable: true },
@@ -1044,7 +1049,8 @@ function renderPager(total, page, perPage) {
   if (total === 0) { pager.style.display = 'none'; return; }
 
   pager.style.display = 'flex';
-  document.getElementById('pager-info').textContent = `총 ${total.toLocaleString()}건`;
+  document.getElementById('pager-info').textContent =
+    `전체 ${total.toLocaleString()}건` + (pages > 1 ? ` · ${page}/${pages}쪽` : '');
 
   if (pages <= 1) { document.getElementById('pager-btns').innerHTML = ''; return; }
 

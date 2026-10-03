@@ -345,9 +345,19 @@
      현재 쪽은 bg #E9F9FB · 글자 primary 이고 테두리는 그대로 #E8EAEC 다.
      왼쪽 '총 N건'(#pager-info)은 시안에 없지만 화면에 있던 글자라 그대로 둔다.
      taxinvoice/index.blade.php 도 같은 값을 들고 있다 — 전역 한 벌이 필요한 자리. */
-  .hist-pager { padding:12px; border-top:1px solid var(--gray-200); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  /* 건수와 쪽 단추를 **한 줄**에 둔다 (2026-10-03 지시 「공단 팩스 전송 그리드 전체
+     건수와 페이징이 분리되어 있음」).
+
+     여태 표 아랫줄이 「전체 N건」을 따로 적고, 그 아래에 쪽 줄이 또 섰다. 같은 말이
+     두 줄로 선 셈이다. 표의 아랫줄을 끄고(footer:false) 이 줄 하나가 건수와 쪽
+     번호를 함께 진다 — 다른 목록 화면(ce-pager)과 같은 모양이다.
+
+     세 칸으로 나눈다. 양 끝이 같은 몫(flex:1)을 가지므로 단추 묶음이 **판 한가운데**
+     선다 — 왼쪽 글자가 길어져도 가운데가 밀리지 않는다. */
+  .hist-pager { padding:12px; border-top:1px solid var(--gray-200); display:flex; align-items:center; justify-content:center; gap:8px; flex-shrink:0; }
+  .pager-info, .pager-spacer { flex:1 1 0; min-width:0; }
   .pager-info { font-size:12px; font-weight:500; line-height:19px; color:var(--gray-600); }
-  .pager-btns { display:flex; gap:6px; }
+  .pager-btns { display:flex; gap:6px; flex:none; }
   .pager-btn {
     height:28px; min-width:28px; padding:0 6px; border:1px solid var(--gray-200); border-radius:6px;
     background:var(--gray-0); font-size:13px; font-weight:500; line-height:21px; cursor:pointer; color:var(--gray-1000);
@@ -417,9 +427,11 @@
   <div class="fax-grid-pane" data-titab="hist">
     <div id="faxHistGrid"></div>
 
+    {{-- 건수와 쪽 단추가 한 줄이다. 오른쪽 빈 칸은 단추를 가운데에 세우는 몫이다 --}}
     <div class="hist-pager" id="hist-pager" style="display:none;">
       <div class="pager-info" id="pager-info"></div>
       <div class="pager-btns" id="pager-btns"></div>
+      <div class="pager-spacer"></div>
     </div>
   </div>
 
@@ -570,7 +582,14 @@
     // 시안은 표가 카드 남은 높이를 채운다(1568×858 = 탭 44 + 표 762 + 페이저 52).
     // 460 고정이면 카드 아래가 빈다 — 기준 구현 patients/index.blade.php 와 같이 'fit' 을 쓴다.
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
-    footer: { total: true, selected: false, modified: false },
+    /* 표의 아랫줄은 끈다 (2026-10-03 지시).
+
+       이 화면은 서버가 한 쪽씩(15줄) 내려 준다. 그래서 표가 세는 「전체 N건」은 늘
+       **보고 있는 쪽의 줄 수**였다 — 1,200건짜리 조회에도 「전체 15건」이라 적혔다.
+       참된 건수는 서버가 함께 주는 `total` 이고, 그것은 아래 쪽 줄이 적는다.
+
+       같은 말이 두 줄로 서던 것도 이것으로 없어진다 — 건수와 쪽 번호가 한 줄이다. */
+    footer: false,
     columns: [
       { header: '전송일시', name: 'sentAt',     width: 150, sortable: true },
       { header: '발신번호', name: 'sendNum',    width: 120 },
@@ -582,14 +601,11 @@
   });
   // 하단 상태바에 있던 '선택 N건' 을 결과바로 잇는다(전역 헬퍼).
   window.dsBindSelCount(window.__faxGrid, 'fax-sel-count');
-  // '전체 N건' 도 같은 상태바 표시였다. 같은 방식으로 결과바에 잇기만 한다.
-  (function (g) {
-    const t = document.getElementById('fax-total-count');
-    if (!g || !t || typeof g._updateFooter !== 'function') return;
-    const orig = g._updateFooter.bind(g);
-    g._updateFooter = function () { orig(); t.textContent = g.getData().length; };
-    g._updateFooter();
-  })(window.__faxGrid);
+  /* 탭 이름 옆의 「(총 N건)」은 **서버가 준 전체 건수**다 (2026-10-03 고침).
+
+     여태 표가 들고 있는 줄 수(`getData().length`)를 적었다. 이 화면은 서버가 한
+     쪽씩 15줄만 내려 주므로, 1,200건짜리 조회에도 「총 15건」이라 적혔다.
+     참된 건수는 조회가 돌아올 때 `renderPager` 가 함께 적는다. */
   function faxOpenRow(r) {
     if (!r || !r.receiptNum) return;
     openDetail(r.receiptNum);
@@ -838,7 +854,8 @@ async function loadHistory(page = 1) {
 
     if (list.length === 0) {
       window.__faxGrid.setData([]);
-      document.getElementById('hist-pager').style.display = 'none';
+      /* 쪽 줄도 건수도 함께 0 으로 — 탭 이름에 지난 조회의 건수가 남지 않게 한다 */
+      renderPager(0, 1, 15);
       return;
     }
 
@@ -917,10 +934,25 @@ function faxResultDesc(code) {
 function renderPager(total, page, perPage) {
   const pager = document.getElementById('hist-pager');
   const pages = Math.ceil(total / perPage);
-  if (pages <= 1) { pager.style.display = 'none'; return; }
+
+  /* 탭 이름 옆의 건수도 여기서 적는다 — 참된 전체 건수를 아는 자리가 여기다 */
+  const 탭건수 = document.getElementById('fax-total-count');
+  if (탭건수) { 탭건수.textContent = Number(total || 0).toLocaleString(); }
+
+  /* **쪽이 하나뿐이어도 건수는 보인다** (2026-10-03 지시).
+
+     여태 쪽이 하나면 줄 전체를 감췄다. 표의 아랫줄이 건수를 적고 있어 그래도 됐지만,
+     그 줄을 껐으므로 이제 감추면 건수까지 사라진다. 아무것도 없을 때만 감추고,
+     한 쪽일 때는 건수만 두고 단추를 비운다 — 다른 목록 화면과 같은 규칙이다. */
+  if (!total) { pager.style.display = 'none'; return; }
 
   pager.style.display = 'flex';
-  document.getElementById('pager-info').textContent = `총 ${total.toLocaleString()}건`;
+
+  /* 쪽이 여럿이면 몇 쪽 가운데 몇 쪽인지도 함께 적는다 */
+  document.getElementById('pager-info').textContent =
+    `전체 ${total.toLocaleString()}건` + (pages > 1 ? ` · ${page}/${pages}쪽` : '');
+
+  if (pages <= 1) { document.getElementById('pager-btns').innerHTML = ''; return; }
 
   const btns   = [];
   const start  = Math.max(1, page - 2);

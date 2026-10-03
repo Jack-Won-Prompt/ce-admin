@@ -665,7 +665,12 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
     // 엑셀 저장은 결과바로 옮겼다(동작은 downloadExcel() 그대로).
     // 하단 상태바는 시안에 없다 — '선택 N건' 은 조회 결과 탭 이름과 검색 단추 줄에 있다.
     height: 460, editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
-    footer: { total: true, selected: false, modified: false },
+    /* 표의 아랫줄은 끈다 (2026-10-03 지시 「전체 건수와 페이징이 분리되어 있음」).
+
+       서버가 한 쪽씩 내려 주므로 표가 세는 「전체 N건」은 **보고 있는 쪽의 줄 수**다.
+       참된 건수는 서버가 함께 주는 `total` 이고, 그것은 아래 쪽 줄이 적는다. 켜 두면
+       같은 말이 두 줄로 서고, 그나마 위 줄은 틀린 수다. */
+    footer: false,
     columns: [
       { header: '작성일',            name: 'date',   width: 100, sortable: true },
       /* 「주문번호」다 — 처방번호는 함께 세우지 않는다 (2026-09-28 지시).
@@ -1133,7 +1138,8 @@ function renderPager(total, page, perPage) {
      끝나는 조회가 대부분인데, 줄 전체를 감추면 총 건수까지 사라진다. */
   if (total === 0) { pager.style.display = 'none'; return; }
   pager.style.display = 'flex';
-  document.getElementById('pager-info').textContent = `총 ${total.toLocaleString()}건`;
+  document.getElementById('pager-info').textContent =
+    `전체 ${total.toLocaleString()}건` + (pages > 1 ? ` · ${page}/${pages}쪽` : '');
   if (pages <= 1) { document.getElementById('pager-btns').innerHTML = ''; return; }
   const btns  = [];
   const start = Math.max(1, page-2), end = Math.min(pages, page+2);

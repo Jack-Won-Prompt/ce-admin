@@ -208,7 +208,19 @@
       { header: '주소',        name: 'address', width: 260, sortable: true },
       { header: '처방전',      name: 'used',   width: 90,  align: 'right', sortable: true, renderer: 쓰임칸 },
       { header: '사용',        name: 'active', width: 90,  align: 'center', sortable: true, renderer: 사용칸 },
-      { header: '메모',        name: 'memo',   width: 200, sortable: true },
+      /* 메모는 넉넉히 둔다 (2026-10-03 지시 「가로 스크롤 막대도 없고 마지막 줄
+         내용이 끝까지 안 보임」).
+
+         200 으로 두었더니 1920 화면에서 **보이는 너비 245px 에 글은 400px** 이라 끝이
+         잘렸다. 그런데 칸 너비 합(1,500)이 판(1,848)보다 좁아 **가로 막대가 아예 생기지
+         않아** 잘린 글을 볼 길이 없었다. 남는 자리는 모든 칸에 고루 나뉘므로 메모만
+         늘어나지도 않는다.
+
+         합치기가 적는 글이 길다 — 「… / 2026-10-02 「연세의료원」 으로 합침」. 그 한 줄이
+         들어갈 만큼 둔다. 좁은 화면에서는 합이 판보다 넓어져 가로 막대가 서고, 굴려서
+         끝까지 읽는다. 더 긴 글은 마우스를 얹으면 전문이 뜬다(wwGrid 가 12자 넘는 글에
+         붙인다). */
+      { header: '메모',        name: 'memo',   width: 420, sortable: true },
     ],
     data: ROWS,
   });
