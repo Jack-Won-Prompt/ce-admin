@@ -134,7 +134,25 @@ class PrescriptionController extends Controller
             });
         }
 
-        $rows = $query->get();
+        /* **상한을 둔다** (2026-10-03 · 오류 이력 #25).
+
+           여태 조건에 걸린 것을 통째로 담았다. 기간을 넓게 잡으면 그만큼 다 들어온다 —
+           2026-01-01~10-02 로 조회하면 **15,049줄**이고, 줄마다 주문ㆍ거래처를 딸려
+           메모리 한도(128M)를 넘겼다.
+
+             Allowed memory size of 134217728 bytes exhausted
+             GET /prescriptions?date_from=2026-01-01&date_to=2026-10-02   10-02 17:36
+
+           기본값(최근 7일)은 332줄이라 평소에는 닿지 않는다. 기간을 넓힌 그 한 번에
+           화면이 통째로 죽었다.
+
+           최근 것부터 상한만큼만 담고, **몇 건이 걸렸는지는 그대로 알린다** — 조용히
+           잘라 내면 담당자는 그것이 전부인 줄 안다. 주문 대기 목록이 이미 같은
+           방식이다(작업대기상한). */
+        $걸린수 = (clone $query)->count();
+        $상한   = self::목록상한;
+
+        $rows = $query->latest('id')->limit($상한)->get();
 
         /* 결제 칸이 쓰는 값을 한 번에 세어 둔다 — 줄마다 물으면 쉰 줄에 쉰 번을 묻는다 */
         $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('patient_id'));
@@ -212,7 +230,11 @@ class PrescriptionController extends Controller
                 'admin_note' => (string) ($rx->admin_note ?? ''),
             ];
         });
-        $total = $gridData->count();
+        /* 화면에 적는 건수는 **걸린 수**다 — 담은 수가 아니다. 넘쳤으면 화면이
+           그렇게 말하고, 담당자는 기간을 좁힌다. */
+        $total  = $걸린수;
+        $보인수 = $gridData->count();
+        $넘침   = max(0, $걸린수 - $보인수);
 
         $statusCounts = [
             'all'            => Prescription::count(),
@@ -241,7 +263,7 @@ class PrescriptionController extends Controller
 
         $managers = User::whereIn('role', ['admin', 'manager'])->orderBy('name')->get();
 
-        return view('prescriptions.list', compact('gridData', 'total', 'statusCounts', 'managers', 'accCounts'));
+        return view('prescriptions.list', compact('gridData', 'total', '보인수', '넘침', '상한', 'statusCounts', 'managers', 'accCounts'));
     }
 
     // ── 담당자 지정 (AJAX) ────────────────────────────────
@@ -1967,6 +1989,18 @@ class PrescriptionController extends Controller
 
     /** 작업 대기 리스트가 한 번에 그리는 줄 수 */
     private const 작업대기상한 = 500;
+
+    /**
+     * 처방전 목록에 한 번에 담는 줄 수 (2026-10-03 · 오류 이력 #25).
+     *
+     * 기간을 넓게 잡으면 걸린 것이 그대로 다 들어와 메모리 한도를 넘겼다
+     * (2026-01-01~10-02 로 15,049줄 · 128M 초과). 최근 것부터 이만큼만 담고,
+     * 몇 건이 걸렸는지는 화면이 그대로 말한다.
+     *
+     * 작업 대기 목록과 같은 값이다 — 두 목록이 같은 화면 안에서 서로 다른 수를
+     * 들고 있으면 담당자가 어느 쪽을 믿어야 할지 모른다.
+     */
+    private const 목록상한 = 500;
 
     /**
      * 작업 대기 리스트의 잣대 — 네 가지를 함께 본다.

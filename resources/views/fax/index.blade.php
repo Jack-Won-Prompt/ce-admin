@@ -884,8 +884,10 @@ async function loadHistory(page = 1) {
          성공ㆍ실패는 상태가 아니라 결과코드(result)가 정한다: 100 이 성공이다.
          여태 2 를 「성공」ㆍ3 을 「실패」로 적어, 정상 전송된 팩스가 실패로 보였다
          (2026-09-30 실전 시험에서 바로잡음). */
+      /* 실패면 **결과코드를 함께 적는다** (2026-10-03 지시).
+         여태 「전송 실패」 넉 자뿐이라, 왜 못 갔는지 알려면 건마다 상세를 열어야 했다. */
       const statusTxt  = String(row.state) === '3'
-        ? (Number(row.result) === 100 ? '전송 성공' : '전송 실패')
+        ? (Number(row.result) === 100 ? '전송 성공' : '전송 실패 (' + (row.result ?? '-') + ')')
         : ({ '0':'접수','1':'변환 중','2':'전송 중','4':'취소' }[s] ?? '알 수 없음');
       const sentAt     = row.sendDT ? row.sendDT.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/,'$1-$2-$3 $4:$5') : '—';
       return {
@@ -938,16 +940,33 @@ async function syncPending() {
 }
 
 /* ── 팩스 결과코드 설명 ── */
+/* 결과코드를 사람 말로 (2026-10-03 지시 「실패시 오류 메세지도 확인되어야 함」).
+
+   여기 적혀 있던 표는 **우리가 받는 코드와 맞지 않았다.** 0~12 를 적어 두었는데
+   운영이 실제로 받은 것은 100ㆍ513ㆍ499ㆍ505ㆍ517ㆍ999 다 — 한 개도 걸리지 않아
+   화면에는 늘 「결과코드 513」처럼 숫자만 떴다.
+
+   **뜻을 지어내지 않는다.** 우리가 확인한 것은 100 이 성공이라는 것 하나뿐이다
+   (FaxHistory::RESULT_OK · 2026-09-30 에 이 잣대로 성공을 실패로 적던 것을
+   바로잡았다). 나머지는 숫자를 그대로 보이고, 몇 장이 닿았는지를 함께 적는다 —
+   그것은 팝빌이 숫자로 주는 **사실**이라 지어낼 것이 없다. */
 function faxResultDesc(code) {
-  const map = {
-    '0':'전송 성공', '-1':'결과 없음',
-    '2':'수신 거부', '3':'전화번호 오류', '4':'전화기 꺼짐',
-    '5':'전화기 오류', '6':'통화중', '7':'링 없음',
-    '8':'팩스 수신 불가', '9':'수신지 지원 불가',
-    '10':'전화국 없음', '11':'통신 장애', '12':'기타 오류',
-  };
   const c = String(code ?? '');
-  return map[c] ? `결과코드 ${c}: ${map[c]}` : `결과코드 ${c}`;
+  if (c === '') { return '결과 없음'; }
+  if (c === '100') { return '결과코드 100 · 전송 성공'; }
+  return '결과코드 ' + c + ' · 전송 실패';
+}
+
+/** 몇 장이 닿았나 — 팝빌이 숫자로 준다. 실패한 건에서 가장 먼저 보는 값이다 */
+function faxPageDesc(r) {
+  const 전체 = Number(r.sendPageCnt ?? 0);
+  if (!전체) { return ''; }
+  const 성공 = Number(r.successPageCnt ?? 0);
+  const 실패 = Number(r.failPageCnt ?? 0);
+  const 환불 = Number(r.refundPageCnt ?? 0);
+  return 전체 + '장 중 ' + 성공 + '장 닿음'
+       + (실패 ? ' · ' + 실패 + '장 실패' : '')
+       + (환불 ? ' · ' + 환불 + '장 환불' : '');
 }
 
 function renderPager(total, page, perPage) {
@@ -1029,7 +1048,12 @@ async function openDetail(receiptNum) {
       ? arr.map(r => {
           const rCls  = stMap[String(r.state??'')] ?? 'wait';
           const rTxt  = txMap[String(r.state??'')] ?? '—';
-          const rDesc = r.state == 3 ? `<br><span style="font-size:10px;color:var(--text-muted);">${faxResultDesc(r.result)}</span>` : '';
+          /* 결과코드와 함께 **몇 장이 닿았는지**를 적는다 — 실패한 건에서 가장 먼저
+             보는 값이고, 팝빌이 숫자로 주므로 지어낼 것이 없다 */
+          const _장 = faxPageDesc(r);
+          const rDesc = r.state == 3
+            ? `<br><span style="font-size:10px;color:var(--text-muted);">${faxResultDesc(r.result)}${_장 ? ' · ' + _장 : ''}</span>`
+            : '';
           return `<tr><td>${r.receiveNum??'—'}</td><td>${r.receiveName??'—'}</td><td><span class="fax-badge ${rCls}">${rTxt}</span>${rDesc}</td></tr>`;
         }).join('')
       : '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">수신자 정보 없음</td></tr>';
@@ -1048,6 +1072,15 @@ async function openDetail(receiptNum) {
           <span>실패 <span class="fax-stat-red">${failPages}</span>장</span>
           <span>취소 ${cancelPages}장</span>
         </p>
+        ${_닿음 ? '' : `
+        <p style="margin-top:6px;padding:7px 10px;border-radius:6px;
+                  background:#FEF3F2;border:1px solid #FECDCA;color:#B42318;font-size:12px;">
+          <b>전송 실패</b>
+          · ${faxResultDesc(first.result)}
+          ${first.sendResult != null ? ' · 전송결과 ' + first.sendResult : ''}
+          ${Number(first.refundPageCnt ?? 0) ? ' · ' + first.refundPageCnt + '장 환불' : ''}
+          ${fmt(first.resultDT) ? ' · 결과 ' + fmt(first.resultDT) : ''}
+        </p>`}
       </div>
       <table class="fax-normal-table">
         <colgroup><col width="15%"><col width="35%"><col width="15%"><col width="35%"></colgroup>

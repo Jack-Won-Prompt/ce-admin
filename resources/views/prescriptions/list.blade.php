@@ -242,6 +242,19 @@
     <div class="ds-grid-card">
       <div class="pnl-tabs">
         <button type="button" class="pnl-tab active" onclick="return false;"><i class="fa-solid fa-list"></i> 조회 결과<span class="pnl-tab-cnt">(총 {{ number_format($total) }}건)</span></button>
+        {{-- 넘친 만큼은 화면이 말한다 (2026-10-03 · 오류 이력 #25).
+
+             기간을 넓게 잡으면 걸린 것이 그대로 다 들어와 메모리 한도를 넘겼다
+             (2026-01-01~10-02 로 15,049줄). 이제 최근 것부터 상한만큼만 담는데,
+             조용히 잘라 내면 담당자는 그것이 전부인 줄 안다. --}}
+        @if(($넘침 ?? 0) > 0)
+          <span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;
+                       background:#FFF4E5;border:1px solid #FFD8A8;color:#B54708;
+                       border-radius:6px;padding:3px 9px;font-size:12px;font-weight:600;">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            최근 {{ number_format($보인수) }}건만 보입니다 · {{ number_format($넘침) }}건이 더 있습니다 — 기간을 좁혀 주십시오
+          </span>
+        @endif
       </div>
       <div id="rxGrid"></div>
     </div>

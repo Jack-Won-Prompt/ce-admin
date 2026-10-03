@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', '오류 기록')
-@section('page-title', '오류 기록')
-@section('breadcrumb', '홈 - 설정 - 오류 기록')
+@section('title', '오류 이력')
+@section('page-title', '오류 이력')
+@section('breadcrumb', '홈 - 설정 - 오류 이력')
 
 @section('content')
 
@@ -108,7 +108,7 @@
   <div class="ds-grid-card">
     <div class="pnl-tabs">
       <span class="pnl-tab active">
-        <i class="fa-solid fa-triangle-exclamation"></i> 오류 기록
+        <i class="fa-solid fa-triangle-exclamation"></i> 오류 이력
         <span class="pnl-tab-cnt">(총 {{ number_format($셈['all']) }}건)</span>
       </span>
       <span style="margin-left:auto;" class="el-sum">

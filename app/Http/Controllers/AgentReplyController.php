@@ -113,7 +113,7 @@ class AgentReplyController extends Controller
         $기록 = ErrorLog::find($짐['error_log_id'] ?? 0);
 
         if (! $기록) {
-            return ['ok' => false, 'message' => '오류 기록을 찾지 못했습니다'];
+            return ['ok' => false, 'message' => '오류 이력을 찾지 못했습니다'];
         }
 
         $글 = trim((string) ($짐['memo'] ?? ''));
@@ -141,7 +141,7 @@ class AgentReplyController extends Controller
             'checked_at' => now(),
         ])->save();
 
-        return ['ok' => true, 'message' => "오류 기록 {$기록->id} 에 적었습니다"];
+        return ['ok' => true, 'message' => "오류 이력 {$기록->id} 에 적었습니다"];
     }
 
     /** 들어온 회신도 자취에 남긴다 */

@@ -77,7 +77,7 @@ class CollectMessagesCommand extends Command
         'notices/index'         => '공지사항',
         'documents/index'       => '서류 보관함',
         'deposits/index'        => '입금 관리',
-        'error-logs'            => '오류 기록',
+        'error-logs'            => '오류 이력',
         'masters/_billing'      => '청구처 관리',
         'masters/index'         => '기준정보 관리',
         'nhis/index'            => '공단 관리',

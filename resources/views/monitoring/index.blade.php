@@ -173,7 +173,7 @@
 
 {{-- ⑥ 최근 장애 --}}
 <div class="mon-card" style="margin-bottom:14px;">
-  <div class="mon-head">최근 장애 <span class="sp"></span><span class="mon-sub">오류 기록 기준 · 최근 3일</span></div>
+  <div class="mon-head">최근 장애 <span class="sp"></span><span class="mon-sub">오류 이력 기준 · 최근 3일</span></div>
   <div class="mon-wrap">
     <table class="mon-tbl" id="monInc">
       <thead><tr>

@@ -1896,9 +1896,9 @@
         @endif
         @if($vis('error-logs'))
         <div class="menu-item {{ request()->routeIs('error-logs*') ? 'active' : '' }}">
-          <a class="menu-link" data-icon="wrench" href="{{ route('error-logs.index') }}" data-title="오류 기록">
+          <a class="menu-link" data-icon="wrench" href="{{ route('error-logs.index') }}" data-title="오류 이력">
             @dsicon('wrench', 'ds-icon menu-icon')
-            <span>오류 기록</span>
+            <span>오류 이력</span>
           </a>
         </div>
         @endif
