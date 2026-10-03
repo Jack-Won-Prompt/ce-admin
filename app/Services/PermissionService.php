@@ -35,11 +35,30 @@ class PermissionService
             return false;
         }
 
+        $def = config("permissions.pages.$page");
+
+        /* **계정으로 가리는 화면** (2026-10-03 지시).
+        
+           `only_email` 이 적힌 화면은 그 계정만 연다. 관리자라도 그 목록에 없으면
+           못 본다 — 그래서 아래 `role === 'admin'` 통과보다 **먼저** 본다.
+        
+           오류 이력이 그렇다. 코드 파일 경로ㆍ줄 번호ㆍ예외 자취ㆍ요청에 담겨 온 값을
+           그대로 보여 주는 자리라, 역할이 아니라 계정으로 가린다.
+        
+           메뉴도 라우트도 이 자리를 지난다 — 메뉴는 visiblePages() 가, 라우트는
+           CheckPagePermission 이 각각 여기를 부른다. 한 곳만 고치면 둘 다 막힌다. */
+        if ($def && ! empty($def['only_email'])) {
+            $열린계정 = array_map('mb_strtolower', (array) $def['only_email']);
+
+            if (! in_array(mb_strtolower((string) $user->email), $열린계정, true)) {
+                return false;
+            }
+        }
+
         if ($user->role === 'admin') {
             return true;
         }
 
-        $def = config("permissions.pages.$page");
         if (!$def) {
             // 레지스트리에 없는 페이지 키 — 오타로 화면이 조용히 사라지는 것을 막기 위해
             // 경고를 남기고 허용한다(차단은 미들웨어의 페이지 매칭이 담당).
