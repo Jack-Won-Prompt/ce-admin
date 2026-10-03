@@ -925,8 +925,21 @@ async function syncPending() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || '동기화 실패');
 
-    const msg = `동기화 완료: 총 ${data.total}건 중 ${data.synced}건 갱신` +
-      (data.errors > 0 ? `, 오류 ${data.errors}건` : '');
+    /* 서버가 주는 이름은 `checked`ㆍ`synced`ㆍ`errors` 다 (2026-10-03 고침).
+
+       여태 없는 이름(`total`)을 읽어 화면에 「총 undefined건 중 0건 갱신」이라
+       떴다. 숫자가 비면 담당자는 동기화가 깨진 것으로 읽는다.
+
+       말도 함께 고친다. 이 단추가 묻는 것은 **아직 끝나지 않은 건**이지 전체가
+       아니다(`FaxSyncService::syncPending` 이 `pending()` 만 모은다). 「총 N건」이라
+       적으면 전체 이력을 다 물어본 것으로 읽힌다. */
+    const 확인 = Number(data.checked ?? 0);
+    const 갱신 = Number(data.synced ?? 0);
+
+    const msg = 확인 === 0
+      ? '동기화 완료: 상태를 확인할 미완료 건이 없습니다'
+      : `동기화 완료: 미완료 ${확인}건 확인 · ${갱신}건 갱신`
+        + (data.errors > 0 ? ` · 오류 ${data.errors}건` : '');
     info.textContent = msg;
     showToast(msg, data.errors > 0 ? 'warning' : 'success');
     loadHistory(histPage);
