@@ -12,15 +12,22 @@ use Illuminate\Support\Facades\Cache;
  * AWS 에 묻는다 — 되는 것만 담고, 안 되는 것은 **왜 안 되는지 그대로 알린다**
  * (2026-10-02 지시).
  *
- * ## 지금 운영은 권한이 없다
+ * ## 지금 열려 있는 것과 막혀 있는 것 (2026-10-03 확인)
  *
- * 기계에 붙은 역할은 `unicorn-ec2-ssm-role` 이고(STS 로 확인) 여기에는 CloudWatch
- * 권한이 **없다** — `cloudwatch:ListMetrics` 가 AccessDenied 로 돌아온다.
- * 그래서 이 반은 지금 거의 다 「권한 없음」을 돌려준다.
+ * 기계에 붙은 역할은 `unicorn-ec2-ssm-role` 이다(STS 로 확인).
+ *
+ *   열림 : `cloudwatch:ListMetrics` · `cloudwatch:GetMetricData`
+ *          → EC2 CPUㆍ네트워크, RDS, 그리고 CloudWatch 에이전트가 올리는
+ *            메모리ㆍ디스크(`CWAgent` 이름칸)까지 받아 온다
+ *   막힘 : `ec2:DescribeInstances` · `elasticloadbalancing:DescribeLoadBalancers`
+ *          · `ce:GetCostAndUsage`
+ *
+ * 2026-10-02 에는 CloudWatch 도 AccessDenied 였다. 운영에서 권한을 열고 에이전트를
+ * 붙여 메모리ㆍ디스크를 올리게 했다.
  *
  * 빈 칸에 그럴듯한 숫자를 넣지 않는다. 감시 화면이 거짓을 보이면 아예 없는 것보다
- * 나쁘다 — 사람이 그것을 믿고 판단한다. 대신 **어느 권한이 모자란지** 화면에 적어
- * 그것만 붙이면 곧 채워지게 한다.
+ * 나쁘다 — 사람이 그것을 믿고 판단한다. 아직 막힌 것은 **어느 권한이 모자란지**
+ * 화면에 적어, 그것만 붙이면 곧 채워지게 한다.
  *
  * ## 과금은 부를 때마다 돈이 든다
  *
@@ -158,6 +165,22 @@ class AwsMetrics
                 [['Name' => 'InstanceId', 'Value' => $기계]], 'Average');
             $질의['ec2_net_in'] = $this->한질의('ec2_net_in', 'AWS/EC2', 'NetworkIn',
                 [['Name' => 'InstanceId', 'Value' => $기계]], 'Sum');
+
+            /* 메모리ㆍ디스크 — CloudWatch 에이전트가 올린다 (2026-10-03 운영 조치).
+            
+               EC2 는 메모리와 디스크를 스스로 올리지 않는다. 운영에서 에이전트를 붙여
+               `CWAgent` 이름칸에 `mem_used_percent`ㆍ`disk_used_percent` 를 올리게 했고,
+               `cloudwatch:ListMetrics` 권한도 함께 열렸다.
+            
+               **꼬리표를 코드에 박지 않는다.** 디스크 지표는 기계마다 꼬리표가 다르다 —
+               이 서버는 `path=/`ㆍ`device=nvme0n1p1`ㆍ`fstype=ext4` 네 개가 붙어 있는데,
+               디스크를 갈거나 서버를 새로 세우면 달라진다. 박아 두면 그날 조용히 빈칸이
+               된다. 올라와 있는 그대로 조회해서 쓴다. */
+            foreach (['ec2_mem' => 'mem_used_percent', 'ec2_disk' => 'disk_used_percent'] as $id => $지표) {
+                if ($꼬리 = $this->에이전트꼬리표($지표, $기계)) {
+                    $질의[$id] = $this->한질의($id, 'CWAgent', $지표, $꼬리, 'Average');
+                }
+            }
         }
 
         if ($묶음 = app(DatabaseMetrics::class)->지금()['cluster'] ?? null) {
@@ -183,6 +206,46 @@ class AwsMetrics
         }
 
         return $질의;
+    }
+
+    /**
+     * CloudWatch 에이전트 지표의 꼬리표를 **조회해서** 가져온다 (2026-10-03).
+     *
+     * 디스크 지표는 기계마다 꼬리표가 다르다. 올라와 있는 것을 그대로 읽어 쓰면
+     * 서버를 새로 세워도 따라간다.
+     *
+     * 이 기계 것만 고른다 — 한 계정에 여러 서버가 에이전트를 올리면 이름이 같고
+     * 꼬리표만 다른 지표가 여럿 선다.
+     *
+     * 하루에 한 번만 묻는다. 꼬리표는 거의 바뀌지 않는데 화면은 1분마다 열린다.
+     * 묻지 못하면 비워 돌려준다 — 그 지표만 빠지고 나머지는 그대로 선다.
+     */
+    private function 에이전트꼬리표(string $지표, string $기계): array
+    {
+        return Cache::remember('monitor:cwagent:' . $지표 . ':' . $기계, 86400, function () use ($지표, $기계) {
+            try {
+                $답 = (new CloudWatchClient($this->차림()))->listMetrics([
+                    'Namespace'  => 'CWAgent',
+                    'MetricName' => $지표,
+                    'Dimensions' => [['Name' => 'InstanceId', 'Value' => $기계]],
+                ]);
+            } catch (\Throwable) {
+                return [];
+            }
+
+            foreach ($답['Metrics'] ?? [] as $m) {
+                $꼬리 = [];
+                foreach ($m['Dimensions'] ?? [] as $d) {
+                    $꼬리[] = ['Name' => (string) $d['Name'], 'Value' => (string) $d['Value']];
+                }
+
+                if ($꼬리) {
+                    return $꼬리;
+                }
+            }
+
+            return [];
+        });
     }
 
     private function 한질의(string $id, string $이름칸, string $지표, array $꼬리, string $셈): array

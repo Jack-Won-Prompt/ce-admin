@@ -10,10 +10,16 @@
 | ## 어디서 오는 값인가
 |
 | AWS CloudWatch 로만 알 수 있는 것과, 이 기계에서 직접 잴 수 있는 것이 갈린다.
-| 운영 기계에 붙은 역할(`unicorn-ec2-ssm-role`)에는 CloudWatch 권한이 없어
-| `cloudwatch:ListMetrics` 가 AccessDenied 다(2026-10-02 확인). 그래서 CPUㆍ메모리ㆍ
-| 디스크는 CloudWatch 를 기다리지 않고 `/proc` 과 `df`, 지난 값은 `sar` 에서 읽는다.
-| 권한이 생기면 AWS 칸이 저절로 채워진다 — 화면은 두 자리를 함께 보여 준다.
+| CPUㆍ메모리ㆍ디스크는 CloudWatch 를 기다리지 않고 `/proc` 과 `df`, 지난 값은 `sar`
+| 에서 읽는다 — 화면이 바로 서야 하기 때문이다.
+|
+| **CloudWatch 권한은 2026-10-03 에 열렸다.** 10-02 에는 `cloudwatch:ListMetrics` 가
+| AccessDenied 였다. 운영에서 권한을 열고 CloudWatch 에이전트를 붙여 메모리ㆍ디스크를
+| `CWAgent` 이름칸으로 올리게 했다. 화면은 두 자리를 함께 보여 준다 — 이 기계가 바로
+| 잰 값과 CloudWatch 에 쌓인 값이다. 두 값이 벌어지면 한쪽이 멈춘 것이다.
+|
+| 아직 막힌 것은 `ec2:DescribeInstances`ㆍ`elasticloadbalancing:DescribeLoadBalancers`
+| ㆍ`ce:GetCostAndUsage` 다. 그 칸은 어느 권한이 모자란지 화면에 적는다.
 |
 | ## 지역
 |
