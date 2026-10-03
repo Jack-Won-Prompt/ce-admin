@@ -219,33 +219,46 @@ class AwsMetrics
      *
      * 하루에 한 번만 묻는다. 꼬리표는 거의 바뀌지 않는데 화면은 1분마다 열린다.
      * 묻지 못하면 비워 돌려준다 — 그 지표만 빠지고 나머지는 그대로 선다.
+     *
+     * **찾은 것만 담아 둔다** (2026-10-03 고침).
+     *
+     * 처음에는 `Cache::remember` 로 감쌌는데, 그러면 **못 찾은 것도 하루를 간다.**
+     * 배포 직후 첫 조회가 한 번 어긋나자 빈 값이 그대로 박혀, 메모리ㆍ디스크 두 줄이
+     * 하루 내내 비어 보였다. 감시 화면에서 빈칸은 「괜찮다」로 읽히므로 그대로 둘 수
+     * 없다. 찾았을 때만 담고, 못 찾으면 다음에 다시 묻는다.
      */
     private function 에이전트꼬리표(string $지표, string $기계): array
     {
-        return Cache::remember('monitor:cwagent:' . $지표 . ':' . $기계, 86400, function () use ($지표, $기계) {
-            try {
-                $답 = (new CloudWatchClient($this->차림()))->listMetrics([
-                    'Namespace'  => 'CWAgent',
-                    'MetricName' => $지표,
-                    'Dimensions' => [['Name' => 'InstanceId', 'Value' => $기계]],
-                ]);
-            } catch (\Throwable) {
-                return [];
-            }
+        $열쇠 = 'monitor:cwagent:' . $지표 . ':' . $기계;
 
-            foreach ($답['Metrics'] ?? [] as $m) {
-                $꼬리 = [];
-                foreach ($m['Dimensions'] ?? [] as $d) {
-                    $꼬리[] = ['Name' => (string) $d['Name'], 'Value' => (string) $d['Value']];
-                }
+        if (is_array($담긴것 = Cache::get($열쇠)) && $담긴것) {
+            return $담긴것;
+        }
 
-                if ($꼬리) {
-                    return $꼬리;
-                }
-            }
-
+        try {
+            $답 = (new CloudWatchClient($this->차림()))->listMetrics([
+                'Namespace'  => 'CWAgent',
+                'MetricName' => $지표,
+                'Dimensions' => [['Name' => 'InstanceId', 'Value' => $기계]],
+            ]);
+        } catch (\Throwable) {
             return [];
-        });
+        }
+
+        foreach ($답['Metrics'] ?? [] as $m) {
+            $꼬리 = [];
+            foreach ($m['Dimensions'] ?? [] as $d) {
+                $꼬리[] = ['Name' => (string) $d['Name'], 'Value' => (string) $d['Value']];
+            }
+
+            if ($꼬리) {
+                Cache::put($열쇠, $꼬리, 86400);
+
+                return $꼬리;
+            }
+        }
+
+        return [];
     }
 
     private function 한질의(string $id, string $이름칸, string $지표, array $꼬리, string $셈): array
