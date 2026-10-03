@@ -776,6 +776,36 @@ class Order extends Model
             return 0;
         }
 
+        /* 실제로 결제된 줄은 거두기 전에 「결제완료」로 적는다 (2026-10-03 지시).
+
+           가상계좌는 markPaid() 를 지나지 않는다. 링크를 눌러 계좌를 받은 뒤 입금은
+           나중에 들어오므로, 입금 웹훅이 여기로 올 때 그 줄의 paid_at 은 아직 비어
+           있다 — 그래서 **환자가 실제로 쓴 줄까지 「취소」로 거둬졌다.**
+
+             EUD202610021341391 ((E)이명섭A) · 가상계좌 60,750원 10-02 18:35 입금
+             링크 #84 cancelled 01053323136 17:36 발송
+             링크 #86 cancelled 01053055285 17:42 발송  ← 이 줄로 냈다
+                      토스주문번호가 toss_payments 의 것과 같다
+
+           돈을 받았는지는 toss_payments 가 정하므로 미수로 읽히지는 않았다. 그러나
+           결제 기록에서 **어느 줄로 냈는지** 알 수 없었고, 두 줄 모두 「취소」라
+           담당자는 보내기만 하고 못 받은 건으로 읽는다.
+
+           카드는 결제 즉시 markPaid() 가 paid_at 을 적으므로 아래 찾기에 걸리지
+           않는다 — 한 번 적힌 줄을 두 번 적지 않는다. */
+        if ($결제된것 = $this->결제된링크()) {
+            $결제된것->update([
+                'status'        => 'paid',
+                'paid_at'       => $this->paidAt() ?? now(),
+                'payment_key'   => $결제된것->payment_key   ?: $this->tossPayment?->payment_key,
+                'toss_order_id' => $결제된것->toss_order_id ?: $this->tossPayment?->toss_order_id,
+            ]);
+
+            activity()->performedOn($this)->log(sprintf(
+                '%s — 실제로 결제된 결제 요청 1건을 「결제완료」로 기록했습니다 (%s원)',
+                $까닭, number_format((int) $결제된것->amount)));
+        }
+
         $남은것 = $this->paymentLinks()
             ->whereNull('paid_at')
             ->whereIn('status', ['sent', 'pending'])
@@ -793,6 +823,48 @@ class Order extends Model
         }
 
         return $남은것->count();
+    }
+
+    /**
+     * 실제로 결제된 결제 요청 줄을 찾는다 (2026-10-03 지시).
+     *
+     * toss_payments 에 남은 토스주문번호ㆍ결제키와 같은 줄이 그것이다. 우리가 결제
+     * 페이지를 열 때 보낸 값 그대로라, 여러 번 보낸 링크 가운데 환자가 **어느 것을
+     * 눌렀는지** 이 값으로만 가릴 수 있다.
+     *
+     * 이미 「결제완료」로 적힌 줄(paid_at 이 있는 줄)은 찾지 않는다 — 카드 결제가
+     * 그렇다. 두 번 적을 일이 없다.
+     *
+     * 토스 결제 줄이 없으면(담당자가 통장을 보고 확인한 건) 가릴 값이 없으므로
+     * 아무것도 돌려주지 않는다.
+     */
+    public function 결제된링크(): ?\App\Models\PaymentLink
+    {
+        $결제 = $this->tossPayment;
+
+        if (! $결제) {
+            return null;
+        }
+
+        /* 토스주문번호를 먼저 본다 — 결제 한 번에 하나뿐인 값이다. 결제키는 가상계좌
+           발급 때와 입금 때가 같은지 보장되지 않아 뒤에 본다. */
+        foreach (['toss_order_id', 'payment_key'] as $칸) {
+            if (blank($결제->{$칸})) {
+                continue;
+            }
+
+            $줄 = $this->paymentLinks()
+                ->whereNull('paid_at')
+                ->where($칸, $결제->{$칸})
+                ->latest('id')
+                ->first();
+
+            if ($줄) {
+                return $줄;
+            }
+        }
+
+        return null;
     }
 
     /**
