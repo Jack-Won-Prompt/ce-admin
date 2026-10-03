@@ -148,7 +148,16 @@ class FaxController extends Controller
         $perPage   = (int) $request->query('per_page', 15);
         $corpNum   = $request->query('corp_num', config('popbill.test.corp_num'));
 
+        /* 2026-10-01 이전은 세우지 않는다 (2026-10-03 지시).
+
+           그 전 43건은 운영 전환 전에 시험으로 보낸 것이다. 지우지는 않는다 —
+           팝빌이 원본을 들고 있어 지워도 다음 동기화에 다시 끌려온다. 담아 두되
+           화면에 세우지 않는다. 바닥은 FaxHistory::보이는바닥 한 곳에 있다.
+
+           날짜를 손으로 그보다 앞서 고쳐도 걸린다 — 화면 기본값만 바꾸면 날짜를
+           되돌리는 순간 다시 보인다. */
         $paginator = FaxHistory::where('corp_num', $corpNum)
+            ->보일것()
             ->whereBetween('created_at', [$startDate, $endDate])
             ->latest()
             ->paginate($perPage, ['*'], 'page', (int) $request->query('page', 1));

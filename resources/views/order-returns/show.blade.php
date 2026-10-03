@@ -561,11 +561,11 @@
     @endif
   </div>
   <div class="rt-bd">
-    <div class="rt-kv"><span>발행 처리</span><span>{{ $r->credit_issued_at?->format('Y-m-d H:i') ?? '아직' }}</span></div>
+    <div class="rt-kv"><span>발행 처리</span><span>{{ $r->credit_issued_at?->format('Y-m-d H:i') ?? '미발행' }}</span></div>
     <div class="rt-kv"><span>내용</span><span>{{ $r->credit_note ?: '—' }}</span></div>
     @if($r->needsAdjust())
       <div class="rt-kv"><span>금액조정 주문</span><span>
-        {{ $r->adjust_so_no ?: '아직' }}
+        {{ $r->adjust_so_no ?: '미생성' }}
         {{ $r->adjusted_at ? '· ' . $r->adjusted_at->format('Y-m-d H:i') : '' }}
         {{-- 창고가 거절하면 여기서 다시 세운다. 예전에는 「상세에서 다시 시도해
              주십시오」라 말해 놓고 그 단추를 두지 않았다. --}}

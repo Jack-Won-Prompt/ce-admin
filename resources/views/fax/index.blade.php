@@ -642,13 +642,32 @@ let selectedFiles = [];
 let histPage = 1;
 let histMeta = {};
 
+/* 화면에 세우는 바닥 날짜 — 서버와 같은 값을 본다(FaxHistory::보이는바닥).
+   여기에 글자를 또 적어 두면 한쪽만 고쳐지는 날이 온다. */
+const FAX_FLOOR = @json(\App\Models\FaxHistory::보이는바닥);
+
 /* ── 초기화 ── */
 document.addEventListener('DOMContentLoaded', () => {
   // 날짜 input을 먼저 초기화한 후 조회 실행
   const today = new Date();
   const ago30 = new Date(today);
   ago30.setDate(today.getDate() - 30);
-  document.getElementById('f-start').value = fmtDate(ago30);
+
+  /* 조회 시작일은 **바닥보다 앞서지 않는다** (2026-10-03 지시).
+
+     2026-10-01 이전 건은 화면에 세우지 않는다(FAX_FLOOR). 한 달 전으로 열어 두면
+     9월이 걸리는데 그 자리는 서버가 걸러 버리므로, 담당자는 「분명 보낸 건이 있는데
+     목록이 비었다」로 읽는다. 처음부터 바닥부터 보여 준다.
+
+     달력 자체도 그 앞을 고를 수 없게 막는다(min) — 고를 수 있는데 결과가 없으면
+     화면이 고장 난 것으로 보인다. */
+  const 시작 = fmtDate(ago30) < FAX_FLOOR ? FAX_FLOOR : fmtDate(ago30);
+
+  const 시작칸 = document.getElementById('f-start');
+  시작칸.value = 시작;
+  시작칸.min   = FAX_FLOOR;
+  document.getElementById('f-end').min = FAX_FLOOR;
+
   document.getElementById('f-end').value   = fmtDate(today);
 
   loadSenderNumbers();

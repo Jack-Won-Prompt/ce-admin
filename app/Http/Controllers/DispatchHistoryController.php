@@ -77,7 +77,8 @@ class DispatchHistoryController extends Controller
 
         $counts = [
             'message'         => $inRange(MessageHistory::query(), 'created_at')->count(),
-            'fax'             => $inRange(FaxHistory::query(), 'created_at')->count(),
+            /* 목록과 같은 잣대로 센다 — 세지 않는 것을 건수에만 더하면 숫자와 줄이 어긋난다 */
+            'fax'             => $inRange(FaxHistory::보일것(), 'fax_histories.created_at')->count(),
             'tax_invoice'     => Order::whereNotNull('tax_invoice_no')
                                     ->where(fn ($q) => $q->whereBetween(DB::raw('DATE(tax_invoice_issued_at)'), [$dateFrom, $dateTo])
                                                          ->orWhereBetween(DB::raw('DATE(tax_invoice_cancelled_at)'), [$dateFrom, $dateTo]))
@@ -713,7 +714,10 @@ class DispatchHistoryController extends Controller
 
     private function faxQuery(?string $search, string $from, string $to)
     {
+        /* 2026-10-01 이전은 세우지 않는다 (2026-10-03 지시) — 운영 전환 전에
+           시험으로 보낸 것이다. 바닥은 FaxHistory::보이는바닥 한 곳에 있다. */
         return FaxHistory::with(['sentBy', 'prescription.patient'])
+            ->보일것()
             ->whereBetween(DB::raw('DATE(fax_histories.created_at)'), [$from, $to])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($q2) use ($search) {

@@ -7,6 +7,30 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FaxHistory extends Model
 {
+    /**
+     * 화면에 세우는 바닥 날짜 (2026-10-03 지시).
+     *
+     * 「공단 팩스 발송 이력 => 2026-10-01 이전 건은 안 보이게」
+     *
+     * 이 날 전의 43건은 운영 전환 전에 시험으로 보낸 것이다 — 모두 팝빌에서 끌어온
+     * 거울이라 처방전ㆍ받는번호ㆍ보낸이가 비어 있고, 결과코드도 499ㆍ505ㆍ517ㆍ999 가
+     * 많다(닿지 않는 번호로 보낸 것이다).
+     *
+     * **지우지 않는다**(2026-10-03 지시 「지우지 않기, 그냥 두기」). 팝빌이 원본을
+     * 들고 있어 지워도 다음 동기화에 다시 끌려오고, 그쪽 이력은 우리가 지울 수 없다.
+     * 담아 두되 화면에 세우지 않는다.
+     *
+     * 바닥은 한 곳에 둔다 — 공단 팩스 발송 화면과 발송 이력 화면이 같은 값을 본다.
+     * 따로 적어 두면 한쪽만 고쳐지는 날이 온다.
+     */
+    public const 보이는바닥 = '2026-10-01';
+
+    /** 화면에 세울 것만 — 바닥 날짜 뒤에 보낸 것이다 */
+    public function scope보일것($query)
+    {
+        return $query->whereDate($query->getModel()->getTable() . '.created_at', '>=', self::보이는바닥);
+    }
+
     protected $fillable = [
         'prescription_id',
         'corp_num', 'receipt_num', 'sender', 'sender_name',

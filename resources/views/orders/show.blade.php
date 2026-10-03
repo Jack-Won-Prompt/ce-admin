@@ -417,7 +417,9 @@
                   <span>{{ $order->closing_checked_at->format('Y-m-d') }}
                     {{ $order->closingChecker?->name ? '· ' . $order->closingChecker->name : '' }}</span>
                 @else
-                  <span style="color:var(--text-muted);">아직</span>
+                  {{-- 체크하면 옆에 날짜와 확인한 사람이 선다. 안 된 상태를
+                       「아직」이라 적어 왔는데 화면 용어는 표준 업무어로 적는다. --}}
+                  <span style="color:var(--text-muted);">미완료</span>
                 @endif
               </label>
             </div>
