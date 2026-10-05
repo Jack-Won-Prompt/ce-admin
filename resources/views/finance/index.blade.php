@@ -154,7 +154,22 @@
   /* 칸은 서버가 정한다(FinanceController::columnsFor) — 요청서 14~19쪽의 차례를
      그대로 옮긴 것이라, 화면에서 다시 적으면 두 벌이 갈린다. */
   const COLS = @json($columns);
-  COLS.forEach(c => { if (c.editor === 'number') { delete c.editor; c.renderer = money; } });
+
+  /* 돈 칸은 `editor:'number'` 을 **그대로 둔다** (2026-10-05 지시 「운영 Finance 화면의
+     합계 항목은 안보임」).
+
+     여태 `delete c.editor` 로 지웠다. 그런데 wwGrid 가 맨 아래 합계줄에서 더할 칸을
+     고르는 잣대가 바로 그 표식이다(wwGrid.js:2903 `col.editor === 'number' &&
+     col.summary !== false`). 지우면 합계줄은 서는데 「합계」 라벨만 남고 숫자가 하나도
+     들어차지 않는다 — 공급가액ㆍ부가세ㆍ합계금액ㆍ카드ㆍ현금영수증ㆍ세금계산서를
+     아래 합계 영역에서 보자던 자리가 통째로 비어 있었다.
+
+     지울 까닭이 없다. 셀을 그리는 것은 `renderer` 가 먼저 가져간다
+     (wwGrid.js:1899) — 0 을 빈 칸으로 두는 것은 그대로다. 표는 `editable:false` 라
+     수 입력칸이 열릴 일도 없다. `align` 은 서버가 이미 right 로 준다
+     (FinanceController `$money`). 엑셀로 내보낼 때 글자가 아니라 수로 나가는 것도
+     이 표식이 정한다(wwGrid.js:539). */
+  COLS.forEach(c => { if (c.editor === 'number') c.renderer = money; });
 
   /* 감출 머리글 — 탭마다 다르다 (FinanceController::숨길칸, 2026-09-15 지시).
      2026-09-11 엑셀에서 담당자가 회색으로 칠해 둔 칸들이다.
@@ -185,8 +200,9 @@
     data: 줄들,
   });
 
+  /* 탭을 바꿀 때도 같은 잣대다 — 여기서 표식을 지우면 그 탭만 합계가 빈다 */
   const 돈칸으로 = (칸들) => {
-    칸들.forEach(c => { if (c.editor === 'number') { delete c.editor; c.renderer = money; } });
+    칸들.forEach(c => { if (c.editor === 'number') c.renderer = money; });
     return 칸들;
   };
 
