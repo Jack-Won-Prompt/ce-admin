@@ -335,7 +335,7 @@ class OrderGridExtras
         return [
             /* 검수 메모는 **검수자의 말**이다. 담당자가 요청하며 남긴 말은 따로 선다. */
             'rx_memo'        => $p?->review_memo ?? '',
-            'rx_req_memo'    => (\Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')
+            'rx_req_memo'    => (self::칸있나('prescriptions', 'review_request_memo')
                                     ? ($p?->review_request_memo ?? '') : ''),
             /* 유형은 **처방전ㆍ처방외 둘뿐**이다 (2026-09-30 지시).
 
@@ -973,6 +973,36 @@ class OrderGridExtras
         $카드 = $결제->raw_response['card'] ?? null;
 
         return is_array($카드) && isset($카드[$키]) ? (string) $카드[$키] : '';
+    }
+
+    /** 한 번 물어 본 스키마 — 줄마다 다시 묻지 않는다 */
+    private static array $칸확인 = [];
+
+    /**
+     * 이 칸이 있는가 — **한 번만 묻는다** (2026-10-05 · Finance 화면이 느리던 자리).
+     *
+     * 배포는 `git pull` 뒤에 `migrate` 를 돈다. 그 사이에 새 코드는 이미 살아 있고
+     * 칸은 아직 없어서, 없는 칸을 읽다 화면이 통째로 깨지는 일이 있었다. 그래서
+     * 물어보고 쓰기로 했는데, 그 물음이 **줄마다** 돌고 있었다.
+     *
+     * `Schema::hasColumn` 은 information_schema 를 뒤지는 질의다. Finance 화면은
+     * 210줄에 **210번**을 물었다(2026-10-05 실측 · 한 탭 1.8초 가운데 적지 않은 몫).
+     *
+     * 칸이 있는지는 한 요청 안에서 바뀌지 않는다. 한 번 묻고 쥐고 있는다.
+     */
+    private static function 칸있나(string $표, string $칸): bool
+    {
+        $열쇠 = $표 . '.' . $칸;
+
+        if (! array_key_exists($열쇠, self::$칸확인)) {
+            try {
+                self::$칸확인[$열쇠] = \Illuminate\Support\Facades\Schema::hasColumn($표, $칸);
+            } catch (\Throwable) {
+                self::$칸확인[$열쇠] = false;
+            }
+        }
+
+        return self::$칸확인[$열쇠];
     }
 
     /**

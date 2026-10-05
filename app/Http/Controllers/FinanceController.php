@@ -108,7 +108,14 @@ class FinanceController extends Controller
      */
     private function fromOrders(string $tab, string $from, string $to, Request $request): array
     {
-        $query = Order::with(['patient', 'prescription.billingOffice', 'items', 'tossPayment'])
+        /* 사람 칸을 **미리 담는다** (2026-10-05 · 화면이 느리던 자리).
+
+           표에 담당자ㆍ등록자ㆍ수정자가 선다(OrderGridExtras::ww). 미리 담지 않으면
+           줄마다 `users` 를 묻는다 — 210줄에 **411번**이었다(2026-10-05 실측).
+           한 탭을 여는 데 질의가 641번 돌고 1.8초가 걸렸다. */
+        $query = Order::with(['patient', 'prescription.billingOffice', 'items', 'tossPayment',
+                              'operationUser', 'creator',
+                              'prescription.creator', 'prescription.updater'])
             ->whereBetween(\DB::raw('DATE(created_at)'), [$from, $to])
             ->orderByDesc('created_at')->orderByDesc('id');
 
