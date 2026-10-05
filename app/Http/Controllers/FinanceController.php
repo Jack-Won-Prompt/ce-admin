@@ -123,6 +123,36 @@ class FinanceController extends Controller
             self::scopeUnpaid($query);
         }
 
+        /* 부가세신고내역은 **신고 대상만** 세운다 (2026-10-05 지시).
+
+           여태 통합주문내역과 똑같이 기간에 걸린 주문을 모두 세웠다. 그래서 신고
+           자료를 뽑는 자리에 신고할 것이 없는 줄이 섞였다 — 10-01~10-05 로 보면
+           211줄 가운데 **148줄이 금액 0원**이고 154줄이 아직 대기였다(2026-10-05 실측).
+
+           잣대는 **증빙이 실제로 나갔는가**다. 세금계산서ㆍ현금영수증은 국세청으로
+           나간 숫자이고, 이 탭의 공급가액 칸도 그 값을 먼저 쓴다
+           (`tax_invoice_supply`). 발행되지 않은 건은 아직 신고할 것이 없다.
+
+           주문 상태로 가리지 않는다 — 대기인 채로 증빙만 먼저 나간 건이 있을 수
+           있고, 그때 신고 대상인지는 증빙이 정한다. */
+        if ($tab === 'vat') {
+            $query->where(fn ($q) => $q
+                ->where('tax_invoice_status', 'issued')
+                ->orWhere('cash_receipt_status', 'issued')
+                /* 카드 매출도 신고 대상이다 (2026-10-05 지시).
+
+                   전액 본인부담 카드 결제는 세금계산서도 현금영수증도 나가지 않는다 —
+                   공단 청구가 없어 「청구전략에 없음」이고, 카드는 **카드매출전표가
+                   증빙**이라 현금영수증을 내지 않는다. 증빙 발행만 보면 이런 건이
+                   통째로 빠진다(10-01~10-05 에 2건 270,000원).
+
+                   이 탭에 「카드」 칸이 따로 있는 것도 카드 매출을 세려는 자리다.
+                   카드로 받은 것이 끝난 건을 더한다 — 이미 증빙이 난 27건은 위에서
+                   걸리므로 겹치지 않는다. */
+                ->orWhereHas('tossPayment', fn ($t) => $t
+                    ->where('status', 'DONE')->where('method', 'CARD')));
+        }
+
         if ($request->filled('q')) {
             $kw = $request->q;
             $query->where(fn ($s) => $s
@@ -171,8 +201,16 @@ class FinanceController extends Controller
            맨 위에 서서 거꾸로 읽혔다. */
         $data = $rows->flatMap(function (Order $o) use ($정정, $extras) {
             $줄 = [
-                // 정정한 적이 있으면 이 줄이 「정정 후」다 — 무엇을 보고 있는지 밝힌다
-                'kind'   => isset($정정[$o->id]) ? '정정 후' : '주문',
+                /* 구분은 **무슨 줄인가**를 말한다 (2026-10-05 지시).
+
+                   여태 보통 줄을 모두 「주문」 한 말로 적었다. 그런데 처방전 한 장에
+                   원 주문과 추가 주문이 함께 설 수 있고, 둘은 돈의 뜻이 다르다 —
+                   추가 주문은 먼저 산 몫 위에 더 산 것이다. 이 탭에는 「원/추가」 칸도
+                   없어 가릴 길이 아예 없었다.
+
+                   값은 이미 있다(Order::orderKindLabel). 정정한 적이 있으면 이 줄은
+                   「정정 후」이므로 그 말이 앞선다 — 무엇을 보고 있는지가 먼저다. */
+                'kind'   => isset($정정[$o->id]) ? '정정 후' : $o->orderKindLabel(),
                 'reason' => '',
             ]
             + $this->orderRow($o)
@@ -500,7 +538,13 @@ class FinanceController extends Controller
             $환불 = (int) $r->refund_amount;
 
             return [
-                'kind'       => '반품환불',
+                /* 교환ㆍ반품ㆍ취소를 갈라 적는다 (2026-10-05 지시).
+
+                   여태 셋을 모두 「반품환불」 한 말로 적었다. 접수 갈래는 세 가지인데
+                   (OrderReturn::TYPES) 표에서는 갈리지 않아, 재무가 교환과 취소를
+                   가릴 수 없었다. 돈의 움직임이 서로 다르다 — 교환은 차액만 오가고
+                   취소는 받은 것을 통째로 돌려준다. */
+                'kind'       => OrderReturn::TYPES[$r->type] ?? '반품환불',
                 'reason'     => OrderReturn::reasonLabel($r->reason_code),
                 'order_no'   => $r->order?->order_number ?? '',
                 'order_at'   => $r->created_at?->format('Y-m-d') ?? '',
@@ -1107,7 +1151,8 @@ class FinanceController extends Controller
             'orders' => [
                 /* 갈래와 사유 (2026-09-11 확인요청 8쪽). 한 표에 주문과 반품환불이
                    함께 서므로, 음수만으로 가리지 않고 이름으로도 가른다. */
-                ['header' => '구분',       'name' => 'kind',      'width' => 84,  'align' => 'center', 'sortable' => true],
+                /* 구분은 「정정 2차 · 원 주문」까지 들어간다 — 84 로는 잘린다 (2026-10-05) */
+                ['header' => '구분',       'name' => 'kind',      'width' => 130, 'align' => 'center', 'sortable' => true],
                 ['header' => '사유',       'name' => 'reason',    'width' => 130, 'align' => 'center', 'sortable' => true],
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
