@@ -1135,9 +1135,14 @@ class FinanceController extends Controller
                 ['header' => '카드종류',   'name' => '카드종류',  'width' => 100, 'align' => 'center'],
                 ['header' => '할부',       'name' => '할부',      'width' => 80,  'align' => 'center'],
                 ['header' => '결제·취소액', 'name' => '결제취소액', 'width' => 110] + $money,
-                ['header' => 'PG수수료',   'name' => 'PG수수료',  'width' => 100] + $money,
-                ['header' => '공급가액',   'name' => '공급가액',  'width' => 100] + $money,
-                ['header' => '부가세',     'name' => '부가세',    'width' => 90]  + $money,
+                /* 수수료는 **공급가액 → 부가세 → 합** 차례다 (2026-10-05 정합성 검증).
+
+                   묶음 표 셋과 머리글ㆍ차례ㆍ뜻을 맞춘다 — 갈래를 바꿔도 같은 이름이
+                   같은 값이어야 두 표를 견줄 수 있다. 여태 이 표의 「PG수수료」만
+                   수수료 총액이라 묶음 표보다 부가세 몫 8,253원 많았다. */
+                ['header' => 'PG수수료',    'name' => 'PG수수료', 'width' => 100] + $money,
+                ['header' => 'PG부가세',    'name' => 'PG부가세', 'width' => 100] + $money,
+                ['header' => 'PG수수료 합', 'name' => '수수료합', 'width' => 110] + $money,
                 ['header' => '할부수수료', 'name' => '할부수수료', 'width' => 100] + $money,
                 ['header' => '당일 정산액', 'name' => '정산액',    'width' => 110] + $money,
                 ['header' => '카드 매입상태', 'name' => '매입상태', 'width' => 110, 'align' => 'center'],
@@ -1157,13 +1162,19 @@ class FinanceController extends Controller
                 ['header' => '결제수단', 'name' => '결제수단', 'width' => 140, 'align' => 'center', 'sortable' => true],
                 ['header' => '결제+취소 건수', 'name' => '건수', 'width' => 120] + $money,
                 ['header' => '매출액',   'name' => '매출액',   'width' => 120] + $money,
+                ['header' => 'PG수수료', 'name' => 'PG수수료', 'width' => 110] + $money,
+                ['header' => 'PG부가세', 'name' => 'PG부가세', 'width' => 110] + $money,
+                ['header' => 'PG수수료 합', 'name' => '수수료합', 'width' => 120] + $money,
+                /* 네 갈래는 **합 다음**에 둔다 (2026-10-05 정합성 검증).
+
+                   토스가 가른 네 갈래는 부가세까지 든 총액이라, 그 합은 「PG수수료 합」과
+                   같다(09-01~10-05 · 일반 85,569 + 기타 5,280 = 90,849). 여태 네 갈래가
+                   「PG수수료」(공급가액 82,596) 왼쪽에 서 있어, 왼쪽에서 오른쪽으로 읽으면
+                   네 갈래가 그 칸을 이루는 것처럼 보였다. */
                 ['header' => '수수료 일반',   'name' => '수수료일반',   'width' => 110] + $money,
                 ['header' => '수수료 할부',   'name' => '수수료할부',   'width' => 110] + $money,
                 ['header' => '수수료 포인트', 'name' => '수수료포인트', 'width' => 110] + $money,
                 ['header' => '수수료 기타',   'name' => '수수료기타',   'width' => 110] + $money,
-                ['header' => 'PG수수료', 'name' => 'PG수수료', 'width' => 110] + $money,
-                ['header' => 'PG부가세', 'name' => 'PG부가세', 'width' => 110] + $money,
-                ['header' => 'PG수수료 합', 'name' => '수수료합', 'width' => 120] + $money,
                 ['header' => '당일 정산액', 'name' => '정산액', 'width' => 130] + $money,
             ],
 
