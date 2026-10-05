@@ -415,6 +415,9 @@ class FinanceController extends Controller
                 'order_at'   => $o?->created_at?->format('Y-m-d') ?? '',
                 'patient_id' => $o?->patient_id,
                 'patient'    => $o?->patient?->name ?? '',
+                /* 기관 구분도 함께 싣는다 (2026-10-05) — 거래처명 옆 칸이라, 정정 줄만
+                   비어 있으면 그 줄이 다른 사람 것으로 보인다. 값은 그 주문의 청구처다. */
+                'claim_agency' => \App\Support\ClaimAgency::LABELS[$o?->prescription?->claim_agency ?? ''] ?? '',
                 'code'       => $a->product_code ?? '',
                 'product'    => $a->product_name ?? '',
                 'shipped_at' => '',
@@ -1093,6 +1096,12 @@ class FinanceController extends Controller
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '고객ID',     'name' => 'patient_id','width' => 80,  'align' => 'center'],
                 ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
+                /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
+
+                   누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과
+                   지자체는 청구 서식도 입금 시점도 다르다. 값은 처방전의 청구처를
+                   그대로 쓴다(OrderGridExtras::of · ClaimAgency::LABELS). */
+                ['header' => '기관 구분', 'name' => 'claim_agency', 'width' => 120, 'align' => 'center', 'sortable' => true],
                 ['header' => '제품코드',   'name' => 'code',      'width' => 110],
                 ['header' => '제품명',     'name' => 'product',   'width' => 200],
                 ['header' => '주문수량',   'name' => 'qty',       'width' => 90] + $money,
@@ -1144,6 +1153,12 @@ class FinanceController extends Controller
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
+                /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
+
+                   누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과
+                   지자체는 청구 서식도 입금 시점도 다르다. 값은 처방전의 청구처를
+                   그대로 쓴다(OrderGridExtras::of · ClaimAgency::LABELS). */
+                ['header' => '기관 구분', 'name' => 'claim_agency', 'width' => 120, 'align' => 'center', 'sortable' => true],
                 // 환자에게 청구한 금액 — 입금과 맞춰 보는 값이다
                 ['header' => '주문 금액',  'name' => 'billed',    'width' => 110] + $money,
                 ['header' => '본인 부담금', 'name' => 'copay',     'width' => 110] + $money,
@@ -1181,6 +1196,12 @@ class FinanceController extends Controller
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
+                /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
+
+                   누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과
+                   지자체는 청구 서식도 입금 시점도 다르다. 값은 처방전의 청구처를
+                   그대로 쓴다(OrderGridExtras::of · ClaimAgency::LABELS). */
+                ['header' => '기관 구분', 'name' => 'claim_agency', 'width' => 120, 'align' => 'center', 'sortable' => true],
                 ['header' => '지급기관명', 'name' => 'agency',    'width' => 180, 'sortable' => true],
                 ['header' => '청구금액',   'name' => 'claimed',   'width' => 110] + $money,
                 ['header' => '승인금액',   'name' => 'approved',  'width' => 110] + $money,
@@ -1208,6 +1229,12 @@ class FinanceController extends Controller
                 ['header' => '주문번호',     'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',     'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '거래처명',     'name' => 'patient',   'width' => 90,  'sortable' => true],
+                /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
+
+                   누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과
+                   지자체는 청구 서식도 입금 시점도 다르다. 값은 처방전의 청구처를
+                   그대로 쓴다(OrderGridExtras::of · ClaimAgency::LABELS). */
+                ['header' => '기관 구분', 'name' => 'claim_agency', 'width' => 120, 'align' => 'center', 'sortable' => true],
                 ['header' => '총 주문금액',  'name' => 'total',     'width' => 110] + $money,
                 ['header' => '환자부담금',   'name' => 'copay',     'width' => 110] + $money,
                 ['header' => '공단부담금',   'name' => 'nhis',      'width' => 110] + $money,
@@ -1230,6 +1257,12 @@ class FinanceController extends Controller
             'returns' => [
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
+                /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
+
+                   누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과
+                   지자체는 청구 서식도 입금 시점도 다르다. 값은 처방전의 청구처를
+                   그대로 쓴다(OrderGridExtras::of · ClaimAgency::LABELS). */
+                ['header' => '기관 구분', 'name' => 'claim_agency', 'width' => 120, 'align' => 'center', 'sortable' => true],
                 ['header' => '제품명',     'name' => 'product',   'width' => 200],
                 ['header' => '반품접수일', 'name' => 'taken_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '반품완료일', 'name' => 'done_at',   'width' => 100, 'align' => 'center', 'sortable' => true],
@@ -1249,6 +1282,12 @@ class FinanceController extends Controller
                 ['header' => '출고일자',   'name' => 'shipped_at','width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '배송일자',   'name' => 'delivered', 'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
+                /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
+
+                   누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과
+                   지자체는 청구 서식도 입금 시점도 다르다. 값은 처방전의 청구처를
+                   그대로 쓴다(OrderGridExtras::of · ClaimAgency::LABELS). */
+                ['header' => '기관 구분', 'name' => 'claim_agency', 'width' => 120, 'align' => 'center', 'sortable' => true],
                 ['header' => '제품명',     'name' => 'product',   'width' => 200],
                 ['header' => '공급가액',   'name' => 'supply',    'width' => 110] + $money,
                 ['header' => '부가세',     'name' => 'vat',       'width' => 100] + $money,
