@@ -26,6 +26,22 @@
         <input type="date" name="date_to" value="{{ $dateTo }}" class="form-control">
       </div>
     </div>
+    {{-- 기관 구분으로 거른다 (2026-10-05 지시).
+
+         「세 값으로 구분 확인하는 것이 목적」이라 눈으로만 가리는 것으로는 모자란다 —
+         한 달치가 이백 줄이 넘는다. 고르면 그 기관 건만 선다.
+
+         빈칸(청구처를 아직 적지 않은 건)은 그대로 둔다(2026-10-05 지시). 고르개에도
+         따로 세우지 않는다 — 세 값으로 가리는 자리다. --}}
+    <div class="ds-filter-field" id="agencyFilter" style="display:{{ $tab === 'pg' ? 'none' : '' }};">
+      <label class="ds-field-label">기관 구분</label>
+      <select name="agency" class="form-control form-select">
+        <option value="">전체</option>
+        @foreach(\App\Support\ClaimAgency::LABELS as $코드 => $이름)
+          <option value="{{ $코드 }}" @selected(request('agency') === $코드)>{{ $이름 }}</option>
+        @endforeach
+      </select>
+    </div>
     {{-- PG정산내역에서만 서는 칸 (2026-09-14 확인요청 1ㆍ2쪽).
 
          토스 화면이 묻는 것 가운데 **정산 응답으로 가릴 수 있는 것만** 세운다. 정산타입ㆍ

@@ -131,6 +131,15 @@ class FinanceController extends Controller
                 ->orWhereHas('patient', fn ($p) => $p->where('name', 'like', "%{$kw}%")));
         }
 
+        /* 기관 구분으로 거른다 (2026-10-05 지시).
+
+           청구처는 처방전에 적힌다 — 주문에는 없다. 그래서 처방전을 타고 가린다.
+           고르지 않으면 모두 선다(빈칸인 건까지). */
+        if ($request->filled('agency')) {
+            $query->whereHas('prescription',
+                fn ($p) => $p->where('claim_agency', $request->get('agency')));
+        }
+
         $rows = $query->get();
 
         /* PG 정산은 환자결제ㆍ미정산 두 탭에서만 쓴다 — 나머지 탭까지 토스를 부르면
@@ -530,6 +539,14 @@ class FinanceController extends Controller
                 ->where('receipt_no', 'like', "%{$kw}%")
                 ->orWhereHas('order', fn ($o) => $o->where('order_number', 'like', "%{$kw}%"))
                 ->orWhereHas('order.patient', fn ($p) => $p->where('name', 'like', "%{$kw}%")));
+        }
+
+        /* 기관 구분 — 주문에서 세는 탭과 같은 잣대다 (2026-10-05 지시).
+           거르개가 탭마다 다르게 들으면, 탭을 옮길 때마다 걸린 수가 달라져 어느 쪽을
+           믿어야 할지 모른다. */
+        if ($request->filled('agency')) {
+            $query->whereHas('order.prescription',
+                fn ($p) => $p->where('claim_agency', $request->get('agency')));
         }
 
         $rows   = $query->get();
