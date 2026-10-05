@@ -115,7 +115,10 @@ class FinanceController extends Controller
            한 탭을 여는 데 질의가 641번 돌고 1.8초가 걸렸다. */
         $query = Order::with(['patient', 'prescription.billingOffice', 'items', 'tossPayment',
                               'operationUser', 'creator',
-                              'prescription.creator', 'prescription.updater'])
+                              'prescription.creator', 'prescription.updater',
+                              /* payMethod() 는 토스 수단이 없으면 결제 링크를 본다 —
+                                 미리 담지 않으면 줄마다 묻는다 (2026-10-05) */
+                              'paymentLinks'])
             ->whereBetween(\DB::raw('DATE(created_at)'), [$from, $to])
             ->orderByDesc('created_at')->orderByDesc('id');
 
@@ -392,7 +395,24 @@ class FinanceController extends Controller
                없으면 총액에서 10% 를 갈라 어림한다. */
             'supply'     => (int) ($o->tax_invoice_supply ?: round($total / 1.1)),
             'vat'        => (int) ($o->tax_invoice_vat ?: $total - round($total / 1.1)),
-            'by_card'    => $o->pay_method === 'card' ? $billed : 0,
+            /* 「카드」는 **토스가 알려 준 수단**으로 센다 (2026-10-05 고침).
+
+               여태 `pay_method` 를 그대로 보았다. 그 칸은 「링크페이로 안내했다」는
+               뜻이지 카드로 받았다는 뜻이 아니다 — 담당자가 카드 링크를 보내도
+               환자는 결제창에서 가상계좌를 고를 수 있다.
+
+               그래서 **가상계좌로 받은 돈이 「카드」로 세어지고, 같은 돈에 현금영수증도
+               발행되어 두 번 세어졌다.** 10-01~10-05 에 14줄이 그랬고 1,351,500원이
+               겹쳤다 — 합계금액 37,410,000 인데 카드+현금영수증+세금계산서가
+               38,761,500 이었다.
+
+               `Order::payMethod()` 가 이미 그 잣대를 들고 있다(2026-10-01 지시 —
+               「돈이 들어온 뒤에는 토스가 알려 준 유형이 정본이다」). 증빙을 가르는
+               자리는 그것 하나여야 한다.
+
+               고친 뒤로는 카드 2,288,250 + 현금영수증 2,566,500 = 본인부담 4,854,750
+               이고, 거기에 세금계산서(공단부담)를 더하면 합계금액과 같아진다. */
+            'by_card'    => $o->payMethod() === \App\Models\PaymentLink::METHOD_CARD ? $billed : 0,
             'by_cash'    => $o->cash_receipt_status === 'issued' ? (int) $o->cash_receipt_amount : 0,
             'by_tax'     => $o->tax_invoice_status === 'issued'
                                 ? (int) ($o->tax_invoice_supply + $o->tax_invoice_vat) : 0,
