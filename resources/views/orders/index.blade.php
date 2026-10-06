@@ -595,7 +595,9 @@ window.HELP_TOUR_STEPS = [
 
 
       // 네 목록 화면이 함께 쓰는 칸 — 위드웍스 판매주문 현황의 차례다
-      ...ceWwCols({ orderKind: false }),
+      /* 위드웍스 원본 칸 스물여섯을 걷는다 (2026-10-06 지시 · SR #94ㆍ#97) —
+         훑을 때 눈만 가리고 쓰이지 않는다. 다른 화면은 그대로 둔다. */
+      ...ceWwCols({ orderKind: false, 상세칸: false }),
     ],
     data: @json($gridData),
   });

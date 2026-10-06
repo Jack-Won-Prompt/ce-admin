@@ -268,6 +268,12 @@ class DispatchHistoryController extends Controller
                 'channel'  => $m->channelLabel(),
                 'template' => $m->template_label ?: ($m->template_code ?: '자유 문구'),
                 'rx'       => $m->prescription?->rx_number ?? '-',
+                /* 누구에게 간 것인가 — 처방번호만으로는 훑을 수 없다 (2026-10-06 · SR #93
+                   「발송/발행 내역 — 행에 환자명 추가」). 다른 여섯 갈래에는 이미 선다.
+                   (E) 만 떼고 동명이인 꼬리는 둔다 — 목록에서는 그 꼬리가 가릴 일을 한다. */
+                'patient'  => \App\Models\Patient::bare(
+                                  $m->prescription?->patient?->name
+                                  ?: ($m->prescription?->patient_name_ocr ?? '')) ?: '-',
                 // 누구에게 나갔는지 — 목록에서 바로 보여야 「안 왔다」를 되짚을 수 있다
                 'rcv'      => self::받는번호($m->receivers),
                 'total'    => (int) $m->total,
@@ -286,6 +292,7 @@ class DispatchHistoryController extends Controller
                 ['header' => '채널',     'name' => 'channel',  'width' => 80,  'align' => 'center', 'sortable' => true],
                 ['header' => '유형',     'name' => 'template', 'width' => 130, 'sortable' => true],
                 ['header' => '처방번호', 'name' => 'rx',       'width' => 130],
+                ['header' => '환자명',   'name' => 'patient',  'width' => 90,  'sortable' => true],
                 ['header' => '수신 번호', 'name' => 'rcv',     'width' => 160],
                 ['header' => '대상',     'name' => 'total',    'width' => 70,  'editor' => 'number'],
                 ['header' => '성공',     'name' => 'ok',       'width' => 70,  'editor' => 'number'],
@@ -321,7 +328,7 @@ class DispatchHistoryController extends Controller
             $columns = [
                 ['header' => '발송일시', 'name' => 'created', 'width' => 130, 'sortable' => true],
                 ['header' => '처방번호', 'name' => 'rx',      'width' => 130],
-                ['header' => '이름',     'name' => 'patient', 'width' => 90,  'sortable' => true],
+                ['header' => '환자명',     'name' => 'patient', 'width' => 90,  'sortable' => true],
                 ['header' => '제목',     'name' => 'title',   'width' => 220],
                 ['header' => '받는 곳',  'name' => 'to',      'width' => 160],
                 ['header' => '문서',     'name' => 'files',   'width' => 70,  'align' => 'center'],
@@ -337,7 +344,7 @@ class DispatchHistoryController extends Controller
                 ['header' => '일시',     'name' => 'at',        'width' => 130, 'sortable' => true],
                 ['header' => '방향',     'name' => 'way',       'width' => 70,  'align' => 'center', 'sortable' => true],
                 ['header' => '주문번호', 'name' => 'order_no',  'width' => 120, 'sortable' => true],
-                ['header' => '이름',     'name' => 'patient',   'width' => 90],
+                ['header' => '환자명',     'name' => 'patient',   'width' => 90],
                 ['header' => '위드웍스 판매번호', 'name' => 'so_no', 'width' => 150],
                 ['header' => '사건',     'name' => 'event',     'width' => 140, 'sortable' => true],
                 ['header' => '상태',     'name' => 'status',    'width' => 120, 'align' => 'center'],
@@ -364,7 +371,7 @@ class DispatchHistoryController extends Controller
             $columns = [
                 ['header' => '발행일시',   'name' => 'created',  'width' => 130, 'sortable' => true],
                 ['header' => '주문번호',   'name' => 'order_no', 'width' => 120],
-                ['header' => '이름',     'name' => 'patient',  'width' => 90,  'sortable' => true],
+                ['header' => '환자명',     'name' => 'patient',  'width' => 90,  'sortable' => true],
                 ['header' => '사업자번호', 'name' => 'biz_no',   'width' => 120],
                 ['header' => '상호',       'name' => 'biz_name', 'width' => 140],
                 ['header' => '공급가액',   'name' => 'supply',   'width' => 100, 'editor' => 'number'],
@@ -394,7 +401,7 @@ class DispatchHistoryController extends Controller
             $columns = [
                 ['header' => '발행일시',   'name' => 'created',  'width' => 130, 'sortable' => true],
                 ['header' => '주문번호',   'name' => 'order_no', 'width' => 120],
-                ['header' => '이름',     'name' => 'patient',  'width' => 90,  'sortable' => true],
+                ['header' => '환자명',     'name' => 'patient',  'width' => 90,  'sortable' => true],
                 ['header' => '종류',       'name' => 'cr_type',  'width' => 90,  'align' => 'center'],
                 ['header' => '식별번호',   'name' => 'ident',    'width' => 130],
                 ['header' => '발행금액',   'name' => 'amount',   'width' => 100, 'editor' => 'number'],
@@ -429,7 +436,7 @@ class DispatchHistoryController extends Controller
             $columns = [
                 ['header' => '발송일시', 'name' => 'created',  'width' => 130, 'sortable' => true],
                 ['header' => '주문번호', 'name' => 'order_no', 'width' => 120],
-                ['header' => '이름',   'name' => 'patient',  'width' => 90,  'sortable' => true],
+                ['header' => '환자명',   'name' => 'patient',  'width' => 90,  'sortable' => true],
                 ['header' => '발송 팩스','name' => 'fax',      'width' => 120],
                 ['header' => '청구금액', 'name' => 'claim',    'width' => 100, 'editor' => 'number'],
                 ['header' => '공단부담금','name' => 'nhis',     'width' => 100, 'editor' => 'number'],
@@ -458,7 +465,7 @@ class DispatchHistoryController extends Controller
             $columns = [
                 ['header' => '발행일시', 'name' => 'created',  'width' => 130, 'sortable' => true],
                 ['header' => '주문번호', 'name' => 'order_no', 'width' => 120],
-                ['header' => '이름',   'name' => 'patient',  'width' => 90,  'sortable' => true],
+                ['header' => '환자명',   'name' => 'patient',  'width' => 90,  'sortable' => true],
                 ['header' => '은행',     'name' => 'bank',     'width' => 90],
                 ['header' => '계좌번호', 'name' => 'account',  'width' => 150],
                 ['header' => '금액',     'name' => 'amount',   'width' => 100, 'editor' => 'number'],
@@ -691,7 +698,7 @@ class DispatchHistoryController extends Controller
 
     private function messageQuery(?string $search, string $from, string $to)
     {
-        return MessageHistory::with(['sentBy', 'prescription'])
+        return MessageHistory::with(['sentBy', 'prescription.patient'])
             ->whereBetween(DB::raw('DATE(message_histories.created_at)'), [$from, $to])
             ->when($search, function ($q) use ($search) {
                 /* 목록에는 010-3422-7121 로 그려 주는데 receivers 에는 숫자만 담겨 있다.

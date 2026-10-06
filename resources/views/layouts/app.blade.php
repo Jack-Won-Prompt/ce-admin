@@ -2213,8 +2213,26 @@ document.addEventListener('click', (e) => {
      쓰는 법 — columns: [ …번호ㆍ이름, ...ceMoneyCols(), 날짜, …화면 고유, ...ceWwCols() ] */
   /* 마케팅 동의는 부르는 쪽이 켠다 — ceWwCols({ marketing: true }) (2026-09-14 지시).
      열 화면이 함께 쓰는 칸이라 기본으로 켜면 모든 목록이 한 칸씩 넓어진다. */
+  /* **주문 관리에서 걷어 낸 칸** (2026-10-06 지시 · SR #94ㆍ#97).
+
+     위드웍스 판매현황을 그대로 맞추느라 세운 칸들인데, 주문 관리에서는 훑을 때 눈만
+     가리고 쓰이지 않는다(「주문관리 행렬 삭제」로 스물넷을 적어 주셨다). 다른 화면
+     (정산ㆍ청구ㆍ현금영수증ㆍ입금ㆍ교환반품)은 그대로 둔다 — 그쪽에서 보는 담당자가
+     있고, 정산은 숨김 칸 목록으로 따로 가린다.
+
+     지우지 않고 **부르는 쪽이 끄게** 한다 — 지우면 되살릴 자리가 없고, 다섯 화면이 같은
+     묶음을 쓴다. 주문 관리만 ceWwCols({ 상세칸: false }) 로 부른다. */
+  const CE_WW_걷을칸 = new Set([
+    'ww_wh_to', 'ww_so_type', 'ww_pick_type', 'ww_barcode', 'ww_grade', 'ww_std_code',
+    'ww_desc1', 'ww_desc2', 'ww_desc3', 'ww_desc4',
+    'ww_line_no', 'ww_line_det', 'ww_line_uid', 'ww_inv_state', 'ww_due_chg',
+    'ww_po_no', 'ww_po_date', 'ww_addr_code', 'ww_address',
+    'ww_qty_rb', 'ww_qty_sb', 'ww_receipt_state', 'ww_sticker',
+    'rt_purpose', 'rt_purpose_note', 'rx_last_qty',
+  ]);
+
   window.ceWwCols = function (opts = {}) {
-    return [
+    const 칸들 = [
       // ── 위드웍스 차례 ──────────────────────────────────
       { header: '요양병원 코드',  name: 'rx_hosp_code', width: 110 },
       { header: '병원명',         name: 'rx_hospital',  width: 150, sortable: true },
@@ -2387,6 +2405,11 @@ document.addEventListener('click', (e) => {
       { header: '수정자',    name: 'ww_updated_by', width: 100, sortable: true },
       { header: '수정 일시', name: 'ww_updated_at', width: 160, align: 'center', sortable: true },
     ];
+
+    /* 주문 관리는 위드웍스 원본 칸을 걷고 부른다 (SR #94ㆍ#97) */
+    return opts.상세칸 === false
+      ? 칸들.filter(c => !CE_WW_걷을칸.has(c.name))
+      : 칸들;
   };
 
   /* 정산 — 날짜 칸 바로 앞에 세운다. 화면마다 그 칸의 이름이 다르지만(판매일자ㆍ
