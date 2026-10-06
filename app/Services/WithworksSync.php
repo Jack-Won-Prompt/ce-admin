@@ -190,6 +190,112 @@ class WithworksSync
         ]);
     }
 
+    /**
+     * 출고 상태 이름표 — 저쪽 API 가 준 짝에서 확인된 둘만 쓴다 (2026-10-06 · SR #106).
+     *
+     * 우리 표에 이미 담긴 짝을 세어 확인했다 — 02 → 신규(4건), 95 → 출고완료(76건).
+     * 저쪽 출고 표에는 02ㆍ14ㆍ17ㆍ52ㆍ55ㆍ61ㆍ68ㆍ92ㆍ93ㆍ95ㆍ98 열한 가지가 서는데,
+     * 나머지 아홉은 어느 자료에도 이름이 없다. **이름표를 지어내지 않는다** — 화면이
+     * 틀린 말을 하는 것이 비어 있는 것보다 나쁘다.
+     */
+    private const DB_SHIP_LABEL = ['02' => '신규', '95' => '출고완료'];
+
+    /**
+     * 출고 정보를 저쪽 표에서 되짚는다 (2026-10-06 지시 · SR #106).
+     *
+     * 「출고 완료인데 출고일자ㆍ출고상태가 공란」인 건이 있었다. 까닭은 둘이다.
+     *
+     *   ① `so_show` 가 정정 전 판매주문을 돌려주는 건은 `ship` 묶음이 아예 오지 않는다
+     *      ((E)박영희G — 우리 S2610020036 인데 저쪽은 S2610010535ㆍ취소를 준다).
+     *   ② 출고가 방금 끝난 건은 다음 동기화까지 비어 있다.
+     *
+     * 그래서 저쪽 출고 표(`schedule_by_ships`)를 우리 판매번호로 직접 읽는다. 이어지는
+     * 열쇠는 `so_id` 다 — 같은 `so_no` 에 `sales_orders` 가 여럿이므로(정정마다 한 줄)
+     * 그 모두를 쥐고 찾는다. 하나만 쥐면 95(출고완료) 줄을 놓친다 — 박영희G 가 그렇다.
+     *
+     * **출고완료(95) 줄이 있을 때만** 날짜를 적는다. 그 줄의 `ship_complete_date` 가
+     * 출고일이고, 청구 기한(출고일＋2주)이 이 날을 센다.
+     *
+     * 2026-10-06 실측 : 이어진 주문 105건 가운데 이 길로 채울 수 있는 것 2건,
+     * 저쪽에 출고 줄이 아직 없는 것 9건, 02(신규)인 것 18건이다.
+     */
+    private function 출고맞추기(Order $order): void
+    {
+        if (blank($order->withworks_so_no)) {
+            return;
+        }
+
+        try {
+            $창고 = \App\Support\WithworksSource::연결(\App\Support\WithworksSource::창고);
+
+            $soIds = $창고->table('sales_orders')
+                ->where('so_no', $order->withworks_so_no)->pluck('id');
+
+            if ($soIds->isEmpty()) {
+                return;
+            }
+
+            $출고들 = $창고->table('schedule_by_ships')
+                ->whereIn('so_id', $soIds)
+                ->orderByDesc('id')
+                ->get(['id', 'status', 'ship_no', 'ship_complete_date']);
+        } catch (\Throwable $e) {
+            Log::warning('[Withworks] 저쪽 출고 표를 보지 못했다', [
+                'order' => $order->order_number, 'error' => $e->getMessage(),
+            ]);
+
+            return;
+        }
+
+        if ($출고들->isEmpty()) {
+            return;
+        }
+
+        /* 출고완료 줄이 있으면 그것이 이 건의 출고다. 없으면 가장 최신 줄의 상태만 본다. */
+        $완료 = $출고들->firstWhere('status', '95');
+        $볼것 = $완료 ?: $출고들->first();
+        $코드 = (string) $볼것->status;
+
+        $바꿀것 = [];
+
+        if (isset(self::DB_SHIP_LABEL[$코드])) {
+            if ((string) $order->withworks_ship_status !== $코드) {
+                $바꿀것['withworks_ship_status']       = $코드;
+                $바꿀것['withworks_ship_status_label'] = self::DB_SHIP_LABEL[$코드];
+            }
+        } else {
+            Log::info('[Withworks] 모르는 출고 상태 — 이름을 적지 않는다', [
+                'order' => $order->order_number, 'so_no' => $order->withworks_so_no, '상태' => $코드,
+            ]);
+        }
+
+        if (blank($order->withworks_ship_no) && filled($볼것->ship_no)) {
+            $바꿀것['withworks_ship_no'] = $this->fit($볼것->ship_no, self::WIDTH['withworks_ship_no']);
+        }
+
+        /* 날짜는 **출고완료 줄에서만** 가져온다 — 예정일이나 다른 걸음의 시각을 출고일로
+           적으면 청구 기한이 엉뚱한 날에서 세어진다. */
+        if ($완료 && filled($완료->ship_complete_date) && blank($order->shipped_at)) {
+            $바꿀것['shipped_at'] = \Carbon\Carbon::parse($완료->ship_complete_date)->toDateString();
+        }
+
+        if (! $바꿀것) {
+            return;
+        }
+
+        $order->update($바꿀것);
+
+        activity()->performedOn($order)->log(sprintf(
+            '위드웍스 출고 정보를 저쪽 자료로 맞췄습니다 — %s · %s%s',
+            $order->withworks_so_no,
+            $바꿀것['withworks_ship_status_label'] ?? ('상태 ' . $코드),
+            isset($바꿀것['shipped_at']) ? ' · 출고일 ' . $바꿀것['shipped_at'] : ''));
+
+        Log::info('[Withworks] 저쪽 표로 출고를 맞췄다', [
+            'order' => $order->order_number, 'so_no' => $order->withworks_so_no, '적은것' => $바꿀것,
+        ]);
+    }
+
     public function apply(Order $order, array $result, bool $full = false): void
     {
         /* **다른 판매주문의 상태로 덮지 않는다** (2026-10-06 · SR #110).
@@ -216,6 +322,7 @@ class WithworksSync
             /* 그냥 두면 옛 상태가 영영 남는다 — 저쪽 표를 직접 보고 맞춘다
                (2026-10-06 지시 · SR #110). */
             $this->표로맞추기($order);
+            $this->출고맞추기($order);
 
             return;
         }
@@ -290,6 +397,16 @@ class WithworksSync
         }
 
         $order->update($update);
+
+        /* **응답에 출고 묶음이 없으면 저쪽 표를 본다** (2026-10-06 · SR #106).
+
+           `so_show` 는 출고가 방금 끝난 건이나 정정을 거친 건에 `ship` 을 싣지 않는
+           일이 있다. 그때 우리 출고 칸이 비어 있으면 화면이 「출고 완료인데 출고일자
+           공란」으로 선다. 비어 있을 때만 한 번 더 묻는다 — 채워진 건에는 질의를
+           더하지 않는다. */
+        if (! isset($result['ship']) && blank($order->fresh()->shipped_at)) {
+            $this->출고맞추기($order->fresh());
+        }
 
         /* Lot 은 두 길로 온다.
 
