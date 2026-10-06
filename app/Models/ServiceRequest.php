@@ -94,6 +94,29 @@ class ServiceRequest extends Model
             'answerer'    => $this->answeredBy?->name ?? '',
             'answered_at' => $this->answered_at?->format('Y-m-d H:i') ?? '',
             'created'     => $this->created_at?->format('Y-m-d H:i:s') ?? '',
+
+            /* 누가 올린 것인가 — 화면이 「내가 고칠 수 있는 글인가」를 가린다
+               (2026-10-06 · SR #82) */
+            'user_id'     => $this->user_id,
+
+            /* 붙임 파일 (2026-10-06 · SR #82ㆍ#86).
+               본문에 끼운 그림(inline)은 빼고 센다 — 본문에 이미 보이는 것을 목록에
+               또 세우면 같은 것이 두 번 보인다. */
+            'files'       => $this->files
+                ->where('inline', false)
+                ->map(fn (ServiceRequestFile $f) => [
+                    'id'    => $f->id,
+                    'name'  => $f->original_name,
+                    'size'  => $f->크기글(),
+                    'image' => $f->그림인가(),
+                    'url'   => route('sr.files.show', $f),
+                ])->values()->all(),
         ];
+    }
+
+    /** 붙임 파일 — 본문에 끼운 그림도 같은 표에 담긴다(inline 으로 가린다) */
+    public function files(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ServiceRequestFile::class)->orderBy('id');
     }
 }

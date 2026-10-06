@@ -3264,7 +3264,17 @@ window.ceQuill = (function () {
    *
    * 세우는 약속을 칸에 걸어 두어, 뒤에 부른 쪽은 그 약속을 함께 기다리게 한다.
    */
-  async function make(자리, 안내말) {
+  /**
+   * @param 자리    편집기를 세울 칸(또는 고르개)
+   * @param 안내말  빈 칸에 보일 글
+   * @param 짐      { 그림올리기 } — 그림 한 장을 받아 주소를 돌려주는 약속.
+   *                주면 그림이 **파일로 올라가고 본문에는 주소만** 들어간다.
+   *                주지 않으면 Quill 이 하던 대로 base64 로 넣는다.
+   *
+   * 그림을 글 안에 넣으면 base64 로 바뀌어 글자 수가 수십 배가 된다. SR 의 `content`
+   * 는 TEXT(65,535바이트)라 갈무리 한 장에 「글자 초과」로 막혔다(SR #86 · 2026-10-06).
+   */
+  async function make(자리, 안내말, 짐) {
     const el = typeof 자리 === 'string' ? document.querySelector(자리) : 자리;
     if (!el) return null;
 
@@ -3294,11 +3304,31 @@ window.ceQuill = (function () {
         앞 = 그앞;
       }
 
+      const 올리기 = 짐 && typeof 짐.그림올리기 === 'function' ? 짐.그림올리기 : null;
+
       const q = new Q(el, {
         theme: 'snow',
         placeholder: 안내말 || '',
-        modules: { toolbar: TOOLBAR },
+        modules: {
+          toolbar: 올리기
+            ? { container: TOOLBAR, handlers: { image: () => 그림고르기(q, 올리기) } }
+            : TOOLBAR,
+        },
       });
+
+      /* 붙여넣기ㆍ끌어다 놓기도 같은 길로 보낸다 — 도구막대만 막으면 Ctrl+V 로
+         base64 가 그대로 들어온다 (2026-10-06 · SR #86). */
+      if (올리기) {
+        const 가로채기 = (e) => {
+          const 것들 = [...(e.clipboardData || e.dataTransfer || {}).files || []]
+                        .filter(f => f.type.startsWith('image/'));
+          if (!것들.length) return;
+          e.preventDefault();
+          것들.forEach(f => 넣기(q, f, 올리기));
+        };
+        q.root.addEventListener('paste', 가로채기);
+        q.root.addEventListener('drop',  가로채기);
+      }
 
       el.__quill = q;
       return q;
@@ -3310,6 +3340,31 @@ window.ceQuill = (function () {
       /* 끝났으면 약속은 걷는다 — 다음부터는 위의 `el.__quill` 이 바로 답한다.
          실패했을 때도 걷어야 다시 눌러 세울 수 있다. */
       delete el.__quill세우는중;
+    }
+  }
+
+  /** 도구막대의 그림 단추 — 파일을 고르게 하고 올린 주소를 글에 넣는다 */
+  function 그림고르기(q, 올리기) {
+    const 칸 = document.createElement('input');
+    칸.type = 'file';
+    칸.accept = 'image/*';
+    칸.onchange = () => { if (칸.files?.[0]) 넣기(q, 칸.files[0], 올리기); };
+    칸.click();
+  }
+
+  /** 한 장을 올리고 그 자리에 끼운다 */
+  async function 넣기(q, 파일, 올리기) {
+    const 자리 = (q.getSelection(true) || { index: q.getLength() }).index;
+
+    try {
+      const 주소 = await 올리기(파일);
+      if (!주소) return;
+      q.insertEmbed(자리, 'image', 주소, 'user');
+      q.setSelection(자리 + 1, 0);
+    } catch (e) {
+      window.ceAlert
+        ? ceAlert(e?.message || '그림을 올리지 못했습니다.', { tone: 'danger' })
+        : alert(e?.message || '그림을 올리지 못했습니다.');
     }
   }
 
@@ -3337,6 +3392,33 @@ window.ceQuill = (function () {
   .ce-quill .ql-container.ql-snow { border-color: var(--gray-200, #e5e7eb);
     border-radius: 0 0 8px 8px; font-family: inherit; }
   .ce-quill .ql-editor { min-height: 140px; font-size: 13px; line-height: 21px; }
+
+  /* 링크 말풍선이 보이게 한다 (2026-10-06 · SR #82).
+
+     「빨강색(링크)은 클릭 시 활성화 되지 않고, 파란색(그림)만 활성화되고 있음」으로
+     올라온 자리다. 눌러도 아무 일이 없는 것이 아니라 — 말풍선은 서고 입력칸에 초점도
+     가는데 **눈에 안 보였다.**
+
+     Quill 은 말풍선을 고른 글자 위에 띄운다. 그 자리가 창 밖이면 왼쪽으로 밀리는데,
+     SR 창의 몸통이 `overflow-y:auto` 라 한 축만 잘라도 두 축이 모두 잘린다(CSS 규칙) —
+     말풍선이 담는 칸 왼쪽 밖 41px 에 서서 통째로 잘렸다(1920 실측). 첫 줄에서 열면
+     도구막대까지 덮었다.
+
+     고른 글자를 따라가지 않고 **글칸 왼쪽 위에 세운다.** 주소를 적는 칸이라 자리가
+     옮겨 다닐 까닭이 없고, 어느 줄에서 열어도 잘리지 않는다. */
+  .ce-quill .ql-container { position: relative; }
+  .ce-quill .ql-tooltip {
+    left: 8px !important; top: 8px !important;
+    transform: none !important;
+    z-index: 5; max-width: calc(100% - 16px);
+  }
+
+  /* 말풍선 안의 글도 우리말로 — 영어 그대로면 무엇을 적는 자리인지 읽히지 않는다 */
+  .ce-quill .ql-snow .ql-tooltip::before                 { content: "주소"; }
+  .ce-quill .ql-snow .ql-tooltip[data-mode="link"]::before { content: "주소 입력"; }
+  .ce-quill .ql-snow .ql-tooltip a.ql-action::after      { content: "저장"; }
+  .ce-quill .ql-snow .ql-tooltip a.ql-remove::before     { content: "지우기"; }
+  .ce-quill .ql-snow .ql-tooltip.ql-editing a.ql-action::after { content: "저장"; }
   .ce-quill .ql-editor.ql-blank::before { font-style: normal; color: var(--gray-500, #9ca3af); }
   .ce-quill .ql-editor img { max-width: 100%; }
   /* 담긴 글을 보여 주는 자리 — 편집기가 낸 꼴을 그대로 그린다 */

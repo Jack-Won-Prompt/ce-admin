@@ -187,8 +187,9 @@
 <div class="srx-pop" id="srxPopNew" role="dialog" aria-label="SR 신규 등록">
   <div class="srx-pop-head" data-pop-drag>
     <i class="fa-solid fa-plus" style="font-size:13px;color:var(--gray-400);"></i>
-    <span class="ttl">SR 신규 등록</span>
-    <button type="button" class="x" onclick="srxPop.close('srxPopNew')" aria-label="닫기">
+    {{-- 고칠 때 「SR 수정」으로 바뀐다 (2026-10-06 · SR #82) --}}
+    <span class="ttl" id="srxPopNewTitle">SR 신규 등록</span>
+    <button type="button" class="x" onclick="srxPop.close('srxPopNew'); srxEditReset();" aria-label="닫기">
       <i class="bx bx-x"></i>
     </button>
   </div>
@@ -219,14 +220,29 @@
       <div class="ce-quill"><div id="srxContent"
            data-ph="어떤 화면에서 무엇이 어떻게 되면 좋을지 입력해 주십시오."></div></div>
     </div>
-    <div class="srx-field" style="margin-bottom:0;">
+    <div class="srx-field">
       <label for="srxPageLabel">대상 화면</label>
       <input type="text" id="srxPageLabel" maxlength="100" placeholder="예) 처방전 목록">
       <span class="srx-hint">비워 두면 기록되지 않습니다. 상단 SR 패널로 등록하면 보고 있던 화면이 자동 기록됩니다.</span>
     </div>
+
+    {{-- 붙임 파일 (2026-10-06 · SR #82ㆍ#86).
+         그림은 내용 칸에 바로 붙여도 된다 — 파일로 올라가고 글에는 주소만 들어간다.
+         화면 갈무리 말고 엑셀ㆍPDF 를 함께 올리는 자리가 여기다. --}}
+    <div class="srx-field" style="margin-bottom:0;">
+      <label>붙임 파일</label>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="ds-btn ds-btn-sm" onclick="document.getElementById('srxFileInput').click()">
+          <i class="bx bx-paperclip"></i> 파일 선택
+        </button>
+        <input type="file" id="srxFileInput" multiple style="display:none;" onchange="srxFilePick(this)">
+        <span class="srx-hint" style="margin:0;">한 개 10MB 까지. 내용 칸에는 그림을 바로 붙여 넣어도 됩니다.</span>
+      </div>
+      <div id="srxFileList" style="margin-top:8px;display:flex;flex-direction:column;gap:4px;"></div>
+    </div>
   </div>
   <div class="srx-pop-foot">
-    <button type="button" class="ds-btn" onclick="srxPop.close('srxPopNew')">닫기</button>
+    <button type="button" class="ds-btn" onclick="srxPop.close('srxPopNew'); srxEditReset();">닫기</button>
     <button type="button" class="ds-btn ds-btn-primary" id="srxSubmitBtn" onclick="srxSubmit()">
       <i class="bx bx-send"></i> 등록
     </button>
@@ -306,7 +322,15 @@
     </div>
 
     <div class="srx-sec">
-      <h4>요청 내용</h4>
+      <h4 style="display:flex;align-items:center;gap:8px;">
+        요청 내용
+        {{-- 올린 사람이 제 글을 고치는 자리 (2026-10-06 · SR #82).
+             답변이 달리면 숨긴다 — 답변은 그때의 글을 보고 적은 것이다. --}}
+        <button type="button" class="ds-btn ds-btn-sm" id="srxEditBtn"
+                style="display:none;margin-left:auto;font-weight:400;" onclick="srxEditOpen()">
+          <i class="bx bx-edit"></i> 수정
+        </button>
+      </h4>
       <div class="srx-meta" id="srxMeta"></div>
       {{-- 담긴 글은 담길 때 걸러진 것이다(App\Support\RichText) — 꾸밈을 그대로 그린다 --}}
       <div class="srx-body ce-rich" id="srxContentBox"></div>
@@ -352,6 +376,10 @@
   const CSRF  = document.querySelector('meta[name=csrf-token]')?.content ?? '';
   const CLS   = { new:'sr-b-new', in_progress:'sr-b-in_progress', done:'sr-b-done', hold:'sr-b-hold' };
   const ME    = @json(Auth::user()?->name ?? '');
+  /* 내가 올린 글인지 가리려고 쓴다 — 올린 사람은 답변 전까지 제 글을 고칠 수 있다
+     (2026-10-06 · SR #82) */
+  const ME_ID = @json(Auth::id());
+  const CAN_ANSWER = @json(perm('service-requests', 'update'));
   let _rows = @json($gridData);
   let _sel  = null;
 
@@ -463,7 +491,9 @@
 
          Quill 이 붙이는 이름표(ql-toolbar · ql-container)를 빼고 고른다. */
       el.querySelectorAll('.ce-quill > div:not(.ql-toolbar):not(.ql-container)').forEach((자리) => {
-        window.ceQuill?.make(자리, 자리.dataset.ph || '')
+        /* 그림은 **파일로 올리고 글에는 주소만** 넣는다 (2026-10-06 · SR #86).
+           그러지 않으면 Quill 이 base64 로 바꿔 넣어 content(TEXT)를 넘긴다. */
+        window.ceQuill?.make(자리, 자리.dataset.ph || '', { 그림올리기: srxUploadInline })
           .catch(() => showToast('편집기를 불러오지 못했습니다.', 'warning'));
       });
 
@@ -535,9 +565,33 @@
     /* 옛 글자뿐인 줄은 줄바꿈을 살려야 한다 — 이름표가 하나도 없으면 그렇게 본다.
        꾸밈글(Quill)은 <p>ㆍ<ul> 이 줄바꿈을 맡으므로 pre-wrap 을 걸면 빈 줄이 벌어진다
        (2026-10-01 「팝업 내용 틀이 깨져 보임」). */
+    /* 올린 사람은 답변이 달리기 전까지 제 글을 고칠 수 있다 (2026-10-06 · SR #82).
+       관리자는 답변 뒤에도 고친다 — 오타를 바로잡을 길은 있어야 한다. */
+    const 고칠수있나 = (r.user_id === ME_ID && !r.answer) || CAN_ANSWER;
+    const 고침단추 = document.getElementById('srxEditBtn');
+    if (고침단추) 고침단추.style.display = 고칠수있나 ? '' : 'none';
+
     const 내용칸 = document.getElementById('srxContentBox');
     내용칸.innerHTML = r.content || '';
     내용칸.classList.toggle('is-plain', !/<[a-z][\s\S]*>/i.test(r.content || ''));
+
+    /* 붙임 파일을 내용 아래에 세운다 (2026-10-06 · SR #82).
+       본문에 끼운 그림은 이미 위에 보이므로 서버가 목록에서 빼고 준다(inline). */
+    const 붙임 = r.files || [];
+    if (붙임.length) {
+      const 줄 = document.createElement('div');
+      줄.style.cssText = 'margin-top:12px;padding-top:10px;border-top:1px solid var(--gray-200);'
+                       + 'display:flex;flex-direction:column;gap:5px;';
+      줄.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--gray-600);">붙임 파일 ${붙임.length}개</div>`
+        + 붙임.map(f => `
+          <a href="${esc(f.url)}" target="_blank" rel="noopener"
+             style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--primary);text-decoration:none;">
+            <i class="bx ${f.image ? 'bx-image' : 'bx-file'}"></i>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(f.name)}</span>
+            <span style="color:var(--gray-500);">${esc(f.size)}</span>
+          </a>`).join('');
+      내용칸.appendChild(줄);
+    }
 
     document.getElementById('srxPrevAnswer').innerHTML = r.answer
       ? `<div class="srx-answer">
@@ -584,6 +638,118 @@
     } finally { btn.disabled = false; }
   };
 
+  /* ── 파일 올리기 (2026-10-06 · SR #82ㆍ#86) ──────────────────
+
+     여태 그림을 글 안에 base64 로 담았다. 갈무리 한 장이 글자 수십만 자가 되어
+     content(TEXT·65,535바이트)를 넘겼고, 담당자는 「글자 초과」로 화면을 붙이지
+     못했다. 이제 파일로 올리고 글에는 주소만 둔다. */
+
+  /** 한 개를 올린다 — 주소와 이름을 돌려준다 */
+  async function srxUpload(파일, 본문그림) {
+    const 짐 = new FormData();
+    짐.append('file', 파일);
+    if (본문그림) 짐.append('inline', '1');
+
+    const res = await fetch(BASE + '/files', {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+      body: 짐,
+    });
+    const d = await res.json().catch(() => ({}));
+
+    if (!res.ok || !d.success) {
+      throw new Error(d.message
+        || Object.values(d.errors ?? {}).flat().join(', ')
+        || '파일을 올리지 못했습니다. (10MB 까지)');
+    }
+    return d;
+  }
+
+  /** 편집기가 부르는 자리 — 글에 끼울 주소만 돌려준다 */
+  async function srxUploadInline(파일) {
+    return (await srxUpload(파일, true)).url;
+  }
+
+  /** 이번에 올려 둔 붙임 파일 — 저장하면 그 SR 에 걸린다 */
+  let _붙임 = [];
+
+  window.srxFilePick = async function (칸) {
+    const 것들 = [...(칸.files || [])];
+    칸.value = '';
+    for (const f of 것들) {
+      try {
+        _붙임.push(await srxUpload(f, false));
+      } catch (e) {
+        ceAlert(e.message, { tone: 'danger' });
+      }
+    }
+    srxFileDraw();
+  };
+
+  window.srxFileDrop = async function (id) {
+    try {
+      await fetch(BASE + '/files/' + id, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+      });
+    } catch (e) { /* 지우지 못해도 목록에서는 뺀다 — 임자 없는 줄로 남는다 */ }
+    _붙임 = _붙임.filter(x => x.id !== id);
+    srxFileDraw();
+  };
+
+  function srxFileDraw() {
+    const 자리 = document.getElementById('srxFileList');
+    if (!자리) return;
+
+    자리.innerHTML = _붙임.map(f => `
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+        <i class="bx ${f.image ? 'bx-image' : 'bx-file'}" style="color:var(--gray-500);"></i>
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(f.name)}</span>
+        <span style="color:var(--gray-500);">${esc(f.size)}</span>
+        <button type="button" class="ds-btn ds-btn-sm" onclick="srxFileDrop(${f.id})" title="빼기">
+          <i class="bx bx-x"></i>
+        </button>
+      </div>`).join('');
+  }
+
+  /* ── 고치기 (2026-10-06 · SR #82) ──────────────────────────────
+
+     새로 적는 창을 그대로 쓴다. 칸이 같고, 두 벌을 두면 한쪽만 고치는 날이 온다.
+     고치는 중인 SR 번호를 들고 있다가 저장할 때 길을 가른다. */
+  let _고치는중 = null;
+
+  window.srxEditOpen = function () {
+    if (!_sel) return;
+    _고치는중 = _sel.id;
+
+    document.getElementById('srxTitle').value      = _sel.title || '';
+    document.getElementById('srxCategory').value   = _sel.category || 'improve';
+    document.getElementById('srxPriority').value   = _sel.priority || 'normal';
+    document.getElementById('srxPageLabel').value  = _sel.page || '';
+
+    /* 이미 붙어 있는 파일은 그 SR 것이라 여기서 다시 세우지 않는다 —
+       이 목록은 「이번에 새로 올린 것」만 담는다. */
+    _붙임 = [];
+    srxFileDraw();
+
+    document.getElementById('srxPopNewTitle').textContent = 'SR 수정';
+    document.getElementById('srxSubmitBtn').innerHTML = '<i class="bx bx-save"></i> 수정';
+
+    srxPop.close('srxPopAnswer');
+    srxPop.open('srxPopNew');
+
+    /* 편집기는 창이 열릴 때 선다 — 선 뒤에 글을 넣는다 */
+    window.ceQuill?.make(document.getElementById('srxContent'), '', { 그림올리기: srxUploadInline })
+      .then(q => ceQuill.set(q, _sel.content || ''));
+  };
+
+  /** 새로 적는 자리로 되돌린다 */
+  window.srxEditReset = function () {
+    _고치는중 = null;
+    document.getElementById('srxPopNewTitle').textContent = 'SR 신규 등록';
+    document.getElementById('srxSubmitBtn').innerHTML = '<i class="bx bx-send"></i> 등록';
+  };
+
   /* 신규 등록 (2026-10-01 지시) — 띠의 「신규 등록」이 여는 팝오버에서 보낸다 */
   window.srxSubmit = async function () {
     const title   = document.getElementById('srxTitle').value.trim();
@@ -593,8 +759,9 @@
     const btn = document.getElementById('srxSubmitBtn');
     btn.disabled = true;
     try {
-      const res = await fetch(BASE, {
-        method: 'POST',
+      /* 고치는 중이면 그 SR 로 보낸다 — 칸이 같아 창 하나로 둘을 맡는다 */
+      const res = await fetch(_고치는중 ? (BASE + '/' + _고치는중) : BASE, {
+        method: _고치는중 ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
         body: JSON.stringify({
           title, content,
@@ -612,11 +779,18 @@
 
       /* 담긴 줄을 목록 맨 위에 세우고 적던 것을 비운다 — 창은 닫는다.
          이어서 또 올릴 일이 흔하지 않고, 열어 둔 채 비우면 담긴 것인지 헷갈린다. */
-      _rows = [d.row, ...(_rows ?? [])];
+      if (_고치는중) {
+        _rows = (_rows ?? []).map(x => x.id === d.row.id ? d.row : x);
+      } else {
+        _rows = [d.row, ...(_rows ?? [])];
+      }
       grid.setData(_rows);
+      srxEditReset();
       document.getElementById('srxTitle').value = '';
       document.getElementById('srxPageLabel').value = '';
       ceQuill.set(document.getElementById('srxContent')?.__quill, '');
+      _붙임 = [];
+      srxFileDraw();
       srxPop.close('srxPopNew');
     } catch (e) {
       ceAlert('등록 중 오류가 발생했습니다.', { tone: 'danger' });

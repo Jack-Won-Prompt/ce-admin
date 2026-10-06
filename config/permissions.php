@@ -450,6 +450,19 @@ return [
     | 페이지를 null 로 두면 라우트명으로 찾은 페이지를 그대로 쓰고 액션만 바꾼다.
     */
     'overrides' => [
+        /* SR — 올린 사람이 제 글을 고치고 파일을 붙이는 길 (2026-10-06 · SR #82ㆍ#86).
+
+           `update` 는 **답변ㆍ상태 변경** 권한이다(위 service-requests 주석). 그런데
+           라우트 이름만 보면 PUT 은 update, DELETE 는 delete 로 읽혀, 답변 권한이 없는
+           담당자가 **제가 올린 글조차** 고치거나 제 파일을 뗄 수 없게 된다.
+
+           그래서 이 넷은 조회로 둔다. 「내 글인가ㆍ답변이 달렸는가」는 컨트롤러가
+           본다(updateContentㆍdeleteFile) — 권한 설정이 아니라 그 자리에서 가릴 일이다. */
+        'sr.update'        => ['service-requests', 'view'],
+        'sr.files.store'   => ['service-requests', 'view'],
+        'sr.files.show'    => ['service-requests', 'view'],
+        'sr.files.destroy' => ['service-requests', 'view'],
+
         // 처방전 이미지·첨부 파일 내보내기 — 라우트 이름이 files.* 라 페이지를 못 찾는다.
         // 처방전을 볼 수 있는 사람만 그 파일도 볼 수 있게 명시한다.
         // 단계를 옮기는 것은 새로 만드는 일이 아니라 고치는 일이다

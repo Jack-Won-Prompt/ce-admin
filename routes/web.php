@@ -568,6 +568,16 @@ Route::middleware(['auth'])->group(function () {
         Route::put(   '/{serviceRequest}/answer', [\App\Http\Controllers\ServiceRequestController::class, 'answer'])->name('answer');
         Route::put(   '/{serviceRequest}/status', [\App\Http\Controllers\ServiceRequestController::class, 'updateStatus'])->name('status');
         Route::delete('/{serviceRequest}',  [\App\Http\Controllers\ServiceRequestController::class, 'destroy'])->name('destroy');
+
+        /* 올린 사람이 제 글을 고친다 (2026-10-06 · SR #82) */
+        Route::put(   '/{serviceRequest}',  [\App\Http\Controllers\ServiceRequestController::class, 'updateContent'])->name('update');
+
+        /* 붙임 파일 (2026-10-06 · SR #82ㆍ#86).
+           그림을 본문에 base64 로 넣어 「글자 초과」로 막히던 것을 파일로 옮긴다.
+           내려받기가 라우트를 지나므로 로그인과 권한을 그 자리에서 본다. */
+        Route::post(  '/files',             [\App\Http\Controllers\ServiceRequestController::class, 'uploadFile'])->name('files.store');
+        Route::get(   '/files/{file}',      [\App\Http\Controllers\ServiceRequestController::class, 'showFile'])->name('files.show');
+        Route::delete('/files/{file}',      [\App\Http\Controllers\ServiceRequestController::class, 'deleteFile'])->name('files.destroy');
     });
 
     // 채팅
