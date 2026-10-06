@@ -31,8 +31,17 @@ window.nhisAssistBtn = function (orderId, opts) {
   const local  = agency === 'local';
   const none   = agency === 'none';
 
+  /* 내지 않는 건은 **「해당 없음」이라 적는다** (2026-10-06 지시 · SR #88 「청구 관리:
+     처방외 청구진행은 해당없음으로 표시 필요 / 현재 직접처리로 보이고 있음」).
+
+     여태 「직접 처리」라 적었다. 그 말은 우리가 하는 일(발행한 증빙을 거래처로 보내는
+     것)을 가리키는데, 담당자는 「청구」 칸에서 그 말을 읽고 **우리가 청구를 직접 한다**는
+     뜻으로 받았다. 처방외ㆍ산재ㆍ자동차보험은 환자가 직접 내므로 우리 청구는 없다.
+
+     단추는 그대로 누를 수 있다 — 누르면 증빙을 보내는 창이 열린다. 머물면 그 일이
+     무엇인지 뜬다(아래 title). 이름만 사실에 맞춘다. */
   btn.innerHTML = none
-    ? '<i class="fa-solid fa-paper-plane"></i> 직접 처리'
+    ? '<i class="fa-solid fa-paper-plane"></i> 해당 없음'
     : local
       ? '<i class="fa-solid fa-envelope"></i> ' + (opts.sent ? '등기 영수증' : '등기 발송')
       : '<i class="fa-solid fa-clipboard-list"></i> 청구';
@@ -45,7 +54,8 @@ window.nhisAssistBtn = function (orderId, opts) {
       btn.title = opts.reason || '연결된 주문이 없습니다';
       return btn;
     }
-    btn.title = '발행된 증빙을 거래처로 문자ㆍ메일로 보냅니다 (청구는 환자가 직접 합니다)';
+    btn.title = '공단·지자체에 청구하지 않는 건입니다 (환자가 보험사·근로복지공단에 직접 청구). '
+              + '누르면 발행된 증빙을 거래처로 문자·메일로 보냅니다.';
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       openDirectSendPop(orderId, btn, {

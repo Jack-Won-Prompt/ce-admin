@@ -1375,6 +1375,15 @@ $calcDeposit  = $calcCopay;
             <button onclick="closeConsentPopover()" style="background:none;border:none;cursor:pointer;color:#fff;font-size:16px;line-height:1;">&#215;</button>
           </div>
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
+            {{-- 거래처가 연결되지 않은 건에는 보내지 않는다 (2026-10-06 지시 · SR #118).
+                 서명이 돌아오면 서명자 이름으로 거래처가 새로 만들어져 본래 거래처와
+                 나뉜다. 서버도 막지만(sendConsentSms), 눌러 보고서야 알면 늦다. --}}
+            <div id="consentNoPatient" style="display:none;background:var(--danger-light);border:1px solid var(--alert-100);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--danger);line-height:1.6;">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <strong>거래처가 연결되지 않은 건입니다.</strong><br>
+              이대로 보내면 서명자 이름으로 거래처가 새로 만들어져 본래 거래처와 나뉩니다.
+              거래처 관리에 등록한 뒤 위쪽 이름 조회로 연결하고 다시 보내 주십시오.
+            </div>
             <div id="consentResendNotice" style="display:none;background:var(--alert-50);border:1px solid var(--alert-100);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--alert-500);line-height:1.6;">
               {{-- 글은 JS 가 상태에 맞춰 채운다 — 만료된 건과 이미 서명을 받아 둔 건은
                    같은 「재발송」이어도 담당자에게 알려야 할 것이 다르다 (2026-10-06). --}}
@@ -2030,7 +2039,16 @@ $calcDeposit  = $calcCopay;
 
            단추는 그대로 두고 「발행완료」 딱지만 붙인다. 누르면 발행한 내용이 바로
            선다 — 아직이면 발행 창이 열린다. 취소는 그 상세 창 안에 둔다. --}}
-      <div id="cashReceiptArea">
+      {{-- **머리줄에서는 감춘다** (2026-10-06 지시 · SR #105 「주문등록 상단 현금영수증
+           숨김 요청(결제전송 옆)」).
+
+           현금영수증은 입금이 확인되면 자동으로 발행된다(DepositAutoIssue). 손으로 낼
+           자리는 카드/현금영수증 화면의 「즉시발행」과 주문 관리의 「재발행」에 있으므로,
+           이 머리줄에 또 두면 담당자가 같은 일을 세 곳에서 찾는다.
+
+           자리는 지운 것이 아니라 감춘 것이다 — 발행 상태를 다시 그리는 코드가 이 칸을
+           찾으므로(아래 cashReceiptArea 를 다시 그리는 자리), 없애면 그 자리가 넘어진다. --}}
+      <div id="cashReceiptArea" style="display:none;">
         @php $cr발행 = $prescription->order?->cash_receipt_status === 'issued'; @endphp
         <button class="pib-btn{{ $cr발행 ? ' is-paid' : '' }}" id="btnCrIssueTrigger"
                 onclick="{{ $cr발행 ? 'toggleCrDetailPopover(event)' : 'toggleCrIssuePopover(event)' }}">
@@ -16765,6 +16783,21 @@ window.HELP_TOUR_STEPS = [
     }
 
     updateConsentPreview();
+
+    /* **거래처가 연결되지 않은 건에는 보내지 못한다** (2026-10-06 지시 · SR #118).
+
+       서명이 돌아오면 서명자 이름으로 거래처를 찾고, 못 찾으면 새로 만든다
+       (PatientLink::attach). 그래서 이 상태로 보내면 서명 한 번에 거래처와 주문이
+       저절로 생기고 본래 거래처와 나뉜다 — 2026-10-06 (E)여수환 건이 그랬다.
+
+       서버도 422 로 막는다. 여기서 막는 것은 눌러 보기 전에 알려 주기 위한 것이다. */
+    const 거래처없음 = ! String(document.getElementById('f-patient-id')?.value ?? '').trim();
+    const 거래처알림 = document.getElementById('consentNoPatient');
+    if (거래처알림) 거래처알림.style.display = 거래처없음 ? 'block' : 'none';
+    if (거래처없음 && sendBtn) {
+      sendBtn.disabled = true;
+      sendBtn.title = '거래처 관리에 등록한 뒤 이름 조회로 연결해 주십시오';
+    }
 
     closeAllPopovers();
     const pop = document.getElementById('consentPopover');

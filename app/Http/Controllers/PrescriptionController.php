@@ -4008,6 +4008,33 @@ class PrescriptionController extends Controller
             }
         }
 
+        /* **받은 뒤에는 급여 날짜를 빈 값으로 덮지 않는다** (2026-10-06 지시 · SR #51
+           「결제 후 주문 등록에서 저장하면 급여 기간·재구매 가능일이 삭제됨」).
+
+           이 다섯은 입금이 확인되면 한 번에 산출되어 저장된다(BenefitDates::onPaid).
+           그런데 화면은 저장할 때마다 다섯을 늘 함께 보내고(order.blade.php ·
+           strOrNull), 보내는 값은 **화면을 연 그 시점의 값**이다 — 결제 전에 연 화면에서는
+           비어 있다. 바로 위에서 「보내 왔는가」로 가르므로 빈 값도 그대로 덮었다.
+
+           잣대는 바로 아래 pay_method 와 같다 — 받기 전에는 담당자가 적는 값이지만,
+           받은 뒤에는 **사실**이다. 비우려고 보낸 것인지 화면이 낡아 빈 것인지 가릴 수
+           없으므로, 받은 건에서는 빈 값으로 지우지 않는다. 값을 바꾸는 것은 그대로 된다.
+
+           2026-10-02 에 다섯 건이 그렇게 비었다 — (E)전춘자ㆍ정지영ㆍ김서영ㆍ김문철ㆍ
+           박영희G. 입금 뒤 다시 산출되어 지금은 채워져 있으나, 덮는 길은 그대로 있었다. */
+        $급여날짜 = ['pay_date', 'buy_date', 'use_start_date', 'benefit_end_date', 'next_repurchase'];
+
+        if ($prescription->order?->isDepositConfirmed()) {
+            foreach ($급여날짜 as $칸) {
+                if (array_key_exists($칸, $rxCols) && blank($rxCols[$칸]) && filled($prescription->$칸)) {
+                    unset($rxCols[$칸]);
+                    Log::info('[급여날짜] 받은 건이라 빈 값으로 덮지 않았습니다', [
+                        'rx' => $prescription->rx_number, 'column' => $칸,
+                    ]);
+                }
+            }
+        }
+
         if ($rxCols) {
             $prescription->update($rxCols);
         }
@@ -5226,6 +5253,27 @@ class PrescriptionController extends Controller
             'name'   => 'nullable|string|max:50',
         ]);
 
+        /* **거래처가 연결되지 않은 건에는 보내지 않는다** (2026-10-06 지시 · SR #118).
+
+           서명이 돌아오면 그 서명자 이름으로 거래처를 찾고, 못 찾으면 **새로
+           만든다**(PatientLink::attach). 그래서 거래처 없는 처방전에서 링크를 보내면
+           서명 한 번에 거래처ㆍ주문이 저절로 생기고, 그것이 본래 거래처와 갈린다.
+
+           2026-10-06 에 그 일이 두 번 일어났다 — 16:10 「박메이」, 16:12 「여수환 보호자」로
+           나간 링크가 서명과 함께 거래처 두 개와 대기 주문 두 건을 만들었다. 둘 다
+           (E)여수환 한 사람의 건이었다.
+
+           첫 저장의 자동 발송은 이미 이 잣대로 막혀 있었다(consentSmsOnFirstSave —
+           사람이 붙지 않으면 보내지 않는다). 손으로 누르는 이 자리에만 잣대가 없었다. */
+        if (! $prescription->patient_id) {
+            return response()->json([
+                'success' => false,
+                'message' => '거래처가 연결되지 않은 건입니다. 서명 링크를 보내면 서명자 이름으로 '
+                           . '거래처가 새로 만들어져 본래 거래처와 나뉩니다. '
+                           . '거래처 관리에 등록한 뒤 이름 조회로 연결하고 다시 보내 주십시오.',
+            ], 422);
+        }
+
         // 오타로 동의 건을 만들고 SMS 를 태우는 일만 막는다.
         // 02-XXX-XXXX(9자리)까지 받아 들여 실제 번호를 거부하지 않는다.
         $mobile = preg_replace('/\D/', '', $request->mobile);
@@ -5377,7 +5425,16 @@ class PrescriptionController extends Controller
 
         $prescription->refresh()->loadMissing('patient');
         $patient = $prescription->patient;
-        if (!$patient) return $no(null);                                    // 아직 사람이 붙지 않았다
+
+        /* 거래처가 붙지 않았으면 보내지 않는다 — **까닭을 말한다** (2026-10-06 · SR #118).
+
+           여태 조용히 지나갔다(reason null). 그런데 이 함수의 약속은 「보내지 않는 때에는
+           까닭을 함께 돌려준다」다. 보냈는지 못 보냈는지 모르면 담당자는 기다린다.
+           손으로 누르는 자리도 같은 잣대로 막는다(sendConsentSms). */
+        if (!$patient) {
+            return $no('거래처가 연결되지 않아 서명 링크를 보내지 않았습니다. '
+                     . '거래처 관리에 등록한 뒤 이름 조회로 연결해 주십시오.');
+        }
 
         /* **자격으로 가르지 않는다.** 처음 오는 거래처는 산재ㆍ자동차보험ㆍ처방외라도
            서명을 받는다(2026-09-08 지시).
