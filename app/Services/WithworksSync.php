@@ -118,6 +118,30 @@ class WithworksSync
 
     public function apply(Order $order, array $result, bool $full = false): void
     {
+        /* **다른 판매주문의 상태로 덮지 않는다** (2026-10-06 · SR #110).
+
+           정정하면 저쪽에 판매주문이 새로 선다. 우리 표는 새 번호를 들고 있는데
+           `so_show` 는 우리 주문번호로 물으면 **처음 섰던 번호**를 돌려준다 — 그 줄은
+           정정과 함께 취소되어 있어, 훑기가 돌 때마다 「확정」이 「취소」로 덮였다.
+
+           실제로 (E)박영희G 건이 그랬다. 우리 표 S2610020036(확정)인데 응답은
+           S2610010535(취소)였고, 담당자 화면에는 출고가 끝난 건이 「취소」로 섰다.
+
+           번호가 다르면 그 응답은 지난 이야기다 — 적지 않고 자취만 남긴다. */
+        $응답번호 = trim((string) ($result['so_no'] ?? ''));
+        $우리번호 = trim((string) $order->withworks_so_no);
+
+        if ($응답번호 !== '' && $우리번호 !== '' && $응답번호 !== $우리번호) {
+            Log::warning('[Withworks] 다른 판매주문의 상태가 왔다 — 적지 않는다', [
+                'order' => $order->order_number,
+                '우리'  => $우리번호,
+                '응답'  => $응답번호,
+                '응답상태' => $result['status'] ?? null,
+            ]);
+
+            return;
+        }
+
         $shipBefore = (string) $order->withworks_ship_status;
 
         /* 온 것만 덮는다. 웹훅 한 건은 그때 바뀐 것만 담을 수 있어서, 없는 값을 null 로 밀어
@@ -164,7 +188,20 @@ class WithworksSync
             /* 창고가 알려 주는 출고일. 바로 위의 withworks_ship_at 과 다른 값이다 —
                그것은 우리가 받아 적은 시각이라, 웹훅이 실패해 열 분 뒤 훑기가 채우면
                열 분 늦은 날이 적힌다. 청구 기한(출고일+2주)이 이 날을 센다. */
-            if (($shippedAt = $ship['shipped_at'] ?? null)) {
+            /* **저쪽이 주는 이름은 `ship_complete_date` 다** (2026-10-06 · SR #106).
+
+               여태 `shipped_at` 만 찾아 한 건도 채우지 못했다 — 출고가 끝나고 송장까지
+               받은 건인데 화면의 출고일자ㆍ출고상태가 공란이었다(10-06 기준 7건).
+               so_show 응답을 직접 불러 확인한 칸 이름이다.
+
+                 ship.ship_no · ship_status · ship_status_label · tracking_no
+                 ship.schedule_date      예정일
+                 ship.ship_complete_date 출고완료 시각  ← 이것이 출고일이다
+
+               옛 이름도 그대로 본다 — 웹훅이 다른 이름으로 보내는 길이 있을 수 있다. */
+            $shippedAt = $ship['ship_complete_date'] ?? $ship['shipped_at'] ?? null;
+
+            if ($shippedAt) {
                 $update['shipped_at'] = \Carbon\Carbon::parse($shippedAt)->toDateString();
             }
 
