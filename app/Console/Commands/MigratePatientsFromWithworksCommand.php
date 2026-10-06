@@ -42,6 +42,7 @@ class MigratePatientsFromWithworksCommand extends Command
                             {--force : 실제로 옮긴다. 없으면 세어 보이기만 한다}
                             {--batch= : 묶음 이름. 비우면 오늘 날짜로 짓는다}
                             {--limit= : 몇 명만 시험 삼아}
+                            {--새것만 : 우리 표에 없는 사람만 담는다 — 이미 있는 거래처는 손대지 않는다}
                             {--with-signs : 위임장 서명도 거래처로 옮겨 담는다}';
 
     protected $description = '운영 고객 정보(ww_customers)를 거래처 관리로 옮긴다';
@@ -103,9 +104,31 @@ class MigratePatientsFromWithworksCommand extends Command
         $이미 = DB::table('patients')->whereNotNull('ww_account_id')
             ->pluck('id', 'ww_account_id')->all();
 
-        $질의->chunk(500, function ($줄들) use (&$셈, &$보기, &$이미, $정말, $묶음, $이름겹침, $주민겹침) {
+        /* **이미 있는 거래처는 손대지 않는 길** (2026-10-06 · SR #111).
+
+           아래 담는 자리는 `name` 과 `mobile` 을 원천 값으로 **무조건 덧쓴다.** 처음
+           옮길 때는 그것이 맞지만, 뒤에 다시 돌리면 담당자가 고친 값이 되돌아간다 —
+           개명한 이름((E)하나인 → 원천은 아직 (E)팜티인)과 고쳐 둔 전화번호가 그렇다.
+
+           09-29~30 처방전을 담으려면 거래처 11명이 먼저 있어야 하는데, 그 11명만 담기
+           위해 12,608명을 덧쓸 수는 없다. 이 열쇠는 「없는 사람만 담는다」는 뜻이다. */
+        $새것만 = (bool) $this->option('새것만');
+
+        if ($새것만) {
+            $this->line('  <comment>새것만</comment> — 이미 있는 거래처는 건드리지 않습니다 (고친 이름ㆍ번호를 지키려는 것입니다)');
+        }
+
+        $셈['건너뜀'] = 0;
+
+        $질의->chunk(500, function ($줄들) use (&$셈, &$보기, &$이미, $정말, $묶음, $이름겹침, $주민겹침, $새것만) {
             foreach ($줄들 as $w) {
                 $셈['모두']++;
+
+                if ($새것만 && isset($이미[$w->ww_id])) {
+                    $셈['건너뜀']++;
+
+                    continue;
+                }
 
                 $이름 = Patient::bare($w->account_name);          // (E) 를 뗀다
                 $번호 = $this->전화($w->phone_1);
