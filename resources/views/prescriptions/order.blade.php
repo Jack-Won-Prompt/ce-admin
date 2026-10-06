@@ -4122,10 +4122,25 @@ $calcDeposit  = $calcCopay;
                 </select>
               </div>
               {{-- 청구처 — 공단이냐 지자체냐에 따라 이후 절차가 통째로 갈린다.
-                   급여구분을 고르면 따라오되, 확정은 담당자가 한다. --}}
+
+                   **자격이 정하는 값이라 사람이 고르지 않는다** (2026-10-06 지시 · SR #76
+                   「자격을 선택이 된 경우 청구처는 그에 따라 자동으로 선택되며 사람이
+                   수동으로 수정할 수 없게끔 해주세요」).
+
+                     일반ㆍ차상위경감 → 건강보험공단
+                     기초            → 지자체(시군구청)
+                     자동차보험ㆍ산재 → 해당 없음
+                     처방외          → 해당 없음 (자격을 묻지 않는다)
+
+                   규칙은 한 곳에 있다(ClaimAgency::fromBenefitClass). 화면이 자격을
+                   고를 때 따라 세우고(suggestClaimAgency), 서버도 저장할 때 같은 규칙으로
+                   다시 셈한다 — 화면만 믿을 수는 없다.
+
+                   잠가 두어도 값은 함께 담긴다(화면이 .value 를 읽어 보낸다). --}}
               <div class="rx-field-row">
                 <span class="rx-field-label rx-key">청구처</span>
-                <select class="form-control" id="f-claim-agency" style="flex:1;">
+                <select class="form-control" id="f-claim-agency" style="flex:1;background:var(--gray-50);"
+                        disabled title="자격이 정하는 값입니다 — 자격을 고치면 따라 바뀝니다 (일반ㆍ차상위경감 → 공단 · 기초 → 지자체 · 자동차보험ㆍ산재ㆍ처방외 → 해당 없음)">
                   <option value="">선택</option>
                   @foreach(\App\Support\ClaimAgency::LABELS as $v => $label)
                     <option value="{{ $v }}" @selected(($prescription->claim_agency ?? '') === $v)>{{ $label }}</option>
@@ -9801,8 +9816,45 @@ window.HELP_TOUR_STEPS = [
     return true;
   }
 
+  /**
+   * 빨강 별표가 빈 칸이 있으면 제품을 넣지 못한다 (2026-10-06 지시 · SR #76
+   * 「병원 처방정보 중 빨간색의 값이 없는 경우 주문제품에서 입력 불가」).
+   *
+   * 빨강 별표는 넷이다 — 유형ㆍ신구매/재구매ㆍ자격ㆍ청구처. 이 넷이 정해지면 청구처ㆍ
+   * 관할 청구처ㆍ청구전략ㆍ발행할 서류가 줄줄이 따라 정해진다(위 .rx-key 주석). 그
+   * 앞에 제품을 넣으면 금액을 어느 잣대로 가를지 모르는 채 줄이 선다.
+   *
+   * 청구처는 묻지 않는다 — 자격이 정해지면 저절로 선다.
+   * 처방외는 자격을 묻지 않는다 — 자격을 쓰지 않는 갈래다(BillingStrategy).
+   */
+  function gate필수칸() {
+    const 처방외 = document.getElementById('f-acc-add-type')?.value === '20';
+
+    const 볼것 = [
+      ['f-acc-add-type',  '유형'],
+      ['f-purchase-type', '신구매/재구매'],
+      ...(처방외 ? [] : [['f-benefit-class', '자격']]),
+    ];
+
+    const 빠진것 = 볼것.filter(([id]) => ! String(document.getElementById(id)?.value ?? '').trim());
+
+    if (! 빠진것.length) return false;
+
+    ceAlert(빠진것.map(([, 이름]) => 이름).join('ㆍ') + '을(를) 먼저 선택해 주십시오.'
+          + String.fromCharCode(10, 10)
+          + '빨강 별표가 붙은 항목이 정해져야 청구처ㆍ청구전략ㆍ발행할 서류가 정해집니다.',
+      { title: '필수 항목', tone: 'warning' });
+
+    const 첫칸 = document.getElementById(빠진것[0][0]);
+    첫칸?.scrollIntoView({ block: 'center' });
+    첫칸?.focus();
+
+    return true;
+  }
+
   function addItem() {
     if (gate취소사유()) return;
+    if (gate필수칸()) return;
     items.push(emptyItem());
     if (document.getElementById('tabsCol')?.classList.contains('tab-view-table')) {
       renderItemsTable();

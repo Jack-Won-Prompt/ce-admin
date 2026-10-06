@@ -3921,10 +3921,29 @@ class PrescriptionController extends Controller
                돌리는 코드는 브라우저에만 있었다(order.blade.php · suggestClaimAgency).
                그래서 API 나 직접 POST 로는 「처방외인데 청구처가 공단」인 건이 담길 수
                있었고, 청구 관리는 빈 청구처를 공단으로 읽는다(NhisController). */
-            'claim_agency'         => (string) $request->input('counsel_acc_add_type')
-                                        === \App\Support\BillingStrategy::TYPE_NONRX
-                                            ? \App\Support\ClaimAgency::NONE
-                                            : $request->input('claim_agency'),
+            /* **청구처는 자격이 정한다** (2026-10-06 지시 · SR #76 「자격을 선택이 된
+               경우 청구처는 그에 따라 자동으로 선택되며 사람이 수동으로 수정할 수
+               없게끔」).
+
+               규칙은 한 곳에 있다 — ClaimAgency::fromBenefitClass.
+
+                 일반ㆍ차상위경감 → 공단 · 기초 → 지자체 · 자동차보험ㆍ산재 → 해당 없음
+                 처방외          → 해당 없음 (자격을 묻지 않는다)
+
+               화면에서도 그 칸을 잠갔지만 여기서도 굳힌다 — API 나 직접 POST 로는
+               어긋난 값이 담길 수 있고, 청구 관리는 빈 청구처를 공단으로 읽는다
+               (NhisController · SR #88 에서 겪은 그 자리다).
+
+               자격이 비면 규칙이 값을 주지 못한다 — 그때만 화면 값을 그대로 둔다. */
+            'claim_agency'         => (function () use ($request) {
+                if ((string) $request->input('counsel_acc_add_type')
+                        === \App\Support\BillingStrategy::TYPE_NONRX) {
+                    return \App\Support\ClaimAgency::NONE;
+                }
+
+                return \App\Support\ClaimAgency::fromBenefitClass($request->input('benefit_class'))
+                    ?? $request->input('claim_agency');
+            })(),
             /* 이 건을 보내는 청구처 — 주소로 찾아 사람이 고른 한 줄이다 */
             'billing_office_id'    => $request->input('billing_office_id'),
             'local_gov'            => $request->input('local_gov'),
