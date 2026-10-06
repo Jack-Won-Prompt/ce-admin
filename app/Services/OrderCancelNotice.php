@@ -62,7 +62,8 @@ class OrderCancelNotice
         }
 
         // 환자가 받는 문자다 — 이름 앞의 (E) 를 뗀다
-        $name = Patient::bare($order->patient?->name) ?: '고객';
+        /* 환자가 받는 글에 서는 이름 (2026-10-06 · SR #102) */
+        $name = Patient::실명($order->patient?->name) ?: '고객';
 
         $body = MessageTemplate::channel('sms')->active()
             ->where('code', self::TEMPLATE)->value('body') ?: self::기본문구();

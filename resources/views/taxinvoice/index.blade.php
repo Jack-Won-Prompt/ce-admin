@@ -745,6 +745,20 @@ tiTab('hist');
 <script>
 const CORP_NUM = document.getElementById('corp-num');
 const TI_BASE  = BASE_URL + '/api/popbill/taxinvoice';
+
+/* **밖으로 나가는 이름에서 꼬리를 뗀다** (2026-10-06 지시 · SR #90
+   「공급받는자/이름 : 뒤에 알파벳 제외 — (E)김혜경C 로 보이고 있음」).
+
+   같은 이름이 여럿일 때 우리는 뒤에 대문자를 붙여 가린다(김혜경Cㆍ김영자AA). 그것은
+   우리 쪽 표시이고 세금계산서에 적힐 이름이 아니다. (E) 도 사업부 표시다.
+
+   한글 뒤의 대문자 한두 자만 뗀다 — 영문 상호(주식회사 ABC)나 가운데 글자는 건드리지
+   않는다. 서버의 Patient::실명() 과 같은 잣대다. */
+const ti실명 = (v) => String(v ?? '')
+  .replace(/^\s*\(E\)\s*/, '')
+  .replace(/([가-힣])[A-Z]{1,2}$/, '$1')
+  .trim();
+
 const HEADERS  = { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json', 'Content-Type': 'application/json' };
 let detailIdx = 0;
 let histPage  = 1;
@@ -1069,7 +1083,7 @@ async function loadHistory(page = 1) {
              열면 상세에 그대로 있고, 아래 「처방번호」 열에도 실려 있다. */
           date: wDate,
           mgt: (r.order_number ?? '—'),
-          buyer: (r.invoiceeCorpName ?? '—'),
+          buyer: (ti실명(r.invoiceeCorpName) || '—'),
           supply, tax, type: '—', status: '발행 대기',
           record_type: 'pending', rx_number: (r.rx_number ?? ''), mgtKey: '', canCancel: false,
         };
@@ -1101,7 +1115,7 @@ async function loadHistory(page = 1) {
              국세청발행번호   — 국세청이 준 번호 */
         date: wDate,
         mgt: (r.orderNumber || '—'),
-        buyer: (r.invoiceeCorpName ?? '—'),
+        buyer: (ti실명(r.invoiceeCorpName) || '—'),
         supply, tax, type: ttTxt, status: sTxt,
 
         // 팝빌이 주는 나머지 (요청서 6쪽)

@@ -333,7 +333,8 @@ final class TransactionStatement
                **공급받는자에는 주민등록번호를 적지 않는다.** 원본에도 그 칸이 없고,
                우리 규칙으로도 종이에 실려 나가서는 안 되는 값이다(P0-1). */
             'recipient' => [
-                'name'    => $patient?->bare_name ?? \App\Models\Patient::bare($rx->patient_name_ocr ?? ''),
+                /* 거래명세서에 적히는 이름 (2026-10-06 · SR #90) */
+                'name'    => \App\Models\Patient::실명($patient?->name ?? $rx->patient_name_ocr ?? ''),
                 'address' => self::address($order, $rx),
                 /* 연락처는 가운데를 가린다 — 위드웍스가 찍는 모양과 같다(2026-09-17 지시).
                    물건에 붙어 나가는 종이라 남의 손을 여러 번 거친다. */

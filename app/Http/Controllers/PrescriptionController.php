@@ -783,7 +783,7 @@ class PrescriptionController extends Controller
         }
 
         // 환자가 받는 문자다 — (E) 를 뗀다(2026-09-10 지시)
-        $name = \App\Models\Patient::bare($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?: '고객');
+        $name = \App\Models\Patient::실명($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?: '고객');
 
         /* 문구는 메시지 유형(SMS ▸ 주문 확정)에 적어 둔 것을 쓴다 — 담당자가 화면에서
            고칠 수 있어야 하고, 손으로 보낼 때와 갈리지 않아야 한다. */
@@ -4872,8 +4872,8 @@ class PrescriptionController extends Controller
         $params = [
             /* 「(E)」는 우리끼리 쓰는 표시다 — 알림톡 본문과 수신자명(rcvnm)에 그대로
                실려 환자에게 갔다 (2026-09-27 지시로 고침) */
-            '#{고객명}'    => \App\Models\Patient::bare($prescription->patient?->name)
-                              ?: (\App\Models\Patient::bare($prescription->patient_name_ocr) ?: '고객'),
+            '#{고객명}'    => \App\Models\Patient::실명($prescription->patient?->name)
+                              ?: (\App\Models\Patient::실명($prescription->patient_name_ocr) ?: '고객'),
             '#{처방번호}'  => $prescription->rx_number,
             '#{주문번호}'  => $order?->order_number ?? '-',
             '#{제품명}'    => $order?->product_name ?? $prescription->rx_number,
@@ -5286,7 +5286,7 @@ class PrescriptionController extends Controller
         /* 환자가 보는 서명 화면에 그대로 서는 이름이다 — (E) 를 뗀다(2026-09-10 지시).
            화면에서 고쳐 보낸 이름은 사람이 적은 것이라 그대로 둔다. */
         $patientName = trim((string) $request->input('name'))
-            ?: (\App\Models\Patient::bare($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?? '환자'));
+            ?: (\App\Models\Patient::실명($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?? '환자'));
 
         /* **아직 열려 있는 링크가 있으면 다시 보내지 않는다** (2026-10-01 지시 ㉮).
 
@@ -5380,7 +5380,7 @@ class PrescriptionController extends Controller
         }
 
         // 환자가 받는 글이다 — (E) 는 우리 쪽 사업부 표시라 여기 설 자리가 없다(2026-09-10)
-        $name = \App\Models\Patient::bare($patient->name) ?: ($prescription->patient_name_ocr ?: '고객');
+        $name = \App\Models\Patient::실명($patient->name) ?: ($prescription->patient_name_ocr ?: '고객');
 
         $body = \App\Models\MessageTemplate::channel('sms')->active()
             ->where('code', 'rx_received')->value('body')
@@ -5482,7 +5482,7 @@ class PrescriptionController extends Controller
         }
 
         // 환자가 받는 글이고 서명 화면에 그대로 선다 — (E) 를 뗀다(2026-09-10)
-        $name = \App\Models\Patient::bare($patient->name) ?: ($prescription->patient_name_ocr ?: '고객');
+        $name = \App\Models\Patient::실명($patient->name) ?: ($prescription->patient_name_ocr ?: '고객');
 
         try {
             $res = $this->issueConsent($prescription, $mobile, $name)->getData(true);
@@ -5749,7 +5749,7 @@ class PrescriptionController extends Controller
 
         // 신분증 제출 화면도 환자가 본다 — 같은 잣대다(2026-09-10 지시)
         $patientName = trim((string) $request->input('name'))
-            ?: (\App\Models\Patient::bare($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?? '환자'));
+            ?: (\App\Models\Patient::실명($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?? '환자'));
 
         return $this->issueIdCard($prescription, $mobile, $patientName);
     }

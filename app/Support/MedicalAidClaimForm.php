@@ -220,7 +220,8 @@ final class MedicalAidClaimForm
             /* 서류에 적히는 이름에는 (E) 를 두지 않는다 (2026-09-08 확인요청 11쪽).
                사업부가 IC 라는 우리 쪽 표시일 뿐이고, 관청이 보는 종이에는 설 자리가
                없다 — 이 서식의 성명ㆍ청구인 두 칸에 그대로 찍혀 나가고 있었다. */
-            'patient_name'     => \App\Models\Patient::bare($pt?->name ?: $rx?->patient_name_ocr),
+            /* 공단에 내는 서류의 성명 — 동명이인 꼬리는 우리 표시다 (2026-10-06 · SR #90) */
+            'patient_name'     => \App\Models\Patient::실명($pt?->name ?: $rx?->patient_name_ocr),
             'patient_rrn'      => $rx?->resident_no ?: $pt?->residentNoFor('nhis_claim_form'),
             /* 보장기관은 이 건의 관할 지자체다 — 시장ㆍ군수ㆍ구청장에게 내는 서류다 */
             'insurer_name'     => $rx?->billingOffice?->office_name,
@@ -251,7 +252,7 @@ final class MedicalAidClaimForm
             'claim_d'          => $now->format('j'),
             /* 청구인은 환자 본인이다 — 서식의 「관계」 칸에 「본인」이 인쇄되어 있다.
                우리 계좌로 받는 것은 수령 계좌 칸이 정하는 별개의 일이다. */
-            'claimant_name'    => \App\Models\Patient::bare($pt?->name ?: $rx?->patient_name_ocr),
+            'claimant_name'    => \App\Models\Patient::실명($pt?->name ?: $rx?->patient_name_ocr),
             'claimant_phone'   => PhoneNo::format($pt?->mobile),
         ];
     }

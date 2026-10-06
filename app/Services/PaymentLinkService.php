@@ -139,7 +139,8 @@ class PaymentLinkService
     public function compose(Order $order, PaymentLink $link): string
     {
         // 환자가 받는 문자다 — (E) 는 우리 쪽 사업부 표시라 뗀다(2026-09-10 지시)
-        $name   = \App\Models\Patient::bare($order->patient?->name) ?: '고객';
+        /* 환자가 받는 글에 서는 이름 — 동명이인 꼬리까지 뗀다 (2026-10-06 · SR #102) */
+        $name   = \App\Models\Patient::실명($order->patient?->name) ?: '고객';
         $amount = number_format($link->amount);
         $item   = $order->product_name ?: '주문';
 
@@ -280,7 +281,7 @@ class PaymentLinkService
     public function composeVirtualAccount(PaymentLink $link, array $va): string
     {
         // 환자가 받는 문자다 — (E) 를 뗀다(2026-09-10 지시)
-        $name   = \App\Models\Patient::bare($link->order?->patient?->name) ?: '고객';
+        $name   = \App\Models\Patient::실명($link->order?->patient?->name) ?: '고객';
         $amount = number_format($link->amount);
 
         /* 은행 이름 — **토스가 준 이름을 먼저 쓴다** (2026-10-01 고침).
@@ -364,7 +365,7 @@ class PaymentLinkService
         try {
             return $this->sender->sendBulk(
                 $channel,
-                [['rcv' => $mobile, 'rcvnm' => \App\Models\Patient::bare($order->patient?->name), 'patient_id' => $order->patient_id]],
+                [['rcv' => $mobile, 'rcvnm' => \App\Models\Patient::실명($order->patient?->name), 'patient_id' => $order->patient_id]],
                 $text,
                 $channel === 'alimtalk' ? ($templateCode ?: $this->alimtalkTemplate()) : $templateCode,
                 ['source' => 'payment-link', 'prescription_id' => $order->prescription_id],

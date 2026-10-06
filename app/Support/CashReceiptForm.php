@@ -131,7 +131,8 @@ final class CashReceiptForm
                 'approvalNo'  => (string) ($order->cash_receipt_no ?? ''),
 
                 /* 환자에게 주는 증빙이다 — 「(E)」를 뗀다 (2026-09-27 지시) */
-                'buyer'       => \App\Models\Patient::bare($order->patient?->name),
+                /* 영수증에 찍히는 이름 — (E) 와 동명이인 꼬리를 뗀다 (SR #90) */
+                'buyer'       => \App\Models\Patient::실명($order->patient?->name),
                 'orderNo'     => (string) $order->order_number,
                 'productName' => (string) ($order->product_name ?: ''),
 

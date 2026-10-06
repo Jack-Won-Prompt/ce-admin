@@ -559,9 +559,14 @@ class CashbillController extends Controller
      */
     private function 이름거르개($query, string $이름)
     {
-        return $query->where(function ($w) use ($이름) {
-            $w->whereHas('patient', fn ($p) => $p->where('name', 'like', "%{$이름}%"))
-              ->orWhereHas('prescription', fn ($p) => $p->where('patient_name_ocr', 'like', "%{$이름}%"));
+        /* 치는 이름에서 (E) 와 동명이인 꼬리를 뗀다 (2026-10-06 · SR #102).
+           거래처 이름에는 (E) 가 붙어 있고 처방전의 OCR 이름에는 없다 — 뗀 이름으로
+           맞대면 두 쪽이 함께 걸린다. 「(E)전춘자」로 쳐도 「전춘자」ㆍ「전춘자A」가 선다. */
+        $맨이름 = \App\Models\Patient::실명($이름);
+
+        return $query->where(function ($w) use ($맨이름) {
+            $w->whereHas('patient', fn ($p) => $p->where('name', 'like', "%{$맨이름}%"))
+              ->orWhereHas('prescription', fn ($p) => $p->where('patient_name_ocr', 'like', "%{$맨이름}%"));
         });
     }
 
@@ -584,8 +589,14 @@ class CashbillController extends Controller
             $query->where('order_number', 'like', "%{$v}%");
         }
 
+        /* **치는 이름을 가다듬어 맞댄다** (2026-10-06 · SR #102 「현금/카드 화면 검색
+           조건에 보통 (E)환자명으로 치는데 (E)가 없는 줄이 있어 일부만 조회됨」).
+
+           팝빌이 돌려준 고객 이름에는 (E) 도, 동명이인 꼬리도 없다. 그런데 담당자는
+           다른 화면에서 보던 「(E)전춘자」를 그대로 쳐 넣는다 — 글자 그대로 맞대면 한 줄도
+           걸리지 않는다. 표시를 뗀 이름으로 맞댄다(Patient::실명). */
         if ($v = trim((string) $request->query('customer_name'))) {
-            $query->where('customer_name', 'like', "%{$v}%");
+            $query->where('customer_name', 'like', '%' . \App\Models\Patient::실명($v) . '%');
         }
 
         // 주민번호 — 휴대폰번호가 들어간 건이 섞여 있어 부분검색으로 둔다
@@ -675,7 +686,8 @@ class CashbillController extends Controller
             'supplyCost'   => $r->supply_cost,
             'tax'          => $r->tax,
             'serviceFee'   => $r->service_fee,
-            'customerName' => $r->customer_name,
+            /* 화면에 세우는 이름 — 동명이인 꼬리를 뗀다 (2026-10-06 · SR #102) */
+            'customerName' => \App\Models\Patient::실명($r->customer_name),
             'itemName'     => $r->item_name,
             'identityNum'  => $r->identity_num,
             'hp'           => $r->hp,
@@ -723,7 +735,7 @@ class CashbillController extends Controller
             'tax'                 => $r->tax,
             'serviceFee'          => $r->service_fee,
             'identityNum'         => $r->identity_num,
-            'customerName'        => $r->customer_name,
+            'customerName'        => \App\Models\Patient::실명($r->customer_name),
             'itemName'            => $r->item_name,
             'orderNumber'         => $r->order_number,
             'email'               => $r->email,

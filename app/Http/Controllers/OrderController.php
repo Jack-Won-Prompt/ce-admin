@@ -1429,7 +1429,9 @@ class OrderController extends Controller
             $cb->serviceFee       = '0';
             $cb->identityNum      = $data['cash_receipt_identifier'];
             // 국세청에 나가는 이름이다 — (E) 를 뗀다(2026-09-10 지시)
-            $cb->customerName     = \App\Models\Patient::bare($order->patient?->name);
+            /* 국세청에 적히는 이름이다 — (E) 와 동명이인 꼬리를 모두 뗀다
+               (2026-10-06 · SR #90). 꼬리가 붙은 채 나간 건이 9줄 있었다. */
+            $cb->customerName     = \App\Models\Patient::실명($order->patient?->name);
             /* 현금영수증에는 품목 줄이 없다 — 한 칸에 「제품명 (장비코드) 외 2건」으로
                담는다(2026-09-03 확정). */
             $cb->itemName         = \App\Support\IssueLines::cashItemName($order);

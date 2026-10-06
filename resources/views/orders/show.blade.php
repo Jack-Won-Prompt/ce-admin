@@ -1226,7 +1226,11 @@
   $_tiAmt   = $_tiRate > 0 ? (int) round($_tiBase * $_tiRate / 100) : (int) $order->total_amount;
   $_tiSupply = (int) round($_tiAmt / 1.1);
   $_tiVat    = $_tiAmt - $_tiSupply;
-  $_tiName   = $order->patient?->name ?? $_tiRx?->patient_name_ocr ?? '';
+  /* 공급받는자 이름은 **밖으로 나가는 이름**이다 — (E) 와 동명이인 꼬리를 뗀다
+     (2026-10-06 · SR #90 「공급받는자/이름 뒤에 알파벳 제외」). 꼬리는 같은 이름을
+     가리려고 우리가 붙인 것이고 법적 이름이 아니다. 담당자가 고칠 수 있는 칸이므로
+     채워 주는 값만 바로잡는다. */
+  $_tiName   = \App\Models\Patient::실명($order->patient?->name ?? $_tiRx?->patient_name_ocr ?? '');
 @endphp
 <div class="modal-overlay" id="taxModal">
   <div class="modal-box">

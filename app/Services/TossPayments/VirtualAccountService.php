@@ -42,7 +42,8 @@ class VirtualAccountService extends TossClient
                이 값이 곧 **가상계좌 예금주**다. 환자가 입금할 때 은행 화면에서 보는
                이름이라, (E) 가 붙으면 제 이름이 아닌 것으로 읽혀 입금을 망설인다.
                실제로 09-20ㆍ09-23ㆍ09-27 세 건이 「(E)…」로 나갔다. */
-            'customerName' => \App\Models\Patient::bare($order->patient?->name) ?: '환자',
+            /* 토스에 넘기는 이름 — 동명이인 꼬리까지 뗀다 (2026-10-06 · SR #90) */
+            'customerName' => \App\Models\Patient::실명($order->patient?->name) ?: '환자',
             'bank'         => $bank,
             'validHours'   => $validHours,
         ]);

@@ -330,8 +330,9 @@ final class NhisFaxAuto
         }
 
         /* 공단으로 나가는 서류다 — (E) 를 뗀다 */
-        $name = \App\Models\Patient::bare($prescription->patient?->name)
-            ?: \App\Models\Patient::bare($prescription->patient_name_ocr);
+        /* 공단으로 가는 서류의 이름 (2026-10-06 · SR #90) */
+        $name = \App\Models\Patient::실명($prescription->patient?->name)
+            ?: \App\Models\Patient::실명($prescription->patient_name_ocr);
         $line = trim(self::ROOM_NAME . ' · ' . $prescription->rx_number
                    . ($name ? ' · ' . $name : '') . ' — ' . $what);
 

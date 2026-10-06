@@ -49,8 +49,32 @@ class TaxinvoiceController extends Controller
      */
     private function applyFilters($query, Request $request): void
     {
+        /* **이름으로 찾을 때 구매 거래처도 함께 본다** (2026-10-06 · SR #90
+           「검색조건 이름 → 구매 거래처명으로 조회되게 설정」).
+
+           여태 발행된 줄의 「공급받는자 상호」만 보았다. 그 칸은 발행할 때 담당자가 적은
+           값이라, 사업자로 발행한 건에서는 상호가 들어가고 환자 이름은 어디에도 없다 —
+           환자 이름을 쳐도 그 건이 걸리지 않았다.
+
+           그래서 상호와 **거래처 이름**을 함께 본다. 이름 뒤의 (E)ㆍ동명이인 꼬리를 떼고
+           치는 담당자도 있으므로, 거래처 쪽은 꼬리를 뗀 이름으로도 맞댄다. */
         if ($v = trim((string) $request->query('invoicee_name'))) {
-            $query->where('invoicee_corp_name', 'like', "%{$v}%");
+            $맨이름 = \App\Models\Patient::실명($v);
+
+            /* 주문을 되짚는 길은 이 표의 규칙 하나다 — 관리번호 뒤 6자리가 주문 id 다
+               (위 주석과 같은 잣대). 이 표에는 주문번호 칸이 없다. */
+            $주문들 = \App\Models\Order::query()
+                ->whereHas('patient', fn ($p) => $p->where('name', 'like', "%{$맨이름}%"))
+                ->pluck('id');
+
+            $query->where(function ($w) use ($v, $맨이름, $주문들) {
+                $w->where('invoicee_corp_name', 'like', "%{$v}%")
+                  ->orWhere('invoicee_corp_name', 'like', "%{$맨이름}%");
+
+                foreach ($주문들 as $id) {
+                    $w->orWhere('mgt_key', 'like', 'TI%' . str_pad((string) $id, 6, '0', STR_PAD_LEFT));
+                }
+            });
         }
 
         // 주민번호 — 마스킹으로 저장돼 부분검색만 된다
