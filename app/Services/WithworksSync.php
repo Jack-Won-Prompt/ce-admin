@@ -116,6 +116,80 @@ class WithworksSync
      */
     public const SHIPPED = ['95', '98'];
 
+    /**
+     * 저쪽 API 가 지난 판매주문을 줄 때, **저쪽 표를 직접 보고** 상태를 맞춘다
+     * (2026-10-06 지시 · SR #110).
+     *
+     * `so_show` 는 우리 주문번호로 물으면 처음 섰던 판매주문을 돌려준다. 정정을 거친
+     * 건은 그 줄이 취소되어 있어, 우리가 그것을 적으면 「확정ㆍ출고완료」인 건이
+     * 「취소」로 선다. 위에서 적기를 막았지만 **이미 적힌 옛 상태는 그대로 남는다** —
+     * 새 값이 들어올 길이 없기 때문이다.
+     *
+     * 그래서 어긋났을 때만 저쪽 표(`sales_orders`)에서 우리가 아는 번호의 **가장 최신
+     * 줄**을 읽는다. 같은 `so_no` 가 여러 줄인 경우가 저쪽에 8,445개 있어(2026-10-06
+     * 실측) 번호만으로는 모자라고, 번호가 같은 것 가운데 id 가 가장 큰 것이 지금 것이다.
+     *
+     * **어긋났을 때만** 읽는다 — 10분마다 모든 주문에 질의를 더하지 않는다.
+     *
+     * 상태 이름표는 저쪽 API 가 준 짝에서 확인된 셋만 쓴다(02 등록 · 95 확정 · 99 취소 ·
+     * 저쪽 판매주문의 99.7%). 모르는 코드는 손대지 않는다 — 이름표를 지어내면 화면이
+     * 틀린 말을 하게 된다.
+     */
+    private const DB_STATUS_LABEL = ['02' => '등록', '95' => '확정', '99' => '취소'];
+
+    private function 표로맞추기(Order $order): void
+    {
+        try {
+            $줄 = \App\Support\WithworksSource::연결(\App\Support\WithworksSource::창고)
+                ->table('sales_orders')
+                ->where('so_no', $order->withworks_so_no)
+                ->orderByDesc('id')
+                ->first(['id', 'status']);
+        } catch (\Throwable $e) {
+            Log::warning('[Withworks] 저쪽 표를 보지 못했다', [
+                'order' => $order->order_number, 'error' => $e->getMessage(),
+            ]);
+
+            return;
+        }
+
+        if (! $줄) {
+            return;
+        }
+
+        $코드 = (string) $줄->status;
+
+        if (! isset(self::DB_STATUS_LABEL[$코드])) {
+            Log::info('[Withworks] 모르는 판매주문 상태 — 적지 않는다', [
+                'order' => $order->order_number, 'so_no' => $order->withworks_so_no, '상태' => $코드,
+            ]);
+
+            return;
+        }
+
+        if ($코드 === (string) $order->withworks_status) {
+            return;
+        }
+
+        $옛것 = $order->withworks_status_label;
+
+        $order->update([
+            'withworks_status'       => $코드,
+            'withworks_status_label' => self::DB_STATUS_LABEL[$코드],
+            'withworks_so_id'        => $줄->id,
+            'withworks_status_at'    => now(),
+        ]);
+
+        activity()->performedOn($order)->log(sprintf(
+            '위드웍스 상태를 저쪽 자료로 맞췄습니다 — %s · %s → %s (판매주문 %s)',
+            $order->withworks_so_no, $옛것 ?: '-', self::DB_STATUS_LABEL[$코드], $줄->id));
+
+        Log::info('[Withworks] 저쪽 표로 상태를 맞췄다', [
+            'order' => $order->order_number, 'so_no' => $order->withworks_so_no,
+            '전' => $옛것, '후' => self::DB_STATUS_LABEL[$코드],
+        ]);
+    }
+
     public function apply(Order $order, array $result, bool $full = false): void
     {
         /* **다른 판매주문의 상태로 덮지 않는다** (2026-10-06 · SR #110).
@@ -138,6 +212,10 @@ class WithworksSync
                 '응답'  => $응답번호,
                 '응답상태' => $result['status'] ?? null,
             ]);
+
+            /* 그냥 두면 옛 상태가 영영 남는다 — 저쪽 표를 직접 보고 맞춘다
+               (2026-10-06 지시 · SR #110). */
+            $this->표로맞추기($order);
 
             return;
         }
