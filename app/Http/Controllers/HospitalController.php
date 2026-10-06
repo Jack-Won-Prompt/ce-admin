@@ -199,6 +199,58 @@ class HospitalController extends Controller
     }
 
     /** 없는 병원을 그 자리에서 만든다 */
+    /**
+     * 병원을 지운다 — **관리자만** (2026-10-06 지시 · SR #75).
+     *
+     * 「병원관리 추가는 누구나 할 수 있어야 하고 삭제는 Admin 기능을 가진 사람만
+     * 삭제할 수 있도록」 요청이다. 추가는 잘못 담아도 합치면 되지만, 지우는 것은
+     * 처방전ㆍ주문이 가리키던 자리를 끊는 일이라 되돌리기 어렵다.
+     *
+     * **쓰고 있는 병원은 지우지 않는다.** 처방전이나 주문이 하나라도 가리키고 있으면
+     * 그 줄들이 병원 없는 건이 된다 — 공단 서류를 다시 채워야 한다. 그때는 지우는 대신
+     * 「겹친 번호 모아보기」로 합치는 것이 맞다.
+     */
+    public function destroy(Hospital $hospital): JsonResponse
+    {
+        if (Auth::user()?->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => '병원 삭제는 관리자만 할 수 있습니다.',
+            ], 403);
+        }
+
+        /* **처방전은 번호가 아니라 이름ㆍ요양기관번호로 병원을 가리킨다.**
+
+           `prescriptions.hospital_id` 는 아예 없다 — `hospital_name` 과 `hospital_code`
+           두 칸에 글자로 적힌다(2026-10-06 확인 · 각각 39,026줄ㆍ66,540줄). 목록의
+           「처방전」 칸도 그 둘을 세므로, 지울 수 있는지도 **같은 셈**으로 본다.
+           외래키로 보면 한 건도 안 걸려 무엇이든 지워진다. */
+        $쓰는곳 = [];
+
+        $수 = \App\Models\Prescription::query()
+            ->when($hospital->code, fn ($q) => $q->orWhere('hospital_code', $hospital->code))
+            ->orWhere('hospital_name', $hospital->name)
+            ->count();
+
+        if ($수) { $쓰는곳[] = '처방전 ' . number_format($수) . '건'; }
+
+        if ($쓰는곳) {
+            return response()->json([
+                'success' => false,
+                'message' => '이 병원을 사용 중인 자료가 있어 삭제할 수 없습니다 ('
+                           . implode(' · ', $쓰는곳) . '). 중복 병원이면 ［겹친 번호 모아보기］에서 합쳐 주십시오.',
+            ], 422);
+        }
+
+        $적을것 = $hospital->name . ($hospital->code ? ' (' . $hospital->code . ')' : '');
+
+        $hospital->delete();
+
+        activity()->causedBy(Auth::user())->log('병원 삭제: ' . $적을것);
+
+        return response()->json(['success' => true, 'message' => '삭제했습니다.']);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([

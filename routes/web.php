@@ -416,6 +416,8 @@ Route::middleware(['auth'])->group(function () {
     Route::put( '/hospitals/{hospital}', [\App\Http\Controllers\HospitalController::class, 'update'])->name('hospitals.update');
     Route::post('/hospitals/merge',  [\App\Http\Controllers\HospitalController::class, 'merge'])->name('hospitals.merge');
     Route::post('/hospitals',        [\App\Http\Controllers\HospitalController::class, 'store'])->name('hospitals.store');
+    /* 삭제는 관리자만 — 컨트롤러가 역할을 다시 본다 (2026-10-06 · SR #75) */
+    Route::delete('/hospitals/{hospital}', [\App\Http\Controllers\HospitalController::class, 'destroy'])->name('hospitals.destroy');
     Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
     /* 품번들의 RB(박스당 낱개 수) — 이미 저장된 줄의 박스 환산에 쓴다 */
     Route::get('/products/rbox',  [ProductController::class, 'rbox'])->name('products.rbox');

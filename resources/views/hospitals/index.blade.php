@@ -129,6 +129,11 @@
     <div class="hp-note" id="hpDupNote" style="display:none;"></div>
   </div>
   <div class="hp-foot">
+    {{-- 삭제는 관리자만 (2026-10-06 지시 · SR #75).
+         쓰고 있는 병원은 서버가 막는다 — 처방전ㆍ주문이 가리키던 자리가 끊기면
+         공단 서류를 다시 채워야 한다. --}}
+    <button type="button" class="ds-btn" id="hpDelete" style="display:none;margin-right:auto;color:var(--alert-500);"
+            onclick="hpDelete()">삭제</button>
     <button type="button" class="ds-btn" onclick="hpClose()">닫기</button>
     <button type="button" class="ds-btn ds-btn-primary" id="hpSave" onclick="hpSave()">저장</button>
   </div>
@@ -167,8 +172,11 @@
 @push('scripts')
 <script>
 (function () {
-  const ROWS     = @json($rows);
+  /* 삭제하면 줄을 덜어 내므로 다시 담을 수 있어야 한다 (2026-10-06 · SR #75) */
+  let ROWS       = @json($rows);
   const CAN_EDIT = @json($canEdit);
+  /* 삭제는 관리자만 (2026-10-06 지시 · SR #75) — 서버도 역할을 다시 본다 */
+  const IS_ADMIN = @json(auth()->user()?->role === 'admin');
   const CSRF     = document.querySelector('meta[name=csrf-token]')?.content;
 
   /* 번호가 겹치는 줄은 한눈에 — 겹치면 청구가 남의 병원으로 간다 */
@@ -270,6 +278,13 @@
 
     const 저장 = document.getElementById('hpSave');
     저장.style.display = CAN_EDIT ? '' : 'none';
+
+    /* 삭제는 관리자만. 쓰고 있는 병원은 단추 자체를 세우지 않는다 —
+       눌러도 서버가 막으므로, 누를 수 없음을 먼저 보이는 편이 낫다. */
+    const 지움 = document.getElementById('hpDelete');
+    const 쓰임 = Number(r.used || 0);
+    지움.style.display = (IS_ADMIN && !쓰임) ? '' : 'none';
+    지움.title = 쓰임 ? '사용 중인 병원은 삭제할 수 없습니다' : '';
     ['hpName','hpCode','hpDept','hpTel','hpFax','hpAddr','hpMemo','hpActive']
       .forEach(k => document.getElementById(k).disabled = !CAN_EDIT);
 
@@ -280,6 +295,38 @@
   window.hpClose = function () {
     document.getElementById('hpBack').style.display  = 'none';
     document.getElementById('hpModal').style.display = 'none';
+  };
+
+  /** 삭제 — 관리자만. 서버가 역할과 「쓰고 있는가」를 다시 본다 */
+  window.hpDelete = async function () {
+    if (!지금줄) return;
+
+    if (!await ceConfirm(
+          `'${지금줄.name}' 병원을 삭제하시겠습니까?`,
+          { title: '병원 삭제', tone: 'danger', confirmText: '삭제' })) return;
+
+    const 단추 = document.getElementById('hpDelete');
+    단추.disabled = true;
+
+    try {
+      const res = await fetch('/hospitals/' + 지금줄.id, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+      });
+      const d = await res.json().catch(() => ({}));
+
+      if (!res.ok || !d.success) {
+        ceAlert(d.message || '삭제하지 못했습니다.', { tone: 'danger' });
+        return;
+      }
+
+      showToast(d.message || '삭제했습니다.', 'success');
+      ROWS = ROWS.filter(x => x.id !== 지금줄.id);
+      grid.setData(ROWS);
+      hpClose();
+    } catch (e) {
+      ceAlert('삭제 중 오류가 발생했습니다.', { tone: 'danger' });
+    } finally { 단추.disabled = false; }
   };
 
   window.hpSave = async function () {
