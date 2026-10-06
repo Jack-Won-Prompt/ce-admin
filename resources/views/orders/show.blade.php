@@ -692,9 +692,18 @@
                 <button class="btn btn-outline btn-sm" onclick="printDoc('cash')">
                   <i class="bx bx-printer"></i> 출력
                 </button>
+                {{-- 현금영수증은 발행 뒤 식별번호를 고칠 수 없다 — 취소하고 다시 내야 한다
+                     (2026-10-06 지시). 여태 그 길이 없어 담당자가 팝빌에 직접 들어가
+                     취소하고 돌아왔고, 그러면 우리 표는 「발행됨」인 채로 남았다. --}}
+                <button class="btn btn-outline btn-sm" onclick="reissueCashReceipt()">
+                  <i class="bx bx-refresh"></i> 재발행
+                </button>
                 <button class="btn btn-danger btn-sm" onclick="cancelCashReceipt()">
                   <i class="bx bx-block"></i> 취소
                 </button>
+              </div>
+              <div style="margin-top:6px;font-size:11px;color:var(--text-muted);line-height:1.6;">
+                번호를 바꾸려면 주문 등록에서 현금영수증번호를 먼저 변경한 후 ［재발행］을 누르십시오.
               </div>
             @elseif($crStatus === 'cancelled')
               <div class="receipt-row">
@@ -1563,6 +1572,21 @@ async function submitCashReceipt() {
   if (res.success) {
     showToast(`현금영수증 발행 완료 (${res.cash_receipt_no})`, 'success', 5000);
     closeCashModal();
+    setTimeout(() => location.reload(), 1000);
+  }
+}
+
+/* 취소하고 바뀐 번호로 다시 낸다 (2026-10-06 지시).
+   번호를 안 바꿨으면 서버가 그 자리에서 되돌려보내며 무엇을 해야 하는지 알린다. */
+async function reissueCashReceipt() {
+  if (!await ceConfirm(
+        '현금영수증을 취소하고 변경된 번호로 다시 발행합니다. 계속하시겠습니까?',
+        { title: '현금영수증 재발행', confirmText: '재발행', cancelText: '닫기' })) return;
+
+  const res = await apiRequest(ORDER_URL + '/cash-receipt/reissue', 'POST');
+
+  if (res.success) {
+    showToast(res.message || '재발행했습니다.', 'success', 5000);
     setTimeout(() => location.reload(), 1000);
   }
 }

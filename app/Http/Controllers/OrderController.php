@@ -1527,6 +1527,105 @@ class OrderController extends Controller
     }
 
     // ── 현금영수증 취소 (팝빌) ───────────────────────────
+    /**
+     * 현금영수증 재발행 — 취소하고 바뀐 번호로 다시 낸다 (2026-10-06 지시 · SR 요청).
+     *
+     * 현금영수증은 발행하고 나서 **식별번호를 고칠 수 없다.** 전화번호를 잘못 적었거나
+     * 사업자번호로 바꿔 달라는 요청이 오면 취소하고 새로 내는 수밖에 없다. 여태 그 길이
+     * 화면에 없어, 담당자가 팝빌에 직접 들어가 취소하고 돌아와야 했다 — 그러면 우리 표는
+     * 그 사실을 모른 채 「발행됨」으로 남는다(2026-10-06 (E)김지수B 건이 그랬다).
+     *
+     * **바꿀 번호가 없으면 내지 않는다.** 같은 번호로 다시 내는 것은 취소만 한 셈이고,
+     * 국세청에는 취소와 발행이 한 번씩 더 쌓인다. 번호는 주문 등록에서 고친다 —
+     * 거기가 환자 정보를 적는 자리다.
+     */
+    public function reissueCashReceipt(Order $order): \Illuminate\Http\JsonResponse
+    {
+        if ($order->cash_receipt_status !== 'issued') {
+            return response()->json([
+                'success' => false,
+                'message' => '발행된 현금영수증이 없습니다. 먼저 발행해 주십시오.',
+            ], 422);
+        }
+
+        /* 지금 내야 할 번호 — 거래처에 적힌 현금영수증번호가 먼저고, 없으면 휴대폰이다.
+           발행할 때 쓰는 잣대와 같다(DepositAutoIssue::cashReceipt). */
+        $새번호 = preg_replace('/\D/', '',
+            (string) ($order->patient?->cash_receipt_no ?: $order->patient?->mobile));
+
+        if ($새번호 === '') {
+            return response()->json([
+                'success' => false,
+                'message' => '현금영수증번호가 없습니다. 주문 등록에서 번호를 입력한 후 다시 시도하십시오.',
+            ], 422);
+        }
+
+        if ($새번호 === preg_replace('/\D/', '', (string) $order->cash_receipt_identifier)) {
+            return response()->json([
+                'success' => false,
+                'message' => '현재 발행된 번호와 같습니다. 주문 등록에서 현금영수증번호를 변경한 후 재발행하십시오.',
+            ], 422);
+        }
+
+        /* ① 취소 — 이미 팝빌에서 직접 취소한 건이면 그 자리가 422 로 답한다.
+           그때는 우리 표만 사실에 맞추고 ②로 넘어간다. */
+        $취소함 = false;
+        $res = $this->cancelCashReceipt($order);
+        $몸  = json_decode($res->getContent(), true) ?: [];
+
+        if ($몸['success'] ?? false) {
+            $취소함 = true;
+        } else {
+            Log::warning('[CashReceipt] 재발행 중 취소가 되지 않았다 — 팝빌에서 이미 취소된 건일 수 있다', [
+                'order' => $order->order_number, 'message' => $몸['message'] ?? null,
+            ]);
+
+            $order->update([
+                'cash_receipt_status'       => 'cancelled',
+                'cash_receipt_cancelled_at' => $order->cash_receipt_cancelled_at ?? now(),
+            ]);
+        }
+
+        $order->refresh();
+
+        /* ② 바뀐 번호로 다시 낸다. 구분은 거래처에 적힌 것을 따른다 —
+           「지출증빙」이면 사업자번호, 아니면 소득공제다. */
+        $구분 = ($order->patient?->deduction === '지출증빙') ? 'business_expense' : 'income_deduction';
+
+        $res2 = $this->issueCashReceipt(new Request([
+            'cash_receipt_type'       => $구분,
+            'cash_receipt_identifier' => $새번호,
+            'cash_receipt_amount'     => (int) $order->cash_receipt_amount ?: (int) $order->patient_copay,
+        ]), $order);
+
+        $몸2 = json_decode($res2->getContent(), true) ?: [];
+
+        if (! ($몸2['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => '취소는 되었으나 재발행하지 못했습니다 — ' . ($몸2['message'] ?? '')
+                           . ' 현금/카드영수증 화면에서 다시 발행해 주십시오.',
+            ], 422);
+        }
+
+        $order->refresh();
+
+        activity()->causedBy(Auth::user())->performedOn($order)->log(sprintf(
+            '현금영수증 재발행 — %s 로 다시 발행했습니다 (승인 %s · %s원)%s',
+            $새번호, $order->cash_receipt_no, number_format((int) $order->cash_receipt_amount),
+            $취소함 ? '' : ' · 앞 건은 팝빌에서 이미 취소되어 있었습니다'));
+
+        return response()->json([
+            'success' => true,
+            'message' => '현금영수증을 재발행했습니다. (승인번호 ' . $order->cash_receipt_no . ')',
+            'data'    => [
+                'cash_receipt_no'         => $order->cash_receipt_no,
+                'cash_receipt_identifier' => $order->cash_receipt_identifier,
+                'cash_receipt_issued_at'  => $order->cash_receipt_issued_at?->format('Y-m-d H:i'),
+            ],
+        ]);
+    }
+
     public function cancelCashReceipt(Order $order): \Illuminate\Http\JsonResponse
     {
         if ($order->cash_receipt_status !== 'issued') {

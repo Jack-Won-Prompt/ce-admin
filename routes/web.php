@@ -622,6 +622,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{order}/tax-invoice',   [OrderController::class, 'cancelTaxInvoice'])->name('cancelTaxInvoice');
         Route::post('/{order}/cash-receipt',        [OrderController::class, 'issueCashReceipt'])->name('issueCashReceipt');
         Route::delete('/{order}/cash-receipt',      [OrderController::class, 'cancelCashReceipt'])->name('cancelCashReceipt');
+        /* 취소하고 바뀐 번호로 다시 낸다 — 현금영수증은 식별번호를 고칠 수 없다
+           (2026-10-06 지시) */
+        Route::post('/{order}/cash-receipt/reissue', [OrderController::class, 'reissueCashReceipt'])->name('reissueCashReceipt');
         Route::get('/{order}/cash-receipt-pdf',     [OrderController::class, 'downloadCashReceiptPdf'])->name('cashReceiptPdf');
         // 미리보기 — 내려받지 않고 그 자리에서 펼쳐 본다(정산/회계 목록의 증빙 단추)
         Route::get('/{order}/cash-receipt-preview', [OrderController::class, 'previewCashReceipt'])->name('cashReceiptPreview');
