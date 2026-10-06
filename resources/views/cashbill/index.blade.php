@@ -551,6 +551,11 @@
       /* 취소 건은 금액을 마이너스로 세운다(요청서 6쪽). 합계가 그만큼 깎여야 이 표만
          보고도 이 기간에 얼마가 남았는지 읽힌다. */
       { header: '합계금액', name: 'amount',    width: 110, editor: 'number' },
+      /* 무엇으로 받은 돈인가 (2026-10-06 지시).
+         거래구분(승인ㆍ취소)과 용도(소득공제ㆍ지출증빙)만으로는 가상계좌로 받았는지
+         카드로 받았는지 알 수 없었다. 잣대는 주문 관리와 같다 — 토스가 알려 준 유형이
+         먼저다. 아직 받기 전이거나 우리 주문이 아닌 줄은 빈칸이다. */
+      { header: '결제수단', name: 'payMethod', width: 100, align: 'center', sortable: true },
       // 「유형」이 아니라 「거래구분」이고, 값에서 「거래」는 뗀다 — 승인ㆍ취소만 남는다
       { header: '거래구분', name: 'tradeType', width: 90,  align: 'center', sortable: true },
       { header: '용도',     name: 'usage',     width: 90,  align: 'center', sortable: true },

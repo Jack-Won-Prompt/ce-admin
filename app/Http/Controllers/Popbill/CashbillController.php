@@ -393,6 +393,8 @@ class CashbillController extends Controller
 
         $list = $orders->map(fn (Order $o) => [
             'source'           => 'order',
+            // 무엇으로 받은 돈인가 — 토스가 알려 준 유형이 먼저다 (2026-10-06 지시)
+            'payMethod'        => $o->payMethodLabel(),
             'orderId'          => $o->id,
             'orderNumber'      => $o->order_number,
             'rxNumber'         => $o->prescription?->rx_number,
@@ -471,6 +473,11 @@ class CashbillController extends Controller
 
             return [
                 'source'           => 'order',
+                /* 아직 받기 전인 줄은 비워 둔다 — 「무엇으로 안내했는가」를 적으면
+                   받지도 않은 건이 「링크페이」로 서서 받은 것처럼 읽힌다
+                   (주문 관리가 쓰는 잣대와 같다 · OrderGridExtras). */
+                'payMethod'        => ($o->tossPayment || $o->deposit_confirmed_at !== null)
+                                        ? $o->payMethodLabel() : '',
                 '_sortKey'         => $at?->format('YmdHis') ?? '',
                 'tradeType'        => '발행 대기',
                 'orderId'          => $o->id,
@@ -608,6 +615,17 @@ class CashbillController extends Controller
         $o = $r->order;
 
         return [
+            /* 무엇으로 받은 돈인가 (2026-10-06 지시).
+
+               이 목록은 팝빌 현금영수증ㆍ발행 대기 주문ㆍ카드 줄 셋을 한 표에 섞어
+               세우는데, 그 줄이 가상계좌로 받은 것인지 카드로 받은 것인지는 어디에도
+               없었다. 거래구분(승인ㆍ취소)과 용도(소득공제ㆍ지출증빙)만으로는 알 수 없다.
+
+               잣대는 주문 관리와 같다 — **토스가 알려 준 유형이 먼저**이고, 없으면 우리가
+               고른 방식이다(Order::payMethodLabel). 팝빌에서 직접 발행해 이을 주문이
+               없는 줄은 빈칸이고, 그 빈칸이 곧 「우리 주문이 아니다」라는 말이다. */
+            'payMethod'    => $o?->payMethodLabel() ?? '',
+
             // ── 팝빌이 주는 그대로 ────────────────────────────
             'mgtKey'       => $r->mgt_key,
             'itemKey'      => $r->item_key,

@@ -142,6 +142,12 @@ class CashbillSyncService
                 ? CashbillRecord::firstOrNew(['corp_num' => $corpNum, 'item_key' => $짐])
                 : CashbillRecord::firstOrNew(['corp_num' => $corpNum, 'mgt_key' => '']));
 
+        /* `mgt_key` 는 기본값이 없는 칸이라 비운 채로 담으면 거절당한다.
+           문서번호가 없는 줄은 빈 글자로 채워 둔다 — 가리는 열쇠는 위에서 item_key 다. */
+        if (($rec->mgt_key ?? null) === null) {
+            $rec->mgt_key = '';
+        }
+
         $rec->fill([
             'item_key'      => $info->itemKey      ?? null,
             'trade_type'    => $info->tradeType    ?? null,
