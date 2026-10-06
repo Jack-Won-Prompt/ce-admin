@@ -445,7 +445,7 @@ window.HELP_TOUR_STEPS = [
           return el;
         },
       },
-      { header: '이름',     name: 'patient',   width: 90,  sortable: true },
+      { header: '환자명',     name: 'patient',   width: 90,  sortable: true },
       {
         // 판매인지, 되돌아온 건인지. 되돌아온 건은 눈에 띄어야 한다.
         // renderer 는 노드를 돌려줘야 한다 — 문자열을 주면 글자 그대로 찍힌다.

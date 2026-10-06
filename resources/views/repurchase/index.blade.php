@@ -244,7 +244,7 @@ window.HELP_TOUR_STEPS = [
     columns: [
       { header: '재구매 가능일', name: 'repurchase', width: 130, sortable: true },
       { header: '처방전 번호',   name: 'rx_number',  width: 140, sortable: true },
-      { header: '이름',        name: 'patient',    width: 110, sortable: true },
+      { header: '환자명',        name: 'patient',    width: 110, sortable: true },
       { header: '병원',          name: 'hospital',   width: 200 },
       { header: '상태',          name: 'status',     width: 100, align: 'center', sortable: true },
       { header: '등록 일시',     name: 'created',    width: 160, align: 'center', sortable: true },

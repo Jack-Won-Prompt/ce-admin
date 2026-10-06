@@ -130,7 +130,7 @@
     columns: [
       { header: '발급일시',   name: 'issued_at', width: 140, sortable: true },
       { header: '주문번호',   name: 'order_no',  width: 120, sortable: true },
-      { header: '이름',       name: 'patient',   width: 90,  sortable: true },
+      { header: '환자명',       name: 'patient',   width: 90,  sortable: true },
       { header: '결제수단',   name: 'method',    width: 100, align: 'center', sortable: true },
       { header: '상태',       name: 'status',    width: 90,  align: 'center', sortable: true },
       { header: '매입 상태',  name: 'acquire',   width: 100, align: 'center', sortable: true, renderer: 매입칸 },

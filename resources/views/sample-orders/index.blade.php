@@ -276,7 +276,7 @@
     height: 'fit', editable: false, rowNumber: true, toolbar: false, footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '샘플번호',   name: 'sample_no', width: 150, sortable: true },
-      { header: '이름',       name: 'customer',  width: 110, sortable: true },
+      { header: '환자명',       name: 'customer',  width: 110, sortable: true },
       { header: '상태',       name: 'status',    width: 90,  align: 'center', sortable: true },
       { header: '받는 사람',  name: 'recipient', width: 100 },
       { header: '환자 전화번호', name: 'mobile',  width: 140 },

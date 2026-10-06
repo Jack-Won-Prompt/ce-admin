@@ -481,7 +481,7 @@
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: 'No',            name: 'no',       width: 64,  align: 'right', sortable: true },
-      { header: '거래처명',       name: 'customer', width: 120, sortable: true },
+      { header: '환자명',       name: 'customer', width: 120, sortable: true },
 
       /* 번호가 둘이 되었다 (2026-09-14 지시). 환자가 문자를 받지 못하면 보호자로
          돌려 보내므로, 어느 쪽으로 보내는지(Main contact)를 두 번호 옆에 세운다. */

@@ -55,7 +55,7 @@
     footer: { total: true, selected: false, modified: false },
     columns: [
       { header: '처방번호',  name: 'rx_number', width: 130, sortable: true },
-      { header: '이름',    name: 'patient',   width: 100, sortable: true },
+      { header: '환자명',    name: 'patient',   width: 100, sortable: true },
       { header: '생년월일',  name: 'birth',     width: 110, align: 'center' },
       { header: '상태',      name: 'ocr',       width: 110, align: 'center', sortable: true },
       { header: '주문',      name: 'order',     width: 90,  align: 'center' },

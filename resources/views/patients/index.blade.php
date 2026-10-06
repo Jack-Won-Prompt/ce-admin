@@ -458,7 +458,7 @@ document.addEventListener('keydown', (e) => {
     footer: false,
     columns: [
       { header: '사업부',     name: 'care_type',       width: 70, align: 'center', sortable: true },
-      { header: '이름',       name: 'name',            width: 110, sortable: true },
+      { header: '환자명',       name: 'name',            width: 110, sortable: true },
       { header: '주민등록번호', name: 'resident_no',     width: 130 },
       /* 생년월일 셋 — 위드웍스 표는 「1982. 11. 11.」, 우리 표는 「1982-11-11」, 해만
          맞춰 보는 자리도 있다. 만 나이는 요청대로 따로 세운다(요청서 2쪽). */

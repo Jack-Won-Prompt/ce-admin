@@ -2248,7 +2248,7 @@ document.addEventListener('click', (e) => {
       { header: '취소 상태',      name: 'cancel_state', width: 90,  align: 'center', sortable: true },
       { header: '위드웍스 유형',   name: 'ww_so_type',   width: 130, align: 'center', sortable: true },
       { header: '구매 거래처',    name: 'ww_po_code',   width: 110 },
-      { header: '구매 거래처명',  name: 'ww_po_name',   width: 150, sortable: true },
+      { header: '위드웍스 환자명',  name: 'ww_po_name',   width: 150, sortable: true },
       { header: '판매 거래처명',  name: 'ww_so_name',   width: 150, sortable: true },
       { header: '병원거래처',     name: 'ww_hosp_code', width: 110 },
       { header: '병원거래처 주소', name: 'ww_hosp_addr', width: 220 },

@@ -547,7 +547,7 @@ window.HELP_TOUR_STEPS = [
     columns: [
       { header: '처방번호',      name: 'rx_number',  width: 150, sortable: true },
       { header: '출처',          name: 'source',     width: 70,  align: 'center', sortable: true },
-      { header: '이름',        name: 'patient',    width: 100, sortable: true },
+      { header: '환자명',        name: 'patient',    width: 100, sortable: true },
       { header: '병원',          name: 'hospital',   width: 150, sortable: true },
       // 요양기관코드 — 공단과 맞출 때 쓰는 병원 번호(2026-09-08 확인요청 7쪽)
       { header: '요양기관코드',  name: 'hosp_code',  width: 120, align: 'center', sortable: true },

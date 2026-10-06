@@ -279,7 +279,7 @@
     columns: [
       { header: '접수번호', name: 'receipt',  width: 140, sortable: true },
       { header: '주문번호', name: 'order_no', width: 120, sortable: true },
-      { header: '이름',   name: 'patient',  width: 90 },
+      { header: '환자명',   name: 'patient',  width: 90 },
       { header: '유형',     name: 'type',     width: 60,  align: 'center', sortable: true },
       // 같은 「교환」이라도 변심과 불량은 승인자도 청구 방식도 다르다 — 사유를 세운다
       /* 절차서가 정한 처리 유형이다 — 고객 변심 교환ㆍ불량 교환ㆍ반품 및 환불ㆍ

@@ -381,7 +381,7 @@
       </div>
     </div>
     <div class="ms-field">
-      <label class="ds-field-label">이름</label>
+      <label class="ds-field-label">환자명</label>
       <input type="text" id="msTplLabel" class="form-control" maxlength="100" placeholder="주문 확정" />
     </div>
     <div class="ms-field">
@@ -446,7 +446,7 @@
     height: 'fit', editable: false, rowCheckbox: true, rowNumber: true, toolbar: false,
     footer: { total: true, selected: false, modified: false },
     columns: [
-      { header: '거래처명', name: 'name',     width: 140, sortable: true },
+      { header: '환자명', name: 'name',     width: 140, sortable: true },
       { header: '전화번호', name: 'mobile',   width: 140, sortable: true },
       { header: '처방 건수', name: 'rx_count', width: 90,  sortable: true, align: 'right' },
       { header: '최근 처방', name: 'last_rx',  width: 120, sortable: true },

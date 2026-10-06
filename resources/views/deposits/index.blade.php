@@ -135,7 +135,7 @@
       { header: '취급점',     name: 'branch',    width: 130 },
       { header: '구분',       name: 'kind',      width: 90,  align: 'center', sortable: true },
       { header: '주문번호',   name: 'order_no',  width: 120, sortable: true },
-      { header: '이름',       name: 'patient',   width: 90,  sortable: true },
+      { header: '환자명',       name: 'patient',   width: 90,  sortable: true },
       {
         /* 이 입금이 어느 주문의 돈인지 잇는다. 주문번호를 적으면 그 자리에서 걸리고,
            비우고 저장하면 풀린다 — 상세로 들어갔다 나오는 걸음을 없앤다. */

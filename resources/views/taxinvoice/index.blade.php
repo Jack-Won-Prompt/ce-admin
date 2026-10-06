@@ -335,7 +335,7 @@ select.form-input { appearance:none; background-image:url("data:image/svg+xml,%3
         {{-- 이름 (2026-09-22 확인요청 2쪽) — 담당자가 아는 말은 상호가 아니라 이름이다.
              공급받는자가 환자 개인이라 세금계산서의 「상호」 칸에 이름이 들어간다. --}}
         <div class="ds-filter-field">
-          <label class="ds-field-label">이름</label>
+          <label class="ds-field-label">환자명</label>
           <input type="text" id="f-name" class="form-control" placeholder="환자 이름"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();loadHistory(1);}">
         </div>

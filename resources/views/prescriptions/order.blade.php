@@ -7770,7 +7770,7 @@ window.HELP_TOUR_STEPS = [
         editable: false, rowCheckbox: false, rowNumber: true,
         toolbar: false, footer: { total: true, selected: false, modified: false },
         columns: [
-          { header: '이름',     name: 'name',   width: 140, sortable: true },
+          { header: '환자명',     name: 'name',   width: 140, sortable: true },
           { header: '전화번호', name: 'mobile', width: 160, sortable: true },
           { header: '생년월일', name: 'birth',  width: 130, align: 'center', sortable: true },
           { header: '주민번호', name: 'rn',     width: 140, align: 'center' },
@@ -15643,7 +15643,7 @@ window.HELP_TOUR_STEPS = [
         { header: '처방번호',  name: 'rx_number', width: 150, sortable: true },
         /* 이름은 처방번호 바로 옆이다 (2026-09-16 지시). 번호 둘을 읽고 나면
            다음에 찾는 것은 누구의 것인가다 — 구분ㆍ상태보다 앞선다. */
-        { header: '이름',      name: 'patient',   width: 90,  sortable: true },
+        { header: '환자명',      name: 'patient',   width: 90,  sortable: true },
         /* 원 주문인가 추가 주문인가 (2026-09-16 지시).
 
            처방번호 바로 옆이라야 읽힌다 — 처방전 한 장에 주문이 둘 이상 서면

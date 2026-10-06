@@ -289,7 +289,7 @@
     columns: [
       { header: '유형',     name: 'type',      width: 110, sortable: true, align: 'center' },
       { header: '생성유형', name: 'source',    width: 120, sortable: true },
-      { header: '이름',     name: 'patient',   width: 100, sortable: true },
+      { header: '환자명',     name: 'patient',   width: 100, sortable: true },
       { header: '처방번호', name: 'rx_number', width: 150, sortable: true },
       {
         header: '파일명', name: 'filename', width: 320, sortable: true,

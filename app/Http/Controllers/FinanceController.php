@@ -1018,7 +1018,7 @@ class FinanceController extends Controller
             '1일 처방 개수', 'Description 1', 'Description 2', 'Description 3',
             'Description 4', 'Five/Six', 'Five/Six(110days)', 'Lot',
             'QTY of RB', 'QTY of SB', 'S/O Date', '개인정보동의',
-            '검수 요청 메모', '고유 라인 번호', '구매 거래처', '구매 거래처명',
+            '검수 요청 메모', '고유 라인 번호', '구매 거래처', '위드웍스 환자명',
             '구입일', '급여 종료일', '납품창고', '다음 재구매 가능일',
             '담당 의사명', '등급', '라인번호', '마감일자 변경여부',
             '매출 단가', '발주 번호', '발주일자', '배송요청일자',
@@ -1104,7 +1104,7 @@ class FinanceController extends Controller
             '1일 처방 개수', 'Description 1', 'Description 2', 'Description 3',
             'Description 4', 'Five/Six', 'Five/Six(110days)', 'Lot',
             'QTY of RB', 'QTY of SB', 'S/O Date', '검수 요청 메모',
-            '고유 라인 번호', '구매 거래처', '구매 거래처명', '구입일',
+            '고유 라인 번호', '구매 거래처', '위드웍스 환자명', '구입일',
             '급여 종료일', '납품창고', '다음 재구매 가능일', '담당 의사명',
             '등급', '라인번호', '마감일자 변경여부', '매출 단가',
             '발주 번호', '발주일자', '배송요청일자', '배송주소',
@@ -1145,7 +1145,7 @@ class FinanceController extends Controller
             'pg:payments' => [
                 ['header' => '발급일시',     'name' => 'issued_at', 'width' => 140, 'sortable' => true],
                 ['header' => '주문번호',     'name' => 'order_no',  'width' => 130, 'sortable' => true],
-                ['header' => '이름',         'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '환자명',         'name' => 'patient',   'width' => 90,  'sortable' => true],
                 ['header' => '결제수단',     'name' => 'method',    'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '상태',         'name' => 'status',    'width' => 90,  'align' => 'center', 'sortable' => true],
                 ['header' => '금액',         'name' => 'amount',    'width' => 110] + $money,
@@ -1240,7 +1240,7 @@ class FinanceController extends Controller
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '고객ID',     'name' => 'patient_id','width' => 80,  'align' => 'center'],
-                ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '환자명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
                 /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
 
                    누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과
@@ -1297,7 +1297,7 @@ class FinanceController extends Controller
                 ['header' => '구분',       'name' => 'kind',      'width' => 120, 'align' => 'center', 'sortable' => true],
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '환자명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
                 /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
 
                    누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과
@@ -1340,7 +1340,7 @@ class FinanceController extends Controller
             'agency' => [
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',   'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '환자명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
                 /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
 
                    누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과
@@ -1373,7 +1373,7 @@ class FinanceController extends Controller
             'unpaid' => [
                 ['header' => '주문번호',     'name' => 'order_no',  'width' => 120, 'sortable' => true],
                 ['header' => '주문일자',     'name' => 'order_at',  'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '거래처명',     'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '환자명',     'name' => 'patient',   'width' => 90,  'sortable' => true],
                 /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
 
                    누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과
@@ -1401,7 +1401,7 @@ class FinanceController extends Controller
             // 18쪽 — 매출 차감 및 환불 관리
             'returns' => [
                 ['header' => '주문번호',   'name' => 'order_no',  'width' => 120, 'sortable' => true],
-                ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '환자명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
                 /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
 
                    누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과
@@ -1426,7 +1426,7 @@ class FinanceController extends Controller
                 ['header' => '주문상태',   'name' => 'status',    'width' => 90,  'align' => 'center', 'sortable' => true],
                 ['header' => '출고일자',   'name' => 'shipped_at','width' => 100, 'align' => 'center', 'sortable' => true],
                 ['header' => '배송일자',   'name' => 'delivered', 'width' => 100, 'align' => 'center', 'sortable' => true],
-                ['header' => '거래처명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
+                ['header' => '환자명',   'name' => 'patient',   'width' => 90,  'sortable' => true],
                 /* 기관 구분 — 거래처명 바로 뒤다 (2026-10-05 지시).
 
                    누구 것인가 다음에 묻는 것이 「어디에 청구하는 건인가」다. 공단과

@@ -523,7 +523,7 @@
     footer: { total: true, selected: false, modified: false },   // 시안에 하단 상태바가 없다 — 전체·선택 건수는 상단 결과바로 옮겼다
     columns: [
       { header: '주문번호',    name: 'order_no',      width: 120, sortable: true },
-      { header: '이름',      name: 'patient',       width: 90,  sortable: true },
+      { header: '환자명',      name: 'patient',       width: 90,  sortable: true },
       { header: '주문상태',    name: 'status',        width: 90,  align: 'center', sortable: true },
       {
         /* 공단이냐 지자체냐 — 서류도 보내는 법도 다르다.

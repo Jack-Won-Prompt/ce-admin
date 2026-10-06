@@ -694,7 +694,7 @@ window.pkSearch = function () {
       virtual: false,
       toolbar: false, footer: { total: true, selected: false, modified: false },
       columns: [
-        { header: '이름',     name: 'name',   width: 140, sortable: true },
+        { header: '환자명',     name: 'name',   width: 140, sortable: true },
         { header: '전화번호', name: 'mobile', width: 160, sortable: true },
         { header: '생년월일', name: 'birth',  width: 130, align: 'center', sortable: true },
         { header: '주민번호', name: 'rn',     width: 140, align: 'center' },

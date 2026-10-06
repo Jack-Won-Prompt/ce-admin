@@ -279,7 +279,7 @@
     {{-- 이름 (2026-09-14 지시 · 확인요청 7쪽) — 담당자가 가장 먼저 아는 것은 이름이다.
          번호는 되물어야 알지만 이름은 통화하면서 그대로 친다. --}}
     <div class="ds-filter-field">
-      <label class="ds-field-label">이름</label>
+      <label class="ds-field-label">환자명</label>
       <input type="text" id="f-name" class="form-control" placeholder="이름 일부만 쳐도 됩니다"
              onkeydown="if(event.key==='Enter') loadHistory(1)">
     </div>
