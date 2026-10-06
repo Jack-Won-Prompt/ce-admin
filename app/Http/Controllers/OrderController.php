@@ -1149,6 +1149,13 @@ class OrderController extends Controller
             'tax_invoice_email'    => 'nullable|email|max:100',
             'tax_invoice_supply'   => 'required|numeric|min:0',
             'tax_invoice_vat'      => 'required|numeric|min:0',
+            /* 작성일자 — 적어 보내지 않으면 오늘이다 (2026-10-06 지시).
+
+               작성일자는 **공급시기**를 적는 칸이고, 우리 공급시기는 돈이 들어온 날이다.
+               늘 입금 당일에 내므로 오늘과 같았는데, 입금을 뒤늦게 발견해 나흘 뒤에 내는
+               일이 생겼다(EUD202610010953081 · 10-02 입금 · 10-06 발견). 그때 오늘로
+               적으면 공급시기가 어긋난다. */
+            'write_date'           => 'nullable|date_format:Ymd',
         ]);
 
         $invoiceeType = $data['tax_invoice_invoicee'] ?? '사업자';
@@ -1215,7 +1222,7 @@ class OrderController extends Controller
             $svc = app(TaxinvoiceService::class);
             $inv = $svc->newInvoice();
 
-            $inv->writeDate          = now()->format('Ymd');
+            $inv->writeDate          = $data['write_date'] ?? now()->format('Ymd');
             $inv->chargeDirection    = '정과금';
             $inv->issueType          = '정발행';
             $inv->taxType            = '과세';
@@ -1389,6 +1396,9 @@ class OrderController extends Controller
             'cash_receipt_type'       => 'required|in:income_deduction,business_expense',
             'cash_receipt_identifier' => 'required|string|max:30',
             'cash_receipt_amount'     => 'required|numeric|min:1',
+            /* 거래일시 — 적어 보내지 않으면 팝빌이 전송 시각으로 잡는다 (2026-10-06 지시).
+               세금계산서의 작성일자와 같은 까닭이다. */
+            'trade_dt'                => 'nullable|date_format:YmdHis',
         ]);
 
         try {
@@ -1406,6 +1416,8 @@ class OrderController extends Controller
 
             $cb->mgtKey           = $mgtKey;
             $cb->tradeType        = '승인거래';
+            /* 돈이 들어온 그 시각을 적는다 — 비우면 팝빌이 전송 시각으로 잡는다 */
+            if (! empty($data['trade_dt'])) { $cb->tradeDT = $data['trade_dt']; }
             $cb->tradeUsage       = $data['cash_receipt_type'] === 'income_deduction' ? '소득공제용' : '지출증빙용';
             $cb->taxationType     = '과세';
             $cb->franchiseCorpNum = $corpNum;

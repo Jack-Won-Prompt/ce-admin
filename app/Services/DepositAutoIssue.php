@@ -52,6 +52,27 @@ use Illuminate\Support\Facades\Log;
 class DepositAutoIssue
 {
     /**
+     * 돈이 들어온 때 (2026-10-06 지시).
+     *
+     * 결제일ㆍ급여 종료일ㆍ다음 재구매 가능일이 여기서 서고, 세금계산서의 **작성일자**와
+     * 현금영수증의 **거래일시**도 같은 때를 쓴다 — 셋이 한 날을 가리켜야 한다.
+     *
+     * 담당자가 손으로 세운 것이 먼저다. 그 다음이 토스가 알려 준 입금 시각이고,
+     * 둘 다 없으면 지금이다(옛 건ㆍ무통장입금처럼 들어온 때를 모르는 자리).
+     *
+     * 여태 작성일자는 늘 `now()` 였다. 입금 당일에 내므로 같았지만, 입금을 뒤늦게
+     * 발견해 나흘 뒤에 낸 건이 생겼다 — 그때 오늘로 적으면 공급시기가 어긋난다.
+     */
+    private static function 낸때(Order $order): \Illuminate\Support\Carbon
+    {
+        $때 = $order->deposit_confirmed_at
+            ?? $order->tossPayment?->deposited_at
+            ?? now();
+
+        return \Illuminate\Support\Carbon::parse($때);
+    }
+
+    /**
      * 지금 자동 발행을 하는가.
      *
      * 스위치 두 겹(billing.auto_issue · billing.auto_issue_start)은 **국세청 실신고를
@@ -209,11 +230,7 @@ class DepositAutoIssue
         $rx = $order->prescription;
 
         if ($rx && trim((string) $rx->pay_date) === '') {
-            $낸날 = $order->deposit_confirmed_at
-                    ?? $order->tossPayment?->deposited_at
-                    ?? now();
-
-            \App\Support\BenefitDates::apply($rx, \Illuminate\Support\Carbon::parse($낸날)->toDateString());
+            \App\Support\BenefitDates::apply($rx, self::낸때($order)->toDateString());
         }
 
         /* 돈이 들어온 그때 낸다(2026-09-03 확정 · 테스트 시나리오 3.1.1ㆍ3.2.1).
@@ -381,6 +398,8 @@ class DepositAutoIssue
             'cash_receipt_type'       => $구분,
             'cash_receipt_identifier' => $identifier,
             'cash_receipt_amount'     => $amount,
+            // 거래일시는 돈이 들어온 그 시각이다 (2026-10-06 지시)
+            'trade_dt'                => self::낸때($order)->format('YmdHis'),
         ], '현금영수증', $out);
 
         /* 세금계산서와 같은 까닭 — 신고가 막혀도 종이는 남긴다 (2026-09-16 지시) */
@@ -433,6 +452,8 @@ class DepositAutoIssue
             'tax_invoice_email'    => $order->patient?->email ?? '',
             'tax_invoice_supply'   => $supply,
             'tax_invoice_vat'      => $amount - $supply,
+            // 작성일자는 공급시기 — 돈이 들어온 날이다 (2026-10-06 지시)
+            'write_date'           => self::낸때($order)->format('Ymd'),
         ], '세금계산서', $out);
 
         /* 팝빌로 실제 신고가 나가지 않았어도 종이는 남긴다 (2026-09-16 지시).
