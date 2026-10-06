@@ -37,6 +37,9 @@ class WithworksImport
             '우리'   => 'ww_prescription_infos',
             '거르개' => null,                       // 모두 가져온다 (2026-09-18 지시)
             '한번에' => 2000,
+            /* 「어디까지」를 자를 때 보는 칸 (2026-10-06 · SR #111).
+               표마다 이름이 다르다 — 처방전은 등록일(reg_date), 나머지는 created_at. */
+            '날짜칸' => 'reg_date',
         ],
         'customers' => [
             '이름'   => '고객 정보',
@@ -45,6 +48,7 @@ class WithworksImport
             '우리'   => 'ww_customers',
             '거르개' => ['top_account_id' => 148659, 'account_type' => '30'],
             '한번에' => 2000,
+            '날짜칸' => 'created_at',
         ],
         'customer_addresses' => [
             '이름'   => '고객 주소',
@@ -53,6 +57,7 @@ class WithworksImport
             '우리'   => 'ww_customer_addresses',
             '거르개' => null,                       // 아래에서 고객으로 좁힌다
             '한번에' => 2000,
+            '날짜칸' => 'created_at',
         ],
     ];
 
@@ -64,7 +69,7 @@ class WithworksImport
      *
      * @return array{읽음:int, 담음:int, 마지막:int, 이름:string}
      */
-    public function 가져오기(string $열쇠, ?callable $알림 = null): array
+    public function 가져오기(string $열쇠, ?callable $알림 = null, ?string $까지 = null): array
     {
         $d = self::대상[$열쇠] ?? throw new \InvalidArgumentException("알 수 없는 구분입니다 ({$열쇠}).");
 
@@ -84,7 +89,7 @@ class WithworksImport
         $읽음 = $담음 = 0;
 
         do {
-            $줄들 = $this->한묶음($d, $마지막, $한묶음);
+            $줄들 = $this->한묶음($d, $마지막, $한묶음, $까지);
 
             if ($줄들->isEmpty()) {
                 break;
@@ -124,13 +129,25 @@ class WithworksImport
         return ['읽음' => $읽음, '담음' => $담음, '마지막' => $마지막, '이름' => $d['이름']];
     }
 
-    /** 저쪽에서 한 묶음 읽는다 — 번호 뒤부터, 번호 차례로 */
-    private function 한묶음(array $d, int $뒤부터, int $크기)
+    /**
+     * 저쪽에서 한 묶음 읽는다 — 번호 뒤부터, 번호 차례로.
+     *
+     * `$까지` 를 주면 **그 날까지만** 읽는다 (2026-10-06 · SR #111).
+     *
+     * 2026-10-01 부터는 주문을 CE-Admin 에서 바로 받는다 — 저쪽에 쌓인 그 뒤 줄은
+     * 우리가 가져올 것이 아니다. 그런데 명령에는 「어디까지」가 없어, 밀린 것을
+     * 메우려고 한 번 돌리면 10월 치까지 딸려 들어온다. 그래서 날짜로 끊을 길을 낸다.
+     */
+    private function 한묶음(array $d, int $뒤부터, int $크기, ?string $까지 = null)
     {
         $q = WithworksSource::연결($d['갈래'])->table($d['원천'])
             ->where('id', '>', $뒤부터)
             ->orderBy('id')
             ->limit($크기);
+
+        if ($까지 !== null && ! empty($d['날짜칸'])) {
+            $q->whereDate($d['날짜칸'], '<=', $까지);
+        }
 
         foreach ($d['거르개'] ?? [] as $칸 => $값) {
             $q->where($칸, $값);

@@ -15,12 +15,23 @@ class WithworksImportCommand extends Command
 {
     protected $signature = 'withworks:import
                             {갈래? : prescription_infos · customers · customer_addresses (없으면 모두)}
-                            {--from= : 이 번호 뒤부터 다시 읽는다 (0 이면 처음부터)}';
+                            {--from= : 이 번호 뒤부터 다시 읽는다 (0 이면 처음부터)}
+                            {--until= : 이 날짜까지만 가져온다 (YYYY-MM-DD)}';
 
     protected $description = '위드웍스 운영 자료를 우리 표로 가져옵니다 (읽기만 합니다)';
 
     public function handle(WithworksImport $svc): int
     {
+        /* 「어디까지」는 날짜 꼴이어야 한다 (2026-10-06 · SR #111).
+           꼴이 틀리면 조용히 안 걸러진 채 10월 치까지 딸려 들어온다. */
+        $꼴 = $this->option('until');
+
+        if ($꼴 !== null && ! preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/', (string) $꼴)) {
+            $this->error('--until 은 YYYY-MM-DD 꼴이어야 합니다.');
+
+            return self::FAILURE;
+        }
+
         $갈래들 = $this->argument('갈래')
             ? [$this->argument('갈래')]
             : array_keys(WithworksImport::대상);
@@ -38,7 +49,10 @@ class WithworksImportCommand extends Command
 
             $이름   = WithworksImport::대상[$열쇠]['이름'];
             $시작   = $svc->마지막번호($열쇠);
-            $this->info("── {$이름} ({$열쇠}) · {$시작}번 뒤부터");
+            $까지   = $this->option('until') ?: null;
+
+            $this->info("── {$이름} ({$열쇠}) · {$시작}번 뒤부터"
+                . ($까지 ? " · {$까지} 까지" : ''));
 
             $때 = microtime(true);
 
@@ -46,7 +60,7 @@ class WithworksImportCommand extends Command
                 $r = $svc->가져오기($열쇠, function ($읽음, $마지막) use ($이름) {
                     $this->output->write(sprintf("\r   %s  %s줄 · 마지막 %s      ",
                         $이름, number_format($읽음), number_format($마지막)));
-                });
+                }, $까지);
             } catch (\Throwable $e) {
                 $this->newLine();
                 /* 질의가 통째로 실린 오류는 수십만 자다 — 앞머리만 보인다 */
