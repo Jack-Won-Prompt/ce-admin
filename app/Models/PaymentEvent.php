@@ -101,11 +101,30 @@ class PaymentEvent extends Model
             return null;
         }
 
+        /* **무엇으로 받은 돈인가는 토스가 알려 준 유형이 정본이다** (2026-10-06 대사).
+
+           링크의 method 는 「무엇으로 안내했는가」일 뿐이다. 담당자가 카드 링크를 보내도
+           환자는 토스 결제창에서 가상계좌를 고를 수 있다. 그때 이 자리에 card 가 적히면
+           「현금/카드영수증」 화면이 그 건을 카드 줄로 세워, 현금영수증 줄과 나란히
+           **한 건이 두 건으로** 섰다 — 2026-10-06 대사에서 26건, 3,953,250원이다.
+
+           증빙을 가르는 자리에는 같은 원칙이 이미 적혀 있다(Order::payMethod · 2026-10-01).
+
+           돈이 오간 걸음에만 쓴다. 보낸 걸음은 아직 받기 전이라 「안내한 방식」이 맞고,
+           그것을 토스 유형으로 바꾸면 보낸 자취가 사라진다. */
+        $오갔나 = $kind === self::KIND_PAID
+               || $kind === self::KIND_REFUNDED
+               || ($kind === self::KIND_CANCELLED && $link->paid_at);
+
+        $방식 = $오갔나
+            ? ($link->order?->payMethod() ?? $link->method)
+            : $link->method;
+
         return static::create([
             'order_id'        => $link->order_id,
             'payment_link_id' => $link->id,
             'kind'            => $kind,
-            'method'          => $link->method,
+            'method'          => $방식,
             'amount'          => $금액,
             'occurred_at'     => $때,
             'payment_key'     => $link->payment_key,

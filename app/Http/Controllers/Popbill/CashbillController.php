@@ -295,8 +295,20 @@ class CashbillController extends Controller
              21:29  67,500원 재청구
 
            payment_events 는 걸음마다 한 줄이라 세 줄이 그대로 선다. */
-        $q = \App\Models\PaymentEvent::with(['order.patient', 'order.prescription', 'link'])
-            ->where('method', 'card')
+        /* **카드로 받은 돈인지는 적힌 방식이 아니라 토스가 정한다** (2026-10-06 대사).
+
+           여태 `method = 'card'` 로 가렸다. 그 칸은 걸음을 적을 때 **링크의 방식**을 베껴
+           둔 것이라 「무엇으로 안내했는가」일 뿐이다 — 카드 링크를 보냈는데 환자가 토스
+           결제창에서 가상계좌를 골라 낸 건이 카드 줄로 서서, 현금영수증 줄과 나란히
+           **한 건이 두 건으로** 보였다(대사: 26건 · 3,953,250원).
+
+           반대 방향으로도 틀렸다. 중복 결제 취소는 토스 이름표(「간편결제」)를 그대로
+           적는데(DuplicatePaymentRefundService), 그 값은 'card' 가 아니라서 **나간 돈이
+           화면에서 아예 빠졌다**(윤채우 −81,000원).
+
+           그래서 방식으로 가리지 않고 돈이 오간 걸음을 모두 쥔 다음, 주문마다
+           Order::payMethod() 로 판가름한다 — 증빙을 가르는 그 잣대와 같다. */
+        $q = \App\Models\PaymentEvent::with(['order.patient', 'order.prescription', 'order.tossPayment', 'link'])
             /* **돈이 오간 걸음만 세운다** (2026-09-30 지시).
 
                payment_events 에는 걸음이 모두 담긴다 — 발송ㆍ승인ㆍ환불ㆍ취소ㆍ실패ㆍ
@@ -324,7 +336,10 @@ class CashbillController extends Controller
             $q->whereHas('order', fn ($o) => $this->이름거르개($o, $이름));
         }
 
-        $rows = $q->orderByDesc('occurred_at')->orderByDesc('id')->limit(500)->get()->map(fn ($e) => [
+        $rows = $q->orderByDesc('occurred_at')->orderByDesc('id')->limit(500)->get()
+            ->filter(fn (\App\Models\PaymentEvent $e) => $this->카드로받은돈인가($e))
+            ->values()
+            ->map(fn ($e) => [
             'record_type' => 'card',
             'id'          => $e->id,
             'date'        => $e->occurred_at?->format('Y-m-d'),
@@ -341,6 +356,26 @@ class CashbillController extends Controller
         ]);
 
         return response()->json(['success' => true, 'rows' => $rows]);
+    }
+
+    /**
+     * 이 걸음이 **카드로 받은 돈**인가 (2026-10-06 대사).
+     *
+     * 토스가 분명히 말한 둘만 받는다 — 가상계좌면 아니고, 카드면 그렇다(간편결제도
+     * 토스는 CARD 로 승인한다). 토스가 말해 준 것이 없는 옛 건은 적힌 대로 본다.
+     *
+     * Order::payMethod() 를 그대로 부른다. 증빙을 가르는 자리와 **같은 잣대**여야 한다 —
+     * 한쪽만 고치면 현금영수증이 난 건이 카드 줄로도 서는 일이 또 생긴다.
+     */
+    private function 카드로받은돈인가(\App\Models\PaymentEvent $e): bool
+    {
+        $주문 = $e->order;
+
+        if (! $주문) {
+            return $e->method === \App\Models\PaymentLink::METHOD_CARD;
+        }
+
+        return $주문->payMethod() === \App\Models\PaymentLink::METHOD_CARD;
     }
 
     public function orderReceipts(Request $request): JsonResponse
