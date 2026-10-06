@@ -100,9 +100,12 @@ class PrescriptionController extends Controller
            판매주문 30만 줄을 목록을 열 때마다 묶을 수는 없다.
 
            상태나 찾는 말을 준 때는 푼다 — 아래 「주문이 접수된 건」과 같은 까닭이다.
-           「왜 안 보이나」를 물을 때 이름으로 찾으면 그 줄이 나와야 한다. */
-        if (! $request->filled('status') && ! $request->filled('search')
-            && ! $request->boolean('ww_closed')) {
+           「왜 안 보이나」를 물을 때 이름으로 찾으면 그 줄이 나온다.
+
+           거르개는 두지 않는다 (2026-10-06 지시 「검색 필터 위드웍스 마감 건 제거」).
+           꺼내 볼 길은 이름ㆍ상태로 찾는 그 한 길이면 된다 — 칸을 하나 더 세우면
+           고를 것만 늘고, 기본이 아닌 쪽을 골라 둔 채 잊는 일이 생긴다. */
+        if (! $request->filled('status') && ! $request->filled('search')) {
             $query->whereNull('ww_closed_at')->where('ww_cancelled', false);
         }
 

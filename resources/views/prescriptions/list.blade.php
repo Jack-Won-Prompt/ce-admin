@@ -207,19 +207,6 @@
           @endforeach
         </select>
       </div>
-      {{-- 위드웍스에서 이미 끝난 건 꺼내 보기 (2026-10-06 지시 · SR #78).
-
-           위드웍스에서 온 처방전 가운데 95.2%가 이미 구매확정ㆍ취소된 건이다. 기본으로
-           감추지 않으면 쓸 수 있는 4천 장을 8만 장 속에서 눈으로 골라야 한다. 다만
-           「그 건이 왜 안 보이나」를 확인할 길은 있어야 해서 여기서 꺼낸다. --}}
-      <div class="ds-filter-field">
-        <label class="ds-field-label">위드웍스 마감 건</label>
-        <select name="ww_closed" class="form-control form-select" onchange="this.form.submit()">
-          <option value="">감춤 (기본)</option>
-          <option value="1" {{ request()->boolean('ww_closed') ? 'selected' : '' }}>함께 보기</option>
-        </select>
-      </div>
-
       {{-- 「표시 건수」 칸은 두지 않는다. 목록은 wwGrid 가 한 번에 다 받아 그리고
            (컨트롤러가 ->get() 으로 통째로 넘긴다) 페이지를 나누지 않는다 —
            이 칸은 아무 일도 하지 않으면서 「10개씩」이라 적어 거짓을 말하고 있었다. --}}
@@ -228,7 +215,7 @@
       {{-- 초기화 — 시안 128:1744 은 검색 왼쪽에 늘 세워 둔다. 검색 조건이 있을 때만
            내보내던 조건을 걷었다. 링크는 그대로 이 화면의 라우트로 되돌아간다
            (지금 보고 있는 상태 칩·표시 건수는 유지). --}}
-      <a href="{{ route('prescriptions.index', request()->only('status', 'ww_closed')) }}" class="ds-btn">초기화</a>
+      <a href="{{ route('prescriptions.index', request()->only('status')) }}" class="ds-btn">초기화</a>
       <button type="submit" class="ds-btn ds-btn-primary">검색</button>
       {{-- 「처방전 업로드」 단추는 걷었다 (2026-09-10 지시).
            올리는 자리는 왼쪽 메뉴의 「처방자료 업로드」다 — 화면과 경로는 그대로다. --}}
