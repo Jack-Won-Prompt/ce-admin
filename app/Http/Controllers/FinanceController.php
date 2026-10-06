@@ -913,8 +913,21 @@ class FinanceController extends Controller
         }
 
         try {
+            /* 날짜는 **하이픈을 둔 채** 보낸다 (2026-10-06 · 금일 오류 이력 확인).
+
+               여태 `str_replace('-', '')` 로 떼어 `20261001` 꼴로 보냈다. 토스는 그
+               꼴을 받지 않는다 — 400 `INVALID_DATE` 로 떨어지고, 화면에는 아무 말도
+               뜨지 않은 채 PG사 수수료ㆍ정산금액ㆍ정산일 세 칸이 조용히 빈다.
+               환자결제 탭 214줄 모두 그랬다(10-01~10-06 실측).
+
+               토스에 직접 물어 가렸다.
+                 20261001 / 20261006    → 400 INVALID_DATE
+                 2026-10-01 / 2026-10-06 → 200
+
+               PG 탭은 처음부터 하이픈을 그대로 보내 멀쩡했다 — 이 자리만 떼고 있었다.
+               꼴을 맞추면 캐시 열쇠도 PG 탭과 같아져 저쪽을 한 번만 부른다. */
             $줄들 = app(\App\Services\TossPayments\SettlementService::class)
-                        ->가져오기(str_replace('-', '', $from), str_replace('-', '', $to), 'soldDate');
+                        ->가져오기($from, $to, 'soldDate');
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('[Finance] 토스 정산을 받지 못했습니다',
                 ['error' => $e->getMessage()]);
