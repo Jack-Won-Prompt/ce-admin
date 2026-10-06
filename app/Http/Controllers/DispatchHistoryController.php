@@ -270,10 +270,14 @@ class DispatchHistoryController extends Controller
                 'rx'       => $m->prescription?->rx_number ?? '-',
                 /* 누구에게 간 것인가 — 처방번호만으로는 훑을 수 없다 (2026-10-06 · SR #93
                    「발송/발행 내역 — 행에 환자명 추가」). 다른 여섯 갈래에는 이미 선다.
-                   (E) 만 떼고 동명이인 꼬리는 둔다 — 목록에서는 그 꼬리가 가릴 일을 한다. */
-                'patient'  => \App\Models\Patient::bare(
-                                  $m->prescription?->patient?->name
-                                  ?: ($m->prescription?->patient_name_ocr ?? '')) ?: '-',
+
+                   **목록은 적힌 이름을 그대로 세운다** — (E) 도 동명이인 꼬리도 그대로다.
+                   (E) 는 사업부 표시이고 꼬리는 같은 이름을 가리는 표시라, 훑는 자리에서는
+                   둘 다 할 일이 있다. 한 화면 안에서 갈래마다 다른 꼴로 서면 더 나쁘다 —
+                   팩스ㆍ현금영수증 갈래와 주문 관리가 모두 적힌 대로 세운다.
+                   밖으로 나가는 이름에서만 뗀다(Patient::실명 · SR #90). */
+                'patient'  => $m->prescription?->patient?->name
+                                  ?: ($m->prescription?->patient_name_ocr ?: '-'),
                 // 누구에게 나갔는지 — 목록에서 바로 보여야 「안 왔다」를 되짚을 수 있다
                 'rcv'      => self::받는번호($m->receivers),
                 'total'    => (int) $m->total,
