@@ -2390,7 +2390,9 @@ document.addEventListener('click', (e) => {
       { header: '결제일',         name: 'rx_pay_date',  width: 100, align: 'center', sortable: true },
       { header: '사용 시작일',    name: 'rx_agree_start', width: 110, align: 'center', sortable: true },
       { header: '급여 종료일',    name: 'rx_agree_end', width: 110, align: 'center', sortable: true },
-      { header: '추가정보 등록일', name: 'rx_created',  width: 120, align: 'center', sortable: true },
+      {{-- 위드웍스에 그 구매가 적힌 날이다 — 우리가 주문을 세운 「등록일」과 다르다
+           (2026-10-06 지시 · SR #100). 이관 건에서 둘이 크게 갈린다. --}}
+      { header: '위드웍스 추가정보 등록일', name: 'rx_created',  width: 150, align: 'center', sortable: true },
       { header: '관할 지자체',    name: 'rx_local_gov', width: 140, sortable: true },
       { header: '재구매일',       name: 'rx_repur_date', width: 110, align: 'center', sortable: true },
       { header: '인마켓 마감일',  name: 'rx_inmarket',  width: 110, align: 'center', sortable: true },

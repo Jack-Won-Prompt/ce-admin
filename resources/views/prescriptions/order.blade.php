@@ -2756,9 +2756,32 @@ $calcDeposit  = $calcCopay;
               <option value="">전체</option>
             </select>
           </div>
+          {{-- **위드웍스에 그 구매가 적힌 날** (2026-10-06 지시 · SR #84ㆍ#100ㆍ#129).
+
+               위의 「등록일」은 우리가 주문을 세운 날이다. 이관 건은 9월에 위드웍스에
+               적힌 구매를 담당자가 10월에 열면 그때 주문이 생기므로, 「등록일」이 손댄
+               날로 선다 — 2026-10-06 기준 65건이 그렇다. 원래 등록된 날로도 찾는다. --}}
+          <div class="ol-field">
+            <label class="ds-field-label">위드웍스 추가정보 등록일 (부터)</label>
+            <input type="date" id="ol-rxcreated-from" class="form-control">
+          </div>
+          <div class="ol-field">
+            <label class="ds-field-label">위드웍스 추가정보 등록일 (까지)</label>
+            <input type="date" id="ol-rxcreated-to" class="form-control">
+          </div>
+          {{-- 날짜 둘을 기간으로 받는다 (2026-10-06 지시 · SR #100) — 「그날까지」만
+               고를 수 있어 「이 주에 끝나는 건」처럼 구간으로 추릴 수 없었다. --}}
+          <div class="ol-field">
+            <label class="ds-field-label">처방전종료일 (부터)</label>
+            <input type="date" id="ol-rxend-from" class="form-control">
+          </div>
           <div class="ol-field">
             <label class="ds-field-label">처방전종료일 (까지)</label>
             <input type="date" id="ol-rxend" class="form-control">
+          </div>
+          <div class="ol-field">
+            <label class="ds-field-label">다음재구매가능일 (부터)</label>
+            <input type="date" id="ol-nextrepur-from" class="form-control">
           </div>
           <div class="ol-field">
             <label class="ds-field-label">다음재구매가능일 (까지)</label>
@@ -16071,6 +16094,10 @@ window.HELP_TOUR_STEPS = [
     const hospital  = document.getElementById('ol-hospital')?.value  ?? '';
     const rxend     = document.getElementById('ol-rxend')?.value     ?? '';
     const nextrepur = document.getElementById('ol-nextrepur')?.value ?? '';
+    const rxcFrom   = document.getElementById('ol-rxcreated-from')?.value ?? '';
+    const rxcTo     = document.getElementById('ol-rxcreated-to')?.value   ?? '';
+    const rxendFrom = document.getElementById('ol-rxend-from')?.value     ?? '';
+    const nextFrom  = document.getElementById('ol-nextrepur-from')?.value ?? '';
 
     const rows = 바탕.filter(r => {
       if (q) {
@@ -16100,6 +16127,12 @@ window.HELP_TOUR_STEPS = [
          보는 까닭은 「곧 닥치는 것」을 추리기 위해서다. 비어 있는 건은 걸리지 않는다. */
       if (rxend     && (!r.rx_end        || r.rx_end        > rxend))     return false;
       if (nextrepur && (!r.rx_next_repur || r.rx_next_repur > nextrepur)) return false;
+      if (rxendFrom && (!r.rx_end        || r.rx_end        < rxendFrom)) return false;
+      if (nextFrom  && (!r.rx_next_repur || r.rx_next_repur < nextFrom))  return false;
+
+      /* 위드웍스 추가정보 등록일 — 비어 있는 건은 걸리지 않는다 */
+      if (rxcFrom && (!r.rx_created || r.rx_created < rxcFrom)) return false;
+      if (rxcTo   && (!r.rx_created || r.rx_created > rxcTo))   return false;
       return true;
     });
 
@@ -16109,7 +16142,8 @@ window.HELP_TOUR_STEPS = [
 
   function olReset() {
     ['ol-q', 'ol-from', 'ol-to', 'ol-manager',
-     'ol-rxtype', 'ol-purchase', 'ol-hospital', 'ol-rxend', 'ol-nextrepur'].forEach(id => {
+     'ol-rxtype', 'ol-purchase', 'ol-hospital', 'ol-rxend', 'ol-nextrepur',
+     'ol-rxcreated-from', 'ol-rxcreated-to', 'ol-rxend-from', 'ol-nextrepur-from'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });

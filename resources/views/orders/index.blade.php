@@ -206,9 +206,37 @@ window.HELP_TOUR_STEPS = [
       <input type="text" name="q" value="{{ request('q') }}" class="form-control"
              placeholder="주문번호ㆍ이름ㆍ제품명">
     </div>
-    <div class="ds-filter-field span-2">
-      <label class="ds-field-label">등록일자</label>
-      <input type="date" name="date" value="{{ request('date') }}" class="form-control">
+    {{-- **날짜 셋을 기간으로 받는다** (2026-10-06 지시 · SR #100ㆍ#129).
+
+         여태 「등록일자」 한 칸이었고 하루만 고를 수 있었다. 담당자는 기간으로 본다.
+
+         가려야 할 날짜도 하나가 아니다. 이관 건은 위드웍스에 9월에 적힌 구매를
+         담당자가 10월에 열면 그때 주문이 생기므로 「등록일」이 손댄 날로 선다
+         (2026-10-06 기준 65건 · SR #84). 원래 등록된 날(추가정보 등록일)로도,
+         물건이 나간 날(출고일자)로도 찾을 수 있어야 한다. --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">등록일 (부터)</label>
+      <input type="date" name="date_from" value="{{ request('date_from', request('date')) }}" class="form-control">
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">등록일 (까지)</label>
+      <input type="date" name="date_to" value="{{ request('date_to') }}" class="form-control">
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">위드웍스 추가정보 등록일 (부터)</label>
+      <input type="date" name="rx_created_from" value="{{ request('rx_created_from') }}" class="form-control">
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">위드웍스 추가정보 등록일 (까지)</label>
+      <input type="date" name="rx_created_to" value="{{ request('rx_created_to') }}" class="form-control">
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">출고일자 (부터)</label>
+      <input type="date" name="shipped_from" value="{{ request('shipped_from') }}" class="form-control">
+    </div>
+    <div class="ds-filter-field">
+      <label class="ds-field-label">출고일자 (까지)</label>
+      <input type="date" name="shipped_to" value="{{ request('shipped_to') }}" class="form-control">
     </div>
     <div class="ds-filter-field">
       {{-- 유형 — 판매·교환·반품·취소.

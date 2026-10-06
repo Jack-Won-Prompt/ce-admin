@@ -67,8 +67,47 @@ class OrderController extends Controller
                     ->orWhere('product_name', 'like', "%{$q}%");
             });
         }
+        /* **날짜로 거르는 자리 셋** (2026-10-06 지시 · SR #100ㆍ#129).
+
+           여태 「등록일자」 한 칸이었고 하루만 고를 수 있었다. 담당자는 기간으로 본다.
+           그리고 가려야 할 날짜가 하나가 아니다 —
+
+             등록일            우리가 주문을 세운 날 (orders.created_at)
+             추가정보 등록일   위드웍스에 그 구매가 적힌 날 (prescriptions.created_at)
+             출고일자          창고에서 물건이 나간 날 (orders.shipped_at)
+
+           이관 건에서는 앞의 둘이 크게 갈린다. 9월에 위드웍스에 적힌 건을 담당자가
+           10월에 열면 주문이 그때 생기므로, 「등록일」은 손댄 날로 선다 — 2026-10-06
+           기준 65건이 그렇다(SR #84 「라인 클릭하면 클릭한 날로 등록일이 보임」).
+           그래서 원래 등록된 날로도 찾을 수 있어야 한다.
+
+           옛 이름(date)으로 온 요청도 그대로 받는다 — 담아 둔 링크가 깨지지 않게. */
         if ($request->filled('date')) {
             $query->whereDate('created_at', $request->date);
+        }
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        if ($request->filled('rx_created_from') || $request->filled('rx_created_to')) {
+            $query->whereHas('prescription', function ($p) use ($request) {
+                if ($request->filled('rx_created_from')) {
+                    $p->whereDate('created_at', '>=', $request->rx_created_from);
+                }
+                if ($request->filled('rx_created_to')) {
+                    $p->whereDate('created_at', '<=', $request->rx_created_to);
+                }
+            });
+        }
+
+        if ($request->filled('shipped_from')) {
+            $query->whereDate('shipped_at', '>=', $request->shipped_from);
+        }
+        if ($request->filled('shipped_to')) {
+            $query->whereDate('shipped_at', '<=', $request->shipped_to);
         }
 
         /* 칩에 붙는 건수도 같은 잣대로 센다 — 목록에 없는 줄을 세면 수가 어긋난다 */
