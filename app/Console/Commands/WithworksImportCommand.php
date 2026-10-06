@@ -74,6 +74,13 @@ class WithworksImportCommand extends Command
                 number_format($r['읽음']), number_format($r['마지막']), microtime(true) - $때));
         }
 
+        /* 가져온 뒤에 「위드웍스에서 끝난 건」 표시를 갱신한다 (2026-10-06 · SR #78).
+
+           새로 담은 처방전이 이미 마감된 건일 수 있고, 전에 담아 둔 것이 그 사이에
+           마감되었을 수도 있다. 가져오기와 함께 돌지 않으면 그만큼 목록이 틀린다. */
+        $this->newLine();
+        $this->call('withworks:closed-sync');
+
         $this->newLine();
         $this->info('── 지금까지 담긴 것 ──');
         foreach ($svc->현황() as $열쇠 => $h) {

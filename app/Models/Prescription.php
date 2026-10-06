@@ -114,7 +114,30 @@ class Prescription extends Model
         'insurance_price' => 'float',
         'nhis_amount'     => 'float',
         'patient_copay'   => 'float',
+        /* 위드웍스에서 이미 끝난 건인가 (2026-10-06 · SR #78) —
+           withworks:closed-sync 가 적는다. 목록이 이 둘로 가린다. */
+        'ww_closed_at'    => 'date',
+        'ww_cancelled'    => 'boolean',
     ];
+
+    /** 위드웍스에서 이미 구매확정ㆍ취소된 건인가 — 쓸 수 없는 처방전이다 */
+    public function 위드웍스마감인가(): bool
+    {
+        return $this->ww_closed_at !== null || (bool) $this->ww_cancelled;
+    }
+
+    /** 화면에 적을 한 줄 — 「왜 안 보이나」에 바로 답하기 위한 것 */
+    public function 위드웍스마감글(): string
+    {
+        if (! $this->위드웍스마감인가()) {
+            return '';
+        }
+
+        return $this->ww_cancelled
+            ? '위드웍스 취소' . ($this->ww_so_no ? ' · ' . $this->ww_so_no : '')
+            : '위드웍스 구매확정 ' . $this->ww_closed_at?->format('Y-m-d')
+              . ($this->ww_so_no ? ' · ' . $this->ww_so_no : '');
+    }
 
     /**
      * OCR 주민번호는 오인식 여부를 담당자가 판단해야 하므로 원문을 그대로 암호화한다
