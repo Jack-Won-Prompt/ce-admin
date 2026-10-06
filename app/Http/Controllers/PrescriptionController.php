@@ -2912,11 +2912,30 @@ class PrescriptionController extends Controller
     {
         $payLinks  = $prescription->order?->paymentLinks()->latest('id')->get() ?? collect();
         $payLast   = $payLinks->first();
+        $주문      = $prescription->order;
+
+        /* **받았는가는 돈으로 묻는다** (2026-10-06 지시 「결제가 된 주문은 결제전송 단추
+           상태를 바꿔야 하지 않을까요」).
+
+           여태 「paid 링크가 있는가」와 「담당자가 입금확인을 눌렀는가」만 보았다. 그런데
+           가상계좌 입금은 markPaid() 를 지나지 않아 링크가 `paid` 가 되지 않고, 입금 뒤
+           남은 링크를 거두므로 오히려 `cancelled` 로 선다. 담당자가 입금확인을 누르지
+           않았으면 두 잣대가 모두 거짓이 되어, **돈이 들어왔는데 단추는 「링크 전송완료」**
+           였다 — 2026-10-06 운영에서 5건이다(모두 가상계좌ㆍ토스 DONE).
+
+           정산 화면과 같은 한 자리로 묻는다(Order::isDepositConfirmed) — 담당자가 눈으로
+           확인한 것이거나, 토스가 쥐고 있는 돈이 있으면 받은 것이다. */
+        $받았나 = $payLinks->contains('status', 'paid') || (bool) $주문?->isDepositConfirmed();
+
         return [
             'sent'      => $payLinks->isNotEmpty(),
-            'paid'      => $payLinks->contains('status', 'paid')
-                           || (bool) $prescription->order?->deposit_confirmed_at,
-            'method'    => $payLast ? (\App\Models\PaymentLink::METHODS[$payLast->method] ?? $payLast->method) : '',
+            'paid'      => $받았나,
+            /* 받은 뒤에는 **무엇으로 받았나**가 사실이다. 링크의 방식은 「무엇으로
+               안내했는가」일 뿐이라, 카드 링크로 안내하고 가상계좌로 받은 건이
+               「링크페이」로 적혔다 (2026-10-06 대사와 같은 잣대 · Order::payMethodLabel). */
+            'method'    => $받았나 && $주문
+                            ? $주문->payMethodLabel()
+                            : ($payLast ? (\App\Models\PaymentLink::METHODS[$payLast->method] ?? $payLast->method) : ''),
             'status'    => $payLast?->status ?? '',
             'status_label' => $payLast ? ($payLast->status_label ?? '') : '',
             'sent_at'   => $payLast?->sent_at?->format('Y-m-d H:i') ?? '',
