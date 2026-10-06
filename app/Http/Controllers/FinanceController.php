@@ -996,6 +996,7 @@ class FinanceController extends Controller
         static $표 = [
         /* 통합주문내역 — 엑셀에서 회색인 59칸 */
         'orders' => [
+            '병원거래처', '병원거래처 주소', '구분(SB/SCI)', '관할 청구처', '관할 지자체',
             '1일 처방 개수', 'Description 1', 'Description 2', 'Description 3',
             'Description 4', 'Five/Six', 'Five/Six(110days)', 'Lot',
             'QTY of RB', 'QTY of SB', 'S/O Date', '개인정보동의',
@@ -1015,6 +1016,7 @@ class FinanceController extends Controller
 
         /* 환자 결제내역 — 엑셀에서 회색인 71칸 */
         'patient' => [
+            '구분(SB/SCI)', '관할 청구처', '관할 지자체',
             '1일 처방 개수', 'Description 1', 'Description 2', 'Description 3',
             'Description 4', 'Five/Six', 'Five/Six(110days)', 'Lot',
             'QTY of RB', 'QTY of SB', 'S/O Date', '개인정보동의',
@@ -1037,6 +1039,7 @@ class FinanceController extends Controller
 
         /* 건보ㆍ지자체 결제내역 — 엑셀에서 회색인 69칸 */
         'agency' => [
+            '구분(SB/SCI)', '관할 청구처', '관할 지자체',
             '1일 처방 개수', 'Description 1', 'Description 2', 'Description 3',
             'Description 4', 'Five/Six', 'Five/Six(110days)', 'Lot',
             'QTY of RB', 'QTY of SB', 'S/O Date', '개인정보동의',
@@ -1059,6 +1062,7 @@ class FinanceController extends Controller
 
         /* 미정산내역 — 엑셀에서 회색인 68칸 */
         'unpaid' => [
+            '구분(SB/SCI)', '관할 청구처', '관할 지자체',
             '1일 처방 개수', 'Description 1', 'Description 2', 'Description 3',
             'Description 4', 'Five/Six', 'Five/Six(110days)', 'Lot',
             'QTY of RB', 'QTY of SB', 'S/O Date', '개인정보동의',
@@ -1080,6 +1084,7 @@ class FinanceController extends Controller
 
         /* 반품환불내역 — 엑셀에서 회색인 58칸 */
         'returns' => [
+            '구분(SB/SCI)', '관할 청구처', '관할 지자체',
             '1일 처방 개수', 'Description 1', 'Description 2', 'Description 3',
             'Description 4', 'Five/Six', 'Five/Six(110days)', 'Lot',
             'QTY of RB', 'QTY of SB', 'S/O Date', '개인정보동의',
@@ -1099,6 +1104,7 @@ class FinanceController extends Controller
 
         /* 부가세신고내역 — 엑셀에서 회색인 77칸 */
         'vat' => [
+            '구분(SB/SCI)', '관할 청구처', '관할 지자체',
             /* 이 시트에는 NB주민번호 칸이 아예 없다 — 다른 다섯에만 노랗게
                적혀 있다. 함께 쓰는 묶음(ceWwCols)으로 넣었으므로 여기서 건다. */
             '1일 처방 개수', 'Description 1', 'Description 2', 'Description 3',
