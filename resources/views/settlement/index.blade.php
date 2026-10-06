@@ -877,7 +877,6 @@
     if (처방외 && (!row.settle_key || row.settle_key === 'open')) {
       tag.textContent = '해당 없음';
       tag.style.color = 'var(--text-muted)';
-      tag.title = '처방외는 환자 입금분만 받으면 되는 건이라 정산 대상이 아닙니다';
       wrap.appendChild(tag);
       return wrap;
     }

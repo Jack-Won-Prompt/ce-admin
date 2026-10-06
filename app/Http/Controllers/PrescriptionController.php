@@ -5287,8 +5287,7 @@ class PrescriptionController extends Controller
         if (! $prescription->patient_id) {
             return response()->json([
                 'success' => false,
-                'message' => '거래처가 연결되지 않은 건입니다. 서명 링크를 보내면 서명자 이름으로 '
-                           . '거래처가 새로 만들어져 본래 거래처와 나뉩니다. '
+                'message' => '거래처가 연결되지 않은 건입니다. '
                            . '거래처 관리에 등록한 뒤 이름 조회로 연결하고 다시 보내 주십시오.',
             ], 422);
         }

@@ -54,8 +54,7 @@ window.nhisAssistBtn = function (orderId, opts) {
       btn.title = opts.reason || '연결된 주문이 없습니다';
       return btn;
     }
-    btn.title = '공단·지자체에 청구하지 않는 건입니다 (환자가 보험사·근로복지공단에 직접 청구). '
-              + '누르면 발행된 증빙을 거래처로 문자·메일로 보냅니다.';
+    btn.title = '발행된 증빙을 거래처로 문자·메일로 보냅니다';
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       openDirectSendPop(orderId, btn, {

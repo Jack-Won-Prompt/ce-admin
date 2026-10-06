@@ -1380,9 +1380,7 @@ $calcDeposit  = $calcCopay;
                  나뉜다. 서버도 막지만(sendConsentSms), 눌러 보고서야 알면 늦다. --}}
             <div id="consentNoPatient" style="display:none;background:var(--danger-light);border:1px solid var(--alert-100);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--danger);line-height:1.6;">
               <i class="fa-solid fa-triangle-exclamation"></i>
-              <strong>거래처가 연결되지 않은 건입니다.</strong><br>
-              이대로 보내면 서명자 이름으로 거래처가 새로 만들어져 본래 거래처와 나뉩니다.
-              거래처 관리에 등록한 뒤 위쪽 이름 조회로 연결하고 다시 보내 주십시오.
+              거래처 관리에 등록하고 위쪽 이름 조회로 연결한 뒤 보낼 수 있습니다.
             </div>
             <div id="consentResendNotice" style="display:none;background:var(--alert-50);border:1px solid var(--alert-100);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--alert-500);line-height:1.6;">
               {{-- 글은 JS 가 상태에 맞춰 채운다 — 만료된 건과 이미 서명을 받아 둔 건은
@@ -4140,7 +4138,7 @@ $calcDeposit  = $calcCopay;
               <div class="rx-field-row">
                 <span class="rx-field-label rx-key">청구처</span>
                 <select class="form-control" id="f-claim-agency" style="flex:1;background:var(--gray-50);"
-                        disabled title="자격이 정하는 값입니다 — 자격을 고치면 따라 바뀝니다 (일반ㆍ차상위경감 → 공단 · 기초 → 지자체 · 자동차보험ㆍ산재ㆍ처방외 → 해당 없음)">
+                        disabled>
                   <option value="">선택</option>
                   @foreach(\App\Support\ClaimAgency::LABELS as $v => $label)
                     <option value="{{ $v }}" @selected(($prescription->claim_agency ?? '') === $v)>{{ $label }}</option>
@@ -9840,9 +9838,7 @@ window.HELP_TOUR_STEPS = [
 
     if (! 빠진것.length) return false;
 
-    ceAlert(빠진것.map(([, 이름]) => 이름).join('ㆍ') + '을(를) 먼저 선택해 주십시오.'
-          + String.fromCharCode(10, 10)
-          + '빨강 별표가 붙은 항목이 정해져야 청구처ㆍ청구전략ㆍ발행할 서류가 정해집니다.',
+    ceAlert(빠진것.map(([, 이름]) => 이름).join('ㆍ') + '을(를) 먼저 선택해 주십시오.',
       { title: '필수 항목', tone: 'warning' });
 
     const 첫칸 = document.getElementById(빠진것[0][0]);
@@ -16837,9 +16833,7 @@ window.HELP_TOUR_STEPS = [
       const txt = document.getElementById('consentResendText');
       if (txt) {
         txt.innerHTML = window.CONSENT_STATUS === 'agreed'
-          ? '<strong>이미 서명 동의를 받은 건입니다.</strong><br>'
-            + '새 동의 링크를 발송합니다. 받아 둔 서명은 그대로 유지되며, 환자가 다시 '
-            + '서명하면 새 서명으로 대체됩니다.'
+          ? '받아 둔 서명은 그대로 유지되고, 환자가 다시 서명하면 새 서명으로 바뀝니다.'
           : '<strong>이전 동의 링크가 만료되었습니다.</strong><br>'
             + '새로운 동의 링크를 발송합니다. 이전 링크는 더 이상 사용할 수 없습니다.';
       }
