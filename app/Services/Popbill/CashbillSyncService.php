@@ -124,10 +124,23 @@ class CashbillSyncService
 
     private function upsertFromInfo(string $corpNum, object $info): void
     {
-        $rec = CashbillRecord::firstOrNew([
-            'corp_num' => $corpNum,
-            'mgt_key'  => $info->mgtKey ?? '',
-        ]);
+        /* **문서번호가 없는 줄도 담는다** (2026-10-06 · (E)김지수B 건).
+
+           팝빌 웹에서 직접 낸 것은 문서번호(mgtKey)가 없고 `itemKey` 만 있다. 여태
+           문서번호로만 가려서 그런 줄은 한 건도 담기지 않았고, 매시간 도는 동기화도
+           지나갔다 — 담당자가 팝빌에서 직접 취소하면 우리 표에는 「승인」 줄만 남아
+           같은 금액이 두 번 발행된 것처럼 보였다.
+
+           문서번호가 없으면 `item_key` 로 가린다. 빈 문자열로 가리면 그런 줄이 모두
+           한 줄로 뭉개진다. */
+        $문서 = trim((string) ($info->mgtKey ?? ''));
+        $짐   = trim((string) ($info->itemKey ?? ''));
+
+        $rec = $문서 !== ''
+            ? CashbillRecord::firstOrNew(['corp_num' => $corpNum, 'mgt_key' => $문서])
+            : ($짐 !== ''
+                ? CashbillRecord::firstOrNew(['corp_num' => $corpNum, 'item_key' => $짐])
+                : CashbillRecord::firstOrNew(['corp_num' => $corpNum, 'mgt_key' => '']));
 
         $rec->fill([
             'item_key'      => $info->itemKey      ?? null,
