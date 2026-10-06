@@ -308,7 +308,11 @@ class CashbillController extends Controller
 
            그래서 방식으로 가리지 않고 돈이 오간 걸음을 모두 쥔 다음, 주문마다
            Order::payMethod() 로 판가름한다 — 증빙을 가르는 그 잣대와 같다. */
-        $q = \App\Models\PaymentEvent::with(['order.patient', 'order.prescription', 'order.tossPayment', 'link'])
+        /* 거래처 줄까지 미리 담는다 — Order::payMethod() 가 토스 유형이 없는 건에서 그 줄을
+           되짚는다. 5,000줄을 쥘 수 있으니 줄마다 묻게 두면 왕복이 그만큼 늘어난다. */
+        $q = \App\Models\PaymentEvent::with([
+            'order.patient', 'order.prescription', 'order.tossPayment', 'order.paymentLinks', 'link',
+        ])
             /* **돈이 오간 걸음만 세운다** (2026-09-30 지시).
 
                payment_events 에는 걸음이 모두 담긴다 — 발송ㆍ승인ㆍ환불ㆍ취소ㆍ실패ㆍ
@@ -336,8 +340,17 @@ class CashbillController extends Controller
             $q->whereHas('order', fn ($o) => $this->이름거르개($o, $이름));
         }
 
-        $rows = $q->orderByDesc('occurred_at')->orderByDesc('id')->limit(500)->get()
+        /* **자르기는 거른 뒤에 한다** (2026-10-07).
+
+           전에는 SQL 이 `method='card'` 로 걸러 `limit(500)` 이 「카드 500줄」이었다.
+           이제 가리는 일을 PHP 가 하므로, SQL 에서 먼저 500 을 자르면 그 안에 가상계좌
+           줄이 섞여 **카드 줄이 조용히 모자란다.** 넉넉히 쥔 뒤 걸러서 500 을 센다.
+
+           바깥 울타리는 날짜다(위의 occurred_at 거르개) — 기간 없이 통째로 읽지 않는다.
+           돈이 오간 걸음은 결제 한 번에 한 줄이라, 한 해치도 수천 줄에 그친다. */
+        $rows = $q->orderByDesc('occurred_at')->orderByDesc('id')->limit(5000)->get()
             ->filter(fn (\App\Models\PaymentEvent $e) => $this->카드로받은돈인가($e))
+            ->take(500)
             ->values()
             ->map(fn ($e) => [
             'record_type' => 'card',
