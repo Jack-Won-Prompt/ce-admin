@@ -786,14 +786,25 @@
 
     /* 목록 안 단추다. 위쪽 단추줄과 같은 클래스(.ds-btn)를 주면 「단추줄의 단추」를
        찾는 코드에 줄 수만큼 끼어든다 — 생김새만 같게 두고 클래스는 따로 쓴다. */
+    /* **「입금 확인」 단추는 걷었다** (2026-10-06 지시 · SR #83).
+
+       같은 일을 하는 자리가 둘이었다 — 이 단추와, 옆 칸의 「결제 방식 고르기」다
+       (고르는 순간이 곧 입금 확인이다 · 아래 payMethodCell). 둘을 두면 담당자가
+       어느 것으로 세운 것인지 되짚을 때 갈린다.
+
+       **「취소」는 남긴다.** 손으로 세운 입금을 되돌리는 길은 이것뿐이고, 잘못 세운
+       건을 풀지 못하면 받지 않은 돈이 받은 것으로 남는다(Order::입금확인취소 ·
+       2026-09-19 지시). 아직 세우지 않은 줄에는 단추가 서지 않는다. */
+    if (! row.deposit_hand) return box;
+
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'dep-cell-btn';
     btn.style.cssText = 'height:22px;padding:0 8px;font-size:11px;flex-shrink:0;cursor:pointer;'
                       + 'border:1px solid var(--gray-200);border-radius:6px;background:var(--gray-0);'
-                      + 'color:var(--gray-1000);line-height:1;';
-    btn.textContent = row.deposit_hand ? '취소' : '입금 확인';
-    if (row.deposit_hand) btn.style.color = 'var(--danger)';
+                      + 'color:var(--danger);line-height:1;';
+    btn.textContent = '취소';
+    btn.title = '손으로 세운 입금 확인을 되돌립니다';
     btn.onclick = (ev) => { ev.stopPropagation(); depositAct(row, rowIndex, btn); };
     box.appendChild(btn);
 
@@ -852,6 +863,24 @@
     const tag = document.createElement('span');
     tag.textContent = v || '';
     tag.style.cssText = 'font-weight:700;font-size:12px;color:' + (SETTLE_TONE[row.settle_key] || 'var(--text-secondary)');
+
+    /* **처방외는 정산 대상이 아니다** (2026-10-06 지시 · SR #87).
+
+       환자가 낸 돈만 받으면 끝나는 건이라 공단ㆍ지자체에 청구할 것이 없고, 따라서
+       마감ㆍ확정을 둘 일이 없다. 고르는 자리를 두지 않고 「해당 없음」이라 적는다 —
+       청구 관리의 같은 자리와 같은 말이다(SR #88).
+
+       담긴 값은 건드리지 않는다. 지금 처방외 19건은 모두 「진행중」이라 감출 사실이
+       없고, 혹 마감ㆍ확정된 건이 생기면 그 값을 그대로 세운다. */
+    const 처방외 = String(row.rx_acc_type || '').startsWith('처방외');
+
+    if (처방외 && (!row.settle_key || row.settle_key === 'open')) {
+      tag.textContent = '해당 없음';
+      tag.style.color = 'var(--text-muted)';
+      tag.title = '처방외는 환자 입금분만 받으면 되는 건이라 정산 대상이 아닙니다';
+      wrap.appendChild(tag);
+      return wrap;
+    }
 
     /* 물러난 줄은 고를 것이 없다 — 마감은 지금 값에만 선다 (2026-09-27) */
     if (row.amend_line)               { wrap.appendChild(tag); return wrap; }
