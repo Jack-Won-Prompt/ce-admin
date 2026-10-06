@@ -127,6 +127,24 @@ class ServiceSettings
                 $new = array_key_exists($key, $input) ? '1' : '0';
             } else {
                 if (! array_key_exists($key, $input)) continue;
+
+            /* 글이 아닌 값은 **넘긴다** (2026-10-06 · 설정 두 칸이 꺼져 있던 자리).
+
+               `(string) []` 은 경고만 내고 `'Array'` 라는 글자를 돌려준다. 그 글자가
+               그대로 설정에 앉아, 위임동의 발송 시간과 주문 확정 안내 두 칸이
+               10-01 12:19 부터 10-06 까지 꺼져 있었다 — 시간 제한은 아예 가리지
+               않았고, 확정 안내는 `=== 'card'` 가 거짓이라 늘 무통장입금으로 나갔다.
+               화면은 둘 다 멀쩡해 보여 아무도 알아채지 못했다.
+
+               값이 깨지는 것보다 바뀌지 않는 편이 낫다. 자취를 남겨 둔다. */
+            if (! is_scalar($input[$key]) && $input[$key] !== null) {
+                Log::warning('[서비스 설정] 글이 아닌 값이 와서 건너뛴다', [
+                    'group' => $group, 'key' => $key, 'type' => gettype($input[$key]),
+                ]);
+
+                continue;
+            }
+
                 $new = trim((string) $input[$key]);
                 if ($secret && $new === '') continue;   // 빈칸 = 그대로 두기
             }
@@ -160,6 +178,15 @@ class ServiceSettings
                 $new = array_key_exists($key, $input);
             } else {
                 if (! array_key_exists($key, $input)) continue;
+
+                /* 전용 모델 쪽도 같은 잣대다 — 한쪽만 막으면 다른 길로 들어온다 */
+                if (! is_scalar($input[$key]) && $input[$key] !== null) {
+                    Log::warning('[서비스 설정] 글이 아닌 값이 와서 건너뛴다',
+                        ['model' => $model, 'key' => $key, 'type' => gettype($input[$key])]);
+
+                    continue;
+                }
+
                 $new = trim((string) $input[$key]);
                 if (static::isSecret($f) && $new === '') continue;
             }

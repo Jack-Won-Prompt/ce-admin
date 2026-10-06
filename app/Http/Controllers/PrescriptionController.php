@@ -5299,8 +5299,10 @@ class PrescriptionController extends Controller
             return $no('연락처가 없어 위임동의를 보내지 못했습니다.');
         }
 
-        /* 서명 링크는 30분만 열린다. 밤에 보내면 환자가 아침에 열어 이미 만료다 —
-           정해 둔 시간 밖이면 보내지 않고 그렇게 말한다. */
+        /* 서명 링크는 **보낸 날 23시 30분**에 닫힌다 (2026-10-01 지시.
+           DelegationSignController::만료시각). 그 시각을 넘겨 보내면 다음 날 23시 30분이
+           되어 「오늘 안에」라는 말이 어긋난다 — 정해 둔 시간 밖이면 보내지 않고
+           그렇게 말한다. 「30분만 열린다」던 옛 글을 걷었다 (2026-10-06). */
         if (!$this->withinConsentHours()) {
             return $no('발송 시간(' . config('order.consent_sms_hours') . ') 밖이라 보내지 않았습니다.');
         }
