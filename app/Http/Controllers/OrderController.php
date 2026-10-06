@@ -1301,12 +1301,14 @@ class OrderController extends Controller
                 $pdfName  = '세금계산서_' . ($order->tax_invoice_biz_name ?? '') . '_' . $order->order_number . '.pdf';
                 $pdfPath  = 'tax_invoices/' . $order->id . '/' . $pdfName;
                 Storage::put($pdfPath, $pdfBytes);
-                PrescriptionDocument::create([
-                    'prescription_id'   => $order->prescription_id,
+                /* 같은 자리를 가리키는 줄이 있으면 그것을 쓴다 (SR #85) */
+                PrescriptionDocument::한줄만([
+                    'prescription_id' => $order->prescription_id,
+                    'type'            => 'tax_invoice',
+                    'file_path'       => $pdfPath,
+                ], [
                     'patient_id'        => $order->patient_id,
                     'created_by'        => Auth::id(),
-                    'type'              => 'tax_invoice',
-                    'file_path'         => $pdfPath,
                     'original_filename' => $pdfName,
                 ]);
 
@@ -1478,12 +1480,14 @@ class OrderController extends Controller
                 $pdfName  = '현금영수증_' . \App\Models\Patient::bare($order->patient?->name) . '_' . $mobile . '_' . $order->order_number . '.pdf';
                 $pdfPath  = 'cash_receipts/' . $order->id . '/' . $pdfName;
                 Storage::put($pdfPath, $pdfBytes);
-                PrescriptionDocument::create([
-                    'prescription_id'   => $order->prescription_id,
+                /* 같은 자리를 가리키는 줄이 있으면 그것을 쓴다 (SR #85) */
+                PrescriptionDocument::한줄만([
+                    'prescription_id' => $order->prescription_id,
+                    'type'            => 'cash_receipt',
+                    'file_path'       => $pdfPath,
+                ], [
                     'patient_id'        => $order->patient_id,
                     'created_by'        => Auth::id(),
-                    'type'              => 'cash_receipt',
-                    'file_path'         => $pdfPath,
                     'original_filename' => $pdfName,
                 ]);
             } catch (\Throwable $e) {
@@ -1917,12 +1921,14 @@ class OrderController extends Controller
             $filePath = 'cash_receipts/' . $order->id . '/' . $filename;
             Storage::put($filePath, $pdfOutput);
 
-            PrescriptionDocument::create([
-                'prescription_id'   => $order->prescription_id,
+            /* 내려받을 때마다 줄이 늘지 않게 한다 (SR #85) */
+            PrescriptionDocument::한줄만([
+                'prescription_id' => $order->prescription_id,
+                'type'            => 'cash_receipt',
+                'file_path'       => $filePath,
+            ], [
                 'patient_id'        => $order->patient_id,
                 'created_by'        => Auth::id(),
-                'type'              => 'cash_receipt',
-                'file_path'         => $filePath,
                 'original_filename' => $filename,
             ]);
         } catch (\Throwable $e) {

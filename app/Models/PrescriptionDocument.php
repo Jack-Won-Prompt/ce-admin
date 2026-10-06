@@ -37,6 +37,28 @@ class PrescriptionDocument extends Model
         static::deleted($다시보기);
     }
 
+    /**
+     * 같은 자리를 가리키는 줄이 이미 있으면 그것을 쓴다 (2026-10-06 · SR #85).
+     *
+     * 시스템이 만드는 서류(현금영수증ㆍ세금계산서ㆍ팩스통합본)는 자리가 정해져 있다 —
+     * `cash_receipts/{주문}/{이름}.pdf` 처럼 주문과 이름으로 짜인다. 그런데 그 서류를
+     * 만드는 길이 둘이고(발행할 때, 그리고 **내려받을 때**) 둘 다 줄을 새로 담았다.
+     * 그래서 담당자가 내려받을 때마다 서류함에 같은 줄이 하나씩 늘었다.
+     *
+     * 2026-10-06 운영에서 그렇게 늘어난 줄이 여섯이었다 — (E)김철호 현금영수증 두 줄
+     * (12:03 발행 · 12:38 내려받기), (E)김지수B 세 줄, (E)최우용 팩스통합본 네 줄.
+     *
+     * 파일은 같은 자리에 덮어 쓰이므로 줄만 늘었다 — 서류 자체는 하나다. 그 한 장을
+     * 가리키는 줄도 하나여야 한다.
+     *
+     * 사람이 올리는 첨부는 이 길을 쓰지 않는다 — 같은 파일을 두 번 올리는 것은
+     * 담당자의 뜻이고, 자리도 올릴 때마다 달라진다.
+     */
+    public static function 한줄만(array $열쇠, array $값 = []): self
+    {
+        return static::firstOrCreate($열쇠, $값);
+    }
+
     public function prescription(): BelongsTo
     {
         return $this->belongsTo(Prescription::class);

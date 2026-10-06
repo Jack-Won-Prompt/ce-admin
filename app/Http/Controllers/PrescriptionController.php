@@ -5943,12 +5943,14 @@ class PrescriptionController extends Controller
             [$pdfPath, $pdfUrl] = $this->saveFaxPdf($prescription, $request->documents ?? [], $attachmentIds);
 
             if ($pdfPath) {
-                PrescriptionDocument::create([
-                    'prescription_id'   => $prescription->id,
+                /* 같은 통합본을 다시 보내도 줄은 하나다 (SR #85) */
+                PrescriptionDocument::한줄만([
+                    'prescription_id' => $prescription->id,
+                    'type'            => 'fax',
+                    'file_path'       => $pdfPath,
+                ], [
                     'patient_id'        => $prescription->patient?->id,
                     'created_by'        => Auth::id(),
-                    'type'              => 'fax',
-                    'file_path'         => $pdfPath,
                     'original_filename' => basename($pdfPath),
                 ]);
             }
@@ -6320,12 +6322,14 @@ class PrescriptionController extends Controller
             $filePath = 'fax/' . $prescription->id . '/' . $filename;
             Storage::put($filePath, $pdfOutput);
 
-            PrescriptionDocument::create([
-                'prescription_id'   => $prescription->id,
+            /* 같은 통합본을 다시 보내도 줄은 하나다 (SR #85) */
+            PrescriptionDocument::한줄만([
+                'prescription_id' => $prescription->id,
+                'type'            => 'fax',
+                'file_path'       => $filePath,
+            ], [
                 'patient_id'        => $prescription->patient?->id,
                 'created_by'        => Auth::id(),
-                'type'              => 'fax',
-                'file_path'         => $filePath,
                 'original_filename' => $filename,
             ]);
         } catch (\Throwable $e) {
