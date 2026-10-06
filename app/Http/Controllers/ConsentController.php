@@ -999,7 +999,29 @@ class ConsentController extends Controller
      */
     public function statusCheck(Request $request, Prescription $prescription): JsonResponse
     {
-        $latest = PrescriptionConsent::where('prescription_id', $prescription->id)
+        /* **받아 둔 서명은 다시 보내도 그대로 있다** (2026-10-06 지시
+           「주문 등록에서 위임서명 받았어도 팝오버에서 재전송할 수 있게」).
+
+           여태 이 자리는 가장 최근 줄 하나만 보았다. 서명을 받은 뒤 링크를 다시 보내면
+           새 `pending` 줄이 가장 최근이 되어, 배지가 「서명 동의 완료」에서 「대기중」으로
+           되돌아섰다 — 서명확인 창도 열리지 않아(`status !== 'agreed'` 이면 보내기 창으로
+           새 나간다) 담당자에게는 **받아 둔 서명이 사라진 것**으로 보였다. 그 때문에
+           완료 상태에는 재발송 길을 아예 두지 않았던 것이다.
+
+           서명이 담긴 줄이 있으면 그것이 이 건의 서명이다. 새 서명을 받을 때까지 그
+           사실은 바뀌지 않는다 — 주문의 앞문도 같은 잣대로 본다(DelegationGate::이건서명).
+
+           열려 있는 링크는 따로 쥔다. 둘을 함께 주어야 화면이 「서명은 받아 두었고, 다시
+           보낸 링크도 열려 있다」를 그대로 세운다. */
+        $서명줄 = \App\Support\DelegationGate::이건서명($prescription);
+
+        $열린줄 = PrescriptionConsent::where('prescription_id', $prescription->id)
+            ->where('status', 'pending')
+            ->whereNotNull('expires_at')->where('expires_at', '>', now())
+            ->latest('id')
+            ->first();
+
+        $latest = $서명줄 ?? PrescriptionConsent::where('prescription_id', $prescription->id)
             ->latest()
             ->first();
 
@@ -1120,8 +1142,10 @@ class ConsentController extends Controller
             'status'          => $latest->status,
             'status_label'    => $latest->statusLabel(),
             'responded_at'    => $latest->responded_at?->format('Y-m-d H:i:s'),
-            'expires_at'      => $latest->expires_at->format('Y-m-d H:i'),
-            'remaining_min'   => $latest->remainingMinutes(),
+            /* 열려 있는 링크가 있으면 그쪽 기한을 적는다 — 서명을 받아 둔 뒤 다시 보낸
+               건에서는 서명 줄의 기한(이미 지난 값)이 아니라 지금 열려 있는 것이 사실이다. */
+            'expires_at'      => ($열린줄 ?? $latest)->expires_at?->format('Y-m-d H:i'),
+            'remaining_min'   => ($열린줄 ?? $latest)->remainingMinutes(),
             'has_signature'   => !empty($latest->signature_data),
             'patient_name'    => $latest->patient_name,
             'patient_mobile'  => $latest->patient_mobile,
@@ -1154,10 +1178,11 @@ class ConsentController extends Controller
                다른 길(카카오ㆍ전화)로 건네줄 수 있어야 한다.
 
                아직 열 수 있는 것만 준다 — 이미 서명했거나 기한이 지난 주소를
-               내려 주면 눌러 봐야 「끝난 건」만 뜬다. */
-            'sign_url'        => ($latest->status === 'pending' && $latest->expires_at->isFuture())
-                                  ? url('/consent/' . $latest->token)
-                                  : null,
+               내려 주면 눌러 봐야 「끝난 건」만 뜬다.
+
+               **열려 있는 줄에서 가져온다** (2026-10-06). 서명을 받아 둔 뒤 다시 보낸
+               건에서는 `$latest` 가 서명 줄이라, 그것만 보면 방금 보낸 링크가 사라진다. */
+            'sign_url'        => $열린줄 ? url('/consent/' . $열린줄->token) : null,
         ]);
     }
 

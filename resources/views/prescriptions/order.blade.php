@@ -1376,9 +1376,13 @@ $calcDeposit  = $calcCopay;
           </div>
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px;">
             <div id="consentResendNotice" style="display:none;background:var(--alert-50);border:1px solid var(--alert-100);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--alert-500);line-height:1.6;">
+              {{-- 글은 JS 가 상태에 맞춰 채운다 — 만료된 건과 이미 서명을 받아 둔 건은
+                   같은 「재발송」이어도 담당자에게 알려야 할 것이 다르다 (2026-10-06). --}}
               <i class="fa-solid fa-rotate-right"></i>
-              <strong>이전 동의 링크가 만료되었습니다.</strong><br>
-              새로운 동의 링크를 발송합니다. 이전 링크는 더 이상 사용할 수 없습니다.
+              <span id="consentResendText">
+                <strong>이전 동의 링크가 만료되었습니다.</strong><br>
+                새로운 동의 링크를 발송합니다. 이전 링크는 더 이상 사용할 수 없습니다.
+              </span>
             </div>
             @php
               $consentBase = rtrim(config('app.consent_public_url', config('app.url')), '/');
@@ -16720,6 +16724,21 @@ window.HELP_TOUR_STEPS = [
       if (iconEl)  { iconEl.className = 'fa-solid fa-rotate-right'; iconEl.style.color = '#fff'; }
       if (notice)  notice.style.display = 'block';
       if (sendBtn) sendBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 재발송';
+
+      /* 이미 서명을 받아 둔 건이면 알릴 것이 다르다 (2026-10-06 지시).
+
+         만료된 건은 「받아야 한다」이고, 받아 둔 건은 「이미 있는데 다시 받는다」다.
+         받아 둔 서명이 지워지지 않는다는 것을 적어 주지 않으면, 담당자는 재발송을
+         누르는 순간 서명을 잃는 것으로 읽는다. */
+      const txt = document.getElementById('consentResendText');
+      if (txt) {
+        txt.innerHTML = window.CONSENT_STATUS === 'agreed'
+          ? '<strong>이미 서명 동의를 받은 건입니다.</strong><br>'
+            + '새 동의 링크를 발송합니다. 받아 둔 서명은 그대로 유지되며, 환자가 다시 '
+            + '서명하면 새 서명으로 대체됩니다.'
+          : '<strong>이전 동의 링크가 만료되었습니다.</strong><br>'
+            + '새로운 동의 링크를 발송합니다. 이전 링크는 더 이상 사용할 수 없습니다.';
+      }
     } else {
       if (titleEl) titleEl.textContent = '서명 동의 SMS 발송';
       if (iconEl)  { iconEl.className = 'fa-solid fa-file-signature'; iconEl.style.color = '#fff'; }
@@ -16913,7 +16932,13 @@ window.HELP_TOUR_STEPS = [
     const rb  = document.getElementById('consentResultBadge');
     if (!bw || !rb) return;
     const cfgMap = {
-      agreed:  { bg:'var(--primary-50)', border:'var(--primary-200)', color:'var(--primary)', icon:'fa-circle-check',  text:'서명 동의 완료',  action:'openConsentSignModal()', btnLabel:'서명확인', btnBorder:'var(--primary)', btnColor:'var(--primary)' },
+      /* 받아 두었어도 다시 보낼 수 있어야 한다 (2026-10-06 지시).
+
+         서명이 엉뚱한 사람 것이거나 그림이 쓸 수 없게 들어온 일이 있는데, 완료 상태에는
+         재발송 길이 없어 담당자가 손쓸 자리가 없었다. 「서명확인」 옆에 한 칸 더 둔다 —
+         다시 보내도 받아 둔 서명은 그대로 서 있다(ConsentController::statusCheck). */
+      agreed:  { bg:'var(--primary-50)', border:'var(--primary-200)', color:'var(--primary)', icon:'fa-circle-check',  text:'서명 동의 완료',  action:'openConsentSignModal()', btnLabel:'서명확인', btnBorder:'var(--primary)', btnColor:'var(--primary)',
+                 extraAction:'openConsentModal(true)', extraLabel:'재발송', extraBorder:'var(--gray-700)', extraColor:'var(--gray-700)' },
       declined:{ bg:'var(--danger-light)',  border:'var(--alert-100)', color:'var(--danger)',  icon:'fa-circle-xmark',  text:'동의 거절됨',    action:'openConsentModal()',    btnLabel:'재발송',   btnBorder:'var(--danger)',  btnColor:'var(--danger)' },
       pending: { bg:'var(--gray-100)',      border:'var(--gray-300)', color:'var(--gray-700)', icon:'fa-clock',        text:'서명 동의 대기중', action:'openConsentModal()',    btnLabel:'재발송',   btnBorder:'var(--gray-700)',       btnColor:'var(--gray-700)' },
       /* 만료 — 「지난 일」이 아니라 「다시 보내야 하는 일」이다.
@@ -16949,7 +16974,13 @@ window.HELP_TOUR_STEPS = [
        보이기로 정하면 이 자리 한 곳만 되살리면 된다. */
     const 꼬리 = '';
 
-    rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span>${꼬리}<button onclick="event.stopPropagation();${cfg.action}" style="height:16px;padding:0 5px;font-size:10px;background:${cfg.btnBg ?? 'none'};border:1px solid ${cfg.btnBorder};color:${cfg.btnColor};border-radius:6px;cursor:pointer;margin-left:4px;font-weight:600;">${cfg.btnLabel}</button>`;
+    /* 단추가 둘일 수 있다 — 완료 상태는 「서명확인」과 「재발송」이 나란히 선다 */
+    const 단추 = (label, action, border, color, bg) =>
+      `<button onclick="event.stopPropagation();${action}" style="height:16px;padding:0 5px;font-size:10px;background:${bg ?? 'none'};border:1px solid ${border};color:${color};border-radius:6px;cursor:pointer;margin-left:4px;font-weight:600;">${label}</button>`;
+
+    rb.innerHTML = `<i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;"></i><span style="font-weight:700;color:${cfg.color};margin-left:2px;">${cfg.text}</span>${꼬리}`
+      + 단추(cfg.btnLabel, cfg.action, cfg.btnBorder, cfg.btnColor, cfg.btnBg)
+      + (cfg.extraAction ? 단추(cfg.extraLabel, cfg.extraAction, cfg.extraBorder, cfg.extraColor, cfg.extraBg) : '');
   }
   // 이름 조회로 다른 사람을 고르면 그 사람의 동의 상태로 다시 그린다
   window._applyConsentBtn = _applyConsentBtn;
