@@ -1867,11 +1867,79 @@ class PrescriptionController extends Controller
     }
 
     /** 잡아 둔 자리대로 얹어 첨부 파일을 갈아 놓는다 */
+    /**
+     * 등록신청서 신청인란을 저장하지 못했다 — 한 자리에서 말하고 적는다 (2026-10-06 지시).
+     *
+     * 세 가지로 막힌다: 검사에 걸림ㆍ얹을 칸이 없음ㆍ그리지 못함. 셋 다 사람이 화면
+     * 앞에서 멈추는 자리인데, 여태 가지마다 다르게 돌려보냈고 둘은 아무 자취도 남기지
+     * 않았다. 오류 이력은 `ValidationException` 을 거르므로 검사 실패는 표에 들지
+     * 않는다 — 그 거르기는 그대로 두고, **이 자리만 스스로 적는다**(WorkBlockedException).
+     */
+    private function overlay못함(Prescription $prescription, PrescriptionAttachment $attachment,
+                                 string $까닭, array $자세히 = []): \Illuminate\Http\JsonResponse
+    {
+        Log::warning('[등록신청서 얹기] 저장하지 못했습니다', [
+            'rx' => $prescription->rx_number, 'attachment' => $attachment->id,
+            'why' => $까닭, 'detail' => $자세히,
+        ]);
+
+        \App\Support\ErrorRecorder::담기(new \App\Exceptions\WorkBlockedException(sprintf(
+            '등록신청서 신청인란을 저장하지 못했습니다 — %s (처방 %s · 첨부 %d)',
+            $까닭, $prescription->rx_number, $attachment->id)));
+
+        return response()->json(['success' => false, 'message' => $까닭], 422);
+    }
+
+    /** 검사에 걸린 까닭을 담당자가 읽을 수 있는 말로 바꾼다 */
+    private static function overlay말(\Illuminate\Contracts\Validation\Validator $검사): string
+    {
+        $이름 = [
+            'apply_y'   => '신청일(년)', 'apply_m' => '신청일(월)', 'apply_d' => '신청일(일)',
+            'applicant' => '신청인',     'relation' => '관계',      'tel'     => '전화번호',
+            'signature' => '서명',
+        ];
+
+        $첫  = (string) array_key_first($검사->errors()->toArray());
+        $쪽  = explode('.', $첫);
+        $칸  = $이름[$쪽[1] ?? ''] ?? ($쪽[1] ?? '');
+
+        /* 값이 **없는 것**과 **범위 밖인 것**은 담당자가 할 일이 다르다 — 앞의 것은
+           자리를 잡아야 하고, 뒤의 것은 잡아 둔 것을 옮겨야 한다. 어긴 규칙으로 가린다. */
+        $어긴규칙 = array_keys($검사->failed()[$첫] ?? []);
+        $없는것   = in_array('Required', $어긴규칙, true);
+
+        return match (true) {
+            $첫 === 'fields' => '얹을 칸이 없습니다. 신청인란 자리를 먼저 잡아 주십시오.',
+            $첫 === 'rotate' => '돌린 각도가 올바르지 않습니다 (0ㆍ90ㆍ180ㆍ270 만 됩니다).',
+
+            str_ends_with($첫, '.x'), str_ends_with($첫, '.y')
+                => $없는것
+                    ? sprintf('「%s」의 자리가 잡혀 있지 않습니다. 종이 위로 끌어다 놓아 주십시오.', $칸)
+                    : sprintf('「%s」이(가) 종이 밖에 있습니다. 안쪽으로 끌어다 놓아 주십시오.', $칸),
+
+            str_ends_with($첫, '.w')
+                => sprintf('「%s」의 너비가 범위를 벗어났습니다. 모서리를 끌어 크기를 맞춰 주십시오.', $칸),
+
+            str_ends_with($첫, '.size')
+                => sprintf('「%s」의 글자 크기가 범위를 벗어났습니다.', $칸),
+
+            default => '입력한 값이 올바르지 않습니다 (' . $첫 . ').',
+        };
+    }
+
     public function saveRegistrationOverlay(Request $request, Prescription $prescription, PrescriptionAttachment $attachment): \Illuminate\Http\JsonResponse
     {
         $this->이첨부인가($prescription, $attachment);
 
-        $data = $request->validate([
+        /* 검사에 걸리면 **우리말로 말하고 오류 이력에 적는다** (2026-10-06 지시).
+
+           여태 `$request->validate()` 가 그대로 422 를 던졌다. 이 서비스에는 우리말
+           검사 문구가 없어(locale en) 화면에는 `The fields.signature.w field must not
+           be greater than 1.` 같은 영어가 떴고, 담당자는 손쓸 길이 없었다. 게다가
+           오류 이력은 `ValidationException` 을 통째로 거르므로 자취도 남지 않았다 —
+           10-06 09:31 에 담당자가 두 번 눌러 두 번 막히고 일을 포기했는데, 무엇이
+           틀렸는지 끝내 알 수 없었다. */
+        $검사 = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'fields'              => 'required|array',
             'fields.*.x'          => 'required|numeric|min:0|max:1',
             'fields.*.y'          => 'required|numeric|min:0|max:1',
@@ -1881,6 +1949,13 @@ class PrescriptionController extends Controller
             'rotate'              => 'nullable|integer|in:0,90,180,270',
         ]);
 
+        if ($검사->fails()) {
+            return $this->overlay못함($prescription, $attachment,
+                self::overlay말($검사), $검사->errors()->toArray());
+        }
+
+        $data = $검사->validated();
+
         /* 아는 이름만 받는다 — 화면에서 온 값이라 그대로 믿지 않는다.
            화면에서 지운 칸은 아예 오지 않는다(그 칸은 얹지 않는다). */
         $자리 = array_intersect_key($data['fields'], array_flip(
@@ -1888,7 +1963,9 @@ class PrescriptionController extends Controller
         ));
 
         if (! $자리) {
-            return response()->json(['success' => false, 'message' => '입력할 항목이 없습니다.'], 422);
+            return $this->overlay못함($prescription, $attachment,
+                '얹을 칸이 하나도 없습니다. 신청인ㆍ관계ㆍ전화번호ㆍ서명 가운데 적어도 하나는 두어야 합니다.',
+                ['보낸칸' => array_keys($data['fields'])]);
         }
 
         $각도 = (int) ($data['rotate'] ?? 0);
@@ -1896,11 +1973,9 @@ class PrescriptionController extends Controller
         try {
             $그림 = \App\Support\RegistrationOverlay::compose($attachment, $자리, $각도);
         } catch (\Throwable $e) {
-            Log::warning('[등록신청서 얹기] 그리지 못했습니다', [
-                'attachment' => $attachment->id, 'error' => $e->getMessage(),
-            ]);
-
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            return $this->overlay못함($prescription, $attachment,
+                '등록신청서에 글자를 얹지 못했습니다 — ' . $e->getMessage(),
+                ['갈래' => $e::class, '자리' => $e->getFile() . ':' . $e->getLine()]);
         }
 
         /* 원본은 처음 얹을 때 한 번만 옮겨 적는다 — 두 번째부터는 이미 적혀 있는
