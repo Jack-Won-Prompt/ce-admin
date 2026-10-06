@@ -6220,6 +6220,20 @@ function regOvDefaults() {
 })();
 
 async function regOvSave() {
+  /* 출력할 항목이 하나도 없으면 보내지 않는다 (2026-10-06 · 오류 이력 #27).
+
+     항목을 모두 제외한 상태로 저장을 누르면 서버가 422 로 되돌려보낸다. 담당자가
+     10-06 11:31~11:41 사이에 같은 자리에서 10회 막혔는데, 화면에는 그 까닭이
+     「입력할 항목이 없습니다」로만 떠서 무엇을 해야 하는지 알 수 없었다.
+
+     보내기 전에 여기서 막고, 되돌리는 방법을 함께 안내한다 — ［초기화］가 제외한
+     항목을 모두 복원한다(regOvDefaults). */
+  if (!regOvFields || Object.keys(regOvFields).length === 0) {
+    showToast('출력할 항목이 없습니다. ［초기화］를 클릭하여 기본 위치를 복원한 후 저장하십시오.',
+              'warning', 6000);
+    return;
+  }
+
   try {
     const res = await fetch(`${REG_OV_BASE}/${regOvAtt}/overlay`, {
       method: 'POST',

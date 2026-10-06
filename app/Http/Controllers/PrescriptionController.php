@@ -1932,7 +1932,7 @@ class PrescriptionController extends Controller
         $없는것   = in_array('Required', $어긴규칙, true);
 
         return match (true) {
-            $첫 === 'fields' => '얹을 칸이 없습니다. 신청인란 자리를 먼저 잡아 주십시오.',
+            $첫 === 'fields' => '출력할 항목이 없습니다. ［초기화］를 클릭하여 기본 위치를 복원한 후 저장하십시오.',
             $첫 === 'rotate' => '돌린 각도가 올바르지 않습니다 (0ㆍ90ㆍ180ㆍ270 만 됩니다).',
 
             str_ends_with($첫, '.x'), str_ends_with($첫, '.y')
@@ -1987,7 +1987,7 @@ class PrescriptionController extends Controller
 
         if (! $자리) {
             return $this->overlay못함($prescription, $attachment,
-                '얹을 칸이 하나도 없습니다. 신청인ㆍ관계ㆍ전화번호ㆍ서명 가운데 적어도 하나는 두어야 합니다.',
+                '출력할 항목이 없습니다. 신청인ㆍ관계ㆍ전화번호ㆍ서명 중 하나 이상을 배치한 후 저장하십시오.',
                 ['보낸칸' => array_keys($data['fields'])]);
         }
 
