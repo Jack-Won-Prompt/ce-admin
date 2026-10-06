@@ -117,8 +117,11 @@ final class VirtualAccountForOrder
      *
      * 기한이 지났거나 금액이 달라졌으면 쓸 수 없다. 금액이 달라지는 일이 있다 —
      * 검수를 마친 뒤 수량을 고치면 본인부담이 바뀐다.
+     *
+     * **밖에서도 쓴다** (2026-10-06 지시). 결제 링크 화면이 이 잣대로 「이미 나온
+     * 계좌가 있는가」를 묻는다 — 같은 물음에 두 벌의 답을 두지 않는다.
      */
-    private function living(Order $order): ?TossPayment
+    public function living(Order $order): ?TossPayment
     {
         $p = TossPayment::where('order_id', $order->id)
             ->where('method', 'VIRTUAL_ACCOUNT')

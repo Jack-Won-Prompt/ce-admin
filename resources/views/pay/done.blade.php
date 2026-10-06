@@ -59,6 +59,13 @@
         @endif
       </div>
     @endif
+
+    {{-- 이미 나온 계좌를 다시 보여 주는 자리에만 선다 (2026-10-06 지시).
+         결제창을 열 때마다 계좌가 새로 나와 앞 계좌로 들어온 돈이 이을 곳을 잃었다.
+         다른 방법으로 내시려면 담당자를 거쳐야 한다는 것을 여기서 알린다. --}}
+    @if(!empty($note))
+      <p style="font-size:13px;color:#6B7178;margin-top:14px;line-height:1.6;">{{ $note }}</p>
+    @endif
   </div>
 </div>
 </body>
