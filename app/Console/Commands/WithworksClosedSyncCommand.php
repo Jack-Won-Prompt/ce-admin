@@ -75,10 +75,32 @@ class WithworksClosedSyncCommand extends Command
                 ];
             }
 
+            /* **upsert 를 쓰지 않는다** (2026-10-06).
+
+               이미 있는 줄을 고치는 일인데 upsert 는 INSERT 를 먼저 세운다 —
+               `rx_number` 처럼 기본값이 없는 칸에서 「doesn't have a default value」로
+               막힌다. 한 줄씩 고치면 8만 번을 오가므로, 묶음마다 CASE 로 한 번에 고친다. */
             foreach (array_chunk($고칠것, 500) as $조각) {
-                DB::table('prescriptions')->upsert(
-                    $조각, ['id'], ['ww_so_no', 'ww_closed_at', 'ww_cancelled']
+                $ids = array_column($조각, 'id');
+                $값  = [];
+                $식  = [];
+
+                foreach (['ww_so_no', 'ww_closed_at', 'ww_cancelled'] as $칸) {
+                    $조각들 = [];
+                    foreach ($조각 as $줄) {
+                        $조각들[] = 'WHEN ? THEN ?';
+                        $값[] = $줄['id'];
+                        $값[] = $줄[$칸];
+                    }
+                    $식[] = $칸 . ' = CASE id ' . implode(' ', $조각들) . ' END';
+                }
+
+                DB::update(
+                    'UPDATE prescriptions SET ' . implode(', ', $식)
+                    . ' WHERE id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')',
+                    array_merge($값, $ids)
                 );
+
                 $적음 += count($조각);
             }
 
