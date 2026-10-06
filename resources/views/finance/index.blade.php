@@ -151,6 +151,21 @@
     return s;
   };
 
+  /* **0 도 적어야 하는 칸** (2026-10-06 지시 · SR #98 「본인부담금은 0으로 값이 있어야 함」).
+
+     차상위경감ㆍ기초는 본인부담이 **없는 것이 사실**이다. 그 자리를 비워 두면 값이
+     빠진 것과 가릴 수 없다 — 담당자는 입력이 안 된 건으로 읽는다.
+
+     다른 돈 칸은 그대로 비운다. 미수금 0 은 「없다」는 뜻이라 빈칸이 읽기 쉽고, 백여
+     칸이 모두 0 으로 채워지면 정작 값이 있는 칸이 묻힌다. */
+  const money0 = (v) => {
+    const s = document.createElement('span');
+    s.textContent = Number(v || 0).toLocaleString('ko-KR');
+    return s;
+  };
+
+  const 영도적을칸 = new Set(['copay']);
+
   /* 칸은 서버가 정한다(FinanceController::columnsFor) — 요청서 14~19쪽의 차례를
      그대로 옮긴 것이라, 화면에서 다시 적으면 두 벌이 갈린다. */
   const COLS = @json($columns);
@@ -169,7 +184,7 @@
      수 입력칸이 열릴 일도 없다. `align` 은 서버가 이미 right 로 준다
      (FinanceController `$money`). 엑셀로 내보낼 때 글자가 아니라 수로 나가는 것도
      이 표식이 정한다(wwGrid.js:539). */
-  COLS.forEach(c => { if (c.editor === 'number') c.renderer = money; });
+  COLS.forEach(c => { if (c.editor === 'number') c.renderer = 영도적을칸.has(c.name) ? money0 : money; });
 
   /* 감출 머리글 — 탭마다 다르다 (FinanceController::숨길칸, 2026-09-15 지시).
      2026-09-11 엑셀에서 담당자가 회색으로 칠해 둔 칸들이다.
@@ -202,7 +217,7 @@
 
   /* 탭을 바꿀 때도 같은 잣대다 — 여기서 표식을 지우면 그 탭만 합계가 빈다 */
   const 돈칸으로 = (칸들) => {
-    칸들.forEach(c => { if (c.editor === 'number') c.renderer = money; });
+    칸들.forEach(c => { if (c.editor === 'number') c.renderer = 영도적을칸.has(c.name) ? money0 : money; });
     return 칸들;
   };
 

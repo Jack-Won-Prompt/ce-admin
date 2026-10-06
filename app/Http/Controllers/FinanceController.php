@@ -1310,8 +1310,17 @@ class FinanceController extends Controller
                    지자체는 청구 서식도 입금 시점도 다르다. 값은 처방전의 청구처를
                    그대로 쓴다(OrderGridExtras::of · ClaimAgency::LABELS). */
                 ['header' => '기관 구분', 'name' => 'claim_agency', 'width' => 120, 'align' => 'center', 'sortable' => true],
-                // 환자에게 청구한 금액 — 입금과 맞춰 보는 값이다
-                ['header' => '주문 금액',  'name' => 'billed',    'width' => 110] + $money,
+                /* **주문 금액은 매출금액과 같다** (2026-10-06 지시 · SR #98).
+
+                   여태 `billed`(환자에게 청구한 금액)를 세웠다. 그 값은 본인부담뿐이라
+                   기관 몫이 통째로 빠진다 — 차상위경감ㆍ기초처럼 본인부담이 없는 건은
+                   810,000원을 판 건인데도 주문 금액이 0으로 섰다. 기관부담이 있는
+                   93건(2026-10-06 실측 · 276건 가운데)이 그렇게 어긋났다.
+
+                   입금 대조는 이 칸이 아니라 바로 옆 「본인 부담금」과 「입금 금액」으로
+                   한다 — 들어오는 돈은 본인부담이다. 통합주문내역의 「총 주문금액」과도
+                   이제 같은 값이다. */
+                ['header' => '주문 금액',  'name' => 'total',     'width' => 110] + $money,
                 ['header' => '본인 부담금', 'name' => 'copay',     'width' => 110] + $money,
                 ['header' => '입금일자',   'name' => 'paid_at',   'width' => 100, 'align' => 'center', 'sortable' => true],
                 /* 입금확인 — 다른 목록과 같은 넷을 여기에도 세운다 (2026-09-20 지시).
