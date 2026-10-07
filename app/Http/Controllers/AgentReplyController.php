@@ -102,7 +102,14 @@ class AgentReplyController extends Controller
             'answered_by' => null,
         ])->save();
 
-        activity()->performedOn($sr)->log('Agent 가 답변을 적었습니다');
+        /* 분석 틀(원인ㆍ고칠 자리ㆍ고치는 법)은 답변 칸이 아니라 이 자리에 남긴다 —
+           요청하신 분이 읽는 답변에 파일 이름과 줄 번호가 보이지 않게 한다
+           (2026-10-07 지시). */
+        $쪽지 = trim((string) ($짐['note'] ?? ''));
+
+        activity()->performedOn($sr)->log($쪽지 === ''
+            ? 'Agent 가 답변을 적었습니다'
+            : "Agent 가 답변을 적었습니다\n\n" . $쪽지);
 
         return ['ok' => true, 'message' => "SR {$sr->id} 에 적었습니다"];
     }
