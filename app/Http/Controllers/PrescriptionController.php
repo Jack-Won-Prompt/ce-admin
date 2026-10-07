@@ -3075,6 +3075,25 @@ class PrescriptionController extends Controller
         if (! $서명담김) {
             /* 서면으로 받아 올린 위임장도 「완료」다 (2026-10-01 지시) —
                statusCheck 와 같은 답을 주어야 배지가 화면마다 갈리지 않는다. */
+            /* 거래처 서류함에 올려 둔 종이 위임도 「완료」다 (2026-10-07 · SR #115ㆍ#123).
+               서명한 날을 그대로 적는다 — 올린 날이 아니라 종이에 서명한 날이 근거다. */
+            if ($종이 = \App\Support\DelegationGate::거래처서면서류($patient)) {
+                return [
+                    'status'       => 'agreed',
+                    'responded_at' => $종이->signed_at?->format('Y-m-d'),
+                    'rx_number'    => null,
+                    'reused_sign'  => [
+                        'source'      => 'paper',
+                        'label'       => $종이->typeLabel() . '(거래처 서류함)',
+                        'signed_at'   => $종이->signed_at?->format('Y-m-d'),
+                        'rx_number'   => null,
+                        'valid_until' => \App\Support\DelegationGate::서명유효기간(
+                            $종이->signed_at, $patient)?->format('Y-m-d'),
+                        'matched_by'  => null,
+                    ],
+                ];
+            }
+
             if ($서면 = \App\Support\DelegationGate::서면위임장($patient)) {
                 return [
                     'status'       => 'agreed',
@@ -3490,10 +3509,39 @@ class PrescriptionController extends Controller
             ];
         }
 
+        /* **거래처에 올려 둔 종이 서류도 함께 세운다** (2026-10-07 지시 · SR #115ㆍ#123).
+         *
+         * 위임장을 종이로 받아 거래처 서류함에 올려 둔 건이 있다. 그 서류는 처방전에
+         * 붙지 않으므로 여기 세우지 않으면 **올려 두었는데도 주문 등록에서 보이지 않는다** —
+         * 담당자는 「없다」고 읽고 서명을 또 받으러 간다.
+         *
+         * 지우는 X 를 두지 않는다(그림칸이 `isSign` 으로 서므로). 지우는 것은 거래처
+         * 관리에서 한다 — 올린 자리에서 지우는 것이 제자리다. */
+        $patientDocs = [];
+        $거래처서류 = $prescription->patient_id
+            ? \App\Models\PatientDocument::where('patient_id', $prescription->patient_id)
+                ->orderByDesc('id')->get()
+            : collect();
+
+        foreach ($거래처서류 as $줄) {
+            $patientDocs[] = [
+                'id'        => -2000 - $줄->id,
+                'url'       => route('patients.documents.show', [$prescription->patient_id, $줄->id]),
+                'type'      => $줄->doc_type,
+                /* 어느 길로 받은 것인지 숨기지 않는다 — 종이로 받은 것임을 적는다 */
+                'typeLabel' => $줄->typeLabel() . ' (종이)',
+                'name'      => $줄->file_original_name ?: $줄->typeLabel(),
+                'isPdf'     => $줄->isPdf(),
+                'isRx'      => false,
+                'isSign'    => true,
+            ];
+        }
+
         /* 시스템이 만든 서류(위임동의서ㆍ요양비위임장ㆍ팩스통합본ㆍ세금계산서…)도
            같은 자리에 세운다. 따로 목록 카드를 두던 것을 걷었다 — 보는 자리가 둘이면
            어느 쪽을 봐야 하는지 매번 헤맸고, 그 카드에서는 확대도 이동도 되지 않았다. */
-        $allDocsJson = array_merge($rxDoc, $attachmentsJson, self::generatedDocsJson($prescription), $signDocs);
+        $allDocsJson = array_merge($rxDoc, $attachmentsJson,
+            self::generatedDocsJson($prescription), $signDocs, $patientDocs);
 
         // 이름 옆 「조회」 창이 쓰는 목록 — 업로드 화면과 같은 것을 쓴다
         /* 고르개 목록은 더 이상 화면에 박지 않는다 (2026-10-01) — 두 글자부터
@@ -5486,6 +5534,12 @@ class PrescriptionController extends Controller
            하라는 문자를 받는다. */
         if (\App\Support\DelegationGate::서면위임장($prescription)) {
             return $no('서면 위임장을 받아 둔 분입니다.');
+        }
+
+        /* 거래처 서류함에 올려 둔 종이 위임도 같다 (2026-10-07 · SR #115ㆍ#123) —
+           올린 자리가 달라도 받은 것은 받은 것이다. */
+        if (\App\Support\DelegationGate::거래처서면서류($prescription)) {
+            return $no('거래처 서류함에 종이 위임을 받아 둔 분입니다.');
         }
 
         $mobile = preg_replace('/\D/', '', (string) ($patient->mobile ?: $prescription->mobile_ocr));

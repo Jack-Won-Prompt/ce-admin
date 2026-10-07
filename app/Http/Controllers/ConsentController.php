@@ -1579,6 +1579,37 @@ class ConsentController extends Controller
             $pdf->Text((float) $f['x'], (float) $f['y'], $t);
         };
 
+        /**
+         * 「년 월 일」 줄의 숫자 — **오른쪽 끝을 맞춰 적는다** (2026-10-07 지시).
+         *
+         * 「주문등록에 첨부된 위임장 이미지 보면 위임기간 설정 월 숫자 10이 혼자 다른
+         * 위치에 있음」.
+         *
+         * 적는 자리는 인쇄된 「월」 글자 **바로 왼쪽의 빈칸**이다. 좌표는 한 자리 숫자를
+         * 그 빈칸에 맞춰 잡아 두었는데, 왼쪽에 맞춰 적으므로 두 자리가 되면 오른쪽으로
+         * 한 자만큼 더 뻗어 인쇄된 글자에 붙는다 — 10월이 그 첫 경우다(9월까지는 모두
+         * 한 자리였다).
+         *
+         * 그래서 두 자리일 때만 한 자 너비만큼 왼쪽으로 당긴다. 오른쪽 끝이 늘 같은
+         * 자리에 서므로 한 자리 숫자의 모양은 그대로다 — 이미 쓰고 있는 좌표를 고치지
+         * 않아도 된다.
+         */
+        $put숫자 = function (string $key, ?string $t) use ($pdf, $fontName, $fields): void {
+            $t = trim((string) $t);
+            $f = $fields[$key] ?? null;
+            if ($t === '' || ! $f) {
+                return;
+            }
+
+            $pdf->SetFont($fontName, '', (float) ($f['size'] ?? 8));
+
+            $한자폭 = $pdf->GetStringWidth('0');
+            $이것폭 = $pdf->GetStringWidth($t);
+            $당김   = max(0.0, $이것폭 - $한자폭);
+
+            $pdf->Text((float) $f['x'] - $당김, (float) $f['y'], $t);
+        };
+
         /* ① 위임인 — **지금의 거래처를 먼저 본다** (2026-09-05 지시).
 
            예전에는 동의 기록에 찍힌 사진(`$consent->patient_name`)을 먼저 썼다. 서명할 때
@@ -1638,18 +1669,23 @@ class ConsentController extends Controller
         $pdf->Line(61.8, 202.2, 64.1, 199.0);
 
         // ⑤ 위임기간 (서명일부터 N년) — 인쇄된 년/월/일 글자와 겹치지 않게 작게·여백 배치
+        /* **월만** 오른쪽 끝을 맞춘다 (2026-10-07 지시).
+
+           년은 늘 네 자리라 자리가 흔들리지 않는다. 일은 10일부터 31일까지 두 자리가
+           이미 많이 지나갔고 그 모양으로 문제가 된 적이 없다 — 그 빈칸이 두 자리를
+           담을 만큼 넓다는 뜻이라, 고치면 멀쩡한 자리를 흔든다. 보고된 월만 고친다. */
         $put('period_from_y', $sd->format('Y'));
-        $put('period_from_m', $sd->format('n'));
+        $put숫자('period_from_m', $sd->format('n'));
         $put('period_from_d', $sd->format('j'));
         $put('period_to_y',   $ed->format('Y'));
-        $put('period_to_m',   $ed->format('n'));
+        $put숫자('period_to_m',   $ed->format('n'));
         $put('period_to_d',   $ed->format('j'));
 
         /* 위임일 — 서명란 바로 위의 「년 월 일」 줄. 비워 두면 언제 위임한 것인지가
            종이에 남지 않는다(공단이 되돌려 보내는 사유다). 서명한 날이 곧 위임한 날이라
            위임기간 시작일과 같은 날을 쓴다. 자리는 설정에서 고친다. */
         $put('sign_date_y', $sd->format('Y'));
-        $put('sign_date_m', $sd->format('n'));
+        $put숫자('sign_date_m', $sd->format('n'));
         $put('sign_date_d', $sd->format('j'));
 
         /* 서명란의 이름 — 양식에는 「위임인    (서명 또는 인)」 한 줄뿐이라 이름 적을 자리가

@@ -313,6 +313,15 @@
           {{-- 무엇이 무엇으로 바뀌었는지(2026-09-08 확인요청 3ㆍ5쪽). 수정자ㆍ수정일자는
                아래 줄에 이미 서 있었지만 **무엇이** 바뀌었는지는 없었다 — 전화번호를
                고쳐도 화면에는 아무 자취가 없어 저장이 됐는지조차 알 수 없었다. --}}
+          {{-- 서류함 — 종이로 받아 둔 위임장ㆍ서명동의ㆍ신분증 (2026-10-07 지시 · SR #115ㆍ#123).
+
+               여태 서류는 처방전에만 붙었다. 그래서 「위임장 링크로 보냈으나 처리할 수가
+               없어서 문서로 받았는데 아직 처방전이 없는 경우」 올릴 자리가 없었고,
+               담당자는 처방전이 생길 때까지 종이를 들고 기다렸다. --}}
+          <button class="tab-btn" id="tab-btn-docs" onclick="switchTab(this,'tab-docs')">
+            <i class="fa-solid fa-folder-open"></i> 서류함
+            <span id="docCount" style="background:var(--primary-light);color:var(--primary);border-radius:12px;padding:1px 7px;font-size:11px;margin-left:4px;display:none;"></span>
+          </button>
           <button class="tab-btn" id="tab-btn-log" onclick="switchTab(this,'tab-log')">
             <i class="fa-solid fa-clock-rotate-left"></i> 변경 이력
           </button>
@@ -806,6 +815,54 @@
              고칠 수 있는 칸을 두지 않는다. 이 자리에서 서명을 새로 받는 것이 아니고,
              받아 둔 것을 고치면 그것은 더 이상 그 사람이 한 서명이 아니다.
              새로 받아야 하면 운영 데이터 › 위임장 서명에서 다시 보낸다. --}}
+        {{-- 서류함 (2026-10-07 지시 · SR #115ㆍ#123).
+
+             **올린 것을 그대로 쓴다** — 위임장을 우리가 다시 그리지 않는다(「(가)」 결정).
+             환자가 실제로 서명한 원본이 그대로 공단에 나가므로 서명란이 빌 걱정이 없다.
+
+             서명한 날을 함께 받는다 — 위임 기간을 그 날에서 센다. 날이 없으면 기간을
+             잴 수 없어 서명으로 인정하지 않는다. --}}
+        <div class="tab-pane" id="tab-docs" style="overflow-y:auto;">
+          <div style="border:1px solid var(--border-color);border-radius:8px;padding:14px 16px;margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;margin-bottom:10px;">서류 올리기</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+              <div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">갈래</div>
+                <select id="pdType" class="form-control" style="height:32px;font-size:12px;width:200px;"
+                        onchange="pdTypeChanged()">
+                  @foreach(\App\Models\PatientDocument::갈래 as $code => $label)
+                    <option value="{{ $code }}">{{ $label }}</option>
+                  @endforeach
+                </select>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">
+                  서명한 날 <span id="pdSignedReq" style="color:var(--danger);">*</span>
+                </div>
+                <input type="date" id="pdSignedAt" class="form-control" style="height:32px;font-size:12px;width:150px;">
+              </div>
+              <div style="flex:1;min-width:200px;">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">파일 (PDF·JPG·PNG · 20MB 까지)</div>
+                <input type="file" id="pdFile" class="form-control" style="height:32px;font-size:12px;"
+                       accept=".pdf,.jpg,.jpeg,.png">
+              </div>
+              <div style="flex:1;min-width:160px;">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">메모</div>
+                <input type="text" id="pdNote" class="form-control" style="height:32px;font-size:12px;" maxlength="255">
+              </div>
+              <button type="button" class="ds-btn ds-btn-primary" id="pdUpload" onclick="pdUpload()">올리기</button>
+            </div>
+            <div id="pdSignNote" style="margin-top:8px;padding:8px 10px;border:1px solid var(--alert-200);
+                 border-radius:6px;background:var(--alert-50,#fef0c7);font-size:11px;color:#B54708;line-height:1.6;">
+              종이로 받은 위임장ㆍ서명동의를 올리면 주문 등록에서 서명 완료로 읽히고, 올린 원본이
+              그대로 공단으로 나갑니다. 다만 <b>기초ㆍ차상위경감</b> 건의 요양비 지급청구서에는
+              서명 그림을 얹는데, 종이로 받은 건은 그 그림이 없어 서명란이 빈 채로 나갑니다 —
+              그 건은 지급청구서를 손으로 확인해 주십시오.
+            </div>
+          </div>
+          <div id="pdList"></div>
+        </div>
+
         <div class="tab-pane" id="tab-sign" style="overflow-y:auto;">
           @if($서명들->isEmpty())
             <div style="text-align:center;padding:48px 20px;color:var(--text-muted);">
@@ -1137,6 +1194,141 @@
     /* 변경 이력은 열 때 한 번만 불러온다 — 화면을 세울 때마다 부르면 이 탭을 한 번도
        보지 않는 사람에게도 질의가 나간다 */
     if (id === 'tab-log') loadPatientLog();
+    /* 서류함도 열 때 부른다 — 이 탭을 보지 않는 사람에게 질의를 보내지 않는다 */
+    if (id === 'tab-docs') pdLoad();
+  }
+
+  /* ── 서류함 (2026-10-07 지시 · SR #115ㆍ#123) ─────────────
+     종이로 받아 둔 위임장ㆍ서명동의ㆍ신분증을 거래처에 담아 둔다. 파일은 비공개
+     디스크에 담기므로 보기ㆍ내려받기는 모두 서버를 거친다. */
+  const PD_URL  = @json(route('patients.documents.index', $patient));
+  const PD_CSRF = document.querySelector('meta[name=csrf-token]')?.content;
+  /* 위임 서명으로 인정하는 갈래 — 서버(PatientDocument::서명갈래)와 같아야 한다 */
+  const PD_SIGN_KINDS = @json(\App\Models\PatientDocument::서명갈래);
+
+  function pdTypeChanged() {
+    const 갈래   = document.getElementById('pdType').value;
+    const 서명것 = PD_SIGN_KINDS.includes(갈래);
+    /* 서명 갈래가 아니면 서명한 날이 필요 없다 — 별표와 안내를 거둔다 */
+    document.getElementById('pdSignedReq').style.display = 서명것 ? '' : 'none';
+    document.getElementById('pdSignNote').style.display  = 서명것 ? '' : 'none';
+  }
+
+  async function pdLoad() {
+    const box = document.getElementById('pdList');
+    if (!box) return;
+
+    try {
+      const res  = await fetch(PD_URL, { headers: { 'Accept': 'application/json' } });
+      const d    = await res.json().catch(() => ({}));
+      const rows = d.rows ?? [];
+
+      const 셈 = document.getElementById('docCount');
+      if (셈) { 셈.textContent = rows.length; 셈.style.display = rows.length ? '' : 'none'; }
+
+      if (!rows.length) {
+        box.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-muted);">'
+          + '올려 둔 서류가 없습니다.</div>';
+        return;
+      }
+
+      box.innerHTML = rows.map(r => `
+        <div style="border:1px solid var(--border-color);border-radius:8px;padding:10px 14px;margin-bottom:8px;
+                    display:flex;gap:12px;align-items:center;">
+          <i class="fa-regular ${r.isPdf ? 'fa-file-pdf' : 'fa-file-image'}"
+             style="font-size:20px;color:var(--primary);"></i>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;">${_esc(r.typeLabel)}</div>
+            <div style="font-size:11px;color:var(--text-muted);">
+              ${_esc(r.name)}
+              ${r.signed_at ? ' · 서명일 ' + _esc(r.signed_at) : ' · 서명일 없음'}
+              ${r.note ? ' · ' + _esc(r.note) : ''}
+              <br>${_esc(r.uploaded)} · ${_esc(r.uploader)}
+            </div>
+          </div>
+          <a class="ds-btn" href="${_esc(r.url)}" target="_blank" rel="noopener"
+             style="text-decoration:none;">보기</a>
+          <button type="button" class="ds-btn" style="color:var(--alert-500);"
+                  onclick="pdDelete(${Number(r.id)})">지우기</button>
+        </div>`).join('');
+    } catch (e) {
+      box.innerHTML = '<div style="padding:16px;color:var(--danger);">서류를 불러오지 못했습니다.</div>';
+    }
+  }
+
+  function _esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  async function pdUpload() {
+    const 파일 = document.getElementById('pdFile').files?.[0];
+    if (!파일) { showToast('올릴 파일을 골라 주십시오.', 'warning'); return; }
+
+    const 갈래 = document.getElementById('pdType').value;
+    const 서명일 = document.getElementById('pdSignedAt').value;
+
+    if (PD_SIGN_KINDS.includes(갈래) && !서명일) {
+      showToast('서명한 날을 적어 주십시오 — 위임 기간을 그 날에서 셉니다.', 'warning', 5000);
+      return;
+    }
+
+    const 단추 = document.getElementById('pdUpload');
+    단추.disabled = true;
+
+    try {
+      const 몸 = new FormData();
+      몸.append('doc_type', 갈래);
+      몸.append('file', 파일);
+      if (서명일) 몸.append('signed_at', 서명일);
+      const 메모 = document.getElementById('pdNote').value.trim();
+      if (메모) 몸.append('note', 메모);
+
+      const res = await fetch(PD_URL, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': PD_CSRF },
+        body: 몸,
+      });
+      const d = await res.json().catch(() => ({}));
+
+      if (!res.ok || !d.success) {
+        showToast(d.message || '올리지 못했습니다.', 'danger', 5000);
+        return;
+      }
+
+      showToast(d.message || '올렸습니다.', 'success');
+      document.getElementById('pdFile').value = '';
+      document.getElementById('pdNote').value = '';
+      pdLoad();
+    } catch (e) {
+      showToast('올리지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', 'danger');
+    } finally {
+      단추.disabled = false;
+    }
+  }
+
+  async function pdDelete(id) {
+    if (!await ceConfirm('이 서류를 지우시겠습니까?' + String.fromCharCode(10) + String.fromCharCode(10)
+        + '파일은 남고 목록에서만 가려집니다 — 공단에 이미 낸 서류일 수 있어 자취는 지우지 않습니다.',
+        { title: '서류 지우기', confirmText: '지우기', tone: 'danger' })) {
+      return;
+    }
+
+    try {
+      const res = await fetch(PD_URL + '/' + id, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': PD_CSRF },
+      });
+      const d = await res.json().catch(() => ({}));
+
+      if (!res.ok || !d.success) { showToast(d.message || '지우지 못했습니다.', 'danger'); return; }
+
+      showToast(d.message || '지웠습니다.', 'success');
+      pdLoad();
+    } catch (e) {
+      showToast('지우지 못했습니다.', 'danger');
+    }
   }
 
 

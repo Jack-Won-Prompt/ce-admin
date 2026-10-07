@@ -380,6 +380,13 @@ Route::middleware(['auth'])->group(function () {
            이 자리를 거쳐야 보인다(2026-09-29 지시). '/{patient}' 보다 앞에 둔다. */
         Route::get('/{patient}/delegation-signs/{sign}/image',
             [PatientController::class, 'delegationSignImage'])->name('delegationSigns.image');
+        /* 거래처 서류함 (2026-10-07 지시 · SR #115ㆍ#123) — 종이로 받아 둔 위임장ㆍ
+           서명동의ㆍ신분증을 담는다. 처방전이 서기 전에 받은 것도 받을 그릇이 있어야 한다.
+           '/{patient}' 보다 앞에 둔다. 파일은 비공개 디스크에 담고 이 자리를 거쳐야 열린다. */
+        Route::get(   '/{patient}/documents',             [PatientController::class, 'documents'])->name('documents.index');
+        Route::post(  '/{patient}/documents',             [PatientController::class, 'storeDocument'])->name('documents.store');
+        Route::get(   '/{patient}/documents/{document}',  [PatientController::class, 'showDocument'])->name('documents.show');
+        Route::delete('/{patient}/documents/{document}',  [PatientController::class, 'destroyDocument'])->name('documents.destroy');
         Route::get('/{patient}',     [PatientController::class, 'show'])->name('show');
         Route::put('/{patient}',     [PatientController::class, 'update'])->name('update');
         Route::delete('/{patient}',  [PatientController::class, 'destroy'])->name('destroy');

@@ -4,7 +4,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Patient;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -204,7 +206,20 @@ class PatientController extends Controller
         /* 처방 동의가 없는 거래처는 옮겨 담은 위임장 서명을 본다 */
         $위임서명 = $this->위임장서명들($그린것->pluck('id'));
 
-        $gridData = $그린것->map(function ($p) use ($consents, $마케팅, $위임서명) {
+        /* 종이로 받아 서류함에 올려 둔 위임ㆍ서명동의 (2026-10-07 지시 · SR #115ㆍ#123).
+           배지와 문은 같은 것을 보아야 한다 — 주문 등록은 이 서류를 서명으로 인정하므로
+           (DelegationGate::종이서명) 목록의 「서명여부」도 그것을 읽어야 한다. 한쪽만
+           알면 「서명여부는 빈칸인데 주문은 진행된다」가 된다.
+
+           쪽에 그린 거래처만 한 번에 묻는다 — 줄마다 묻지 않는다. */
+        $종이서명 = \App\Models\PatientDocument::whereIn('patient_id', $그린것->pluck('id'))
+            ->whereIn('doc_type', \App\Models\PatientDocument::서명갈래)
+            ->whereNotNull('signed_at')
+            ->orderByDesc('signed_at')->orderByDesc('id')
+            ->get(['id', 'patient_id', 'doc_type', 'signed_at'])
+            ->keyBy('patient_id');
+
+        $gridData = $그린것->map(function ($p) use ($consents, $마케팅, $위임서명, $종이서명) {
             // 생년월일 + 나이
             $birth = $p->birth_date
                 ? $p->birth_date->format('Y-m-d') . ' (만 ' . $p->age . '세)'
@@ -308,7 +323,11 @@ class PatientController extends Controller
                 'updated'         => $p->updated_at?->format('Y-m-d H:i:s') ?? '',
 
                 // ── 위임 서명 ──
-                'signed'      => $c ? $c->statusLabel() : ($sg ? '서명 완료' : ''),
+                /* 종이로 받아 올려 둔 것도 서명으로 읽는다 — 어느 길로 받았는지는
+                   숨기지 않고 「서명 완료(종이)」라 적는다 (2026-10-07 · SR #115ㆍ#123) */
+                'signed'      => $c ? $c->statusLabel()
+                                    : ($sg ? '서명 완료'
+                                           : (isset($종이서명[$p->id]) ? '서명 완료(종이)' : '')),
                 'minor'       => $minorRx ? '미성년' : (($c || $sg) ? '성년' : ''),
                 'g_relation'  => $minorRx ? (($c ?: $sg)->guardian_relation ?? '') : '',
                 'g_name'      => $minorRx ? (($c ?: $sg)->guardian_name ?? '') : '',
@@ -425,6 +444,127 @@ class PatientController extends Controller
                                    . rawurlencode($sign->sign_filename ?: 'sign.png') . '"',
             'Cache-Control'       => 'private, no-store',
         ]);
+    }
+
+    /* ── 거래처 서류함 (2026-10-07 지시 · SR #115ㆍ#123) ──────────────────────
+     *
+     * 종이로 받아 둔 위임장ㆍ서명동의ㆍ신분증을 거래처에 담아 둔다. 여태 서류는 처방전에만
+     * 붙어, 처방전이 서기 전에 받은 것은 올릴 자리가 없었다.
+     *
+     * **비공개 디스크에 담는다.** 처방전 첨부는 `public` 에 담겨 로그인 없이 열리는데,
+     * 위임장에는 주민등록번호와 서명이 들어간다 — 같은 실수를 되풀이하지 않는다
+     * (2026-10-07 팩스 통합본에서 드러난 그 자리다).
+     */
+    private const 서류디스크 = 'local';
+
+    /** 이 거래처의 서류 — 거래처 관리 상세와 주문 등록이 함께 읽는다 */
+    public function documents(Patient $patient): JsonResponse
+    {
+        $줄들 = \App\Models\PatientDocument::where('patient_id', $patient->id)
+            ->with('uploader:id,name')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (\App\Models\PatientDocument $d) => [
+                'id'        => $d->id,
+                'type'      => $d->doc_type,
+                'typeLabel' => $d->typeLabel(),
+                'name'      => $d->file_original_name ?: $d->typeLabel(),
+                'signed_at' => $d->signed_at?->format('Y-m-d'),
+                'note'      => (string) $d->note,
+                'isPdf'     => $d->isPdf(),
+                'hasSign'   => filled($d->signature_data),
+                'url'       => route('patients.documents.show', [$patient, $d]),
+                'uploader'  => $d->uploader?->name ?? '',
+                'uploaded'  => $d->created_at?->format('Y-m-d H:i'),
+                'size'      => (int) $d->file_size,
+            ]);
+
+        return response()->json(['success' => true, 'rows' => $줄들]);
+    }
+
+    public function storeDocument(Request $request, Patient $patient): JsonResponse
+    {
+        $값 = $request->validate([
+            'doc_type'  => ['required', 'string', Rule::in(array_keys(\App\Models\PatientDocument::갈래))],
+            /* 종이에 서명한 날 — 위임 유효기간을 이 날에서 센다(DelegationGate::서명유효기간).
+               위임장ㆍ서명동의는 이 날이 없으면 기간을 잴 수 없어 문이 열리지 않는다. */
+            'signed_at' => ['nullable', 'date'],
+            'note'      => ['nullable', 'string', 'max:255'],
+            'file'      => ['required', 'file', 'max:20480', 'mimes:pdf,jpg,jpeg,png'],
+        ]);
+
+        if (in_array($값['doc_type'], \App\Models\PatientDocument::서명갈래, true)
+            && blank($값['signed_at'] ?? null)) {
+            return response()->json([
+                'success' => false,
+                'message' => '서명한 날을 적어 주십시오 — 위임 기간을 그 날에서 셉니다. '
+                           . '날이 없으면 서명으로 인정되지 않습니다.',
+            ], 422);
+        }
+
+        $파일 = $request->file('file');
+        $이름 = now()->format('YmdHis') . '_' . \Illuminate\Support\Str::random(6)
+              . '.' . strtolower($파일->getClientOriginalExtension());
+
+        $길 = $파일->storeAs('patient-docs/' . $patient->id, $이름, self::서류디스크);
+
+        $서류 = \App\Models\PatientDocument::create([
+            'patient_id'         => $patient->id,
+            'doc_type'           => $값['doc_type'],
+            'file_path'          => $길,
+            'file_original_name' => $파일->getClientOriginalName(),
+            'file_mime_type'     => $파일->getClientMimeType(),
+            'file_size'          => $파일->getSize(),
+            'signed_at'          => $값['signed_at'] ?? null,
+            'note'               => $값['note'] ?? null,
+            'uploaded_by'        => Auth::id(),
+        ]);
+
+        activity()->causedBy(Auth::user())->performedOn($patient)->log(sprintf(
+            '거래처 서류를 올렸습니다 — %s%s',
+            $서류->typeLabel(),
+            $서류->signed_at ? ' (서명일 ' . $서류->signed_at->format('Y-m-d') . ')' : ''));
+
+        return response()->json([
+            'success' => true,
+            'message' => $서류->typeLabel() . '을(를) 올렸습니다.',
+            'id'      => $서류->id,
+        ]);
+    }
+
+    /** 올려 둔 서류를 보여 준다 — 비공개 디스크라 이 자리를 거쳐야 열린다 */
+    public function showDocument(Patient $patient, \App\Models\PatientDocument $document)
+    {
+        abort_if($document->patient_id !== $patient->id, 404);
+
+        $disk = \Illuminate\Support\Facades\Storage::disk(self::서류디스크);
+
+        abort_unless($disk->exists($document->file_path), 404, '파일이 없습니다.');
+
+        return response($disk->get($document->file_path), 200, [
+            'Content-Type'        => $document->file_mime_type ?: 'application/octet-stream',
+            'Content-Disposition' => 'inline; filename="'
+                                   . rawurlencode($document->file_original_name ?: 'document') . '"',
+            'Cache-Control'       => 'private, no-store',
+        ]);
+    }
+
+    /**
+     * 올려 둔 서류를 지운다 — 파일은 남기고 줄만 가린다(소프트 삭제).
+     *
+     * 공단에 이미 낸 서류일 수 있다. 무엇을 냈는지는 되짚을 수 있어야 한다.
+     */
+    public function destroyDocument(Patient $patient, \App\Models\PatientDocument $document): JsonResponse
+    {
+        abort_if($document->patient_id !== $patient->id, 404);
+
+        $이름 = $document->typeLabel();
+        $document->delete();
+
+        activity()->causedBy(Auth::user())->performedOn($patient)
+            ->log('거래처 서류를 지웠습니다 — ' . $이름);
+
+        return response()->json(['success' => true, 'message' => $이름 . '을(를) 지웠습니다.']);
     }
 
     /**

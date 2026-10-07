@@ -150,6 +150,42 @@ final class DelegationGate
     }
 
     /**
+     * 거래처 서류함에 올려 둔 종이 위임ㆍ서명동의 (2026-10-07 지시 · SR #115ㆍ#123).
+     *
+     * 종이 위임장을 받은 것으로 세는 잣대는 2026-10-01 에 이미 섰다(서면위임장). 다만
+     * 그 자리는 **처방전 첨부**만 보았다 — 처방전이 서기 전에 받은 종이는 올릴 그릇이
+     * 없었다(「아직 처방전이 없는 경우 해당 서류를 업로딩할 수 없습니다」).
+     *
+     * 이제 거래처에도 서류함이 있다(PatientDocument). 그 서류함의 위임ㆍ서명동의도
+     * 서면위임장과 **같은 뜻**으로 센다.
+     *
+     * **쓸서명() 에는 넣지 않는다.** 종이에는 서명 그림이 없으므로 그림이 들어가는
+     * 서류(요양비 지급청구서ㆍ서명확인 창)는 빈 채로 두어야 한다 — 받은 것처럼 꾸미면
+     * 서명란이 빈 청구서가 나간 것을 아무도 모른다. 2026-10-01 에 적어 둔 그 잣대를
+     * 그대로 따른다.
+     *
+     * 기간은 종이에 서명한 날에서 센다. 그 날이 없는 줄은 PatientDocument 쪽에서
+     * 돌려주지 않는다 — 기간을 잴 수 없으면 받은 것으로 세지 않는다.
+     */
+    public static function 거래처서면서류(Prescription|Patient|null $것): ?\App\Models\PatientDocument
+    {
+        $거래처 = $것 instanceof Prescription
+            ? ($것->patient ?? ($것->patient_id ? Patient::find($것->patient_id) : null))
+            : $것;
+
+        $서류 = \App\Models\PatientDocument::거래처위임($거래처);
+
+        if (! $서류) {
+            return null;
+        }
+
+        /* 위임기간이 지났으면 다시 받아야 한다 — 다른 길과 같은 잣대다 */
+        $끝 = self::서명유효기간($서류->signed_at, $거래처);
+
+        return ($끝 && $끝->gte(now())) ? $서류 : null;
+    }
+
+    /**
      * 공개 동의서 링크에서 받은 서명 (2026-10-02 지시).
      *
      * 「개인정보동의서에 서명내용 있으면 서명확인완료(위임, 개인정보 모두)로 보이게 /
@@ -479,7 +515,9 @@ final class DelegationGate
     public static function signed(Prescription $prescription): bool
     {
         return self::쓸서명($prescription) !== null
-            || self::서면위임장($prescription) !== null;
+            || self::서면위임장($prescription) !== null
+            /* 거래처 서류함에 올려 둔 종이 위임도 받은 것으로 센다 (2026-10-07) */
+            || self::거래처서면서류($prescription) !== null;
     }
 
     /** 막아야 하면 그 말을, 지나가도 되면 null */
