@@ -1316,13 +1316,21 @@ class ConsentController extends Controller
      */
     public function downloadDelegationOverlayPdf(Prescription $prescription)
     {
-        $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
-            ->where('status', 'agreed')
-            ->whereNotNull('signature_data')
-            ->latest()
-            ->firstOrFail();
+        /* **이 건에 쓸 서명으로 그린다** (2026-10-07 지시 · SR 관리 3번).
 
-        $pdfData = $this->buildDelegationOverlayPdf($consent);
+           여태 이 처방전에 달린 동의만 찾아(firstOrFail) 없으면 404 였다. 그런데 서명은
+           한 번 받으면 위임기간 안에서 다시 쓰므로(2026-09-26 결정), 지난 서명을 빌려 쓰는
+           건에는 제 동의 줄이 없다 — 화면은 「서명 완료」인데 「요양비위임장 PDF」를 누르면
+           없는 파일이 떴다. 10-01 이후만 72건이다.
+
+           DelegationGate::쓸서명 이 그 넷을 한 곳에서 본다(이 건ㆍ지난 건ㆍ옮겨 온 것ㆍ
+           공개 동의서). 배지ㆍ문과 같은 것을 보아야 화면마다 말이 갈리지 않는다. */
+        $consent = \App\Support\DelegationGate::쓸서명($prescription);
+
+        abort_if(! $consent, 404, '서명을 받은 위임동의가 없습니다.');
+
+        /* 그릴 기준은 **이 건**이다 — 빌려 쓴 동의는 옛 처방전에 달려 있다 */
+        $pdfData = $this->buildDelegationOverlayPdf($consent, true, $prescription);
 
         $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
         $filename = '요양비지급청구위임장_' . $consent->patient_name . '_' . $mobile . '.pdf';
@@ -1361,18 +1369,17 @@ class ConsentController extends Controller
      */
     public function overlayPdfBytes(Prescription $prescription): ?string
     {
-        $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
-            ->where('status', 'agreed')
-            ->whereNotNull('signature_data')
-            ->latest()
-            ->first();
+        /* 팩스통합본에 실을 위임장도 **이 건에 쓸 서명**으로 그린다 (2026-10-07 · SR 관리 3번).
+           지난 서명을 빌려 쓰는 건에서 여기만 제 동의를 찾으면, 통합본에서 위임장 쪽이
+           통째로 빠진 채 공단으로 나간다. */
+        $consent = \App\Support\DelegationGate::쓸서명($prescription);
 
         if (!$consent) {
             return null;
         }
 
         try {
-            return $this->buildDelegationOverlayPdf($consent);
+            return $this->buildDelegationOverlayPdf($consent, true, $prescription);
         } catch (\Throwable $e) {
             \Log::warning('요양비위임장 생성 실패(팩스통합): ' . $e->getMessage());
             return null;
@@ -1405,8 +1412,16 @@ class ConsentController extends Controller
      * $withSignature 를 끄면 서명란을 비운 채로 그린다 — 서명하기 **전에** 환자에게
      * 무엇에 서명하는지 보여 주는 자리에서 쓴다(2026-09-10 「서명 동의」).
      */
-    private function buildDelegationOverlayPdf(PrescriptionConsent $consent, bool $withSignature = true): string
-    {
+    /**
+     * @param  Prescription|null  $기준  이 건으로 그린다 — 비우면 동의가 달린 처방전.
+     *         **지난 서명을 빌려 쓰는 건**에서는 동의가 다른 처방전에 달려 있으므로,
+     *         그대로 두면 옛 건의 주민등록번호ㆍ거래처로 그려진다 (2026-10-07 · SR #3).
+     */
+    private function buildDelegationOverlayPdf(
+        PrescriptionConsent $consent,
+        bool $withSignature = true,
+        ?Prescription $기준 = null,
+    ): string {
         \App\Models\DelegationSetting::applyToConfig();  // DB 설정 → config('delegation.*')
 
         $templatePath = resource_path('pdf/delegation_form.pdf');
@@ -1450,7 +1465,7 @@ class ConsentController extends Controller
 
             // 1페이지에만 텍스트 필드 + 서명 오버레이
             if ($p === 1) {
-                $this->stampDelegationFields($pdf, $consent, $fontName);
+                $this->stampDelegationFields($pdf, $consent, $fontName, $기준);
 
                 // 서명 오버레이 ('@': 원본 이미지 데이터 직접 사용, 알파채널 PNG는 GD로 처리)
                 if ($withSignature && $imgData !== '') {
@@ -1488,17 +1503,20 @@ class ConsentController extends Controller
     public function saveDelegationDocument(Prescription $prescription): ?PrescriptionDocument
     {
         try {
-            $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
-                ->where('status', 'agreed')
-                ->whereNotNull('signature_data')
-                ->latest()
-                ->first();
+            /* **이 건에 쓸 서명으로 그린다** (2026-10-07 지시 · SR 관리 3번).
+
+               이 처방전의 동의만 찾던 자리다. 그래서 지난 서명을 빌려 쓰는 건에서는
+               「설정 반영 재생성」을 눌러도 「서명된 위임동의가 없어 생성할 수 없습니다」로
+               막혔고, 위임장이 영영 만들어지지 않았다 — 10-01 이후 72건이 그랬다. */
+            $consent = \App\Support\DelegationGate::쓸서명($prescription);
 
             if (!$consent) {
                 return null;
             }
 
-            $pdfData = $this->buildDelegationOverlayPdf($consent);
+            /* 그릴 기준은 **이 건**이다 — 빌려 쓴 동의는 옛 처방전에 달려 있어,
+               그대로 두면 옛 건의 주민등록번호ㆍ거래처로 그려진다. */
+            $pdfData = $this->buildDelegationOverlayPdf($consent, true, $prescription);
 
             /* 파일 이름도 종이에 적히는 값과 같아야 한다 — 안은 새 연락처인데 이름은 옛
                번호이면, 파일만 보고 고른 사람이 옛 것을 보냈다고 여긴다. */
@@ -1552,9 +1570,15 @@ class ConsentController extends Controller
      * ①위임인(성명·주민번호·전화) ②준요양기관 ③수령계좌 ④자가도뇨 체크 ⑤위임기간.
      * 준요양기관·수령계좌 값은 config/delegation.php(.env) 에서 온다.
      */
-    private function stampDelegationFields(\setasign\Fpdi\Tcpdf\Fpdi $pdf, PrescriptionConsent $consent, string $fontName): void
-    {
-        $patient = $consent->prescription?->patient;
+    private function stampDelegationFields(
+        \setasign\Fpdi\Tcpdf\Fpdi $pdf,
+        PrescriptionConsent $consent,
+        string $fontName,
+        ?Prescription $기준 = null,
+    ): void {
+        /* 지난 서명을 빌려 쓰는 건은 동의가 다른 처방전에 달려 있다 — 넘겨받은 건을 먼저 본다 */
+        $대상    = $기준 ?? $consent->prescription;
+        $patient = $대상?->patient;
         $prov    = config('delegation.provider', []);
         $acct    = config('delegation.account', []);
         $sd      = $consent->responded_at ?? now();
@@ -1631,7 +1655,7 @@ class ConsentController extends Controller
         $put('patient_name', $patient?->bare_name ?: Patient::bare($consent->patient_name));
         // 법정서식(요양비 지급청구 위임장) — 평문이 필요한 지점. 감사로그가 남는다(P0-1).
         // 처방전에 적힌 번호를 먼저 쓰고, 없으면 환자 정보의 번호를 쓴다.
-        $rrn = $consent->prescription?->residentNoOcrFor('nhis_claim_form')
+        $rrn = $대상?->residentNoOcrFor('nhis_claim_form')
                ?: $patient?->residentNoFor('nhis_claim_form');
         // 서식에는 하이픈을 넣어 적는다. 저장은 숫자 열세 자리다.
         if ($rrn && preg_match('/^(\d{6})-?(\d{7})$/', preg_replace('/\s/', '', $rrn), $rm)) {
