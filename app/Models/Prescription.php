@@ -580,6 +580,50 @@ class Prescription extends Model
             }
         });
 
+        /* **다음 재구매 가능일은 사용 시작일 × 총 처방일수가 정한다**
+           (2026-10-07 지시 · SR #77 「구입일 및 사용시작일 2개의 값이 입력되면 해당 값이
+           계산되어야 하며, 해당값은 총 처방일수 + 사용시작일」 · SR #103 「Five/Six(110days)
+           정보 있으면 +20일 자동 계산되어야 하고, block 필요」).
+
+           셈은 BenefitDates 와 같은 한 가지다 — 사용 시작일 + 총 처방일수, Five/Six(110days)
+           이면 스무 날 더. 그 자리는 **돈이 들어올 때만** 다시 세므로(onPaid), 그 사이에
+           담당자가 사용 시작일이나 총 처방일수를 고치면 화면이 셈한 값만 저장됐다.
+           화면 셈이 어긋나 있던 자리가 그래서 그대로 저장됐다(Five/Six 건이 스무 날 앞섰다).
+
+           화면에서 그 칸을 잠갔지만 여기서도 굳힌다 — API 나 직접 POST 로는 어긋난 값이
+           담길 수 있고, 재구매 제한이 이 값을 먼저 본다(RepurchaseWindow).
+
+           **셀 수 없으면 손대지 않는다.** 비우지도 않는다 — 받은 건의 급여 날짜를 빈 값으로
+           덮지 않는다는 잣대와 같다(SR #51). 모르면 적힌 것을 그대로 둔다. */
+        static::saving(function (self $rx) {
+            $시작 = trim((string) ($rx->use_start_date ?? ''));
+            $일수 = (int) ($rx->total_days ?? 0);
+
+            if ($시작 === '' || $일수 < 1) {
+                return;
+            }
+
+            try {
+                $날 = \Carbon\Carbon::parse($시작)->startOfDay();
+            } catch (\Throwable) {
+                return;
+            }
+
+            /* Five/Six 프로그램(05 Fiveㆍ06 Six)이면 스무 날 늦다 — 90일 처방이지만
+               110일분을 받아 가기 때문이다. 이미 110일이 적힌 건에는 더하지 않는다
+               (2026-10-07 지시). 깃발은 `five_program` 이다 — `five_110days` 는 날짜를
+               적는 칸이라 깃발로 쓸 수 없다(App\Support\BenefitDates 에 자세히 적어 두었다). */
+            $더할것 = in_array(trim((string) ($rx->five_program ?? '')), ['05', '06'], true)
+                        && $일수 < 110
+                            ? 20 : 0;
+
+            $셈한것 = $날->copy()->addDays($일수 + $더할것)->toDateString();
+
+            if ((string) $rx->next_repurchase !== $셈한것) {
+                $rx->next_repurchase = $셈한것;
+            }
+        });
+
         /* 빈 초안이 아닌 처방전은 주문 관리에도 선다.
            어느 길로 만들어지든(업로드ㆍ상담하기ㆍ주문 등록의 저장ㆍ위임동의 서명) 빠지지
            않게 여기 한 곳에서 세운다 — 길마다 한 줄씩 붙여 두었더니 나중에 난 길(상담하기)이
@@ -602,14 +646,15 @@ class Prescription extends Model
                배정은 「누가 볼 것인가」를 적는 일이지 「이 건을 주문으로 진행한다」는 뜻이
                아니므로, 사람이 적는 칸이 하나도 바뀌지 않은 저장에서는 세우지 않는다.
 
-               청구처도 셈에서 뺀다 — 바로 위 saving 이 유형ㆍ자격으로 채우는 칸이라,
-               그것을 내용으로 세면 열어 보기만 해도 다시 주문이 나게 된다.
+               청구처와 다음 재구매 가능일도 셈에서 뺀다 — 위의 saving 이 유형ㆍ자격과
+               사용 시작일ㆍ총 처방일수로 채우는 칸이라, 그것을 내용으로 세면 열어 보기만
+               해도 다시 주문이 나게 된다.
 
                일부러 부른 자리는 그대로다 — 주문 등록의 저장과 위임동의 서명은 OrderSync
                를 직접 부른다. */
             $내용바뀜 = array_diff(
                 array_keys($p->getChanges()),
-                ['assigned_user_id', 'updated_at', 'updated_by', 'claim_agency'],
+                ['assigned_user_id', 'updated_at', 'updated_by', 'claim_agency', 'next_repurchase'],
             );
             if ($p->wasRecentlyCreated || $내용바뀜) {
                 \App\Support\OrderSync::seed($p);

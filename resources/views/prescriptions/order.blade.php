@@ -4077,7 +4077,10 @@ $calcDeposit  = $calcCopay;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">Five/Six</span>
-                <select class="form-control" id="f-five-program" style="flex:1;">
+                {{-- Five(05)ㆍSix(06)를 고르면 다음 재구매 가능일이 스무 날 뒤로 선다
+                     (2026-10-07 지시 · SR #103). 고치면 그 자리에서 다시 센다. --}}
+                <select class="form-control" id="f-five-program" style="flex:1;"
+                        onchange="if (typeof calc다음재구매 === 'function') calc다음재구매();">
                   <option value="">선택</option>
                   <option value="00" @selected(($prescription->five_program ?? '') == '00')>N/A</option>
                   <option value="05" @selected(($prescription->five_program ?? '') == '05')>Five</option>
@@ -4124,10 +4127,12 @@ $calcDeposit  = $calcCopay;
                      브라우저가 「Five/Six(110days」 와 「)」 로 갈라 괄호 하나만
                      아랫줄에 남았다. 끊을 자리를 우리가 정한다. --}}
                 <span class="rx-field-label">Five/Six<br>(110days)</span>
-                {{-- 값이 적혀 있으면 다음 재구매 가능일이 스무 날 뒤로 선다
-                     (2026-09-08 확인요청 10쪽). 고치면 그 자리에서 다시 센다. --}}
+                {{-- 이 칸은 **날짜를 적는 자리**다 — 이관된 건에 모두 날짜가 담겨 있다.
+                     한때 이 칸에 값이 있으면 다음 재구매 가능일이 스무 날 뒤로 섰는데,
+                     이관 뒤에는 그 잣대로 프로그램이 아닌 건까지 뒤로 밀렸다. 깃발은
+                     위의 「Five/Six」 고르는 칸이다 (2026-10-07 지시 · SR #103). --}}
                 <input type="text" class="form-control" id="f-five" value="{{ $prescription->five_110days ?? '' }}"
-                       oninput="calcBenefitEnd()" style="flex:1;" />
+                       style="flex:1;" />
               </div>
               {{-- 2열 — 자격 … 사유 11줄. 1차 요청서 17쪽 순서를 따른다
                    (… 요류역학검사일·자격 / 1일 처방개수·총 처방기간·총계 /
@@ -4295,14 +4300,19 @@ $calcDeposit  = $calcCopay;
                      min-width:0 이 없으면 이 묶음이 '자동' 버튼 폭(68) 아래로 줄지 못해
                      3열 1600 에서 열 밖으로 68px, 2열 1280 에서 92px 삐져나갔다(실측).
                      값은 제 컬럼에서 읽는다. --}}
-                <div style="display:flex;gap:8px;flex:1;min-width:0;align-items:center;">
-                  <input type="date" class="form-control" id="f-next-repurchase" value="{{ $prescription->next_repurchase ?? '' }}" style="flex:1;min-width:0;" />
-                  <button type="button" onclick="calcNextRepurchase(true)"
-                          title="처방전발행일 + 처방기간(일) + 1일"
-                          style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--primary);border-radius:8px;background:var(--primary-light);color:var(--primary);font-size:13px;font-weight:500;line-height:20px;cursor:pointer;white-space:nowrap;">
-                    <i class="fa-solid fa-rotate"></i> 자동
-                  </button>
-                </div>
+                {{-- **손으로 적지 않는다** (2026-10-07 지시 · SR #77 「첫번째 자동의 내용이
+                     있는 사항은 구매 이후 자동으로 생성되어야 하며 입력할 수 없게끔」 ·
+                     SR #103 「block 필요」).
+
+                     사용 시작일과 총 처방일수에서 서는 값이다. 적을 수 있게 두면 두 값과
+                     어긋난 날짜가 저장되고, 재구매 제한이 그 값을 먼저 본다
+                     (RepurchaseWindow). 「자동」 단추도 걷었다 — 두 값이 들어오는 순간
+                     저절로 서므로 누를 일이 없고, 그 단추의 셈은 아래 칸(발행일 기준)의
+                     것이라 누르면 다른 날짜가 이 칸에 섰다. --}}
+                <input type="text" class="form-control" id="f-next-repurchase" readonly
+                       value="{{ $prescription->next_repurchase ?? '' }}"
+                       placeholder="사용 시작일과 총 처방일수로 자동 계산됩니다"
+                       style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
               </div>
               <div class="rx-field-row">
                 {{-- 이름을 「다음 재구매 가능일 (발행일 기준)」으로 세운다 (2026-09-23 지시).
@@ -10237,12 +10247,15 @@ window.HELP_TOUR_STEPS = [
 
        그 칸에 값이 적혀 있으면 그 프로그램으로 본다 — 고르는 칸이 아니라 적는 칸이고,
        적혀 있다는 것 자체가 그 프로그램이라는 뜻이다. 서버도 같은 잣대를 쓴다. */
-    const 백십일 = (document.getElementById('f-five')?.value ?? '').trim() !== '';
-    const next = new Date(개시);
-    next.setDate(next.getDate() + days + (백십일 ? 20 : 0));
+    /* 셈은 `calc다음재구매()` 한 곳에 둔다 (2026-10-07 · SR #103).
 
-    const n = document.getElementById('f-next-repurchase');
-    if (n) n.value = fmt(next);
+       여태 이 자리에서도 그 칸에 적었다. 그런데 바로 뒤에 도는 `calc다음재구매()` 가
+       **+20 없이** 같은 칸을 다시 적어, Five/Six 건의 다음 재구매 가능일이 화면에서
+       스무 날 앞서 보였다. 그 값이 그대로 저장되므로(화면이 보낸 값을 적는다) 저장된
+       날짜도 틀렸다 — 서버의 BenefitDates 는 결제 때만 다시 센다.
+
+       한 칸을 두 함수가 적지 않게 한다. */
+    if (typeof calc다음재구매 === 'function') { calc다음재구매(); }
   };
 
   /* 사용 개시일을 고치면 급여 종료일이 그 자리에서 다시 선다 (2026-09-10 지시).
@@ -10338,7 +10351,20 @@ window.HELP_TOUR_STEPS = [
     const d = new Date(시작);
     if (isNaN(d.getTime())) { 칸.value = ''; return; }
 
-    d.setDate(d.getDate() + 일수);
+    /* Five/Six 프로그램이면 스무 날 뒤다 (2026-10-07 지시 · SR #103).
+
+       깃발은 **「Five/Six」 고르는 칸**(05 Fiveㆍ06 Six)이다. 아래의 「Five/Six(110days)」
+       는 날짜를 적는 칸이라 깃발로 쓸 수 없다 — 이관된 73,754건에 날짜가 담겨 있어,
+       그것을 깃발로 보면 프로그램이 아닌 건에도 +20 이 붙는다.
+
+       이미 110일이 적힌 건에는 더하지 않는다 — 스무 날을 더하는 까닭이 「90일 처방이지만
+       110일분을 받아 간다」는 것이라, 두 번 세게 된다.
+
+       서버도 같은 잣대를 쓴다(App\Support\BenefitDates). */
+    const 프로그램 = (document.getElementById('f-five-program')?.value ?? '').trim();
+    const 백십일 = (프로그램 === '05' || 프로그램 === '06') && 일수 < 110;
+
+    d.setDate(d.getDate() + 일수 + (백십일 ? 20 : 0));
 
     const 두자리 = (n) => String(n).padStart(2, '0');
     칸.value = `${d.getFullYear()}-${두자리(d.getMonth() + 1)}-${두자리(d.getDate())}`;
