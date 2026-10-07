@@ -1552,15 +1552,6 @@ Route::post('/pay/{token}/simulate', [\App\Http\Controllers\PaymentLinkControlle
 Route::post('/toss/webhook', [TossWebhookController::class, 'handle'])->name('toss.webhook');
 Route::post('/toss/webhook/{key}', [TossWebhookController::class, 'handle'])->name('toss.webhook.keyed');
 
-/* ── Agent 되돌이 확인용 — 열면 일부러 멈춘다 ─────────────────
-   확인이 끝나면 이 라우트와 App\Support\AgentSelfTest 를 함께 걷는다
-   (2026-10-07 시험). */
-Route::get('/dev/agent-error-test', function () {
-    abort_unless(\Illuminate\Support\Facades\Auth::user()?->email === 'admin@ce-admin.co.kr', 403);
-
-    return \App\Support\AgentSelfTest::쪽수(37) . ' 쪽';
-})->middleware('auth');
-
 // ── 개발용: FCM 상태 진단 및 테스트 전송 ──────────────────
 Route::get('/dev/fcm-status', function () {
     if (!\Illuminate\Support\Facades\Auth::check()) abort(403);
