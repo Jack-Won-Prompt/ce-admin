@@ -60,6 +60,14 @@ class AgentNotifier
             return;
         }
 
+        /* **우리가 멈춘 것은 우리에게 보내지 않는다** (2026-10-07 확인).
+           Agent 가 일하다 멈추면 그 잘못이 오류 기록에 담기고, 담기면 또 Agent 에게
+           넘어가 또 Claude 를 부른다. 묶기(하루 한 번)가 있어 돌지는 않았지만, 자기
+           실패를 자기가 분석하는 일거리가 실제로 하나 더 생겼다. */
+        if (self::우리가멈춘것인가($e)) {
+            return;
+        }
+
         /* 같은 잘못은 하루 한 번. 자리(파일:줄)와 갈래로 묶는다 — 메시지에 번호나
            이름이 섞여 들어가는 잘못이 많아, 메시지까지 넣으면 묶이지 않는다. */
         $열쇠 = 'agent:error:' . substr(hash('sha256', $e::class . '|' . $e->getFile() . ':' . $e->getLine()), 0, 24);
@@ -85,6 +93,28 @@ class AgentNotifier
     }
 
     // ── 안쪽 ─────────────────────────────────────────────
+
+    /** Agent 자신이 멈춘 것인가 — 그 자리에서 난 잘못은 넘기지 않는다 */
+    private static function 우리가멈춘것인가(Throwable $e): bool
+    {
+        $자리 = str_replace('\\', '/', $e->getFile());
+
+        foreach ([
+            'app/Services/AgentWorker.php',
+            'app/Services/AgentFixer.php',
+            'app/Jobs/AgentWorkJob.php',
+            'app/Support/AgentNotifier.php',
+            'app/Http/Controllers/AgentHookController.php',
+            'app/Http/Controllers/AgentReplyController.php',
+            'app/Console/Commands/AgentWork',
+        ] as $우리자리) {
+            if (str_contains($자리, $우리자리)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * 보낼 자리인가 — 켜졌는지, 주소와 열쇠가 있는지.

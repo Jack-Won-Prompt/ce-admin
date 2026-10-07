@@ -305,12 +305,7 @@ class AgentWorker
             ->implode("
 ");
 
-        /* 앞뒤에 울타리(```)가 붙어 오는 때가 있다 — 가운데만 꺼낸다 */
-        if (preg_match('~\{.*\}~s', $글, $m)) {
-            $글 = $m[0];
-        }
-
-        $짜인것 = json_decode($글, true);
+        $짜인것 = $this->짜인덩이를꺼낸다($글);
 
         if (! is_array($짜인것)) {
             $덩이들 = collect($답->json('content') ?? [])->pluck('type')->implode(', ');
@@ -323,6 +318,50 @@ class AgentWorker
                           + (int) ($답->json('usage.output_tokens') ?? 0);
 
         return $짜인것;
+    }
+
+    /**
+     * 받은 글에서 짜인 덩이(JSON) 하나를 꺼낸다 (2026-10-07 고침).
+     *
+     * 세 가지가 섞여 온다.
+     *   · 앞뒤에 울타리(```json) 가 붙는다
+     *   · 앞뒤에 사람에게 하는 말이 붙는다 — 짝이 맞는 덩이만 집는다
+     *   · **JSON 이 모르는 달아내기가 섞인다.** `\$corpNum` 한 자리 때문에 분석 한
+     *     건이 통째로 버려졌다(2026-10-07 확인). PHP 변수 이름을 적다가 앞의
+     *     백슬래시를 함께 적어 보내는데, JSON 에 `\$` 라는 달아내기는 없다.
+     *
+     * 그래서 집은 덩이를 그대로 한 번, 모르는 달아내기를 떼고 또 한 번 읽어 본다.
+     */
+    private function 짜인덩이를꺼낸다(string $글): ?array
+    {
+        $글 = trim(preg_replace('~```(?:json)?~i', '', $글) ?? $글);
+
+        $후보 = [];
+
+        /* 짝이 맞는 덩이 — 뒤에 말이 더 붙어 와도 거기까지만 집는다 */
+        if (preg_match_all('~\{(?:[^{}]++|(?R))*\}~s', $글, $m)) {
+            $후보 = $m[0];
+        }
+
+        $후보[] = $글;
+
+        foreach ($후보 as $하나) {
+            foreach ([$하나, $this->모르는달아내기를뗀다($하나)] as $볼것) {
+                $짜인것 = json_decode($볼것, true);
+
+                if (is_array($짜인것)) {
+                    return $짜인것;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /** JSON 이 아는 달아내기(" \ / b f n r t u)만 남기고 나머지 백슬래시를 뗀다 */
+    private function 모르는달아내기를뗀다(string $글): string
+    {
+        return preg_replace('~\\\\(?![\\\\/"bfnrtu])~', '', $글) ?? $글;
     }
 
     /**
