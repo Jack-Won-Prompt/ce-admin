@@ -544,6 +544,42 @@ class Prescription extends Model
      */
     protected static function booted(): void
     {
+        /* **청구처는 유형 × 자격이 정한다 — 그 판정을 여기 한 곳에 둔다**
+           (2026-10-06 지시 · SR #76 「자격을 선택이 된 경우 청구처는 그에 따라 자동으로
+           선택되며 사람이 수동으로 수정할 수 없게끔」 / 2026-10-07 지시 ①).
+
+           여태 이 셈은 주문 등록의 저장 요청 안에만 있었다(PrescriptionController 의
+           $rxCols). 그 배열은 「화면이 보내 온 칸만 적는다」는 잣대로 걸러지므로
+           (`$request->has(...)`), **유형ㆍ자격을 싣지 않는 저장에서는 한 번도 돌지 않았다.**
+           10-01~10-07 에 청구처가 빈 주문이 115건이었고, 그중 기초 5건은 지자체인데
+           공단으로, 처방외 2건은 해당 없음인데 공단으로 읽히고 있었다 — 청구 관리가
+           빈 청구처를 공단으로 읽기 때문이다(NhisController).
+
+           규칙 자체는 한 곳이다 — ClaimAgency::fromBenefitClass.
+
+             일반ㆍ차상위경감 → 공단 · 기초 → 지자체 · 자동차보험ㆍ산재 → 해당 없음
+             처방외(유형 20)  → 해당 없음 (자격을 묻지 않는다)
+
+           자격이 비면 규칙이 값을 주지 못한다 — 그때는 적힌 값을 그대로 둔다. 담당자가
+           자격을 고르는 순간 이 자리가 다시 와서 맞춘다. */
+        static::saving(function (self $rx) {
+            /* 칸이 있는지는 한 번만 묻는다 — 저장마다 information_schema 를 때리면
+               일꾼이 다섯뿐인 서버에서 그 자체가 짐이 된다. */
+            static $칸있나 = null;
+            $칸있나 ??= Schema::hasColumn('prescriptions', 'claim_agency');
+            if (! $칸있나) {
+                return;
+            }
+
+            $규칙 = (string) ($rx->counsel_acc_add_type ?? '') === \App\Support\BillingStrategy::TYPE_NONRX
+                ? \App\Support\ClaimAgency::NONE
+                : \App\Support\ClaimAgency::fromBenefitClass($rx->benefit_class);
+
+            if ($규칙 !== null && $규칙 !== $rx->claim_agency) {
+                $rx->claim_agency = $규칙;
+            }
+        });
+
         /* 빈 초안이 아닌 처방전은 주문 관리에도 선다.
            어느 길로 만들어지든(업로드ㆍ상담하기ㆍ주문 등록의 저장ㆍ위임동의 서명) 빠지지
            않게 여기 한 곳에서 세운다 — 길마다 한 줄씩 붙여 두었더니 나중에 난 길(상담하기)이
@@ -552,7 +588,32 @@ class Prescription extends Model
            이미 줄이 있으면 손대지 않는다(OrderSync::seed). 값을 다시 맞추는 것은 그 일을
            하려고 부른 자리의 몫이다. */
         static::saved(function (self $p) {
-            \App\Support\OrderSync::seed($p);
+            /* **담당자만 적힌 저장에서는 세우지 않는다** (2026-10-07 지시 「저장 전까지
+               생성되면 안됨」).
+
+               주문 목록에서 처방전을 열면 아직 임자가 없는 건에 연 사람이 적힌다
+               (PrescriptionController::show · claim=1). 그 한 줄도 save() 라서 이 자리가
+               깨어났고, 위드웍스에서 옮겨 온 건은 유형이 이미 실려 있어 seed 의 잣대를
+               그대로 지났다 — **열어 보기만 한 건에 주문번호가 났다**(10-07 09:07
+               EUD202610070907461 · 09:23 EUD202610070923431 — 두 건의 자취에 저장이 한 줄도
+               없다).
+
+               주문번호는 위드웍스ㆍ토스ㆍ팝빌ㆍ공단으로 나가는 대외 식별자다. 담당자
+               배정은 「누가 볼 것인가」를 적는 일이지 「이 건을 주문으로 진행한다」는 뜻이
+               아니므로, 사람이 적는 칸이 하나도 바뀌지 않은 저장에서는 세우지 않는다.
+
+               청구처도 셈에서 뺀다 — 바로 위 saving 이 유형ㆍ자격으로 채우는 칸이라,
+               그것을 내용으로 세면 열어 보기만 해도 다시 주문이 나게 된다.
+
+               일부러 부른 자리는 그대로다 — 주문 등록의 저장과 위임동의 서명은 OrderSync
+               를 직접 부른다. */
+            $내용바뀜 = array_diff(
+                array_keys($p->getChanges()),
+                ['assigned_user_id', 'updated_at', 'updated_by', 'claim_agency'],
+            );
+            if ($p->wasRecentlyCreated || $내용바뀜) {
+                \App\Support\OrderSync::seed($p);
+            }
 
             /* 처방전 본 그림을 갈아 끼웠으면 그것을 물었던 요청을 닫는다
                (2026-09-12 지시). 본 그림은 첨부가 아니어서 첨부 쪽 자리가

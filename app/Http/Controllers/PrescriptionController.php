@@ -3930,20 +3930,17 @@ class PrescriptionController extends Controller
                  일반ㆍ차상위경감 → 공단 · 기초 → 지자체 · 자동차보험ㆍ산재 → 해당 없음
                  처방외          → 해당 없음 (자격을 묻지 않는다)
 
-               화면에서도 그 칸을 잠갔지만 여기서도 굳힌다 — API 나 직접 POST 로는
+               화면에서도 그 칸을 잠갔지만 서버에서도 굳힌다 — API 나 직접 POST 로는
                어긋난 값이 담길 수 있고, 청구 관리는 빈 청구처를 공단으로 읽는다
                (NhisController · SR #88 에서 겪은 그 자리다).
 
-               자격이 비면 규칙이 값을 주지 못한다 — 그때만 화면 값을 그대로 둔다. */
-            'claim_agency'         => (function () use ($request) {
-                if ((string) $request->input('counsel_acc_add_type')
-                        === \App\Support\BillingStrategy::TYPE_NONRX) {
-                    return \App\Support\ClaimAgency::NONE;
-                }
-
-                return \App\Support\ClaimAgency::fromBenefitClass($request->input('benefit_class'))
-                    ?? $request->input('claim_agency');
-            })(),
+               **굳히는 자리는 Prescription 모델의 saving 한 곳이다** (2026-10-07 지시 ①).
+               여태 이 배열 안에서 셌더니, 이 배열이 「화면이 보내 온 칸만 적는다」로
+               걸러지는 탓에 유형ㆍ자격을 싣지 않는 저장에서는 한 번도 돌지 않았다 —
+               10-01~10-07 에 청구처가 빈 주문이 115건이었다. 여기서는 화면 값을 그대로
+               넘기고, 규칙이 값을 주면 모델이 덮는다. 자격이 비면 규칙이 값을 주지
+               못하므로 화면 값이 그대로 남는다. */
+            'claim_agency'         => $request->input('claim_agency'),
             /* 이 건을 보내는 청구처 — 주소로 찾아 사람이 고른 한 줄이다 */
             'billing_office_id'    => $request->input('billing_office_id'),
             'local_gov'            => $request->input('local_gov'),
