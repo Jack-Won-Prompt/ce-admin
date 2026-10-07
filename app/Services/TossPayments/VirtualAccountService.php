@@ -124,6 +124,67 @@ class VirtualAccountService extends TossClient
         return $p && str_starts_with((string) $p->payment_key, 'SIMVA-');
     }
 
+    /**
+     * **입금 전 가상계좌를 닫는다** (2026-10-07 지시 — 결제전송에서 수단을 바꿀 때).
+     *
+     * 링크만 닫아서는 모자라다. 계좌는 토스에 72시간 살아 있고, 그 계좌로 돈이 들어오면
+     * 입금 웹훅이 `toss_order_id` 로 결제 줄을 찾아 입금완료로 처리한다 — **링크 상태를
+     * 보지 않는다.** 그래서 가상계좌로 안내한 뒤 링크페이로 바꿔도 환자가 옛 문자의
+     * 계좌로 넣으면 그대로 들어왔다.
+     *
+     * 토스에는 「가상계좌 발급 취소」가 따로 없고 결제 취소 하나로 한다. 입금 전이면
+     * 돌려줄 돈이 없으므로 환불 계좌를 싣지 않는다(토스 문서 확인).
+     *
+     * **들어온 돈은 건드리지 않는다** — 그것은 환불이고, 환불 계좌와 담당자의 손이 함께
+     * 가는 일이라 PaymentCancelService 가 맡는다.
+     *
+     * @return array{ok:bool, message:string}
+     */
+    public function 가상계좌닫기(?TossPayment $결제, string $사유): array
+    {
+        if (! $결제 || (string) $결제->method !== 'VIRTUAL_ACCOUNT') {
+            return ['ok' => true, 'message' => '닫을 가상계좌가 없습니다.'];
+        }
+
+        if ($결제->deposited_at || (string) $결제->status === 'DONE') {
+            return ['ok' => false, 'message' => '이미 입금된 계좌는 닫을 수 없습니다 — 환불로 처리해야 합니다.'];
+        }
+
+        if (in_array((string) $결제->status, ['CANCELED', 'EXPIRED', 'ABORTED'], true)) {
+            return ['ok' => true, 'message' => '이미 닫혀 있습니다.'];
+        }
+
+        /* 시험용으로 지어낸 계좌는 토스에 없다 — 물으면 NOT_FOUND_PAYMENT 로 죽는다 */
+        if (self::isSimulated($결제)) {
+            $결제->forceFill(['status' => 'CANCELED'])->save();
+
+            return ['ok' => true, 'message' => '임의로 세운 계좌라 우리 쪽에서만 닫았습니다.'];
+        }
+
+        try {
+            $답 = $this->post('/v1/payments/' . $결제->payment_key . '/cancel', [
+                'cancelReason' => mb_substr($사유, 0, 200),
+            ]);
+        } catch (TossApiException $e) {
+            Log::warning('[Toss] 입금 전 가상계좌를 닫지 못했다', [
+                'order' => $결제->order_id, 'key' => $결제->payment_key, 'error' => $e->getMessage(),
+            ]);
+
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+
+        $결제->forceFill([
+            'status'       => $답['status'] ?? 'CANCELED',
+            'raw_response' => $답,
+        ])->save();
+
+        Log::info('[Toss] 입금 전 가상계좌를 닫았다', [
+            'order' => $결제->order_id, 'key' => $결제->payment_key, 'reason' => $사유,
+        ]);
+
+        return ['ok' => true, 'message' => '발급해 둔 가상계좌를 닫았습니다.'];
+    }
+
     // ─────────────────────────────────────────────────────────────
     // 결제 조회
     // ─────────────────────────────────────────────────────────────

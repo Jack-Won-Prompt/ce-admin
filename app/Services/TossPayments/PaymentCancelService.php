@@ -28,9 +28,14 @@ class PaymentCancelService extends TossClient
      * 주문의 결제를 무른다.
      *
      * @param  int|null  $amount  부분 취소 금액. 비우면 남은 전액.
+     * @param  array|null  $refundAccount  가상계좌로 받은 돈을 돌려줄 계좌
+     *         (['bank'=>…, 'accountNumber'=>…, 'holderName'=>…]).
+     *         **꼴을 고쳤다** (2026-10-07) — 여태 ?string 으로 받았는데 두 호출자가
+     *         배열을 넘긴다(OrderReturnController:1022ㆍReturnFinalApproval:150의
+     *         돌려줄계좌(): ?array). 그 길로 들어오면 TypeError 로 죽는다.
      * @return array{ok:bool, message:string, status?:string, canceled?:int, payment?:TossPayment}
      */
-    public function cancel(Order $order, string $reason, ?int $amount = null, ?string $refundAccount = null): array
+    public function cancel(Order $order, string $reason, ?int $amount = null, ?array $refundAccount = null): array
     {
         $payment = $this->paymentOf($order);
 
@@ -120,9 +125,25 @@ class PaymentCancelService extends TossClient
             $body['cancelAmount'] = $amount;
         }
 
-        /* 가상계좌로 받은 돈은 돌려줄 계좌를 함께 보내야 한다 — 카드처럼 왔던 길로
-           되돌아가지 않기 때문이다. 계좌가 없으면 토스가 거절하므로 미리 막는다. */
-        if ($payment->method_is_virtual_account ?? ($payment->method === '가상계좌')) {
+        /* 가상계좌로 **받은** 돈은 돌려줄 계좌를 함께 보내야 한다 — 카드처럼 왔던 길로
+           되돌아가지 않기 때문이다. 계좌가 없으면 토스가 거절하므로 미리 막는다.
+
+           **입금 전에는 묻지 않는다** (2026-10-07 지시 · 토스 문서 확인). 아직 들어온
+           돈이 없으니 돌려줄 것도 없고, 토스도 그 값을 요구하지 않는다. 결제전송에서
+           수단을 바꿀 때 발급해 둔 계좌를 닫는 길이 이 자리를 지나는데, 계좌를 묻고
+           막으면 닫을 수가 없다.
+
+           **조건도 고쳤다.** 여태 이렇게 적혀 있었다 —
+
+             $payment->method_is_virtual_account ?? ($payment->method === '가상계좌')
+
+           그런 속성은 없고(없는 속성은 null 이라 ?? 가 오른쪽으로 넘어간다), 저장값은
+           `VIRTUAL_ACCOUNT` 다 — 사람이 읽는 이름(`가상계좌`)은 method_label 쪽이다.
+           그래서 이 분기는 **한 번도 참이 된 적이 없고**, 호출자가 환불 계좌를 넘겨도
+           본문에 실리지 않았다. 가상계좌 환불을 토스가 거절해 온 자리다. */
+        $가상계좌 = (string) $payment->method === 'VIRTUAL_ACCOUNT';
+
+        if ($가상계좌 && $payment->deposited_at) {
             if (!$refundAccount) {
                 return ['ok' => false, 'message' => '가상계좌 입금액은 환불 계좌(은행ㆍ계좌번호ㆍ예금주)가 등록되어 있어야 환불할 수 있습니다.'];
             }

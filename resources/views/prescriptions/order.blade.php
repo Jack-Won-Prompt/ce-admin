@@ -1994,11 +1994,38 @@ $calcDeposit  = $calcCopay;
               </div>
             </div>
 
+            {{-- **번호는 고른다 — 적지 않는다** (2026-10-07 지시).
+
+                 여태 자유 입력이었는데, 가상계좌는 그 값을 쓰지 않고 늘 거래처의 환자
+                 번호로 보냈다(VirtualAccountForOrder::notify). 그래서 「바꿔 적어도 기본
+                 번호로 나간다」. 적는 칸을 두면 그 어긋남이 보이지 않으므로 고르는 칸으로
+                 바꾼다 — 보기는 거래처에 **저장된** 번호뿐이고, 서버도 거래처에서 읽는다.
+
+                 보호자 번호는 거래처의 `phone` 칸에 담긴다(이 화면의 f-mobile2). --}}
+            @php
+              $_payMobile   = $prescription->patient?->mobile;
+              $_payGuardian = $prescription->patient?->phone;
+              $_payMain     = (string) ($prescription->patient?->main_contact ?? '');
+            @endphp
             <div>
               <div style="font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;">받는 번호</div>
-              <input type="text" id="payMobile" class="form-control" style="font-size:12px;height:32px;"
-                     placeholder="010-XXXX-XXXX" data-phone
-                     value="{{ $prescription->patient?->mobile ?? $prescription->mobile_ocr ?? '' }}">
+              <select id="payContact" class="form-control" style="font-size:12px;height:32px;">
+                @if($_payMobile)
+                  <option value="mobile" @selected($_payMain !== 'guardian')>
+                    환자 · {{ $_payMobile }}@if($_payMain === 'mobile') · Main contact @endif
+                  </option>
+                @endif
+                @if($_payGuardian)
+                  <option value="guardian" @selected($_payMain === 'guardian')>
+                    보호자 · {{ $_payGuardian }}@if($_payMain === 'guardian') · Main contact @endif
+                  </option>
+                @endif
+              </select>
+              @if(!$_payMobile && !$_payGuardian)
+                <div style="font-size:10px;color:#B54708;margin-top:4px;">
+                  거래처에 전화번호가 없습니다. 거래처 정보를 저장한 뒤 보낼 수 있습니다.
+                </div>
+              @endif
               <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">
                 알림톡으로 먼저 보내고, 막히면 문자로 이어 보냅니다.
               </div>
@@ -13667,6 +13694,14 @@ window.HELP_TOUR_STEPS = [
   const PAY_INDEX_URL_FORM = @json(route('payment-links.index', ['order' => '__ID__']));
   const PAY_CANCEL_URL = @json(url('payment-links'));
 
+  /* 거래처에 **저장된** 번호 — 화면에서 고친 값과 견주어, 저장하지 않았으면 막는다
+     (2026-10-07 지시 「저장을 먼저 요구」). 보내는 번호는 서버가 거래처에서 읽으므로,
+     화면 값으로 보낸 줄 알고 넘어가면 엉뚱한 번호로 나갔다고 읽힌다. */
+  const PAY_CONTACTS = @json([
+    'mobile'   => (string) ($prescription->patient?->mobile ?? ''),
+    'guardian' => (string) ($prescription->patient?->phone ?? ''),
+  ]);
+
   /* 창을 열 때 이미 보냈거나 받았다는 것을 한 번 알린다 (2026-09-14 지시).
 
      단추에 붙인 딱지는 눈에 띄지 않을 수 있다. 보내기 전에 한 번은 말해 두어야
@@ -13755,6 +13790,10 @@ window.HELP_TOUR_STEPS = [
     if (va.paid) {
       tag.textContent = '입금완료';
       tag.style.cssText = 'font-size:10px;padding:1px 6px;border-radius:999px;background:var(--primary-50,#eef2ff);color:var(--primary);';
+    } else if (va.closed) {
+      /* 수단을 바꿀 때 닫은 계좌다 (2026-10-07) — 번호를 불러 주면 안 된다 */
+      tag.textContent = '해지됨 · 이 계좌로는 입금되지 않습니다';
+      tag.style.cssText = 'font-size:10px;padding:1px 6px;border-radius:999px;background:var(--alert-50,#fef0c7);color:#B54708;';
     } else if (va.expired) {
       tag.textContent = '기한지남 · 다시 발급 필요';
       tag.style.cssText = 'font-size:10px;padding:1px 6px;border-radius:999px;background:var(--alert-50,#fef0c7);color:#B54708;';
@@ -13875,8 +13914,9 @@ window.HELP_TOUR_STEPS = [
 
     pop.style.display = 'block';
     placePayPopover();
-    const mobile = document.getElementById('f-mobile')?.value;
-    if (mobile) document.getElementById('payMobile').value = mobile;
+    /* 번호는 거래처에 저장된 것에서 고른다 — 화면 값을 베껴 넣지 않는다 (2026-10-07).
+       여태 f-mobile 을 받는 칸에 복사했는데, 가상계좌는 그 값을 쓰지 않아 고친 번호가
+       조용히 버려졌다. 지금은 보기 자체가 저장된 번호뿐이다. */
     loadPaymentLinks();
   }
 
@@ -13900,17 +13940,55 @@ window.HELP_TOUR_STEPS = [
   }
   window.addEventListener('resize', placePayPopover);
 
-  async function sendPaymentLink(btn) {
+  async function sendPaymentLink(btn, 다시보내기 = false) {
     if (!PAY_STORE_URL) { showToast('주문을 먼저 생성해 주십시오.', 'warning'); return; }
 
-    const method = document.querySelector('input[name="pay_method"]:checked')?.value;
-    const mobile = document.getElementById('payMobile').value.trim();
+    const method  = document.querySelector('input[name="pay_method"]:checked')?.value;
+    const contact = document.getElementById('payContact')?.value;
     if (!method) { showToast('결제 방법을 선택해 주십시오.', 'warning'); return; }
-    if (!mobile) { showToast('수신 번호를 입력해 주십시오.', 'warning'); return; }
+    if (!contact) {
+      showToast('거래처에 전화번호가 없습니다. 거래처 정보를 저장한 뒤 보내 주십시오.', 'warning', 5000);
+      return;
+    }
+
+    /* **화면에서 고친 번호는 저장해야 나간다** (2026-10-07 지시).
+
+       보내는 번호는 서버가 거래처에서 읽는다. 화면에서 고쳐 두고 저장하지 않았으면
+       고친 번호가 아니라 예전 번호로 나가므로, 그대로 보내면 담당자는 고친 번호로
+       갔다고 읽는다. 어느 쪽이 다른지 적어 보여 주고 멈춘다. */
+    const 숫자만 = v => String(v || '').replace(/[^0-9]/g, '');
+    const 화면번호 = 숫자만(document.getElementById(contact === 'guardian' ? 'f-mobile2' : 'f-mobile')?.value);
+    const 적힌번호 = 숫자만(contact === 'guardian' ? PAY_CONTACTS.guardian : PAY_CONTACTS.mobile);
+
+    if (화면번호 && 화면번호 !== 적힌번호) {
+      const 줄 = [
+        '화면의 전화번호가 거래처에 저장된 번호와 다릅니다.',
+        '',
+        '거래처 : ' + (적힌번호 || '없음'),
+        '화면    : ' + 화면번호,
+        '',
+        '저장한 뒤에 보내 주십시오 — 보내는 번호는 거래처에 적힌 것을 씁니다.',
+      ];
+      await ceAlert(줄.join(String.fromCharCode(10)), { title: '결제전송', tone: 'warning' });
+      return;
+    }
 
     BtnState.loading(btn, '보내는 중...');
     try {
-      const res = await apiRequest(PAY_STORE_URL, 'POST', { method, mobile });
+      const res = await apiRequest(PAY_STORE_URL, 'POST',
+        { method, contact, confirm: 다시보내기 ? 1 : 0 });
+
+      /* 같은 수단으로 다시 보내는 것은 묻고 보낸다 (2026-10-07 지시).
+         서버가 묻기를 청하면(resend_confirm) 그 말을 그대로 띄우고, 「네」면 한 번 더
+         부른다 — 그때는 앞서 열려 있던 것을 서버가 닫고 새로 보낸다. */
+      if (res.code === 'resend_confirm') {
+        BtnState.reset(btn);
+        if (await ceConfirm(res.ask, { title: '결제전송' })) {
+          await sendPaymentLink(btn, true);
+        }
+        return;
+      }
+
       /* 못 보낸 것은 apiRequest 가 이미 알린다 — 여기서 또 알리면 같은 말이 두 번 뜬다 */
       if (res.success) {
         showToast(res.message || '보냈습니다.', 'success', 5000);

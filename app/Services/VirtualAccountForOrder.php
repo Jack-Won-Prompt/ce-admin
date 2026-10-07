@@ -36,9 +36,13 @@ final class VirtualAccountForOrder
     /**
      * 가상계좌를 마련해 문자로 보낸다.
      *
+     * @param  string|null  $받는번호  보낼 번호. 비우면 거래처의 환자 번호로 보낸다.
+     *         **인자를 더했다** (2026-10-07 지시) — 여태 이 길은 늘 `patient->mobile` 로
+     *         보냈다. 그래서 결제전송에서 담당자가 다른 번호를 골라도 가상계좌만은
+     *         환자 번호로 갔다(고른 값이 조용히 버려졌다).
      * @return array{sent: bool, reused: bool, message: string, payment: ?TossPayment}
      */
-    public function issueAndNotify(Order $order): array
+    public function issueAndNotify(Order $order, ?string $받는번호 = null): array
     {
         $order->loadMissing('patient');
 
@@ -72,7 +76,7 @@ final class VirtualAccountForOrder
 
         $this->remember($order, $payment);
 
-        $res = $this->notify($order, $payment);
+        $res = $this->notify($order, $payment, $받는번호);
 
         return [
             'sent'    => (bool) ($res['sent'] ?? false),
@@ -141,6 +145,16 @@ final class VirtualAccountForOrder
             return null;                                  // 기한이 지났다
         }
 
+        /* **닫힌 계좌는 되살리지 않는다** (2026-10-07 지시).
+
+           결제전송에서 수단을 바꾸면 발급해 둔 계좌를 토스에서 닫는다
+           (VirtualAccountService::가상계좌닫기). 이 자리는 계좌번호ㆍ입금시각ㆍ기한ㆍ금액만
+           보고 status 를 보지 않아, 닫힌 계좌를 「살아 있다」고 읽어 **다시 안내**할 수
+           있었다 — 그 번호로 넣으면 토스가 받지 않는다. */
+        if (in_array((string) $p->status, ['CANCELED', 'EXPIRED', 'ABORTED'], true)) {
+            return null;
+        }
+
         if ((int) $p->amount !== (int) round($order->expectedDeposit())) {
             return null;                                  // 받을 돈이 달라졌다
         }
@@ -162,7 +176,7 @@ final class VirtualAccountForOrder
     }
 
     /** 계좌를 문자로 보낸다 — 문구는 결제전송이 쓰는 것과 같다 */
-    private function notify(Order $order, TossPayment $p): array
+    private function notify(Order $order, TossPayment $p, ?string $받는번호 = null): array
     {
         /* 문자를 보내는 길이 PaymentLink 를 거친다. 이력이 그 표에 쌓여야 담당자가
            「무엇이 언제 나갔나」를 한자리에서 본다. */
@@ -172,7 +186,16 @@ final class VirtualAccountForOrder
             'method'     => PaymentLink::METHOD_VIRTUAL,
             'amount'     => (int) $p->amount,
             'status'     => 'sent',
-            'receiver'   => preg_replace('/\D/', '', (string) ($order->patient?->mobile ?? '')),
+            'receiver'   => preg_replace('/\D/', '',
+                                (string) ($받는번호 ?: ($order->patient?->mobile ?? ''))),
+            /* **발급한 계좌의 열쇠를 링크에 적는다** (2026-10-07 정합성 검증에서 드러남).
+
+               `Order::결제된링크()` 는 이 두 값으로 「환자가 어느 링크로 냈는지」를 가린다.
+               여태 비워 두어 가릴 수 없었고, `남은링크거두기()` 가 실제로 쓴 줄까지
+               「취소」로 거뒀다 — 받은 결제 93건 가운데 승인 걸음이 없는 6건이 모두
+               가상계좌였던 까닭이다(2026-10-03 에 고치려 한 그 증상이 이 길에 남아 있었다). */
+            'payment_key'   => $p->payment_key,
+            'toss_order_id' => $p->toss_order_id,
             'sent_at'    => now(),
             'expires_at' => $p->due_date,
             'created_by' => \Illuminate\Support\Facades\Auth::id(),

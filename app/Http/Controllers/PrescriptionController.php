@@ -3001,6 +3001,11 @@ class PrescriptionController extends Controller
             /* 기한이 지났는가 — 지난 계좌를 알려 주면 환자가 넣어도 들어오지 않는다 */
             'expired' => (bool) ($tp->due_date?->isPast()),
             'paid'    => $tp->deposited_at !== null,
+            /* **닫혔는가** (2026-10-07 지시). 결제전송에서 수단을 바꾸면 발급해 둔 계좌를
+               토스에서 닫는다(VirtualAccountService::가상계좌닫기). 여기서 알려 주지
+               않으면 닫힌 계좌가 「입금대기」로 그대로 보여, 담당자가 전화로 그 번호를
+               불러 준다 — 넣어도 들어오지 않는다. */
+            'closed'  => in_array((string) $tp->status, ['CANCELED', 'EXPIRED', 'ABORTED'], true),
         ];
     }
 

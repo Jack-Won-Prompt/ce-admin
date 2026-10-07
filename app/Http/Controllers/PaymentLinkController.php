@@ -25,10 +25,32 @@ class PaymentLinkController extends Controller
     /** 만들고 보낸다 */
     public function store(Request $request, Order $order): JsonResponse
     {
+        /* **번호는 고르게 한다 — 손으로 적지 않는다** (2026-10-07 지시).
+         *
+         * 여태 받는 번호가 자유 입력이었다. 그런데 가상계좌는 그 값을 쓰지 않고 늘
+         * 거래처의 환자 번호로 보냈으므로(VirtualAccountForOrder::notify), 담당자가 번호를
+         * 바꿔 적어도 조용히 버려졌다 — 「바꿨는데 기본 번호로 나간다」는 말이 그것이다.
+         *
+         * 이제 **거래처에 적힌 번호 가운데 하나를 고른다.** 번호는 서버가 거래처에서
+         * 읽으므로, 화면에서 고쳐 두고 저장하지 않은 값은 애초에 나갈 수 없다.
+         *
+         *   mobile   → 환자 전화번호 (patients.mobile)
+         *   guardian → 보호자 전화번호 (patients.phone)
+         *
+         * 보호자 번호가 `phone` 칸에 담기는 것은 주문 등록 화면이 그렇게 쓰기 때문이다
+         * (f-mobile2 → phone). 칸 이름과 뜻이 어긋나 있어 여기 적어 둔다. */
+        /* `contact` 를 **필수로 두지 않는다.** 이 고침을 올리는 순간 화면을 열어 둔
+           사람의 브라우저에는 옛 코드가 남아 있어 `mobile` 만 보낸다 — 필수로 두면
+           업무 중에 그 사람들이 「contact 는 필수입니다」로 막힌다. 비어 오면 환자
+           번호로 본다(옛 길의 기본값과 같다). */
         $data = $request->validate([
-            'method' => 'required|in:' . implode(',', array_keys(PaymentLink::METHODS)),
-            'mobile' => 'nullable|string|max:20',
+            'method'  => 'required|in:' . implode(',', array_keys(PaymentLink::METHODS)),
+            'contact' => 'nullable|in:mobile,guardian',
+            /* 같은 수단으로 다시 보낼 때 담당자가 「네」를 누른 표시 (아래 resend_confirm) */
+            'confirm' => 'nullable|boolean',
         ]);
+
+        $접점 = $data['contact'] ?? 'mobile';
 
         if ((int) $order->total_amount <= 0) {
             return response()->json(['success' => false, 'message' => '결제할 금액이 없습니다.'], 422);
@@ -105,11 +127,114 @@ class PaymentLinkController extends Controller
             $order->update(['pay_method' => $data['method']]);
         }
 
+        /* 보낼 번호 — 거래처에 적힌 것만 쓴다 */
+        $거래처 = $order->patient;
+        $번호   = preg_replace('/\D/', '', (string) ($접점 === 'guardian'
+            ? ($거래처?->phone ?? '')
+            : ($거래처?->mobile ?? '')));
+
+        if ($번호 === '') {
+            return response()->json([
+                'success' => false,
+                'code'    => 'no_contact',
+                'message' => $접점 === 'guardian'
+                    ? '거래처에 보호자 전화번호가 없습니다. 거래처 정보를 저장한 뒤 보내 주십시오.'
+                    : '거래처에 환자 전화번호가 없습니다. 거래처 정보를 저장한 뒤 보내 주십시오.',
+            ], 422);
+        }
+
+        /* **수단을 바꿔 보내면 앞서 보낸 것을 닫는다** (2026-10-07 지시).
+         *
+         * 여태 이 자리는 살아 있는 링크를 보지 않았다 — 자동으로 나가는 길만 보았다
+         * (PrescriptionController 의 주문 확정 안내). 그래서 가상계좌로 안내한 뒤
+         * 링크페이를 보내면 **두 길이 모두 열린 채** 남았고, 환자가 둘 다 쓰면 같은 주문에
+         * 두 번 낸다. 10-06 두 주문에 링크가 셋ㆍ둘 서 있었다.
+         *
+         * 같은 수단으로 다시 보내는 것은 「한 번 더 알려 주기」일 때가 많아 막지 않되,
+         * 묻는다 — 모르고 두 번 보내면 환자에게 안내가 두 통 간다.
+         *
+         * 묻는 답은 **200 으로** 돌려준다. 422 로 하면 화면의 apiRequest 가 오류로 알리고
+         * 뒤이어 확인 창이 또 떠, 같은 말을 두 번 읽게 된다. `message` 를 비우는 것도 그
+         * 까닭이다(그 자리는 success:false 면 저절로 알린다). */
+        $열린것  = PaymentLink::where('order_id', $order->id)->get()
+            ->filter(fn (PaymentLink $l) => $l->is_open)
+            ->values();
+        $같은수단 = $열린것->firstWhere('method', $data['method']);
+
+        if ($같은수단 && ! $request->boolean('confirm')) {
+            return response()->json([
+                'success' => false,
+                'code'    => 'resend_confirm',
+                'ask'     => sprintf(
+                    '%s 안내를 %s 에 이미 보냈습니다. 다시 보내시겠습니까?'
+                    . PHP_EOL . PHP_EOL . '앞서 보낸 것은 닫고 새로 보냅니다.',
+                    PaymentLink::METHODS[$data['method']] ?? $data['method'],
+                    $같은수단->sent_at?->format('m-d H:i') ?: '-'),
+            ]);
+        }
+
+        /* 앞서 발급해 둔 가상계좌는 **토스에서도 닫는다** (2026-10-07 지시).
+         *
+         * 링크만 닫아서는 모자라다 — 계좌는 토스에 72시간 살아 있고, 그 계좌로 돈이
+         * 들어오면 입금 웹훅이 `toss_order_id` 로 결제 줄을 찾아 입금완료로 처리한다.
+         * 링크 상태는 보지 않는다(VirtualAccountService::handleDepositWebhook).
+         *
+         * 가상계좌를 다시 고른 때는 닫지 않는다 — 살아 있는 계좌를 되살려 같은 번호를
+         * 다시 안내하는 것이 이 길의 뜻이다(VirtualAccountForOrder::living).
+         *
+         * 못 닫으면 **보내지 않는다.** 계좌가 열린 채로 다른 수단을 안내하는 것이 더
+         * 나쁘다 — 그 사고가 바로 이 지시의 까닭이다. */
+        $가상 = $order->tossPayment;
+
+        if ($data['method'] !== PaymentLink::METHOD_VIRTUAL
+            && $가상 && (string) $가상->method === 'VIRTUAL_ACCOUNT'
+            && ! $가상->deposited_at
+            && ! in_array((string) $가상->status, ['CANCELED', 'EXPIRED', 'ABORTED', 'DONE'], true)) {
+            $닫기 = app(\App\Services\TossPayments\VirtualAccountService::class)
+                ->가상계좌닫기($가상, '결제 수단 변경 — ' . (PaymentLink::METHODS[$data['method']] ?? $data['method']));
+
+            if (! ($닫기['ok'] ?? false)) {
+                return response()->json([
+                    'success' => false,
+                    'code'    => 'va_close_failed',
+                    'message' => '앞서 발급한 가상계좌를 닫지 못해 보내지 않았습니다 — ' . ($닫기['message'] ?? '')
+                               . ' 계좌가 열린 채로 다른 수단을 안내하면 환자가 두 번 낼 수 있습니다.',
+                ], 422);
+            }
+
+            activity()->causedBy(auth()->user())->performedOn($order)
+                ->log('결제 수단을 ' . (PaymentLink::METHODS[$data['method']] ?? $data['method'])
+                    . ' 로 바꾸며 발급해 둔 가상계좌를 닫았습니다');
+        }
+
+        /* 열려 있던 링크를 거둔다 — 지우지 않고 열리지 않게만 한다(보낸 사실은 남는다).
+           한 줄씩 저장한다: PaymentLinkObserver 가 걸음을 그렇게 적는다. */
+        foreach ($열린것 as $링크) {
+            $링크->update(['status' => 'cancelled']);
+        }
+
+        if ($열린것->isNotEmpty()) {
+            activity()->causedBy(auth()->user())->performedOn($order)->log(sprintf(
+                '결제 안내를 다시 보내며 앞서 열려 있던 결제 요청 %d건을 닫았습니다 (%s)',
+                $열린것->count(),
+                $열린것->map(fn ($l) => PaymentLink::METHODS[$l->method] ?? $l->method)->unique()->implode('ㆍ')));
+        }
+
+        /* 보내지 못했을 때 **앞서 닫은 것을 알려 준다** (2026-10-07).
+
+           닫는 일을 보내기보다 먼저 한다 — 계좌가 열린 채로 다른 수단이 나가는 것이
+           가장 나쁘기 때문이다. 그러면 보내기가 실패한 자리에서는 「닫히기만 하고
+           나가지는 않은」 상태가 되므로, 그 말을 붙여 주어야 담당자가 다시 보낸다. */
+        $닫은뒤말 = fn (string $말) => $열린것->isEmpty()
+            ? $말
+            : trim($말) . sprintf(' 앞서 열려 있던 결제 안내 %d건은 닫혔습니다 — 다시 보내 주십시오.',
+                $열린것->count());
+
         /* 가상계좌는 주소를 보내는 것이 아니라 계좌를 발급해 적어 보내는 것이라 길이 다르다.
            여기서 갈라 두지 않으면 담당자가 손으로 보낼 때만 계좌 없이 결제 페이지 주소가
            나간다 — 주문 연계에서 자동으로 나갈 때와 다른 것이 간다. */
         if ($data['method'] === PaymentLink::METHOD_VIRTUAL) {
-            $out = app(\App\Services\VirtualAccountForOrder::class)->issueAndNotify($order);
+            $out = app(\App\Services\VirtualAccountForOrder::class)->issueAndNotify($order, $번호);
 
             /* 이력은 PaymentLink 표에 쌓인다(VirtualAccountForOrder::notify).
                방금 쌓인 줄을 그대로 돌려주어야 팝오버의 이력이 그 자리에서 는다. */
@@ -119,16 +244,16 @@ class PaymentLinkController extends Controller
 
             return response()->json([
                 'success' => $out['sent'],
-                'message' => $out['message'],
+                'message' => $out['sent'] ? $out['message'] : $닫은뒤말($out['message']),
                 'link'    => $link ? $this->row($link) : null,
             ], $out['sent'] ? 200 : 422);
         }
 
-        $res = $this->links->issue($order, $data['method'], $data['mobile'] ?? null);
+        $res = $this->links->issue($order, $data['method'], $번호);
 
         return response()->json([
             'success' => $res['sent'],
-            'message' => $res['message'],
+            'message' => $res['sent'] ? $res['message'] : $닫은뒤말($res['message']),
             'link'    => $this->row($res['link']),
         ]);
     }
