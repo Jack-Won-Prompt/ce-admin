@@ -80,6 +80,17 @@ class AgentFixer
             return ['했나' => false, '글' => $막힘, '커밋' => null];
         }
 
+        /* **한 번에 하나만 들어온다** (2026-10-07 지시).
+           고치는 일터가 하나뿐이다 — 둘이 겹치면 한쪽의 `reset --hard` 가 다른 쪽이
+           막 쓴 파일을 지우고, `git diff` 가 남의 변경까지 세고, 드물게는 엉뚱한
+           내용이 커밋된다. 줄(queue)의 일꾼을 하나만 두어 겹치지 않게 했지만, 손으로
+           `agent:work` 를 돌리는 때가 있어 자리 자체에도 걸쇠를 둔다.
+
+           기다리게 한다 — 돌려보내면 그 건의 고침이 사라진다. 기다렸다 들어오면
+           맞춘다()가 origin/main 을 다시 떠서 앞 건의 고침까지 안고 시작한다.
+           걸쇠는 프로세스가 죽으면 저절로 풀린다(flock). */
+        $걸쇠 = $this->걸쇠를잡는다();
+
         try {
             $this->맞춘다();
 
@@ -128,7 +139,51 @@ class AgentFixer
             Log::warning('[Agent] 고치다 멈췄습니다', ['error' => $e->getMessage()]);
 
             return ['했나' => false, '글' => '고치다 멈췄습니다 — ' . $e->getMessage(), '커밋' => null];
+        } finally {
+            $this->걸쇠를놓는다($걸쇠);
         }
+    }
+
+    // ── 걸쇠 ─────────────────────────────────────────────
+
+    /**
+     * 고치는 자리에 걸쇠를 잡는다 — 잡힐 때까지 기다린다.
+     *
+     * 걸쇠를 못 열면(자리를 못 만들면) 그냥 지나간다. 걸쇠가 없다고 고치는 일을
+     * 멈추면, 파일 하나 못 만든 탓에 아무것도 고쳐지지 않는다.
+     *
+     * @return resource|null
+     */
+    private function 걸쇠를잡는다()
+    {
+        $자리 = storage_path('app/agent-fixer.lock');
+
+        $걸쇠 = @fopen($자리, 'c');
+
+        if ($걸쇠 === false) {
+            Log::warning('[Agent] 걸쇠를 열지 못했습니다 — 걸쇠 없이 고칩니다', ['path' => $자리]);
+
+            return null;
+        }
+
+        if (! flock($걸쇠, LOCK_EX)) {
+            fclose($걸쇠);
+
+            return null;
+        }
+
+        return $걸쇠;
+    }
+
+    /** @param resource|null $걸쇠 */
+    private function 걸쇠를놓는다($걸쇠): void
+    {
+        if (! is_resource($걸쇠)) {
+            return;
+        }
+
+        flock($걸쇠, LOCK_UN);
+        fclose($걸쇠);
     }
 
     // ── 가리기 ───────────────────────────────────────────
@@ -180,6 +235,9 @@ class AgentFixer
 
     private function 되돌린다(): void
     {
+        /* 옮겨 붙이다(rebase) 걸렸으면 먼저 그 일을 접는다 — 접지 않고 두면 다음
+           맞춤이 가지를 바꾸지 못해 일터가 통째로 묶인다 (2026-10-07). */
+        $this->달린다('git rebase --abort 2>/dev/null || true');
         $this->달린다('git checkout -- .');
     }
 
@@ -241,13 +299,19 @@ class AgentFixer
         $this->달린다('git add ' . escapeshellarg($자리));
         $this->달린다("git -c user.name='CE Admin Agent' -c user.email='agent@ce-admin.co.kr' commit --quiet -F -", $글월);
 
-        $해시 = trim($this->달린다('git rev-parse --short HEAD'));
-
         /* main 으로 합쳐 밀어 올린다 — 올라가는 순간 Action 이 운영에 배포한다.
-           합치기는 fast-forward 만 받는다. 그 사이 사람이 main 을 밀었으면 멈추고
-           사람에게 넘긴다 — 남의 일 위에 덮어쓰지 않는다. */
-        $this->달린다('git checkout --quiet main 2>/dev/null || git checkout --quiet -B main origin/main');
-        $this->달린다('git reset --hard --quiet origin/main');
+           합치기는 fast-forward 만 받는다 — 남의 일 위에 덮어쓰지 않는다.
+
+           밀기 바로 앞에서 **한 번 더 떠 온다.** 이 저장소는 다른 사람도 밀고, 걸쇠
+           앞에서 기다린 동안에도 main 이 움직인다. 우리 커밋 하나를 새 main 위로
+           옮겨 붙이면(rebase) 헛되지 않게 올라간다. 옮기다 부딪치면 그 자리에서
+           멈추고 사람에게 넘긴다 (2026-10-07 지시). */
+        $this->달린다('git fetch --quiet origin main');
+        $this->달린다('git rebase --quiet origin/main ' . escapeshellarg($가지));
+
+        $해시 = trim($this->달린다('git rev-parse --short ' . escapeshellarg($가지)));
+
+        $this->달린다('git checkout --quiet -B main origin/main');
         $this->달린다('git merge --ff-only --quiet ' . escapeshellarg($가지));
         $this->달린다('git push --quiet origin main');
 

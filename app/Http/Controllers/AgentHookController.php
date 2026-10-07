@@ -117,24 +117,77 @@ class AgentHookController extends Controller
             return;
         }
 
-        /* FPM 에서 PHP_BINARY 는 php-fpm 을 가리킨다 — CLI 를 따로 적어야 한다.
-           값은 설정에서 고칠 수 있게 둔다(서버마다 자리가 다를 수 있다). */
-        $php = (string) config('services.agent.php_bin', '/usr/bin/php');
-
-        $명령 = sprintf(
-            '%s %s agent:work --log=%d > /dev/null 2>&1 &',
-            escapeshellarg($php),
-            escapeshellarg(base_path('artisan')),
-            $자취번호
-        );
-
+        /* 줄에 쌓는다 — 일꾼이 차례로 집는다. 여러 건이 한꺼번에 와도 동시에
+           터지지 않고, 어긋나면 다시 시도하고, 끝내 안 되면 failed_jobs 에 남는다
+           (2026-10-07 지시). */
         try {
-            // 떼어 내보낸다 — 이 요청이 끝나도 그쪽은 계속 돈다
-            exec($명령);
+            \App\Jobs\AgentWorkJob::dispatch($자취번호);
         } catch (\Throwable $e) {
-            Log::warning('[Agent] 작업자를 띄우지 못했습니다', [
+            /* 줄 자체를 쓸 수 없는 때(설정이 어긋났을 때)다 — 옛 길로 떼어 띄운다.
+               아무 일도 안 하는 것보다 낫다. */
+            Log::warning('[Agent] 줄에 쌓지 못해 떼어 띄웁니다', [
                 'log'   => $자취번호,
                 'error' => $e->getMessage(),
+            ]);
+
+            $this->떼어띄운다("agent:work --log={$자취번호}");
+
+            return;
+        }
+
+        /* **일꾼이 죽어 있으면 줄만 길어지고 아무 일도 일어나지 않는다.** 웹훅은
+           200 으로 받아 놓고 조용히 멈추는 것이 가장 나쁘다 — 집히지 않은 일거리가
+           다섯 분을 넘겼으면 일꾼이 없다고 보고, 한 번 돌고 끝나는 일꾼을 떼어
+           띄워 줄을 비운다. 줄에서 집을 때 자리를 잡으므로(reserved) 두 번 일하는
+           일은 없다. */
+        if ($this->밀려있나()) {
+            Log::warning('[Agent] 줄이 밀려 있습니다 — 일꾼을 보십시오', ['log' => $자취번호]);
+
+            $this->떼어띄운다('queue:work --queue=agent --stop-when-empty --tries=3 --timeout=600');
+        }
+    }
+
+    /** 집히지 않은 일거리가 오래 묵었나 — 일꾼이 죽었다는 낌새다 */
+    private function 밀려있나(): bool
+    {
+        try {
+            if (config('queue.default') !== 'database') {
+                return false;
+            }
+
+            $오래된 = \Illuminate\Support\Facades\DB::table('jobs')
+                ->whereNull('reserved_at')
+                ->where('queue', 'agent')
+                ->min('available_at');
+
+            return $오래된 !== null && (int) $오래된 < now()->subMinutes(5)->getTimestamp();
+        } catch (\Throwable) {
+            // 표를 못 읽으면 괜한 일을 벌이지 않는다
+            return false;
+        }
+    }
+
+    /**
+     * artisan 명령을 떼어 내보낸다 — 이 요청이 끝나도 그쪽은 계속 돈다.
+     *
+     * FPM 에서 PHP_BINARY 는 php-fpm 을 가리킨다 — CLI 를 따로 적어야 한다. 값은
+     * 설정에서 고칠 수 있게 둔다(서버마다 자리가 다를 수 있다).
+     */
+    private function 떼어띄운다(string $명령): void
+    {
+        $php = (string) config('services.agent.php_bin', '/usr/bin/php');
+
+        try {
+            exec(sprintf(
+                '%s %s %s > /dev/null 2>&1 &',
+                escapeshellarg($php),
+                escapeshellarg(base_path('artisan')),
+                $명령
+            ));
+        } catch (\Throwable $e) {
+            Log::warning('[Agent] 작업자를 띄우지 못했습니다', [
+                'command' => $명령,
+                'error'   => $e->getMessage(),
             ]);
         }
     }
