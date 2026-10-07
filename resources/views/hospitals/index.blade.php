@@ -77,6 +77,14 @@
         @if($dupCount)
           <span class="hp-chip hp-dup">번호 겹침 {{ number_format($dupCount) }}개</span>
         @endif
+        {{-- **추가는 누구나 할 수 있다** (2026-10-07 지시 · SR #75 「병원관리 추가는 누구나
+             할 수 있어야 하고 삭제는 Admin 기능을 가진 사람만」).
+
+             여태 이 화면에는 추가가 없어, 병원을 새로 담으려면 주문 등록의 조회 팝업을
+             거쳐야 했다. 삭제는 그대로 관리자만 한다(컨트롤러가 역할을 다시 본다). --}}
+        <button type="button" class="ds-btn ds-btn-primary" onclick="hpNew()">
+          <i class="fa-solid fa-plus"></i> 병원 추가
+        </button>
         <button type="button" class="ds-btn" onclick="window.__hpGrid?.downloadExcel()">엑셀 다운</button>
       </span>
     </div>
@@ -104,7 +112,18 @@
     <input type="text" id="hpName" class="form-control" maxlength="120">
 
     <label>요양기관번호</label>
-    <input type="text" id="hpCode" class="form-control" maxlength="20" placeholder="여덟 자리 · 모르면 비워 두십시오">
+    {{-- **새로 담을 때는 번호를 먼저 조회한다** (2026-10-07 지시 · SR #75 「신규 입력
+         시에는 요양기관코드를 조회한 후 없는 경우에만 등록할 수 있게」).
+
+         번호가 겹치면 청구가 남의 병원으로 간다. 서버도 겹친 번호를 막지만, 눌러 보고서야
+         알면 이미 이름ㆍ주소를 다 적은 뒤다 — 조회를 먼저 거치게 한다. 고치는 창에서는
+         조회 단추를 세우지 않는다(그 줄의 번호는 이미 제 것이다). --}}
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="text" id="hpCode" class="form-control" style="flex:1;min-width:0;"
+             maxlength="20" placeholder="여덟 자리 · 모르면 비워 두십시오">
+      <button type="button" class="ds-btn" id="hpCodeFind" style="display:none;flex-shrink:0;"
+              onclick="hpCodeFind()">번호 조회</button>
+    </div>
 
     <label>진료과</label>
     <input type="text" id="hpDept" class="form-control" maxlength="60">
@@ -246,10 +265,104 @@
   const 찾기 = (id) => ROWS.find(r => r.id === id);
   let 지금줄 = null;
 
+  /* 추가 창인가 — 추가일 때만 번호 조회를 거치게 한다 (2026-10-07 · SR #75) */
+  let 추가모드   = false;
+  let 번호확인됨 = false;
+
+  /**
+   * 새 병원을 담는 창 — 누구나 열 수 있다 (SR #75).
+   *
+   * 번호를 조회하기 전에는 저장을 잠근다. 조회해서 쓰는 곳이 없을 때만 풀린다.
+   */
+  window.hpNew = function () {
+    지금줄     = null;
+    추가모드   = true;
+    번호확인됨 = false;
+
+    document.getElementById('hpTitle').textContent = '병원 추가';
+    ['hpName','hpCode','hpDept','hpTel','hpFax','hpAddr','hpMemo']
+      .forEach(k => { const e = document.getElementById(k); e.value = ''; e.disabled = false; });
+    document.getElementById('hpActive').checked = true;
+    document.getElementById('hpActive').disabled = false;
+
+    document.getElementById('hpDelete').style.display   = 'none';
+    document.getElementById('hpCodeFind').style.display = '';
+
+    const 쪽지 = document.getElementById('hpDupNote');
+    쪽지.style.display = '';
+    쪽지.textContent = '요양기관번호를 적고 ［번호 조회］를 누르십시오. 쓰는 곳이 없을 때만 담을 수 있습니다.';
+
+    const 저장 = document.getElementById('hpSave');
+    저장.style.display = '';
+    저장.disabled = true;
+
+    document.getElementById('hpBack').style.display  = 'block';
+    document.getElementById('hpModal').style.display = 'block';
+  };
+
+  /** 그 번호를 쓰는 병원이 있는지 본다 — 있으면 담지 않고 그 병원을 알려 준다 */
+  window.hpCodeFind = async function () {
+    const 번호 = document.getElementById('hpCode').value.trim();
+    const 쪽지 = document.getElementById('hpDupNote');
+    const 저장 = document.getElementById('hpSave');
+
+    번호확인됨 = false;
+    저장.disabled = true;
+
+    if (!번호) {
+      쪽지.style.display = '';
+      쪽지.textContent = '요양기관번호를 먼저 적어 주십시오.';
+      return;
+    }
+
+    const 단추 = document.getElementById('hpCodeFind');
+    단추.disabled = true;
+
+    try {
+      const res = await fetch('/hospitals/search?q=' + encodeURIComponent(번호),
+        { headers: { 'Accept': 'application/json' } });
+      const d = await res.json().catch(() => ({}));
+      const 같은것 = (d.data || []).filter(x => String(x.code || '').trim() === 번호);
+
+      쪽지.style.display = '';
+
+      if (같은것.length) {
+        쪽지.innerHTML = '이미 <strong>' + 안전(같은것[0].name) + '</strong> 가 쓰는 번호입니다 — '
+          + '새로 담지 않고 그 병원을 쓰십시오. '
+          + '<button type="button" class="ds-btn" style="height:24px;padding:0 8px;font-size:11px;" '
+          + 'onclick="hpOpen(' + Number(같은것[0].id) + ')">그 병원 보기</button>';
+        return;
+      }
+
+      /* 목록에 보이지 않게 내려 둔 줄(사용 안 함)도 번호를 쥐고 있다 — 그 줄까지 본다 */
+      const 내려둔것 = ROWS.filter(x => String(x.code || '').trim() === 번호);
+      if (내려둔것.length) {
+        쪽지.innerHTML = '목록에서 내려 둔 <strong>' + 안전(내려둔것[0].name) + '</strong> 가 쓰는 번호입니다 — '
+          + '그 줄을 되살려 쓰십시오. '
+          + '<button type="button" class="ds-btn" style="height:24px;padding:0 8px;font-size:11px;" '
+          + 'onclick="hpOpen(' + Number(내려둔것[0].id) + ')">그 병원 보기</button>';
+        return;
+      }
+
+      번호확인됨 = true;
+      저장.disabled = false;
+      쪽지.textContent = '쓰는 곳이 없는 번호입니다. 담을 수 있습니다.';
+    } catch (e) {
+      쪽지.style.display = '';
+      쪽지.textContent = '조회하지 못했습니다 — 잠시 뒤 다시 눌러 주십시오.';
+    } finally {
+      단추.disabled = false;
+    }
+  };
+
   window.hpOpen = function (id) {
     const r = 찾기(id);
     if (!r) return;
-    지금줄 = r;
+    지금줄     = r;
+    추가모드   = false;
+    번호확인됨 = false;
+    document.getElementById('hpCodeFind').style.display = 'none';
+    document.getElementById('hpSave').disabled = false;
 
     document.getElementById('hpTitle').textContent = '병원 수정 — ' + r.name;
     document.getElementById('hpName').value = r.name;
@@ -330,13 +443,25 @@
   };
 
   window.hpSave = async function () {
-    if (!지금줄) return;
+    if (!추가모드 && !지금줄) return;
+
+    /* 새로 담는 길에서는 번호 조회를 거치지 않으면 보내지 않는다 (SR #75) */
+    if (추가모드 && !번호확인됨) {
+      showToast('요양기관번호를 먼저 조회해 주십시오.', 'warning');
+      return;
+    }
+
+    if (추가모드 && !document.getElementById('hpName').value.trim()) {
+      showToast('병원명을 적어 주십시오.', 'warning');
+      return;
+    }
+
     const 단추 = document.getElementById('hpSave');
     단추.disabled = true;
 
     try {
-      const res = await fetch('/hospitals/' + 지금줄.id, {
-        method: 'PUT',
+      const res = await fetch(추가모드 ? '/hospitals' : ('/hospitals/' + 지금줄.id), {
+        method: 추가모드 ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
         body: JSON.stringify({
           name:       document.getElementById('hpName').value.trim(),
@@ -359,11 +484,11 @@
         return;
       }
 
-      showToast(d.message || '고쳤습니다.', 'success');
+      showToast(d.message || (추가모드 ? '담았습니다.' : '고쳤습니다.'), 'success');
       hpClose();
       location.reload();
     } catch (e) {
-      showToast('고치지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', 'danger');
+      showToast((추가모드 ? '담지' : '고치지') + ' 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', 'danger');
     } finally {
       단추.disabled = false;
     }
