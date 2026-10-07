@@ -49,13 +49,19 @@ class ImportHospitalsIcNamesCommand extends Command
     protected $signature = 'hospitals:import-ic
                             {--담기 : 우리에 없는 이름을 담는다}
                             {--개명 : 또렷한 것만 이름을 바꾼다}
-                            {--번호 : 이름이 같은데 번호가 다른 줄의 번호를 맞춘다}';
+                            {--번호 : 이름이 같은데 번호가 다른 줄의 번호를 맞춘다}
+                            {--메모도 : 병원말이 없는 이름(메모)도 담는다}';
 
     protected $description = '위드웍스 IC 쪽 병원명(udf34)을 병원 마스터에 맞춘다';
 
-    /** 병원 이름으로 읽히는 말 — 하나라도 들어 있어야 또렷한 이름으로 본다 */
+    /**
+     * 병원 이름으로 읽히는 말 — 하나라도 들어 있어야 병원명으로 본다.
+     *
+     * 「의학원」을 더했다 (2026-10-07 운영 미리 보기) — 「한국원자력의학원」이 실제 병원인데
+     * 이 목록에 없어 메모로 걸러질 참이었다.
+     */
     private const 병원말 = [
-        '병원', '의원', '의료원', '센터', '클리닉', '치과', '한의원', '보건소',
+        '병원', '의원', '의료원', '의학원', '센터', '클리닉', '치과', '한의원', '보건소',
         '비뇨기과', '외과', '내과', '산부인과', '소아과', '요양원',
     ];
 
@@ -81,7 +87,7 @@ class ImportHospitalsIcNamesCommand extends Command
         $우리것   = Hospital::orderBy('id')->get();
         $이름색인 = $우리것->mapWithKeys(fn ($h) => [trim((string) $h->name) => $h->id]);
 
-        $담을것 = $this->담을것($이름별, $이름색인);
+        ['담을것' => $담을것, '메모' => $메모] = $this->담을것($이름별, $이름색인);
         $개명할것 = $this->개명할것($우리것, $번호별, $이름색인);
         $번호고칠것 = $this->번호고칠것($우리것, $이름별);
 
@@ -89,6 +95,7 @@ class ImportHospitalsIcNamesCommand extends Command
         $this->table(['할 일', '몇'], [
             ['담기 — 우리에 없는 이름', count($담을것)],
             ['  그중 원본에 번호가 없는 것', count(array_filter($담을것, fn ($r) => $r['code'] === null))],
+            ['  메모로 보아 담지 않는 것', count($메모)],
             ['개명 — 또렷한 것만', count($개명할것['할것'])],
             ['  걸러진 것', count($개명할것['걸러진것'])],
             ['번호 — 이름 같고 번호 다름', count($번호고칠것)],
@@ -112,7 +119,7 @@ class ImportHospitalsIcNamesCommand extends Command
         }
 
         if (! $한일) {
-            $this->보여주기($담을것, $개명할것, $번호고칠것);
+            $this->보여주기($담을것, $메모, $개명할것, $번호고칠것);
             $this->newLine();
             $this->comment('무엇도 담거나 고치지 않았습니다 — --담기 / --개명 / --번호 를 주십시오.');
         }
@@ -163,10 +170,25 @@ class ImportHospitalsIcNamesCommand extends Command
         return [$이름별, $번호별];
     }
 
-    /** 우리에 없는 이름 — 번호가 비어 있어도 담는다(2026-10-07 지시) */
+    /**
+     * 우리에 없는 이름 — 번호가 비어 있어도 담는다(2026-10-07 지시).
+     *
+     * **메모는 담지 않는다** (같은 날 지시 · 미리 보기에서 드러남). 원본의 병원명 자리에
+     * 메모가 든 줄이 있다 — 「공단재등록대상자필요X」ㆍ「2017년8월 신환」ㆍ「G834」ㆍ
+     * 「재등록필요없으신분」. 그런 것이 병원 목록에 서면 조회에 걸려 담당자가 헤맨다.
+     *
+     * 가리는 잣대는 **병원말이 하나라도 있는가** 하나다. 「주소지-병원명」 꼴은 담는다 —
+     * 위드웍스가 그렇게 적어 둔 이름이고, 그 안에 병원말이 있다(「제주제주연신로-한마음병원」).
+     * 「진주산청지사 2019-10-24일자로 재등록(10/28)」처럼 병원말이 없는 것만 걸린다.
+     *
+     * `--메모도` 를 주면 거르지 않는다 — 「그대로 옮기라」고 할 때를 위해 남긴다.
+     *
+     * @return array{담을것: array<int, array>, 메모: array<int, array>}
+     */
     private function 담을것(array $이름별, \Illuminate\Support\Collection $이름색인): array
     {
         $담을것 = [];
+        $메모   = [];
 
         foreach ($이름별 as $이름 => $번호들) {
             if ($이름색인->has($이름)) {
@@ -175,14 +197,33 @@ class ImportHospitalsIcNamesCommand extends Command
 
             $많이쓴번호 = (string) array_key_first($번호들);
 
-            $담을것[] = [
+            $줄 = [
                 'name' => $이름,
                 'code' => $많이쓴번호 !== '' ? $많이쓴번호 : null,
                 'used' => array_sum($번호들),
             ];
+
+            if (! $this->병원말있나($이름) && ! $this->option('메모도')) {
+                $메모[] = $줄;
+                continue;
+            }
+
+            $담을것[] = $줄;
         }
 
-        return $담을것;
+        return ['담을것' => $담을것, '메모' => $메모];
+    }
+
+    /** 병원말이 하나라도 있는가 */
+    private function 병원말있나(string $이름): bool
+    {
+        foreach (self::병원말 as $말) {
+            if (mb_strpos($이름, $말) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -281,13 +322,7 @@ class ImportHospitalsIcNamesCommand extends Command
             return false;
         }
 
-        foreach (self::병원말 as $말) {
-            if (mb_strpos($이름, $말) !== false) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->병원말있나($이름);
     }
 
     /** 이름은 같은데 번호가 다른 줄 — 원본에 번호가 또렷할 때만 */
@@ -401,11 +436,18 @@ class ImportHospitalsIcNamesCommand extends Command
         $this->info(sprintf('번호 맞추기 — %d곳', $고친것));
     }
 
-    private function 보여주기(array $담을것, array $개명할것, array $번호고칠것): void
+    private function 보여주기(array $담을것, array $메모, array $개명할것, array $번호고칠것): void
     {
         $this->newLine();
         $this->line('<comment>=== 담을 이름 ===</comment>');
         foreach ($담을것 as $줄) {
+            $this->line(sprintf('  [%s] 번호=%s · 원본 %s건',
+                $줄['name'], $줄['code'] ?? '없음', number_format($줄['used'])));
+        }
+
+        $this->newLine();
+        $this->line('<comment>=== 메모로 보아 담지 않는 것 ===</comment>');
+        foreach ($메모 as $줄) {
             $this->line(sprintf('  [%s] 번호=%s · 원본 %s건',
                 $줄['name'], $줄['code'] ?? '없음', number_format($줄['used'])));
         }
