@@ -3910,6 +3910,60 @@ class PrescriptionController extends Controller
             'five_110days'          => 'nullable|string|max:50',
         ]);
 
+        /* **한 거래처에 유형별로 신구매는 하나다** (2026-10-07 지시 · SR #79).
+         *
+         * 「과거 유형:처방전 신구매 있으면 이번 새로 유형:처방전 신구매 입력시 팝업 및 저장
+         *   불가 / 즉 이번 새로 유형:처방전 재구매 입력시 저장 가능」
+         *
+         * 신구매는 그 사람이 **그 유형으로 처음 사는 것**이다. 두 번째부터는 재구매다.
+         * 그런데 화면은 그 값을 그냥 골라 담았다 — 둘 다 신구매로 담기면 공단 등록ㆍ재구매
+         * 제한ㆍ통계가 모두 어긋난다.
+         *
+         * 유형은 둘로 나눈다 — 처방외(20)와 처방전(10ㆍ30). 원내ㆍ원외는 같은 줄이다
+         * (BillingStrategy::key 도 그렇게 묶는다).
+         *
+         * 쓰기 앞에서 막는다. 아래 $payload 저장부터 이미 값을 적기 시작하므로, 여기서
+         * 걸러야 한 칸도 바뀌지 않는다.
+         *
+         * 운영에 이미 겹친 것이 다섯 묶음 있는데 모두 옛 이관분이고 주문이 선 것은 없다
+         * (2026-10-07 확인). 지난 줄은 건드리지 않는다 — 앞으로 담기는 것만 막는다. */
+        if ((string) $request->input('purchase_type') === '신구매') {
+            $거래처번호 = (int) ($request->input('patient_id') ?: $prescription->patient_id);
+            $유형       = (string) $request->input('counsel_acc_add_type');
+
+            if ($거래처번호 && $유형 !== '') {
+                $처방외 = $유형 === \App\Support\BillingStrategy::TYPE_NONRX;
+
+                $이미있는것 = Prescription::where('patient_id', $거래처번호)
+                    ->where('id', '!=', $prescription->id)
+                    ->where('purchase_type', '신구매')
+                    ->when($처방외,
+                        fn ($q) => $q->where('counsel_acc_add_type', \App\Support\BillingStrategy::TYPE_NONRX),
+                        fn ($q) => $q->where(fn ($w) => $w
+                            ->whereNull('counsel_acc_add_type')
+                            ->orWhere('counsel_acc_add_type', '!=', \App\Support\BillingStrategy::TYPE_NONRX)))
+                    ->orderByDesc('id')
+                    ->first(['id', 'rx_number', 'created_at']);
+
+                if ($이미있는것) {
+                    /* 막는 말은 **창으로** 띄운다 — 화면이 `ask` 를 읽어 세운다.
+                       422 로 하면 apiRequest 가 토스트로 한 번 알리고 창이 또 떠서 같은
+                       말을 두 번 읽게 된다(결제전송의 resend_confirm 과 같은 까닭). */
+                    return response()->json([
+                        'success' => false,
+                        'code'    => 'duplicate_first_purchase',
+                        'ask'     => sprintf(
+                            '이 거래처는 %s 유형으로 이미 신구매가 있습니다 — %s (%s). '
+                            . '같은 유형의 신구매는 한 번뿐이므로 저장하지 않았습니다. '
+                            . '이번 건은 「재구매」로 바꿔 주십시오.',
+                            $처방외 ? '처방외' : '처방전',
+                            (string) $이미있는것->rx_number,
+                            (string) ($이미있는것->created_at?->format('Y-m-d') ?: '')),
+                    ]);
+                }
+            }
+        }
+
         $payload = $request->only([
             'patient_name_ocr', 'resident_no_ocr', 'mobile_ocr', 'address_ocr',
             'postcode', 'address_detail',

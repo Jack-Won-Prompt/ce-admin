@@ -10724,6 +10724,17 @@ window.HELP_TOUR_STEPS = [
 
     try {
       const res = await apiRequest(`/prescriptions/${RX_NUMBER}/ocr`, 'POST', payload);
+
+      /* **신구매가 겹치면 창으로 알린다** (2026-10-07 지시 · SR #79).
+
+         한 거래처에 유형별 신구매는 한 번뿐이다. 토스트로만 알리면 저장이 안 된 것을
+         놓치고 다음 걸음으로 넘어간다 — 막힌 것은 창으로 세운다(위임 서명과 같은 결).
+         어느 건이 이미 신구매인지 서버가 적어 보내므로 그대로 보여 준다. */
+      if (res.code === 'duplicate_first_purchase') {
+        await ceAlert(res.ask, { title: '신구매가 이미 있습니다', tone: 'warning' });
+        return;
+      }
+
       if (res.success) {
         clearAllDirty();
         /* 저장하면서 새로 만들어진 사람이 있으면 그 id 를 받아 둔다 — 이걸 들고 있어야
