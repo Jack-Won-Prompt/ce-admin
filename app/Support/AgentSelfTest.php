@@ -19,6 +19,9 @@ class AgentSelfTest
     /** 몇 쪽이 되는가 */
     public static function 쪽수(int $모두): int
     {
-        return intdiv($모두, self::한쪽에);
+        // 나누는 수가 0이면 0으로 나누기 오류가 나므로 1쪽으로 보고 센다
+        $한쪽에 = self::한쪽에 > 0 ? self::한쪽에 : 1;
+
+        return intdiv($모두, $한쪽에);
     }
 }
