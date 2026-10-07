@@ -107,9 +107,11 @@ class AgentReplyController extends Controller
            (2026-10-07 지시). */
         $쪽지 = trim((string) ($짐['note'] ?? ''));
 
+        /* 「제목 | 내용」으로 적는다 — 대시보드의 최근 활동이 막대 앞을 제목으로,
+           전체를 띄움말로 보여 준다 */
         activity()->performedOn($sr)->log($쪽지 === ''
             ? 'Agent 가 답변을 적었습니다'
-            : "Agent 가 답변을 적었습니다\n\n" . $쪽지);
+            : 'Agent 가 답변을 적었습니다 | ' . str_replace(["\r", "\n"], ' ', $쪽지));
 
         return ['ok' => true, 'message' => "SR {$sr->id} 에 적었습니다"];
     }
