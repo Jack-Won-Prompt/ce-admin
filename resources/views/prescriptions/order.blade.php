@@ -14976,6 +14976,20 @@ window.HELP_TOUR_STEPS = [
       const hits = ALL_DOCS.filter(d => d.id > 0 && d.type === req.type);
       hits.forEach(h => { used.add(h.id); rows.push({ label: req.label, att: h, state: 'ok' }); });
 
+      /* **거래처 서류함에 올려 둔 종이도 세운다** (2026-10-08 지시 · SR #115ㆍ#123ㆍ#143).
+
+         그 줄은 ALL_DOCS 에서 id 가 음수다(-2000 아래). 위의 hits 는 `id > 0` 으로
+         걸러 내므로 **올려 두었는데도 팩스 목록에 서지 않았다** — 담당자는 받아 둔
+         종이를 처방전 첨부로 다시 올려야 했다.
+
+         종이에는 환자 서명이 이미 찍혀 있다. 그 종이가 곧 정본이라 서식을 새로 그릴
+         까닭이 없다. 첨부가 아니므로 patient_doc_ids 로 따로 실어 보낸다. */
+      const 종이들 = ALL_DOCS.filter(d => d.id <= -2000 && d.type === req.type);
+      종이들.forEach(h => {
+        used.add(h.id);
+        rows.push({ label: req.label, att: h, state: 'ok', pd: -2000 - h.id });
+      });
+
       /* 신분증 링크로 받아 둔 것도 「있다」로 세운다 (2026-09-30 지시).
 
          그 사진은 첨부가 아니라 동의 기록에 담겨 첨부번호가 없다(ALL_DOCS 에서
@@ -14990,7 +15004,7 @@ window.HELP_TOUR_STEPS = [
         }
       }
 
-      if (!hits.length && toNhis) {
+      if (!hits.length && !종이들.length && toNhis) {
         /* 요양비위임장은 서명하면 시스템이 만들어 「생성 서류」에 담긴다. 이제 팩스가
            그쪽에서도 집어 보내므로 「보낼 수 있다」로 센다 — 예전에는 첨부가 아니라
            못 보낸다고 적었다(2026-09-03 고침). */
@@ -15101,11 +15115,13 @@ window.HELP_TOUR_STEPS = [
     return `
       <label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);
                     border-radius:var(--radius);cursor:pointer;font-size:12px;margin-bottom:3px;">
-        <input type="checkbox" class="fax-att-chk" value="${a.id}" style="accent-color:var(--primary);" checked>
+        <input type="checkbox" class="${r.pd ? 'fax-pd-chk' : 'fax-att-chk'}" value="${r.pd || a.id}"
+               style="accent-color:var(--primary);" checked>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-weight:500;">${esc(r.label)}</span>
-            <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:6px;padding:1px 5px;">첨부</span>
+            {{-- 어느 길로 받은 것인지 숨기지 않는다 — 거래처 서류함에 올린 종이는 그렇게 적는다 --}}
+            <span style="font-size:10px;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary-accent);border-radius:6px;padding:1px 5px;">${r.pd ? '거래처 서류 (종이)' : '첨부'}</span>
           </div>
           <div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(a.name)}</div>
         </div>
@@ -15293,7 +15309,14 @@ window.HELP_TOUR_STEPS = [
     const attLabels = Array.from(document.querySelectorAll('.fax-att-chk:checked'))
       .map(el => el.closest('label').querySelector('span')?.textContent?.trim() ?? '첨부');
 
-    if (!docs.length && !attIds.length) {
+    /* 거래처 서류함에 올린 종이는 첨부가 아니라 거래처에 달린 것이라 따로 싣는다
+       (2026-10-08 · SR #115ㆍ#123ㆍ#143) */
+    const pdIds = Array.from(document.querySelectorAll('.fax-pd-chk:checked'))
+      .map(el => parseInt(el.value));
+    const pdLabels = Array.from(document.querySelectorAll('.fax-pd-chk:checked'))
+      .map(el => el.closest('label').querySelector('span')?.textContent?.trim() ?? '거래처 서류');
+
+    if (!docs.length && !attIds.length && !pdIds.length) {
       showToast('전송할 서류를 하나 이상 선택해 주십시오.', 'warning'); return;
     }
 
@@ -15371,6 +15394,7 @@ window.HELP_TOUR_STEPS = [
           fax_no: faxNo,
           documents: docs,
           attachment_ids: attIds,
+          patient_doc_ids: pdIds,
         }),
       });
       const data = await res.json();
@@ -15391,7 +15415,7 @@ window.HELP_TOUR_STEPS = [
           docs: '',
         });
 
-        showFaxResultModal(data, [...docLabels, ...attLabels]);
+        showFaxResultModal(data, [...docLabels, ...attLabels, ...pdLabels]);
       } else {
         showToast(data.message || '팩스 전송 실패', 'danger');
       }

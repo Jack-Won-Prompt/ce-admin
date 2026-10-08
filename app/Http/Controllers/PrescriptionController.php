@@ -6190,6 +6190,12 @@ class PrescriptionController extends Controller
             'documents.*'     => 'string|in:authorization,delegation,prescription,purchase_history,cash_receipt,tax_invoice,guardian_id,patient_id',
             'attachment_ids'  => 'nullable|array',
             'attachment_ids.*' => 'integer|exists:prescription_attachments,id',
+            /* 거래처 서류함에 올려 둔 종이도 싣는다 (2026-10-08 · SR #115ㆍ#123ㆍ#143).
+               첨부가 아니라 거래처에 달린 것이라 attachment_ids 로는 실을 수 없다 —
+               신분증 링크ㆍ법정대리인 신분증과 같은 까닭이다. 남의 서류가 실리지 않게
+               아래에서 거래처까지 맞춰 본다. */
+            'patient_doc_ids'  => 'nullable|array',
+            'patient_doc_ids.*' => 'integer|exists:patient_documents,id',
         ]);
 
         /* 지자체(시군구청)로 내는 건은 팩스로 보내지 않는다 — 등기로 부친다
@@ -6338,6 +6344,7 @@ class PrescriptionController extends Controller
 
         // 첨부 문서 라벨 수집
         $attachmentIds    = $request->attachment_ids ?? [];
+        $patientDocIds    = $request->patient_doc_ids ?? [];
         $attachmentLabels = [];
         if (!empty($attachmentIds)) {
             $attachments = PrescriptionAttachment::whereIn('id', $attachmentIds)
@@ -6366,7 +6373,7 @@ class PrescriptionController extends Controller
         }
 
         // 파일 경로 수집
-        $filePaths = $this->collectFaxFiles($prescription, $request->documents ?? [], $authInfo, $attachmentIds);
+        $filePaths = $this->collectFaxFiles($prescription, $request->documents ?? [], $authInfo, $attachmentIds, $patientDocIds);
 
         /* 붙일 파일이 하나도 없으면 보내지 않는다.
            여태 여기서 멈추지 않아, 팝빌을 부르지도 않고 「보냈습니다」로 답했다 —
@@ -6383,7 +6390,7 @@ class PrescriptionController extends Controller
         $pdfPath    = null;
         $pdfUrl     = null;
         try {
-            [$pdfPath, $pdfUrl] = $this->saveFaxPdf($prescription, $request->documents ?? [], $attachmentIds);
+            [$pdfPath, $pdfUrl] = $this->saveFaxPdf($prescription, $request->documents ?? [], $attachmentIds, $patientDocIds);
 
             if ($pdfPath) {
                 /* 같은 통합본을 다시 보내도 줄은 하나다 (SR #85) */
@@ -6481,6 +6488,7 @@ class PrescriptionController extends Controller
             'recipient_type'  => $request->recipient_type,
             'documents'       => $request->documents ?? [],
             'attachment_ids'  => $attachmentIds,
+            'patient_doc_ids' => $patientDocIds,
             'pdf_path'        => $pdfPath,
             'sent_by'         => auth()->id(),
             /* 접수번호를 받았으면 팝빌의 「접수」로, 못 받았으면 우리만 쓰는
@@ -7235,9 +7243,9 @@ class PrescriptionController extends Controller
     }
 
     // ── 팩스 합본 PDF 저장 ────────────────────────────────
-    private function saveFaxPdf(Prescription $prescription, array $documents, array $attachmentIds = []): array
+    private function saveFaxPdf(Prescription $prescription, array $documents, array $attachmentIds = [], array $patientDocIds = []): array
     {
-        $pdfOutput = $this->faxPdfBytes($prescription, $documents, $attachmentIds);
+        $pdfOutput = $this->faxPdfBytes($prescription, $documents, $attachmentIds, $patientDocIds);
 
         $patient  = $prescription->patient;
         $mobile   = preg_replace('/[^0-9]/', '', $patient?->mobile ?? '');
@@ -7270,7 +7278,7 @@ class PrescriptionController extends Controller
      *
      * 둘로 두면 또 갈린다. 만드는 일은 여기 하나로 모으고, 저장은 부르는 쪽이 한다.
      */
-    private function faxPdfBytes(Prescription $prescription, array $documents, array $attachmentIds = []): string
+    private function faxPdfBytes(Prescription $prescription, array $documents, array $attachmentIds = [], array $patientDocIds = []): string
     {
         $consent = PrescriptionConsent::where('prescription_id', $prescription->id)
             ->where('status', 'agreed')->latest()->first();
@@ -7351,6 +7359,50 @@ class PrescriptionController extends Controller
                             (int) ($att->img_brightness ?? 0),
                             (int) ($att->img_contrast ?? 0),
                         ),
+                        'type'    => 'image',
+                    ];
+                    @unlink($쪽);
+                }
+            }
+        }
+
+        /* **거래처 서류함에 올린 종이도 통합본에 담는다** (2026-10-08 · SR #115ㆍ#123ㆍ#143).
+
+           팩스로는 나가는데 통합본에 없으면 「무엇을 보냈나」를 남기는 기록이 어긋난다 —
+           PDF 첨부가 통째로 빠져 있던 것과 같은 일이다(SR #134).
+
+           그림은 쪽으로 감싸고, PDF 는 쪽마다 펴 넣는다. 밝기ㆍ명암은 맞춰 둔 것이
+           없으므로(거래처 서류함에는 그 칸이 없다) 0ㆍ0 으로 그대로 간다. */
+        if ($patientDocIds) {
+            $종이들 = \App\Models\PatientDocument::whereIn('id', $patientDocIds)
+                ->where('patient_id', $prescription->patient_id)
+                ->orderBy('id')
+                ->get();
+
+            foreach ($종이들 as $종이) {
+                if (! ($abs = $종이->절대경로())) {
+                    continue;
+                }
+
+                $이름 = $종이->typeLabel() . ' (종이)';
+
+                if (@getimagesize($abs) !== false) {
+                    $attachmentDataUris[] = [
+                        'label'   => $이름,
+                        'dataUri' => $this->rxImageToPortraitDataUri($abs, 0, 0),
+                        'type'    => 'image',
+                    ];
+
+                    continue;
+                }
+
+                $쪽들  = self::pdfPageImages($abs, 'pd_' . $종이->id);
+                $여러쪽 = count($쪽들) > 1;
+
+                foreach ($쪽들 as $번 => $쪽) {
+                    $attachmentDataUris[] = [
+                        'label'   => $이름 . ($여러쪽 ? ' (' . ($번 + 1) . '쪽)' : ''),
+                        'dataUri' => $this->rxImageToPortraitDataUri($쪽, 0, 0),
                         'type'    => 'image',
                     ];
                     @unlink($쪽);
@@ -7541,7 +7593,7 @@ class PrescriptionController extends Controller
     }
 
     // ── 팩스 전송 파일 수집 ───────────────────────────────
-    private function collectFaxFiles(Prescription $prescription, array $documents, ?array $authInfo, array $attachmentIds = []): array
+    private function collectFaxFiles(Prescription $prescription, array $documents, ?array $authInfo, array $attachmentIds = [], array $patientDocIds = []): array
     {
         $files = [];
 
@@ -7713,6 +7765,30 @@ class PrescriptionController extends Controller
                     ) as $한장) {
                         $files[] = $한장;
                     }
+                }
+            }
+        }
+
+        /* **거래처 서류함에 올린 종이도 싣는다** (2026-10-08 지시 · SR #115ㆍ#123ㆍ#143).
+
+           위임장을 종이로 받아 거래처 서류함에 올려 두면 서명은 「받은 것」으로 서고
+           주문 등록 화면에도 보인다. 그런데 공단 팩스에는 실리지 않았다 — 고르개가
+           처방전 첨부만 보았기 때문이다. 담당자는 받아 둔 종이를 다시 처방전 첨부로
+           올려야 했다.
+
+           종이에는 환자 서명이 이미 찍혀 있다. 우리가 서식을 새로 그릴 까닭이 없다 —
+           그 종이가 곧 정본이다. */
+        if ($patientDocIds) {
+            $서류들 = \App\Models\PatientDocument::whereIn('id', $patientDocIds)
+                ->where('patient_id', $prescription->patient_id)   // 남의 서류를 실어 보내지 않는다
+                ->orderBy('id')
+                ->get();
+
+            foreach ($서류들 as $서류) {
+                if ($abs = $서류->절대경로()) {
+                    /* 밝기ㆍ명암은 맞춰 둔 것이 없다(거래처 서류함에는 그 칸이 없다) —
+                       원본을 그대로 보낸다. PDF 든 그림이든 팝빌은 파일을 받는다. */
+                    $files[] = $abs;
                 }
             }
         }

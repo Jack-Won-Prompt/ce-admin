@@ -60,6 +60,26 @@ class PatientDocument extends Model
         return $this->doc_label ?: (self::갈래[$this->doc_type] ?? $this->doc_type);
     }
 
+    /**
+     * 이 서류가 앉아 있는 디스크 (2026-10-08).
+     *
+     * 올리는 자리(PatientController)와 쓰는 자리(팩스)가 따로 적어 두면 한쪽만
+     * 고쳐지는 날이 온다. 공개 디스크가 아니다 — 주민번호와 서명이 든 종이다.
+     */
+    public const 디스크 = 'local';
+
+    /** 파일의 실제 자리 — 없으면 null */
+    public function 절대경로(): ?string
+    {
+        if (! $this->file_path) {
+            return null;
+        }
+
+        $disk = \Illuminate\Support\Facades\Storage::disk(self::디스크);
+
+        return $disk->exists($this->file_path) ? $disk->path($this->file_path) : null;
+    }
+
     public function isPdf(): bool
     {
         return str_contains((string) $this->file_mime_type, 'pdf')

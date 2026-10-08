@@ -455,7 +455,8 @@ class PatientController extends Controller
      * 위임장에는 주민등록번호와 서명이 들어간다 — 같은 실수를 되풀이하지 않는다
      * (2026-10-07 팩스 통합본에서 드러난 그 자리다).
      */
-    private const 서류디스크 = 'local';
+    /* 자리는 모델이 정한다 — 두 곳에 적으면 한쪽만 고쳐지는 날이 온다 (2026-10-08) */
+    private const 서류디스크 = \App\Models\PatientDocument::디스크;
 
     /** 이 거래처의 서류 — 거래처 관리 상세와 주문 등록이 함께 읽는다 */
     public function documents(Patient $patient): JsonResponse
