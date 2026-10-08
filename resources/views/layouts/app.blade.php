@@ -6089,19 +6089,35 @@ document.addEventListener('DOMContentLoaded', () => NoticePanel.initBadge());
 
 // ── CE샵 주문 배지 ─────────────────────────────────────────────
 (function initShopOrderBadge() {
+  /* 껍데기에서만 묻는다 (2026-10-08).
+
+     이 스크립트는 껍데기와 탭(iframe)마다 한 벌씩 돈다. 탭 안에서는 사이드바를
+     CSS 로 감출 뿐 DOM 에는 그대로 있어, 보이지도 않는 배지를 고치려고 탭마다
+     1분에 한 번씩 물었다. 10월 8일 하루 요청 24,632건 가운데 12,235건이 이것이고
+     그 중 10,611건(87%)이 탭에서 온 것이었다.
+
+     잣대는 is-framed 하나를 쓴다 — 사이드바를 감추는 잣대와 같아야 「감췄는데
+     묻는다」가 다시 생기지 않는다. */
+  if (document.documentElement.classList.contains('is-framed')) return;
+
   function refresh() {
+    const el = document.getElementById('shopOrderBadge');
+    if (!el) return;                       // 물어 놓고 버리지 않는다
+
     fetch('{{ url("/api/shop-badge") }}', { headers: { 'X-CSRF-TOKEN': CSRF_TOKEN } })
       .then(r => r.json())
       .then(d => {
-        const el = document.getElementById('shopOrderBadge');
-        if (!el) return;
         if ((d.count || 0) > 0) { el.textContent = d.count; el.style.display = ''; }
         else                     { el.style.display = 'none'; }
       })
       .catch(() => {});
   }
+
   document.addEventListener('DOMContentLoaded', refresh);
-  setInterval(refresh, 60000);
+
+  /* 창을 덮어 두면 묻지 않는다 — 돌아올 때 한 번 맞춘다 */
+  setInterval(() => { if (!document.hidden) refresh(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 })();
 
 // ══════════════════════════════════════════════════════════════
