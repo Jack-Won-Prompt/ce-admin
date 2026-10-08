@@ -6503,49 +6503,74 @@ function 받을이름(res, 물러날이름) {
   return 물러날이름;
 }
 
-/* 이 건의 서류를 한 PDF 로 묶어 내려받는다 (2026-09-27 확인요청 2쪽).
+/* 묶음ㆍ압축은 **브라우저의 보통 내려받기**로 넘긴다 (2026-10-08 지시, SR #147).
 
-   묶는 일은 서버가 한다 — 그림을 PDF 한 쪽으로 감싸고 FPDI 로 잇는 자리가
-   이미 거기 있다(팩스 합본이 쓰던 것). 화면은 청하고 받아서 저장만 한다. */
+   전에는 `fetch` 로 결과물을 통째 받아 `blob` 을 한 번 더 만들었다. 사진이 많은
+   건은 묶음이 57MB 라 한 탭에서 100MB 를 웃돌았고, 서버는 0.84초에 멀쩡히 내보냈는데
+   받는 쪽에서 멎었다((E)이해용 RX-20261001-022 · 23쪽 · 사진 14장이 24.5MP 원본).
+
+   이제 화면은 아무것도 담지 않는다. 대신 누르기 전에 「몇 장ㆍ얼마나 큰지」를
+   가벼운 길(docs-bundle-info)로 묻는다 — 「묶을 서류가 없습니다」를 빈 파일 대신
+   말로 알리기 위해서다. 받는 동안은 브라우저의 내려받기 목록이 보여 준다. */
+
+/* 바이트를 사람이 읽는 말로 */
+function 크기말(바이트) {
+  const n = Number(바이트) || 0;
+  if (n >= 1024 * 1024 * 1024) return (n / 1024 / 1024 / 1024).toFixed(1) + 'GB';
+  if (n >= 1024 * 1024)        return Math.round(n / 1024 / 1024) + 'MB';
+  if (n >= 1024)               return Math.round(n / 1024) + 'KB';
+  return n + '바이트';
+}
+
+/* 메모리에 담지 않고 그대로 넘긴다 — 이름은 서버가 적어 보낸 것을 따른다 */
+function 브라우저로받기(주소) {
+  const a = document.createElement('a');
+  a.href     = 주소;
+  a.download = '';                 /* 같은 서버이므로 Content-Disposition 의 이름이 이긴다 */
+  a.rel      = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/* 무엇이 몇 장이고 얼마나 큰지 — 못 물어도 내려받기는 막지 않는다 */
+async function 묶음살피기() {
+  try {
+    const r = await fetch(`/prescriptions/${RX_NUMBER}/docs-bundle-info`,
+                          { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (_) {
+    return null;
+  }
+}
+
+/* 이 건의 서류를 한 PDF 로 묶어 내려받는다 (2026-09-27 확인요청 2쪽) */
 async function downloadDocsMerged(e) {
   e.stopPropagation();
 
-  const btn = e.currentTarget;
+  const btn  = e.currentTarget;
   const 본래 = btn ? btn.innerHTML : '';
-  if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 묶는 중…'; btn.disabled = true; }
-
-  /* 진행 창 — 첨부가 여럿이면 몇 초가 걸린다 (2026-09-28 지시) */
-  const 창 = ceProgress('서류를 한 PDF 로 묶는 중', 2);
-  창.걸음(1, 합본안내말());
-  창.걸음(2, '한 벌로 잇는 중…');
+  if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 준비 중…'; btn.disabled = true; }
 
   try {
-    const r = await fetch(`/prescriptions/${RX_NUMBER}/docs-merged`, { credentials: 'same-origin' });
+    const 살핌 = await 묶음살피기();
 
-    if (!r.ok) {
-      /* 서버가 까닭을 적어 보낸다 — 「묶을 서류가 없습니다」 같은 것 */
-      let 말 = '서류를 묶지 못했습니다.';
-      try { 말 = (await r.json()).message || 말; } catch (_) {}
-      showToast(말, 'warning', 4000);
+    if (살핌 && !살핌.pdf.count) {
+      showToast('묶을 서류가 없습니다 — 올린 서류나 만들어진 서류가 하나도 없습니다.', 'warning', 4000);
       return;
     }
 
-    const 덩이 = await r.blob();
-    const 주소 = URL.createObjectURL(덩이);
-    const a = document.createElement('a');
-    a.href = 주소;
-    a.download = 받을이름(r, `${RX_NUMBER}.pdf`);
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(주소), 1000);
+    브라우저로받기(`/prescriptions/${RX_NUMBER}/docs-merged`);
 
-    창.마침('서류를 묶었습니다.');
-    showToast('서류를 한 PDF 로 묶었습니다.', 'success');
+    const 말 = 살핌
+      ? `서류 ${살핌.pdf.count}장을 한 PDF 로 묶는 중입니다 (약 ${크기말(살핌.pdf.bytes)}). `
+        + '다 되면 브라우저의 내려받기 목록에 나타납니다.'
+      : '서류를 한 PDF 로 묶는 중입니다 — 다 되면 브라우저의 내려받기 목록에 나타납니다.';
+    showToast(말, 'info', 7000);
   } catch (err) {
     showToast('서류를 묶지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', 'danger');
   } finally {
-    setTimeout(() => 창.닫기(), 400);
     if (btn) { btn.innerHTML = 본래; btn.disabled = false; }
   }
 }
@@ -6557,42 +6582,28 @@ async function downloadDocsMerged(e) {
 async function downloadDocsZip(e) {
   e.stopPropagation();
 
-  const btn = e.currentTarget;
+  const btn  = e.currentTarget;
   const 본래 = btn ? btn.innerHTML : '';
-  if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 압축 중…'; btn.disabled = true; }
-
-  /* 압축은 원본을 그대로 담아 묶음보다 빠르다 — 그래도 장수가 많으면 기다린다 */
-  const 창 = ceProgress('서류를 압축하는 중', 2);
-  창.걸음(1, 합본안내말());
-  창.걸음(2, '압축 파일로 담는 중…');
+  if (btn) { btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 준비 중…'; btn.disabled = true; }
 
   try {
-    const r = await fetch(`/prescriptions/${RX_NUMBER}/docs-zip`, { credentials: 'same-origin' });
+    const 살핌 = await 묶음살피기();
 
-    if (!r.ok) {
-      /* 서버가 까닭을 적어 보낸다 — 「압축할 서류가 없습니다」 같은 것 */
-      let 말 = '서류를 압축하지 못했습니다.';
-      try { 말 = (await r.json()).message || 말; } catch (_) {}
-      showToast(말, 'warning', 4000);
+    if (살핌 && !살핌.zip.count) {
+      showToast('압축할 서류가 없습니다 — 올린 서류나 만들어진 서류가 하나도 없습니다.', 'warning', 4000);
       return;
     }
 
-    const 덩이 = await r.blob();
-    const 주소 = URL.createObjectURL(덩이);
-    const a = document.createElement('a');
-    a.href = 주소;
-    a.download = 받을이름(r, `${RX_NUMBER}.zip`);
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(주소), 1000);
+    브라우저로받기(`/prescriptions/${RX_NUMBER}/docs-zip`);
 
-    창.마침('서류를 압축했습니다.');
-    showToast('서류를 압축했습니다.', 'success');
+    const 말 = 살핌
+      ? `서류 ${살핌.zip.count}장을 압축하는 중입니다 (약 ${크기말(살핌.zip.bytes)}). `
+        + '다 되면 브라우저의 내려받기 목록에 나타납니다.'
+      : '서류를 압축하는 중입니다 — 다 되면 브라우저의 내려받기 목록에 나타납니다.';
+    showToast(말, 'info', 7000);
   } catch (err) {
     showToast('서류를 압축하지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', 'danger');
   } finally {
-    setTimeout(() => 창.닫기(), 400);
     if (btn) { btn.innerHTML = 본래; btn.disabled = false; }
   }
 }

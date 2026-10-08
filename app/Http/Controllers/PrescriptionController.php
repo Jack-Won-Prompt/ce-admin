@@ -6538,6 +6538,67 @@ class PrescriptionController extends Controller
     }
 
     /**
+     * 묶음ㆍ압축을 **누르기 전에** 무엇이 몇 장이고 얼마나 큰지 알려 준다 (2026-10-08 지시).
+     *
+     * 전에는 화면이 `fetch` 로 결과물을 통째 받아 `blob` 으로 한 번 더 담았다. 사진이
+     * 많은 건은 묶음이 57MB 라 한 탭에서 100MB 를 웃돌았고, 그 탓에 받는 쪽에서 멎었다
+     * (SR #147 · (E)이해용 RX-20261001-022). 이제 화면은 브라우저의 보통 내려받기로
+     * 넘기고, 「묶을 서류가 없습니다」 같은 안내만 이 길로 미리 받는다.
+     *
+     * 고르는 잣대는 downloadDocsMerged · downloadDocsZip 과 **같아야 한다** — 여기서
+     * 「있다」 했는데 저기서 404 가 나면 담당자가 빈 손으로 기다린다.
+     */
+    public function docsBundleInfo(Prescription $prescription)
+    {
+        $prescription->load(['patient', 'attachments']);
+
+        $pdf셈 = 0;  $pdf크기 = 0;      // 한 PDF 로 묶을 수 있는 것
+        $zip셈 = 0;  $zip크기 = 0;      // 그대로 압축할 수 있는 것
+        $못펴는것 = [];                   // HEIC 처럼 PDF 로 못 펴는 것 — 압축에는 담긴다
+
+        $재기 = function (?string $path, string $disk) use (&$pdf셈, &$pdf크기, &$zip셈, &$zip크기, &$못펴는것) {
+            if (! $path || ! Storage::disk($disk)->exists($path)) {
+                return;
+            }
+
+            $크기 = (int) Storage::disk($disk)->size($path);
+            $zip셈++;
+            $zip크기 += $크기;
+
+            $확장 = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            if (in_array($확장, ['pdf', 'jpg', 'jpeg', 'png', 'gif'], true)) {
+                $pdf셈++;
+                $pdf크기 += $크기;
+            } else {
+                $못펴는것[] = $확장;
+            }
+        };
+
+        $재기($prescription->image_path, 'public');
+
+        foreach ($prescription->attachments as $att) {
+            $재기($att->file_path, 'public');
+        }
+
+        foreach (PrescriptionDocument::where('prescription_id', $prescription->id)
+                    ->whereNotNull('file_path')->orderBy('id')->get() as $doc) {
+            foreach (['public', 'local'] as $disk) {
+                if (Storage::disk($disk)->exists($doc->file_path)) {
+                    $재기($doc->file_path, $disk);
+                    break;
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'pdf'     => ['count' => $pdf셈, 'bytes' => $pdf크기],
+            'zip'     => ['count' => $zip셈, 'bytes' => $zip크기],
+            'unopenable' => array_values(array_unique($못펴는것)),
+        ]);
+    }
+
+    /**
      * 이 건의 서류를 **한 장짜리 PDF 로 묶어 내려받는다** (2026-09-27 확인요청 2쪽).
      *
      * 여태 서류는 한 장씩만 내려받을 수 있었다. 공단에 낼 묶음을 만들려면 담당자가

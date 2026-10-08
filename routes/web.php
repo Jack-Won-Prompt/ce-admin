@@ -175,6 +175,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get( '/{prescription}/fax-doc-preview', [PrescriptionController::class, 'previewFaxDoc'])->name('faxDocPreview');
         Route::post('/{prescription}/fax-regenerate', [PrescriptionController::class, 'regenerateFax'])->name('faxRegenerate');
         Route::get( '/{prescription}/generated-docs', [PrescriptionController::class, 'generatedDocs'])->name('generatedDocs');
+        /* 묶음ㆍ압축을 누르기 전에 몇 장ㆍ얼마나 큰지 미리 알려 준다 (2026-10-08 지시) */
+        Route::get( '/{prescription}/docs-bundle-info', [PrescriptionController::class, 'docsBundleInfo'])->name('docsBundleInfo');
         /* 올린 서류와 만들어진 서류를 한 PDF 로 묶어 내려받는다 (2026-09-27 확인요청 2쪽) */
         Route::get( '/{prescription}/docs-merged',   [PrescriptionController::class, 'downloadDocsMerged'])->name('docsMerged');
         /* 올라온 그대로 압축해 내려받는다 (2026-09-28 지시) — 묶음과 쓰임이 다르다.
