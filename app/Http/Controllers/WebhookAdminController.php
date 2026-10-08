@@ -192,7 +192,10 @@ class WebhookAdminController extends Controller
         $to   = $request->input('log_to',   now()->toDateString());
 
         $q = WebhookLog::with('webhook')
-            ->whereBetween(DB::raw('DATE(occurred_at)'), [$from, $to]);
+            ->whereBetween(DB::raw('DATE(occurred_at)'), [$from, $to])
+            /* 내부 연계 자취는 이 화면에 세우지 않는다 (2026-10-08 지시). 담당자가 볼
+               것은 거래처와 주고받은 자취다 — 내부 점검용 자취는 표에만 남긴다. */
+            ->where('provider', '!=', 'agent');
 
         if ($request->filled('log_provider'))  $q->where('provider', $request->log_provider);
         if ($request->filled('log_direction')) $q->where('direction', $request->log_direction);

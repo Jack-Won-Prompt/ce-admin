@@ -102,16 +102,11 @@ class AgentReplyController extends Controller
             'answered_by' => null,
         ])->save();
 
-        /* 분석 틀(원인ㆍ고칠 자리ㆍ고치는 법)은 답변 칸이 아니라 이 자리에 남긴다 —
-           요청하신 분이 읽는 답변에 파일 이름과 줄 번호가 보이지 않게 한다
-           (2026-10-07 지시). */
-        $쪽지 = trim((string) ($짐['note'] ?? ''));
-
-        /* 「제목 | 내용」으로 적는다 — 대시보드의 최근 활동이 막대 앞을 제목으로,
-           전체를 띄움말로 보여 준다 */
-        activity()->performedOn($sr)->log($쪽지 === ''
-            ? 'Agent 가 답변을 적었습니다'
-            : 'Agent 가 답변을 적었습니다 | ' . str_replace(["\r", "\n"], ' ', $쪽지));
+        /* **화면에는 분석 내용을 남기지 않는다** (2026-10-08 지시).
+           활동 이력은 대시보드의 최근 활동에 그대로 서고, 거기에 분석 내용이 보이면
+           안 된다. 분석은 보낸 쪽 자취(webhook_logs)에만 둔다 — 짐에 실려 온 쪽지는
+           받아도 적지 않는다. */
+        activity()->performedOn($sr)->log('답변을 등록했습니다');
 
         return ['ok' => true, 'message' => "SR {$sr->id} 에 적었습니다"];
     }

@@ -91,7 +91,11 @@ class ServiceRequest extends Model
             'page_url'    => $this->page_url ?? '',
             'writer'      => $this->user?->name ?? '-',
             'answer'      => $this->answer ?? '',
-            'answerer'    => $this->answeredBy?->name ?? '',
+            /* 담당자 계정이 비어 있는 답변은 운영팀이 등록한 것으로 보인다 — 답변은
+               있는데 작성자 자리가 비어 목록에서 「내 이름 (예정)」으로 뒤집혀 보이던
+               것을 함께 바로잡는다 (2026-10-08). */
+            'answerer'    => $this->answeredBy?->name
+                             ?? ($this->answered_at ? '운영팀' : ''),
             'answered_at' => $this->answered_at?->format('Y-m-d H:i') ?? '',
             'created'     => $this->created_at?->format('Y-m-d H:i:s') ?? '',
 

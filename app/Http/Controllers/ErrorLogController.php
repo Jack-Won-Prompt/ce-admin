@@ -166,6 +166,27 @@ class ErrorLogController extends Controller
         ]);
     }
 
+    /**
+     * 한 건만 삭제한다 (2026-10-08).
+     *
+     * 일괄 삭제는 이레보다 오래된 것만 지운다 — 오늘 남은 기록 하나를 치울 길이
+     * 없었다. 지운 사실은 활동 이력에 남긴다.
+     */
+    public function destroy(ErrorLog $errorLog)
+    {
+        $적을말 = "오류 기록 삭제: #{$errorLog->id} {$errorLog->exception} "
+                . mb_substr((string) $errorLog->file, 0, 120) . ':' . $errorLog->line;
+
+        $errorLog->delete();
+
+        activity()->causedBy(Auth::user())->log($적을말);
+
+        return response()->json([
+            'success' => true,
+            'message' => '오류 기록을 삭제했습니다.',
+        ]);
+    }
+
     /** 오래된 것 비우기 — 표가 끝없이 자라지 않게 */
     public function purge(Request $request)
     {

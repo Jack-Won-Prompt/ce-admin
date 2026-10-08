@@ -334,6 +334,8 @@
            <input type="text" id="elMemo" class="form-control" style="flex:1 1 240px;"
                   placeholder="처리 메모 (선택)" value="${(d.memo ?? '').replace(/"/g, '&quot;')}">
            <button type="button" class="ds-btn ds-btn-primary" onclick="elMark(${d.id})">저장</button>
+           <button type="button" class="ds-btn" style="margin-left:auto;color:var(--danger);"
+                   onclick="elDelete(${d.id})">이 기록 삭제</button>
          </div>
          ${d.checked ? `<div style="margin-top:6px;font-size:11.5px;color:var(--text-muted);">
             ${d.checked} · ${d.checked_at ?? ''}</div>` : ''}
@@ -363,6 +365,22 @@
     const d = await res.json();
     if (d.success) { showToast(d.message, 'success'); elClose(); location.reload(); }
     else { showToast('저장하지 못했습니다.', 'danger'); }
+  };
+
+  /* 한 건만 삭제한다 — 오래된 기록 일괄 삭제로는 오늘 기록을 지울 수 없어
+     시험용으로 남은 기록 하나를 치울 방법이 없었다 (2026-10-08) */
+  window.elDelete = async function (id) {
+    if (!await ceConfirm('이 오류 기록을 삭제합니다. 복구할 수 없습니다.', { tone: 'danger' })) return;
+    const res = await fetch(`/settings/error-logs/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content,
+      },
+    });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok && d.success) { showToast(d.message, 'success'); elClose(); location.reload(); }
+    else { showToast(d.message || '삭제하지 못했습니다.', 'danger'); }
   };
 
   window.elPurge = async function () {
