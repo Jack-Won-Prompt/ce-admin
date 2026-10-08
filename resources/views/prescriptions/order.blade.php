@@ -2848,6 +2848,11 @@ $calcDeposit  = $calcCopay;
               <i class="fa-solid fa-user-tie"></i> 담당자 배정
             </button>
             <button type="button" class="btn btn-outline btn-sm" onclick="olReset()">초기화</button>
+            {{-- 엑셀은 **서버에서** 뽑는다 (2026-10-08 지시 「나」).
+                 이 탭은 화면 안에서 거르지만, 화면이 받아 둔 것은 상한 500줄이다.
+                 상한에 걸려 못 보던 것을 받으려 내려받는 것이라 화면에서 만들면 뜻이 없다.
+                 지금 걸어 둔 조건을 그대로 서버에 보내고, 서버는 같은 잣대로 전부를 준다. --}}
+            <button type="button" class="btn btn-outline btn-sm" onclick="olExcel()">엑셀 다운</button>
             <button type="button" class="btn btn-primary btn-sm" onclick="olApply()">
               <i class="fa-solid fa-magnifying-glass"></i> 검색
             </button>
@@ -16400,6 +16405,41 @@ window.HELP_TOUR_STEPS = [
 
     olGrid.setData(rows);
     showToast(`${rows.length}건`, 'info');
+  }
+
+  /* 지금 걸어 둔 조건을 그대로 서버에 보내 엑셀을 받는다 (2026-10-08 지시 「나」).
+
+     보내는 이름은 서버의 주문줄걸림() 이 읽는 이름과 **짝이 맞아야 한다** —
+     한쪽만 고치면 조건이 조용히 빠진 채 전부가 내려온다. */
+  function olExcel() {
+    const 짝 = {
+      'ol-q': 'q', 'ol-from': 'from', 'ol-to': 'to',
+      'ol-manager-kind': 'manager_kind', 'ol-manager': 'manager',
+      'ol-rxtype': 'rxtype', 'ol-purchase': 'purchase', 'ol-hospital': 'hospital',
+      'ol-status': 'status', 'ol-consent': 'consent',
+      'ol-rxissued-from': 'rxissued_from', 'ol-rxissued-to': 'rxissued_to',
+      'ol-rxcreated-from': 'rxcreated_from', 'ol-rxcreated-to': 'rxcreated_to',
+      'ol-rxend-from': 'rxend_from', 'ol-rxend': 'rxend',
+      'ol-nextrepur-from': 'nextrepur_from', 'ol-nextrepur': 'nextrepur',
+    };
+
+    const 값 = new URLSearchParams();
+    Object.entries(짝).forEach(([id, 이름]) => {
+      const v = (document.getElementById(id)?.value ?? '').trim();
+      if (v) 값.set(이름, v);
+    });
+
+    /* 담당자 갈래는 담당자를 고른 때만 뜻이 있다 — 혼자 가면 서버가 읽을 일이 없다 */
+    if (! 값.get('manager')) 값.delete('manager_kind');
+
+    const a = document.createElement('a');
+    a.href     = `{{ route('prescriptions.orderList.export') }}?` + 값.toString();
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    showToast('지금 조건에 걸린 전부를 엑셀로 내려받습니다 — 다 되면 브라우저의 내려받기 목록에 나타납니다.', 'info', 6000);
   }
 
   function olReset() {

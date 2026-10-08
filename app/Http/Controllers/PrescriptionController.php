@@ -2258,6 +2258,131 @@ class PrescriptionController extends Controller
      * 화면을 열 때와 이름으로 찾을 때가 같은 것을 쓴다 — 두 곳이 따로 그리면
      * 찾은 결과만 칸이 모자라거나 값이 달라진다.
      */
+    /**
+     * 주문 등록 화면의 「주문 목록」 탭을 엑셀로 받는다 (2026-10-08 지시 · SR #80 뒤).
+     *
+     * 이 탭은 **화면 안에서 거른다** — 받아 둔 것을 그 자리에서 좁힌다(폼을 보내 다시
+     * 그리면 보고 있던 건이 날아가기 때문이다). 그래서 엑셀도 화면에서 만들 수 있었지만,
+     * 그러면 **화면이 받아 둔 상한(500줄) 안**에서만 받는다. 상한에 걸려 못 보던 것을
+     * 받으려 내려받는 것이라 그것으로는 뜻이 없다(2026-10-08 지시 「나」).
+     *
+     * 그래서 서버에서 **상한 없이** 담되, 줄은 화면과 **같은 것**을 쓴다 —
+     * `작업대기질의()` 로 담고 `주문줄들()` 로 편다. 거르는 잣대도 화면(olFilter)과
+     * 같은 것을 같은 차례로 적용한다.
+     *
+     * **SQL 로 거르지 않는다.** 「진행 상태」와 「서명동의」는 칸이 아니라 PHP 가 셈해
+     * 붙이는 값이다(Order::status_label · OrderGridExtras::위임동의라벨). SQL 로 다시
+     * 적으면 화면과 다른 것을 거르게 된다 — 같은 조건에 다른 줄이 나오는 것이 가장 나쁘다.
+     */
+    public function exportOrderList(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $머리 = [
+            '주문번호', '처방번호', '환자명', '원/추가', '진행 상태', '서명동의', '처방전 발행일',
+            '주문 구분', '교환·반품·취소 상태', '교환/반품 접수번호', '판매유형', '판매일자',
+            '교환/반품/취소일자', '청구 진행', '청구 여부', '첨부', '파일 상세', '배송지',
+            '담당자', '주민등록번호', '송금자명', '등록담당자', '수정담당자',
+        ];
+        $칸 = ['order_no', 'rx_number', 'patient', 'order_kind', 'status', 'nhis_consent', 'rx_issued',
+               'deal', 'deal_state', 'return_no', 'so_type', 'sold_at',
+               'deal_at', 'nhis_assist', 'claim_done', 'att_count', 'doc_types', 'address',
+               'manager', 'resident_no', 'remitter', 'creator', 'updater'];
+
+        $파일 = '주문목록_' . now()->format('Ymd_Hi') . '.csv';
+
+        return response()->streamDownload(function () use ($request, $머리, $칸) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($out, $머리);
+
+            /* 상한을 걸지 않는다. 쌓지도 않는다 — 오백 줄씩 펴서 흘려 보낸다 */
+            $this->작업대기질의(true)->orderByDesc('id')->chunk(500, function ($덩어리) use ($out, $request, $칸) {
+                foreach ($this->주문줄들($덩어리) as $줄) {
+                    if (! self::주문줄걸림($줄, $request)) {
+                        continue;
+                    }
+
+                    fputcsv($out, array_map(function ($이름) use ($줄) {
+                        $값 = $줄[$이름] ?? '';
+
+                        return is_array($값) ? implode(' ', array_filter($값, 'is_scalar')) : (string) $값;
+                    }, $칸));
+                }
+
+                flush();
+            });
+
+            fclose($out);
+        }, $파일, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * 화면의 olFilter 와 **같은 잣대**로 한 줄을 가린다 (2026-10-08).
+     *
+     * 화면이 보던 값 이름을 그대로 쓴다 — 한쪽만 고치는 날 같은 조건에 다른 줄이 나온다.
+     */
+    private static function 주문줄걸림(array $줄, Request $request): bool
+    {
+        $글 = fn ($k) => trim((string) $request->input($k, ''));
+
+        /* 찾는 말 — 화면과 같은 칸들을 이어 붙여 본다 */
+        if ($q = mb_strtolower($글('q'))) {
+            $건초 = mb_strtolower(implode(' ', [
+                $줄['order_no'] ?? '', $줄['rx_number'] ?? '', $줄['patient'] ?? '', $줄['manager'] ?? '',
+                $줄['rx_hospital'] ?? '', $줄['rx_hosp_code'] ?? '', $줄['rx_doctor'] ?? '',
+            ]));
+
+            if (! str_contains($건초, $q)) {
+                return false;
+            }
+        }
+
+        /* 날짜 — 비어 있는 건은 걸리지 않는다(화면과 같다) */
+        $사이 = function (?string $값, string $부터칸, string $까지칸) use ($글): bool {
+            $값 = trim((string) $값);
+            if (($a = $글($부터칸)) !== '' && ($값 === '' || $값 < $a)) return false;
+            if (($b = $글($까지칸)) !== '' && ($값 === '' || $값 > $b)) return false;
+            return true;
+        };
+
+        if (! $사이($줄['sold_at']       ?? '', 'from',           'to'))            return false;
+        if (! $사이($줄['rx_created']    ?? '', 'rxcreated_from', 'rxcreated_to'))  return false;
+        if (! $사이($줄['rx_issued']     ?? '', 'rxissued_from',  'rxissued_to'))   return false;
+        if (! $사이($줄['rx_end']        ?? '', 'rxend_from',     'rxend'))         return false;
+        if (! $사이($줄['rx_next_repur'] ?? '', 'nextrepur_from', 'nextrepur'))     return false;
+
+        /* 담당자 — 고른 갈래의 칸을 본다. 「미배정」은 __none__ 이다 */
+        if (($담당 = $글('manager')) !== '') {
+            $갈래 = $글('manager_kind') ?: 'review';
+            $이름 = trim((string) (($갈래 === 'order' ? ($줄['order_manager'] ?? '') : ($줄['review_manager'] ?? ''))
+                                   ?: ($줄['manager'] ?? '')));
+
+            if ($담당 === '__none__') { if ($이름 !== '') return false; }
+            elseif ($이름 !== $담당)  { return false; }
+        }
+
+        /* 「처방전」을 고르면 「처방전 - 원내」도 함께 온다 — 화면과 같다 */
+        if (($유형 = $글('rxtype')) !== '' && ! str_starts_with((string) ($줄['rx_acc_type'] ?? ''), $유형)) {
+            return false;
+        }
+
+        if (($것 = $글('purchase')) !== '' && (string) ($줄['rx_purchase'] ?? '') !== $것) return false;
+        if (($것 = $글('hospital')) !== '' && (string) ($줄['rx_hospital'] ?? '') !== $것) return false;
+        if (($것 = $글('status'))   !== '' && (string) ($줄['status'] ?? '')      !== $것) return false;
+
+        /* 서명동의 — 「… 에서 받음」은 화면과 같이 한 가지로 묶어 견준다 */
+        if (($동의 = $글('consent')) !== '') {
+            $값 = trim((string) ($줄['nhis_consent'] ?? ''));
+
+            if ($동의 === '__none__') { if ($값 !== '') return false; }
+            else {
+                $묶음 = preg_match('/에서 받음$/u', $값) ? '다른 건에서 받음' : $값;
+                if ($묶음 !== $동의) return false;
+            }
+        }
+
+        return true;
+    }
+
     private function 주문줄들($orders)
     {
         /* 동의 두 가지는 사람에 붙는다 — 줄마다 물으면 마흔 줄에 여든을 더 묻는다.

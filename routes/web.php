@@ -99,6 +99,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/',              [PrescriptionController::class, 'index'])->name('index');
         /* 목록을 엑셀로 받는다 (2026-10-08 · SR #80) — 화면 검색조건 그대로, 상한 없이 전부 */
         Route::get('/export',        [PrescriptionController::class, 'exportList'])->name('export');
+        /* 주문 등록 화면의 「주문 목록」 탭을 엑셀로 (2026-10-08) — 화면과 같은 잣대, 상한 없이 */
+        Route::get('/order-list/export', [PrescriptionController::class, 'exportOrderList'])->name('orderList.export');
         Route::get('/upload',        [PrescriptionController::class, 'uploadPage'])->name('upload');
         Route::post('/',             [PrescriptionController::class, 'store'])->name('store');
         Route::get('/memos/pinned',  [PrescriptionController::class, 'pinnedMemos'])->name('memos.pinned');
