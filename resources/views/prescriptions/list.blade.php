@@ -217,6 +217,10 @@
            (지금 보고 있는 상태 칩·표시 건수는 유지). --}}
       <a href="{{ route('prescriptions.index', request()->only('status')) }}" class="ds-btn">초기화</a>
       <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+      {{-- 엑셀 받기는 보고 있는 오백 줄이 아니라 **걸러 낸 전부**를 내려받는다
+           (2026-10-08 · SR #80). 위임장 서명 목록과 같은 길이다. --}}
+      <a class="ds-btn" href="{{ route('prescriptions.export', request()->query()) }}"
+         data-no-loading title="지금 검색조건에 걸린 전부를 엑셀로 받습니다">엑셀 다운</a>
       {{-- 「처방전 업로드」 단추는 걷었다 (2026-09-10 지시).
            올리는 자리는 왼쪽 메뉴의 「처방자료 업로드」다 — 화면과 경로는 그대로다. --}}
       {{-- 「검수할 자료」 — 아직 검수하지 않은 건만 모아 본다 (2026-09-10 확인요청 4쪽).

@@ -44,10 +44,82 @@ class PrescriptionController extends Controller
     ) {}
 
     // ── 처방전 목록 ───────────────────────────────────────
-    public function index(Request $request): View
+    /**
+     * 주문 등록 목록이 거르는 잣대 (2026-10-08 · SR #80).
+     *
+     * 화면과 엑셀이 **같은 것**을 보아야 한다. 여태 이 잣대가 index 안에 박혀 있어
+     * 엑셀을 붙이려면 같은 조건을 한 벌 더 적어야 했다 — 한쪽만 고치는 날
+     * 「화면에는 있는데 엑셀에는 없는 줄」이 생긴다.
+     *
+     * 상한(목록상한)은 여기에 두지 않는다. 화면은 상한을 걸고, 엑셀은 걸러 낸 전부를
+     * 가져간다 — 엑셀을 받는 까닭이 그것이다.
+     */
+    /**
+     * 주문 등록 목록을 엑셀로 받는다 (2026-10-08 · SR #80).
+     *
+     * 화면이 쓰는 잣대(목록거른것)와 줄(목록줄)을 **그대로** 쓴다 — 한쪽만 고치는 날
+     * 「화면에는 있는데 엑셀에는 없는 줄」이 생기기 때문이다.
+     *
+     * 화면은 상한 500줄을 걸지만 엑셀은 걸지 않는다. 상한에 걸려 못 보던 것을 받으려
+     * 내려받는 것이라, 여기서까지 자르면 받는 뜻이 없다. 대신 줄을 쌓지 않고
+     * 500줄씩 흘려 보낸다 — 15,049줄로 메모리 한도를 넘긴 적이 있다(오류 이력 #25).
+     *
+     * CSV 로 적고 앞에 BOM 을 둔다. 엑셀이 BOM 없는 UTF-8 을 한글로 읽지 않는다 —
+     * 위임장 서명 목록이 이미 같은 길이다.
+     */
+    public function exportList(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        /* 올린 파일이 몇 장인지 목록에서 바로 보인다 (2026-09-10 지시).
-           줄마다 물으면 마흔 줄에 마흔 번을 묻는다 — 한 번에 세어 온다. */
+        $query = $this->목록거른것($request);
+
+        /* 머리글과 차례는 **화면에 선 열 그대로**다 (2026-10-08).
+           보이는 것과 받는 것이 다르면 담당자가 둘을 맞춰 보며 시간을 쓴다. */
+        $머리글 = [
+            '처방번호', '출처', '환자명', '병원', '요양기관코드', '발행일', '상태',
+            '업로드 파일', '처방전', '등록신청서', '결과지',
+            '파일 검수', '요청 여부', '검수 메모',
+            '처방유형', '판매유형', '주문번호', '위드웍스 판매번호',
+            '검수 담당자', '주민등록번호', '업로드 담당자', '검수 일자',
+            '검수 요청 메모', '참고 사항', '접수일시',
+        ];
+
+        $파일 = '주문등록_' . now()->format('Ymd_Hi') . '.csv';
+
+        return response()->streamDownload(function () use ($query, $머리글) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, chr(0xEF) . chr(0xBB) . chr(0xBF));          // 엑셀이 한글을 깨뜨리지 않게
+            fputcsv($out, $머리글);
+
+            $query->reorder()->orderByDesc('id')->chunk(500, function ($덩어리) use ($out) {
+                /* 결제 칸은 묶음마다 한 번에 세어 온다 — 줄마다 물으면 오백 줄에 오백 번이다 */
+                $extras = \App\Support\OrderGridExtras::forPatients($덩어리->pluck('patient_id'));
+
+                foreach ($덩어리 as $rx) {
+                    $줄 = $this->목록줄($rx, $extras);
+
+                    fputcsv($out, [
+                        $줄['rx_number'], $줄['source'], $줄['patient'], $줄['hospital'],
+                        $줄['hosp_code'], $줄['issued'], $줄['status'],
+                        $줄['files'], $줄['doc_rx'], $줄['doc_reg'], $줄['doc_test'],
+                        /* 「파일 검수」ㆍ「요청 여부」는 화면에서 단추와 뱃지로 서는 자리다 —
+                           글로 적어야 엑셀에서 읽힌다. */
+                        \App\Models\Prescription::STATUS_LABELS[$줄['review']]['label'] ?? $줄['review'],
+                        $줄['reupload'] ? $줄['reupload'] . '건' : '',
+                        $줄['admin_note'],
+                        $줄['acc_type'], $줄['so_type'], $줄['order_no'], $줄['so_no'],
+                        $줄['assignee'], $줄['resident_no'], $줄['uploader'], $줄['reviewed_at'],
+                        $줄['review_request_memo'], $줄['review_memo'], $줄['created'],
+                    ]);
+                }
+
+                flush();
+            });
+
+            fclose($out);
+        }, $파일, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function 목록거른것(Request $request)
+    {
         $query = Prescription::with(['patient', 'assignedUser', 'creator', 'order', 'attachments:id,prescription_id,doc_type'])
             ->withCount('attachments')
             /* 아직 안 닫힌 다시 올리기 요청이 몇 건인가 (2026-09-12 지시).
@@ -157,6 +229,93 @@ class PrescriptionController extends Controller
             });
         }
 
+        return $query;
+    }
+
+    /**
+     * 목록 한 줄 — 화면과 엑셀이 같은 값을 쓴다 (2026-10-08 · SR #80).
+     */
+    private function 목록줄(Prescription $rx, \App\Support\OrderGridExtras $extras): array
+    {
+        $order  = $rx->order;
+        $soType = $order?->so_type;
+
+        return [
+            'id'         => $rx->id,
+            'rx_number'  => $rx->rx_number,
+            'source'     => $rx->upload_source === 'mobile' ? '모바일' : '웹',
+            'patient'    => $rx->patient?->name ?? $rx->patient_name_ocr ?? '-',
+            'hospital'   => $rx->hospital_name ?? '-',
+            'hosp_code'  => $rx->hospital_code ?? '',
+            'issued'     => $rx->issued_date?->format('Y-m-d') ?? '',
+            'status'     => $rx->status_label,
+            'acc_type'   => $rx->accTypeLabel(),
+            'so_type'    => $soType ? (Order::SO_TYPE_LABELS[$soType][0] ?? $soType) : '-',
+            'order_no'   => $order?->order_number ?? '',
+            'so_no'      => $order?->withworks_so_no ?? '',
+            'assignee'   => $rx->assignedUser?->name ?? '미지정',
+
+            /* 서류별로 무엇이 올라왔는가 (2026-09-23 지시).
+
+               여태 「업로드 파일 5장」처럼 장수만 적어, 처방전은 왔는데 등록신청서가
+               아직인지를 알려면 검수 창을 열어 보아야 했다. 서류가 나뉘어 오는 일이
+               잦은데(픽업 업체가 오늘 결과지를, 내일 처방전을) 그 사이에 무엇이
+               비었는지가 목록에서 보이지 않았다.
+
+               세 가지만 적는다 — 처방전ㆍ등록신청서ㆍ결과지. 나머지(신분증ㆍ동의서)는
+               검수의 잣대가 아니다. */
+            /* 처방전은 **본 그림**으로도 들어온다 — 그 건에 처방전 그림이 아직 없으면
+               첫 장이 image_path 로 앉고 첨부가 서지 않는다(PrescriptionApiController::upload).
+               첨부만 보던 탓에 처방전이 멀쩡히 올라온 건까지 「—」로 나왔다
+               (2026-09-25 무한테스트에서 잡음 — 최근 200건 가운데 82건). */
+            'doc_rx'    => ($rx->image_path || $rx->attachments->contains('doc_type', 'prescription'))
+                                                                                       ? 'O' : '—',
+            'doc_reg'   => $rx->attachments->contains('doc_type', 'registration_form') ? 'O' : '—',
+            'doc_test'  => $rx->attachments->contains('doc_type', 'test_result')       ? 'O' : '—',
+
+            /* 결제 네 항목 — 다른 목록과 같은 칸을 여기에도 세운다 (2026-09-20 지시).
+
+               「결제 시 모든 화면에서 결제수단, 입금확인, 입금 금액, 결제 시각을
+               필수로 확인」한다. 처방전 목록에만 이 넷이 없어, 접수부터 보는
+               담당자가 돈이 들어왔는지 알려면 주문 관리로 옮겨 가야 했다.
+
+               값은 OrderGridExtras 가 적는다 — 「입금확인」의 잣대(담당자 확인이냐
+               토스냐, 본인부담 0원은 무엇이라 적느냐)가 화면마다 갈리면 같은 건이
+               목록마다 다르게 보인다. */
+            ...$extras->of($order, $rx->patient_id),
+            // 요청서 6쪽 — 목록에서 바로 견주는 값들
+            'resident_no'  => $rx->resident_no_ocr_masked ?? $rx->patient?->masked_resident_no ?? '',
+            'uploader'     => $rx->creator?->name ?? '',
+            'reviewed_at'  => $rx->reviewed_at?->format('Y-m-d H:i') ?? '',
+            'review_memo'  => $rx->review_memo ?? '',
+            'review_request_memo' => (\Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')
+                                        ? ($rx->review_request_memo ?? '') : ''),
+            'created'    => $rx->created_at?->format('Y-m-d H:i') ?? '',
+
+            /* 올린 파일 — 처방전 그림 한 장에 첨부를 더한다(2026-09-10 지시).
+               생성 서류(위임장 따위)는 우리가 만든 것이라 세지 않는다. */
+            'files'      => $rx->attachments_count + ($rx->image_path ? 1 : 0),
+            /* 「파일 검수」 단추가 설 자리. 값은 상태를 담아 둔다 — 이미 마친 건은
+               단추가 「검수 완료」로 서고 눌러도 다시 승인하지 않는다. */
+            'review'     => $rx->status,
+
+            /* 다시 올리기를 물어 둔 것이 있나 (2026-09-12 지시). 파일 검수
+               바로 옆에 세운다 — 「검수했나」와 「되물었나」는 잇대어 읽는 값이다. */
+            'reupload'   => $rx->open_reuploads_count,
+
+            /* 검수 메모 — 「요청 여부」 옆에서 바로 적는다 (2026-10-02 지시).
+               주문 등록 화면의 「검수 요청 메모」와 같은 칸이다(admin_note) —
+               목록에서 적은 말이 그 화면에 그대로 선다. */
+            'admin_note' => (string) ($rx->admin_note ?? ''),
+        ];
+    }
+
+    public function index(Request $request): View
+    {
+        /* 올린 파일이 몇 장인지 목록에서 바로 보인다 (2026-09-10 지시).
+           줄마다 물으면 마흔 줄에 마흔 번을 묻는다 — 한 번에 세어 온다. */
+        $query = $this->목록거른것($request);
+
         /* **상한을 둔다** (2026-10-03 · 오류 이력 #25).
 
            여태 조건에 걸린 것을 통째로 담았다. 기간을 넓게 잡으면 그만큼 다 들어온다 —
@@ -180,79 +339,7 @@ class PrescriptionController extends Controller
         /* 결제 칸이 쓰는 값을 한 번에 세어 둔다 — 줄마다 물으면 쉰 줄에 쉰 번을 묻는다 */
         $extras = \App\Support\OrderGridExtras::forPatients($rows->pluck('patient_id'));
 
-        $gridData = $rows->map(function (Prescription $rx) use ($extras) {
-            $order = $rx->order;
-            $soType = $order?->so_type;
-
-            return [
-                'id'         => $rx->id,
-                'rx_number'  => $rx->rx_number,
-                'source'     => $rx->upload_source === 'mobile' ? '모바일' : '웹',
-                'patient'    => $rx->patient?->name ?? $rx->patient_name_ocr ?? '-',
-                'hospital'   => $rx->hospital_name ?? '-',
-                'hosp_code'  => $rx->hospital_code ?? '',
-                'issued'     => $rx->issued_date?->format('Y-m-d') ?? '',
-                'status'     => $rx->status_label,
-                'acc_type'   => $rx->accTypeLabel(),
-                'so_type'    => $soType ? (Order::SO_TYPE_LABELS[$soType][0] ?? $soType) : '-',
-                'order_no'   => $order?->order_number ?? '',
-                'so_no'      => $order?->withworks_so_no ?? '',
-                'assignee'   => $rx->assignedUser?->name ?? '미지정',
-
-                /* 서류별로 무엇이 올라왔는가 (2026-09-23 지시).
-
-                   여태 「업로드 파일 5장」처럼 장수만 적어, 처방전은 왔는데 등록신청서가
-                   아직인지를 알려면 검수 창을 열어 보아야 했다. 서류가 나뉘어 오는 일이
-                   잦은데(픽업 업체가 오늘 결과지를, 내일 처방전을) 그 사이에 무엇이
-                   비었는지가 목록에서 보이지 않았다.
-
-                   세 가지만 적는다 — 처방전ㆍ등록신청서ㆍ결과지. 나머지(신분증ㆍ동의서)는
-                   검수의 잣대가 아니다. */
-                /* 처방전은 **본 그림**으로도 들어온다 — 그 건에 처방전 그림이 아직 없으면
-                   첫 장이 image_path 로 앉고 첨부가 서지 않는다(PrescriptionApiController::upload).
-                   첨부만 보던 탓에 처방전이 멀쩡히 올라온 건까지 「—」로 나왔다
-                   (2026-09-25 무한테스트에서 잡음 — 최근 200건 가운데 82건). */
-                'doc_rx'    => ($rx->image_path || $rx->attachments->contains('doc_type', 'prescription'))
-                                                                                           ? 'O' : '—',
-                'doc_reg'   => $rx->attachments->contains('doc_type', 'registration_form') ? 'O' : '—',
-                'doc_test'  => $rx->attachments->contains('doc_type', 'test_result')       ? 'O' : '—',
-
-                /* 결제 네 항목 — 다른 목록과 같은 칸을 여기에도 세운다 (2026-09-20 지시).
-
-                   「결제 시 모든 화면에서 결제수단, 입금확인, 입금 금액, 결제 시각을
-                   필수로 확인」한다. 처방전 목록에만 이 넷이 없어, 접수부터 보는
-                   담당자가 돈이 들어왔는지 알려면 주문 관리로 옮겨 가야 했다.
-
-                   값은 OrderGridExtras 가 적는다 — 「입금확인」의 잣대(담당자 확인이냐
-                   토스냐, 본인부담 0원은 무엇이라 적느냐)가 화면마다 갈리면 같은 건이
-                   목록마다 다르게 보인다. */
-                ...$extras->of($order, $rx->patient_id),
-                // 요청서 6쪽 — 목록에서 바로 견주는 값들
-                'resident_no'  => $rx->resident_no_ocr_masked ?? $rx->patient?->masked_resident_no ?? '',
-                'uploader'     => $rx->creator?->name ?? '',
-                'reviewed_at'  => $rx->reviewed_at?->format('Y-m-d H:i') ?? '',
-                'review_memo'  => $rx->review_memo ?? '',
-                'review_request_memo' => (\Illuminate\Support\Facades\Schema::hasColumn('prescriptions', 'review_request_memo')
-                                            ? ($rx->review_request_memo ?? '') : ''),
-                'created'    => $rx->created_at?->format('Y-m-d H:i') ?? '',
-
-                /* 올린 파일 — 처방전 그림 한 장에 첨부를 더한다(2026-09-10 지시).
-                   생성 서류(위임장 따위)는 우리가 만든 것이라 세지 않는다. */
-                'files'      => $rx->attachments_count + ($rx->image_path ? 1 : 0),
-                /* 「파일 검수」 단추가 설 자리. 값은 상태를 담아 둔다 — 이미 마친 건은
-                   단추가 「검수 완료」로 서고 눌러도 다시 승인하지 않는다. */
-                'review'     => $rx->status,
-
-                /* 다시 올리기를 물어 둔 것이 있나 (2026-09-12 지시). 파일 검수
-                   바로 옆에 세운다 — 「검수했나」와 「되물었나」는 잇대어 읽는 값이다. */
-                'reupload'   => $rx->open_reuploads_count,
-
-                /* 검수 메모 — 「요청 여부」 옆에서 바로 적는다 (2026-10-02 지시).
-                   주문 등록 화면의 「검수 요청 메모」와 같은 칸이다(admin_note) —
-                   목록에서 적은 말이 그 화면에 그대로 선다. */
-                'admin_note' => (string) ($rx->admin_note ?? ''),
-            ];
-        });
+        $gridData = $rows->map(fn (Prescription $rx) => $this->목록줄($rx, $extras));
         /* 화면에 적는 건수는 **걸린 수**다 — 담은 수가 아니다. 넘쳤으면 화면이
            그렇게 말하고, 담당자는 기간을 좁힌다. */
         $total  = $걸린수;

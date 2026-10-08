@@ -23,9 +23,61 @@ use Illuminate\View\View;
 class OrderController extends Controller
 {
     // ── 목록 ──────────────────────────────────────────────
-    public function index(Request $request): View
+    /**
+     * 주문 관리 목록이 거르는 잣대 (2026-10-08 · SR #80).
+     *
+     * 화면과 엑셀이 **같은 것**을 보아야 한다 — 한쪽만 고치는 날 「화면에는 있는데
+     * 엑셀에는 없는 줄」이 생긴다.
+     */
+    /**
+     * 주문 관리 목록을 엑셀로 받는다 (2026-10-08 · SR #80).
+     *
+     * 화면이 쓰는 잣대(목록거른것)와 줄(목록줄들)을 그대로 쓴다. 정정 건이 세 줄로
+     * 펴지는 것도 화면과 같다 — 받아서 합을 내는 자리라 줄 수가 어긋나면 안 된다.
+     *
+     * 줄을 쌓지 않고 오백 줄씩 흘려 보낸다. CSV 앞에는 BOM 을 둔다 —
+     * 엑셀이 BOM 없는 UTF-8 을 한글로 읽지 않는다.
+     */
+    public function exportList(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        // items.lots — 출고한 Lot 과 유효기간이 목록에 선다(요청서 2쪽)
+        $query = $this->목록거른것($request);
+
+        /* 머리글과 차례는 **화면에 선 열 그대로**다 — 보이는 것과 받는 것이 달라서는 안 된다 */
+        $머리글 = [
+            '주문번호', '원/추가', '환자명', '주문 구분', '교환/반품 접수번호', '교환·반품·취소 상태',
+            '판매유형', '상태', '판매일자', '교환/반품/취소일자',
+            '청구 진행', '청구 여부', '공단 팩스', '파일', '파일 상세', '배송지',
+        ];
+        $칸 = ['order_no', 'order_kind', 'patient', 'deal', 'return_no', 'deal_state',
+               'so_type', 'status', 'sold_at', 'deal_at',
+               'nhis_assist', 'claim_done', 'nhis_fax', 'att_count', 'doc_types', 'address'];
+
+        $파일이름 = '주문관리_' . now()->format('Ymd_Hi') . '.csv';
+
+        return response()->streamDownload(function () use ($query, $머리글, $칸) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($out, $머리글);
+
+            $query->reorder()->orderByDesc('id')->chunk(500, function ($덩어리) use ($out, $칸) {
+                foreach ($this->목록줄들($덩어리) as $줄) {
+                    fputcsv($out, array_map(function ($이름) use ($줄) {
+                        $값 = $줄[$이름] ?? '';
+
+                        /* 화면에서 뱃지ㆍ단추로 서는 칸이 배열로 올 수 있다 — 글로 적는다 */
+                        return is_array($값) ? implode(' ', array_filter($값, 'is_scalar')) : (string) $값;
+                    }, $칸));
+                }
+
+                flush();
+            });
+
+            fclose($out);
+        }, $파일이름, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function 목록거른것(Request $request)
+    {
         $query = Order::with(['patient', 'prescription.billingOffice', 'creator', 'returns', 'tossPayment',
                               'items.lots', 'operationUser'])->latest();
 
@@ -111,19 +163,18 @@ class OrderController extends Controller
         }
 
         /* 칩에 붙는 건수도 같은 잣대로 센다 — 목록에 없는 줄을 세면 수가 어긋난다 */
-        $statusCounts = Order::withoutCounselOnly()
-                            ->selectRaw('status, count(*) as cnt')->groupBy('status')
-                            ->pluck('cnt', 'status');
 
-        // 거래 구분별 건수 — 칩에 붙는다
-        $dealCounts = ['sale' => Order::withoutCounselOnly()->whereDoesntHave('returns')->count()];
-        foreach (\App\Models\OrderReturn::TYPES as $type => $label) {
-            $dealCounts[$type] = Order::withoutCounselOnly()
-                ->whereHas('returns', fn ($r) => $r->where('type', $type))->count();
-        }
+        return $query;
+    }
 
-        // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)
-        $orders = $query->get();
+    /**
+     * 담아 온 주문을 화면 줄로 편다 (2026-10-08 · SR #80).
+     *
+     * 정정한 주문은 한 건이 세 줄로 선다. 그 잣대가 이 안에 있으므로 엑셀도 이것을
+     * 그대로 불러 **화면과 같은 줄 수**를 받는다.
+     */
+    private function 목록줄들(\Illuminate\Support\Collection $orders): \Illuminate\Support\Collection
+    {
         $extras = \App\Support\OrderGridExtras::forPatients($orders->pluck('patient_id'));
 
         /* 파일이 몇 장인지, 그리고 그 몇 장이 무엇인지 — 「파일」ㆍ「파일 상세」 칸이다.
@@ -146,7 +197,7 @@ class OrderController extends Controller
            (App\Support\OrderAmendLines). */
         $정정 = \App\Support\OrderAmendLines::모으기($orders);
 
-        $gridData = $orders->flatMap(function ($o) use ($extras, $attCounts, $서류이름, $정정, $공단팩스) {
+        return $orders->flatMap(function ($o) use ($extras, $attCounts, $서류이름, $정정, $공단팩스) {
             /* 유형 — 되돌린 적이 없으면 '판매', 있으면 가장 최근 건의 종류.
                여러 건이 붙었으면 몇 건인지 함께 적는다. 상세로 들어가 보라는 신호다.
                어디까지 진행됐는지는 옆 칸(등록 상태)에서 따로 본다 — 한 칸에 둘을 섞으면
@@ -272,6 +323,26 @@ class OrderController extends Controller
 
             return $폄;
         })->values();
+    }
+
+    public function index(Request $request): View
+    {
+        // items.lots — 출고한 Lot 과 유효기간이 목록에 선다(요청서 2쪽)
+        $query = $this->목록거른것($request);
+        $statusCounts = Order::withoutCounselOnly()
+                            ->selectRaw('status, count(*) as cnt')->groupBy('status')
+                            ->pluck('cnt', 'status');
+
+        // 거래 구분별 건수 — 칩에 붙는다
+        $dealCounts = ['sale' => Order::withoutCounselOnly()->whereDoesntHave('returns')->count()];
+        foreach (\App\Models\OrderReturn::TYPES as $type => $label) {
+            $dealCounts[$type] = Order::withoutCounselOnly()
+                ->whereHas('returns', fn ($r) => $r->where('type', $type))->count();
+        }
+
+        // wwGrid: 필터된 전체를 그리드용 배열로 (클라이언트사이드)
+        $orders   = $query->get();
+        $gridData = $this->목록줄들($orders);
 
         return view('orders.index', compact('gridData', 'statusCounts', 'dealCounts'));
     }

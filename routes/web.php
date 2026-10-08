@@ -97,6 +97,8 @@ Route::middleware(['auth'])->group(function () {
     // 처방전 업로드 & 검수
     Route::prefix('prescriptions')->name('prescriptions.')->group(function () {
         Route::get('/',              [PrescriptionController::class, 'index'])->name('index');
+        /* 목록을 엑셀로 받는다 (2026-10-08 · SR #80) — 화면 검색조건 그대로, 상한 없이 전부 */
+        Route::get('/export',        [PrescriptionController::class, 'exportList'])->name('export');
         Route::get('/upload',        [PrescriptionController::class, 'uploadPage'])->name('upload');
         Route::post('/',             [PrescriptionController::class, 'store'])->name('store');
         Route::get('/memos/pinned',  [PrescriptionController::class, 'pinnedMemos'])->name('memos.pinned');
@@ -619,6 +621,9 @@ Route::middleware(['auth'])->group(function () {
     // 주문 관리
     Route::prefix('orders')->name('orders.')->group(function () {
         Route::get('/',                         [OrderController::class, 'index'])->name('index');
+        /* 엑셀은 **{order} 보다 먼저** 세운다 — 뒤에 두면 'export' 를 주문 번호로 읽는다
+           (2026-10-08 · SR #80) */
+        Route::get('/export',                   [OrderController::class, 'exportList'])->name('export');
         Route::get('/{order}',                  [OrderController::class, 'show'])->name('show');
         /* 처방전이 없어도 주문 등록 화면을 연다 — 「작업 대기 리스트」 더블클릭이 여기로 온다 */
         Route::get('/{order}/open',             [PrescriptionController::class, 'openFromOrder'])->name('open');

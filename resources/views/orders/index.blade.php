@@ -273,6 +273,10 @@ window.HELP_TOUR_STEPS = [
          (지금 보고 있는 상태 칩·거래·처방유형은 유지). --}}
     <a href="{{ route('orders.index', array_filter(['status'=>$curStatus, 'deal'=>$curDeal, 'acc_type'=>request('acc_type')])) }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
+    {{-- 엑셀 받기는 지금 검색조건에 걸린 **전부**를 내려받는다 (2026-10-08 · SR #80).
+         정정 건이 세 줄로 펴지는 것도 화면과 같다. --}}
+    <a class="ds-btn" href="{{ route('orders.export', request()->query()) }}"
+       data-no-loading title="지금 검색조건에 걸린 전부를 엑셀로 받습니다">엑셀 다운</a>
     {{-- 찾는 일과 나란히 둔다. 네비바에 두었더니 탭 안에서 통째로 사라졌다.
          data-ce-tab 이 붙어 있어 지금 탭을 갈아치우지 않고 새 화면 탭으로 열린다. --}}
     <a href="{{ route('prescriptions.index') }}" class="ds-btn"
