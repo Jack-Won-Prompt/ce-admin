@@ -497,6 +497,12 @@ return [
             'password'     => ['label' => '비밀번호',  'config' => 'mail.mailers.smtp.password', 'type' => 'password'],
             'from_address' => ['label' => '보내는 주소', 'config' => 'mail.from.address'],
             'from_name'    => ['label' => '보내는 이름', 'config' => 'mail.from.name'],
+
+            /* 2026-10-08 지시 — 켜면 SR 에 답변이 등록될 때 올린 담당자에게 메일이
+               나간다. 기본은 꺼짐이다. */
+            'sr_answer_mail' => ['label' => 'SR 답변 메일 발송', 'config' => 'mail.sr_answer_mail',
+                                 'type'  => 'bool', 'width' => 2,
+                                 'help'  => '켜면 SR 에 답변이 등록될 때 요청을 올린 담당자에게 메일로 알립니다. 담당자가 직접 쓴 답변은 전문을, 자동으로 등록된 답변은 확인 안내만 보냅니다. 처리 완료로 옮긴 답변과 답변을 고친 것은 보내지 않습니다. 문구는 메시지 관리에서 고칩니다.'],
         ],
     ],
 

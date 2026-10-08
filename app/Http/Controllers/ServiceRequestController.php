@@ -252,6 +252,9 @@ class ServiceRequestController extends Controller
             ], 422);
         }
 
+        /* 적기 전에 가린다 — 저장한 뒤에는 처음인지 고친 것인지 알 수 없다 */
+        $처음인가 = \App\Support\RichText::빈가((string) $serviceRequest->answer);
+
         $serviceRequest->update([
             'answer'      => $답변,
             'answered_by' => Auth::id(),
@@ -260,6 +263,14 @@ class ServiceRequestController extends Controller
         ]);
 
         activity()->causedBy(Auth::user())->log("SR 답변: {$serviceRequest->title}");
+
+        /* 답변이 처음 등록될 때만 메일로 알린다 (2026-10-08 지시). 고친 답변은 보내지
+           않는다 — 같은 건으로 메일이 여러 번 가지 않게 한다. 처리 완료로 옮긴 답변도
+           보내지 않는다(그 잣대는 SrAnswerMail 안에 있다). 담당자가 직접 쓴 답변이라
+           전문을 싣는다. */
+        if ($처음인가) {
+            \App\Support\SrAnswerMail::보낸다($serviceRequest->fresh(['user']), 전문: true);
+        }
 
         return response()->json([
             'success' => true,

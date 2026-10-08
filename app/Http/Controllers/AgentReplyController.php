@@ -108,6 +108,13 @@ class AgentReplyController extends Controller
            받아도 적지 않는다. */
         activity()->performedOn($sr)->log('답변을 등록했습니다');
 
+        /* 올린 담당자에게 메일로 알린다 — **내용은 싣지 않는다** (2026-10-08 지시).
+           화면의 답변은 담당자가 손볼 수 있지만 보낸 메일은 고칠 수 없다. 처리 완료로
+           옮긴 답변은 아예 보내지 않는다(그 잣대는 SrAnswerMail 안에 있다).
+
+           이 자리는 답변이 비어 있을 때만 지나므로 늘 「처음 등록」이다. */
+        \App\Support\SrAnswerMail::보낸다($sr->fresh(['user']), 전문: false);
+
         return ['ok' => true, 'message' => "SR {$sr->id} 에 적었습니다"];
     }
 
