@@ -9903,10 +9903,18 @@ window.HELP_TOUR_STEPS = [
   function gate필수칸() {
     const 처방외 = document.getElementById('f-acc-add-type')?.value === '20';
 
+    /* 1일 처방 개수ㆍ총 처방일수를 더한다 (2026-10-08 지시 · SR #148).
+
+       처방외는 묻지 않는다 — 처방전이 없이 파는 갈래라 애초에 없는 값이다.
+       운영 처방외 주문 29건은 29건 모두 이 둘이 비어 있다(2026-10-08).
+       서버도 같은 잣대를 본다(App\Support\OrderRequiredFields) — 여기는 담당자가
+       제품을 넣기 전에 먼저 알려 주는 자리일 뿐, 막는 힘은 서버에 있다. */
     const 볼것 = [
       ['f-acc-add-type',  '유형'],
       ['f-purchase-type', '신구매/재구매'],
-      ...(처방외 ? [] : [['f-benefit-class', '자격']]),
+      ...(처방외 ? [] : [['f-benefit-class', '자격'],
+                        ['f-daily',         '1일 처방 개수'],
+                        ['f-days',          '총 처방일수']]),
     ];
 
     const 빠진것 = 볼것.filter(([id]) => ! String(document.getElementById(id)?.value ?? '').trim());
@@ -10770,6 +10778,13 @@ window.HELP_TOUR_STEPS = [
          어느 건이 이미 신구매인지 서버가 적어 보내므로 그대로 보여 준다. */
       if (res.code === 'duplicate_first_purchase') {
         await ceAlert(res.ask, { title: '신구매가 이미 있습니다', tone: 'warning' });
+        return;
+      }
+
+      /* 네 칸이 모자라 저장하지 못했다 (2026-10-08 · SR #148).
+         서버가 막은 것이라, 화면의 gate필수칸 을 지나왔더라도 여기서 선다. */
+      if (res.code === 'required_fields') {
+        await ceAlert(res.ask, { title: '필수 항목', tone: 'warning' });
         return;
       }
 

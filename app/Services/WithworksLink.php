@@ -57,6 +57,15 @@ class WithworksLink
         if ($rx) {
             if ($why = RepurchaseWindow::block($rx)) { $모자람[] = $why; }
             if ($why = DelegationGate::block($rx))   { $모자람[] = $why; }
+
+            /* 네 칸이 채워져야 창고로 넘어간다 (2026-10-08 지시 · SR #148).
+
+               저장 쪽(PrescriptionController::updateOcr)과 **같은 잣대**를 본다 —
+               OrderRequiredFields 한 곳에 있다. 저장만 막고 여기를 두면, 옛 줄이
+               다른 길로 들어와 자격도 처방일수도 없이 창고로 간다. */
+            foreach (\App\Support\OrderRequiredFields::막을것($order, $rx) as $칸) {
+                $모자람[] = $칸;
+            }
         }
 
         if (blank($this->배송지($order))) {

@@ -3997,6 +3997,37 @@ class PrescriptionController extends Controller
             'five_110days'          => 'nullable|string|max:50',
         ]);
 
+        /* **네 칸이 채워져야 저장된다** (2026-10-08 지시 · SR #148).
+
+           여태 막는 자리가 화면의 제품 넣기 한 곳뿐이라(gate필수칸 · SR #76) 저장은
+           그대로 지나갔다. 10-06 에 그 잣대를 세운 뒤에도 넷 가운데 하나라도 빈 주문이
+           69건 → 94건으로 늘었다. 화면만 막으면 이렇게 샌다.
+
+           쓰기 앞에서 막는다 — 아래 $payload 저장부터 값을 적기 시작하므로 여기서
+           걸러야 한 칸도 바뀌지 않는다(바로 아래 신구매 관문과 같은 자리).
+
+           잣대는 OrderRequiredFields 한 곳에 있다 — 연계 쪽(WithworksLink)도 같은 것을
+           본다. 두 곳에 따로 적으면 한쪽만 고쳐지는 날이 온다. */
+        $모자란칸 = \App\Support\OrderRequiredFields::막을것(
+            $prescription->order,
+            $prescription,
+            [
+                'counsel_acc_add_type' => $request->input('counsel_acc_add_type'),
+                'benefit_class'        => $request->input('benefit_class'),
+                'daily_count'          => $request->input('daily_count'),
+                'total_days'           => $request->input('total_days'),
+            ],
+        );
+
+        if ($모자란칸) {
+            /* 막는 말은 창으로 띄운다 — 422 로 하면 토스트와 창이 같은 말을 두 번 한다 */
+            return response()->json([
+                'success' => false,
+                'code'    => 'required_fields',
+                'ask'     => \App\Support\OrderRequiredFields::말($모자란칸),
+            ]);
+        }
+
         /* **한 거래처에 유형별로 신구매는 하나다** (2026-10-07 지시 · SR #79).
          *
          * 「과거 유형:처방전 신구매 있으면 이번 새로 유형:처방전 신구매 입력시 팝업 및 저장
