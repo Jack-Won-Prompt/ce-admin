@@ -2717,10 +2717,11 @@ $calcDeposit  = $calcCopay;
            보고 있던 건이 날아간다 — 여기서는 받아 둔 것을 그 자리에서 좁힌다. --}}
       <div class="tab-pane {{ $_openList ? 'active' : '' }}" id="tab-orders">
         {{-- 찾는 줄은 한 줄이다. 칸 넷과 단추 둘이 같은 줄에 선다 — 좁아지면 접힌다.
-             진행 상태로 거르는 칸은 두지 않는다: 이 표에는 아직 창고로 넘기지 않은
-             건만 있어 고를 것이 없다(확정된 건을 보는 자리는 주문 관리다).
-             상태 칸에는 「입금 대기」나 「출고 대기」가 선다 — 본인부담금이 남았는지로
-             갈린다(2026-09-10 확인요청 8쪽). --}}
+             진행 상태로 거르는 칸을 **둔다** (2026-10-08 · SR #124ㆍ#146).
+             한때는 두지 않았다 — 「이 표에는 아직 창고로 넘기지 않은 건만 있다」는
+             까닭이었다. 그 뒤 잣대가 바뀌어(작업대기질의 2026-09-23) 주문등록으로
+             넘어온 건은 그 뒤 어떻게 되든 이 목록에 남는다. 10월 8일 운영에서 372건 중
+             출고완료가 118건이었다 — 고를 것이 없기는커녕 가장 먼저 추려야 할 칸이다. --}}
         <div class="ol-filter">
           <div class="ol-field ol-field-q">
             <label class="ds-field-label">검색어</label>
@@ -2733,6 +2734,32 @@ $calcDeposit  = $calcCopay;
           <div class="ol-field">
             <label class="ds-field-label">등록일 (까지)</label>
             <input type="date" id="ol-to" class="form-control">
+          </div>
+          {{-- 진행 상태ㆍ서명동의 (2026-10-08 · SR #124ㆍ#146).
+
+               고를 것은 **지금 담아 온 줄에 실제로 있는 값**으로 채운다(olFillPicks).
+               라벨을 여기에 붙박이로 적어 두면 주문 상태가 하나 늘어난 날 이 칸만
+               옛 목록을 들고 있게 된다. --}}
+          <div class="ol-field">
+            <label class="ds-field-label">진행 상태</label>
+            <select id="ol-status" class="form-control form-select">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="ol-field">
+            <label class="ds-field-label">서명동의</label>
+            <select id="ol-consent" class="form-control form-select">
+              <option value="">전체</option>
+            </select>
+          </div>
+          {{-- 처방전 발행일 — 기간으로 본다 (2026-10-08 · SR #146) --}}
+          <div class="ol-field">
+            <label class="ds-field-label">처방전 발행일 (부터)</label>
+            <input type="date" id="ol-rxissued-from" class="form-control">
+          </div>
+          <div class="ol-field">
+            <label class="ds-field-label">처방전 발행일 (까지)</label>
+            <input type="date" id="ol-rxissued-to" class="form-control">
           </div>
           {{-- 담당자는 둘이다 — 검수와 주문 (2026-09-23 지시).
 
@@ -15818,6 +15845,21 @@ window.HELP_TOUR_STEPS = [
     fill('ol-purchase', OL_ROWS.map(r => r.rx_purchase));
     fill('ol-hospital', OL_ROWS.map(r => r.rx_hospital));
 
+    /* 진행 상태ㆍ서명동의 (2026-10-08 · SR #124ㆍ#146).
+
+       담아 온 줄에 실제로 있는 값만 세운다 — 고를 수 없는 값을 늘어놓으면
+       골라 놓고 0건을 보게 된다. 서명동의의 빈칸은 「아직 아무것도 없다」는
+       뜻이라 따로 「미수신」으로 세운다(빈 값으로 두면 「전체」와 같아진다). */
+    fill('ol-status',  OL_ROWS.map(r => r.status));
+    (function () {
+      const el = document.getElementById('ol-consent');
+      if (!el) return;
+      const 값 = [...new Set(OL_ROWS.map(r => ol서명동의(r.nhis_consent)).filter(Boolean))].sort();
+      el.innerHTML = '<option value="">전체</option>'
+                   + (OL_ROWS.some(r => !r.nhis_consent) ? '<option value="__none__">미수신</option>' : '')
+                   + 값.map(v => `<option value="${v}">${v}</option>`).join('');
+    })();
+
     olGrid = new wwGrid({
       el: document.getElementById('orderListGrid'),
       /* 남는 높이를 받아 화면 아래끝까지 선다('fit'). 예전에는 399 로 못박았는데,
@@ -15864,6 +15906,10 @@ window.HELP_TOUR_STEPS = [
            가려 준다 (2026-09-14 지시). 손대기 전 목록에서는 늘 「판매」라 조용하고,
            찾았을 때만 다른 말이 선다. */
         { header: '진행 상태', name: 'status',    width: 90,  align: 'center', sortable: true },
+        /* 서명동의ㆍ처방전 발행일 (2026-10-08 · SR #124ㆍ#146).
+           값은 줄에 이미 들어 있었다 — nhis_consent 와 rx_issued 다. 화면에만 없었다. */
+        { header: '서명동의',      name: 'nhis_consent', width: 110, align: 'center', sortable: true },
+        { header: '처방전 발행일', name: 'rx_issued',    width: 110, align: 'center', sortable: true },
         { header: '주문 구분', name: 'deal',      width: 96,  align: 'center', sortable: true },
         /* 거래 구분과 한 쌍이라 나란히 둔다 (2026-09-16 지시).
 
@@ -16256,6 +16302,17 @@ window.HELP_TOUR_STEPS = [
   };
 
   /* 받아 둔 줄(또는 찾은 줄)을 나머지 조건으로 좁힌다 */
+  /* 서명동의 값을 고를 수 있는 꼴로 묶는다 (2026-10-08 · SR #124).
+
+     목록 칸에는 「RX-20261007-032 에서 받음」처럼 **다른 건의 번호를 품은 값**이 선다.
+     그 사람이 다른 건에서 받아 둔 것을 밝혀 적는 자리라 번호가 들어간다. 그대로 두면
+     고를 값이 운영에서 열아홉 가지로 흩어져(10-08 확인) 목록에서 고를 수 없다.
+     표에 서는 글은 그대로 두고, **고르고 거를 때만** 한 가지로 묶는다. */
+  function ol서명동의(값) {
+    const v = (값 || '').trim();
+    return /에서 받음$/.test(v) ? '다른 건에서 받음' : v;
+  }
+
   function olFilter() {
     const 바탕 = OL_FOUND ?? OL_ROWS;
     const q       = OL_FOUND ? '' : (document.getElementById('ol-q')?.value ?? '').trim().toLowerCase();
@@ -16268,6 +16325,11 @@ window.HELP_TOUR_STEPS = [
     const hospital  = document.getElementById('ol-hospital')?.value  ?? '';
     const rxend     = document.getElementById('ol-rxend')?.value     ?? '';
     const nextrepur = document.getElementById('ol-nextrepur')?.value ?? '';
+    /* 2026-10-08 · SR #124ㆍ#146 */
+    const status    = document.getElementById('ol-status')?.value  ?? '';
+    const consent   = document.getElementById('ol-consent')?.value ?? '';
+    const rxiFrom   = document.getElementById('ol-rxissued-from')?.value ?? '';
+    const rxiTo     = document.getElementById('ol-rxissued-to')?.value   ?? '';
     const rxcFrom   = document.getElementById('ol-rxcreated-from')?.value ?? '';
     const rxcTo     = document.getElementById('ol-rxcreated-to')?.value   ?? '';
     const rxendFrom = document.getElementById('ol-rxend-from')?.value     ?? '';
@@ -16304,6 +16366,17 @@ window.HELP_TOUR_STEPS = [
       if (rxendFrom && (!r.rx_end        || r.rx_end        < rxendFrom)) return false;
       if (nextFrom  && (!r.rx_next_repur || r.rx_next_repur < nextFrom))  return false;
 
+      /* 진행 상태ㆍ서명동의 (2026-10-08 · SR #124ㆍ#146).
+         서명동의가 빈칸인 줄은 「아직 아무것도 없다」는 뜻이라 __none__ 으로 고른다 —
+         빈 값으로 고르게 두면 「전체」와 구별되지 않는다. */
+      if (status  && (r.status || '') !== status) return false;
+      if (consent === '__none__') { if ((r.nhis_consent || '') !== '') return false; }
+      else if (consent && ol서명동의(r.nhis_consent) !== consent) return false;
+
+      /* 처방전 발행일 — 기간. 발행일이 없는 건은 걸리지 않는다 */
+      if (rxiFrom && (!r.rx_issued || r.rx_issued < rxiFrom)) return false;
+      if (rxiTo   && (!r.rx_issued || r.rx_issued > rxiTo))   return false;
+
       /* 위드웍스 추가정보 등록일 — 비어 있는 건은 걸리지 않는다 */
       if (rxcFrom && (!r.rx_created || r.rx_created < rxcFrom)) return false;
       if (rxcTo   && (!r.rx_created || r.rx_created > rxcTo))   return false;
@@ -16317,7 +16390,8 @@ window.HELP_TOUR_STEPS = [
   function olReset() {
     ['ol-q', 'ol-from', 'ol-to', 'ol-manager',
      'ol-rxtype', 'ol-purchase', 'ol-hospital', 'ol-rxend', 'ol-nextrepur',
-     'ol-rxcreated-from', 'ol-rxcreated-to', 'ol-rxend-from', 'ol-nextrepur-from'].forEach(id => {
+     'ol-rxcreated-from', 'ol-rxcreated-to', 'ol-rxend-from', 'ol-nextrepur-from',
+     'ol-status', 'ol-consent', 'ol-rxissued-from', 'ol-rxissued-to'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
