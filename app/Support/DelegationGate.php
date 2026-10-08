@@ -501,12 +501,27 @@ final class DelegationGate
             return null;
         }
 
-        return \App\Models\PrescriptionAttachment::where('doc_type', 'delegation')
+        return \App\Models\PrescriptionAttachment::whereIn('doc_type', self::종이서명유형)
             ->whereIn('prescription_id',
                 Prescription::where('patient_id', $patientId)->select('id'))
             ->latest('id')
             ->first();
     }
+
+    /**
+     * 서명을 받아 **사람이 올린 종이** 유형 (2026-10-08 지시 · SR #138).
+     *
+     * 여태 `delegation` 하나만 보았다. 그래서 기초(의료급여) 건에서 환자에게 보내
+     * 서명을 받아 온 **요양비 지급청구서**를 그 이름 그대로 올리면 서명동의가 서지
+     * 않았고, 담당자는 「위임장」으로 바꿔 올려야 했다 — 문서 이름과 올리는 이름이
+     * 달라 무엇이 올라간 것인지 뒤에 알 수 없게 된다((E)송순옥 건).
+     *
+     * `medical_aid_claim` 은 **넣지 않는다.** 그것은 우리가 만들어 붙이는 서식이고
+     * (MedicalAidClaimForm::attach) 서명 전에도 만들어진다 — 운영에 29건이 쌓여 있어
+     * 넣는 순간 스물아홉 건이 한꺼번에 「서명 완료」로 뒤집힌다.
+     * 사람이 서명본을 올리는 자리는 `medical_aid_claim_signed` 로 따로 둔다.
+     */
+    public const 종이서명유형 = ['delegation', 'medical_aid_claim_signed'];
 
     /**
      * 위임 서명을 받았는가 — 지난 서명을 다시 쓰는 건도, **서면으로 올린 위임장도**
