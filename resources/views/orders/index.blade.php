@@ -263,6 +263,21 @@ window.HELP_TOUR_STEPS = [
         @endforeach
       </select>
     </div>
+    {{-- 신구매/재구매 — 상위 조건에서 고른다 (2026-10-08 · SR #133).
+
+         값은 처방전이 들고 있다(prescriptions.purchase_type) — 신구매ㆍ재구매 둘뿐이고
+         10-08 운영에서 재구매 75,698 · 신구매 8,886 · 비어 있는 것 90 이다.
+         비어 있는 건도 고를 수 있게 둔다 — 주문 관리 목록 403줄 가운데 30줄이 그렇고,
+         그것만 추려 메우는 일이 따로 있다. --}}
+    <div class="ds-filter-field">
+      <label class="ds-field-label">신구매/재구매</label>
+      <select name="purchase" class="form-control form-select" onchange="this.form.submit()">
+        <option value="">전체</option>
+        <option value="신구매" {{ request('purchase') === '신구매' ? 'selected' : '' }}>신구매</option>
+        <option value="재구매" {{ request('purchase') === '재구매' ? 'selected' : '' }}>재구매</option>
+        <option value="__none__" {{ request('purchase') === '__none__' ? 'selected' : '' }}>미입력</option>
+      </select>
+    </div>
       {{-- 「표시 건수」 칸은 두지 않는다. 목록은 wwGrid 가 한 번에 다 받아 그리고
            (컨트롤러가 ->get() 으로 통째로 넘긴다) 페이지를 나누지 않는다 —
            이 칸은 아무 일도 하지 않으면서 「10개씩」이라 적어 거짓을 말하고 있었다. --}}
@@ -271,7 +286,7 @@ window.HELP_TOUR_STEPS = [
     {{-- 초기화 — 시안 148:5526 은 검색 왼쪽에 늘 세워 둔다. 검색어·등록일자가 있을 때만
          내보내던 조건을 걷었다. 링크는 그대로 이 화면의 라우트로 되돌아간다
          (지금 보고 있는 상태 칩·거래·처방유형은 유지). --}}
-    <a href="{{ route('orders.index', array_filter(['status'=>$curStatus, 'deal'=>$curDeal, 'acc_type'=>request('acc_type')])) }}" class="ds-btn">초기화</a>
+    <a href="{{ route('orders.index', array_filter(['status'=>$curStatus, 'deal'=>$curDeal, 'acc_type'=>request('acc_type'), 'purchase'=>request('purchase')])) }}" class="ds-btn">초기화</a>
     <button type="submit" class="ds-btn ds-btn-primary">검색</button>
     {{-- 엑셀 받기는 지금 검색조건에 걸린 **전부**를 내려받는다 (2026-10-08 · SR #80).
          정정 건이 세 줄로 펴지는 것도 화면과 같다. --}}
@@ -526,6 +541,8 @@ window.HELP_TOUR_STEPS = [
          들어가 가로로 밀어 봐야 했고, 정작 훑을 때 필요한 것은 누구의 무슨 건이 어디까지
          왔는가다. 뺀 값들은 행을 더블클릭하면 상세 내용에서 그대로 본다. */
       { header: '판매유형',   name: 'so_type',   width: 110, align: 'center' },
+      /* 신구매/재구매 (2026-10-08 · SR #133) — 값은 줄에 이미 있었다(rx_purchase) */
+      { header: '신구매/재구매', name: 'rx_purchase', width: 110, align: 'center', sortable: true },
       { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },
       {{-- 판 날과 되돌아온 날. 되돌아오지 않은 건은 뒤 칸이 비어 있다. --}}
       // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다

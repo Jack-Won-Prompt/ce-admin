@@ -45,11 +45,11 @@ class OrderController extends Controller
         /* 머리글과 차례는 **화면에 선 열 그대로**다 — 보이는 것과 받는 것이 달라서는 안 된다 */
         $머리글 = [
             '주문번호', '원/추가', '환자명', '주문 구분', '교환/반품 접수번호', '교환·반품·취소 상태',
-            '판매유형', '상태', '판매일자', '교환/반품/취소일자',
+            '판매유형', '신구매/재구매', '상태', '판매일자', '교환/반품/취소일자',
             '청구 진행', '청구 여부', '공단 팩스', '파일', '파일 상세', '배송지',
         ];
         $칸 = ['order_no', 'order_kind', 'patient', 'deal', 'return_no', 'deal_state',
-               'so_type', 'status', 'sold_at', 'deal_at',
+               'so_type', 'rx_purchase', 'status', 'sold_at', 'deal_at',
                'nhis_assist', 'claim_done', 'nhis_fax', 'att_count', 'doc_types', 'address'];
 
         $파일이름 = '주문관리_' . now()->format('Ymd_Hi') . '.csv';
@@ -111,6 +111,18 @@ class OrderController extends Controller
 
             $query->whereHas('prescription', fn ($p) => $p->whereIn('counsel_acc_add_type', $같은것));
         }
+        /* 신구매/재구매 — 상위 조건에서 고른다 (2026-10-08 · SR #133).
+
+           값은 처방전이 들고 있다. 「미입력」은 값이 없다는 뜻이라 따로 받는다 —
+           빈 글로 고르게 두면 「전체」와 구별되지 않는다. */
+        if ($request->filled('purchase')) {
+            $고른것 = (string) $request->purchase;
+
+            $query->whereHas('prescription', fn ($p) => $고른것 === '__none__'
+                ? $p->where(fn ($w) => $w->whereNull('purchase_type')->orWhere('purchase_type', ''))
+                : $p->where('purchase_type', $고른것));
+        }
+
         if ($request->filled('q')) {
             $q = $request->q;
             $query->where(function ($sub) use ($q) {
