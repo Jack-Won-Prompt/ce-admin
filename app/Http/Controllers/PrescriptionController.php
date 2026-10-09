@@ -7808,10 +7808,26 @@ class PrescriptionController extends Controller
      *
      * 펴지 못하면 빈 배열을 돌려준다 — 부르는 쪽이 원본을 그대로 쓴다.
      */
+    /** PDF 를 펴는 프로그램 자리 */
+    public const 펴개 = '/usr/bin/pdftoppm';
+
+    /**
+     * PDF 를 쪽마다 펼 수 있는 서버인가 (2026-10-09).
+     *
+     * 고르는 화면이 이것을 물어야 한다 — 「그림인가」로 가리면, 펼 수 있게 된 뒤에도
+     * 화면은 여태 「PDF 는 통합본에 들어가지 않습니다」라고 적는다. 실제로 SR #134
+     * 에서 서버에 프로그램을 깔아 통합본에는 들어가게 되었는데, 주문 관리의 팩스
+     * 서류 목록은 그대로 잠겨 있었다.
+     */
+    public static function pdf펼수있나(): bool
+    {
+        return is_file(self::펴개);
+    }
+
     private static function pdfPageImages(string $absPath, string $이름): array
     {
-        $펴개 = '/usr/bin/pdftoppm';
-        if (! is_file($펴개)) {
+        $펴개 = self::펴개;
+        if (! self::pdf펼수있나()) {
             return [];
         }
 

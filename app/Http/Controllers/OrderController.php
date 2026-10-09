@@ -398,16 +398,22 @@ class OrderController extends Controller
         foreach (\App\Models\PrescriptionAttachment::where('prescription_id', $rx->id)
                      ->orderBy('display_order')->orderBy('id')->get() as $att) {
             $그림 = (bool) $att->is_image;
+
+            /* 실을 수 있는가 — PDF 는 쪽마다 펴서 넣는다 (2026-10-09 · SR #134).
+               여태 「그림이 아니면 못 싣는다」고 적고 체크박스까지 잠갔다. 서버에 펴는
+               프로그램을 깔아 통합본에는 이미 들어가는데도 이 화면에서는 결과지를 고를
+               수조차 없었다. 펼 수 있는 서버인지를 물어 가린다. */
+            $실을수있나 = $그림 || PrescriptionController::pdf펼수있나();
+
             $rows[] = [
                 'kind'  => 'att',
                 'id'    => $att->id,
                 'label' => $att->doc_type_label,
                 'name'  => $att->file_original_name,
                 'at'    => $att->created_at?->format('Y-m-d') ?? '',
-                /* 실을 수 있는가 — PDF 는 팩스 묶음에 끼우지 못한다 */
                 'auto'  => false,
-                'ok'    => $그림,
-                'why'   => $그림 ? '' : 'PDF 는 팩스 통합본에 포함되지 않습니다',
+                'ok'    => $실을수있나,
+                'why'   => $실을수있나 ? '' : 'PDF 는 팩스 통합본에 포함되지 않습니다',
                 /* 무엇을 보내는지 눈으로 확인한다 (2026-09-26 지시).
                    팩스는 되돌릴 수 없다 — 이름만 보고 고르면 엉뚱한 장이 나간다. */
                 'preview'      => route('files.prescription-attachment', $att),
