@@ -14,6 +14,14 @@ on:
         type: boolean
         default: false
 
+# 배포는 한 번에 하나만 (2026-10-10 지시).
+#
+# 두 커밋이 비슷한 때에 올라가면 Action 이 동시에 두 번 돌아, 같은 서버에서
+# git pull 과 마이그레이션이 겹친다. 앞 배포를 끊지 않고 차례로 돌린다.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
 jobs:
   # ── 1단계: 테스트서버에 먼저 올리고 점검한다 (2026-10-09 지시) ──────────
   #

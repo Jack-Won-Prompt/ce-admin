@@ -119,9 +119,13 @@ class AgentHookController extends Controller
 
         /* 줄에 쌓는다 — 일꾼이 차례로 집는다. 여러 건이 한꺼번에 와도 동시에
            터지지 않고, 어긋나면 다시 시도하고, 끝내 안 되면 failed_jobs 에 남는다
-           (2026-10-07 지시). */
+           (2026-10-07 지시).
+
+           **차례를 띄워 둔다** (2026-10-10 지시) — 고침 하나가 곧 운영 배포 하나다.
+           몰려 들어온 것을 연달아 고치면 배포가 겹치고, 앞 고침이 선 것을 보지도
+           못한 채 다음 것이 올라간다. */
         try {
-            \App\Jobs\AgentWorkJob::dispatch($자취번호);
+            \App\Jobs\AgentWorkJob::dispatch($자취번호, $갈래)->delay($this->언제($갈래));
         } catch (\Throwable $e) {
             /* 줄 자체를 쓸 수 없는 때(설정이 어긋났을 때)다 — 옛 길로 떼어 띄운다.
                아무 일도 안 하는 것보다 낫다. */
@@ -143,8 +147,47 @@ class AgentHookController extends Controller
         if ($this->밀려있나()) {
             Log::warning('[Agent] 줄이 밀려 있습니다 — 일꾼을 보십시오', ['log' => $자취번호]);
 
-            $this->떼어띄운다('queue:work --queue=agent --stop-when-empty --tries=3 --timeout=600');
+            $this->떼어띄운다('queue:work --queue=agent,agent-sr --stop-when-empty --tries=3 --timeout=600');
         }
+    }
+
+    /**
+     * 그 갈래의 다음 차례는 언제인가 (2026-10-10 지시).
+     *
+     * 갈래마다 따로 센다 — SR 이 밀려 있어도 오류가 그 뒤에 줄 서지 않는다.
+     *
+     *   · SR    : **등록되고 간격만큼 지난 뒤**에 본다. 그 사이 담당자가 먼저 답을
+     *             적으면 Agent 차례가 왔을 때 「이미 답변이 있어 덮지 않았습니다」로
+     *             비켜선다 — 사람에게 선수를 주는 틈이다
+     *   · 오류  : 대기 중인 것이 없으면 **곧바로** 본다. 운영이 500 을 뱉고 있는데
+     *             첫 건부터 재울 까닭이 없다. 몰려 들어올 때만 간격으로 띄운다
+     */
+    private function 언제(string $갈래): \Illuminate\Support\Carbon
+    {
+        $분  = max(0, (int) config('services.agent.interval_minutes', 10));
+        $sr  = $갈래 === 'sr.created';
+        $바닥 = $sr ? now()->addMinutes($분) : now();
+
+        try {
+            $마지막 = \Illuminate\Support\Facades\DB::table('jobs')
+                ->where('queue', $sr ? 'agent-sr' : 'agent')
+                ->max('available_at');
+
+            if ($마지막) {
+                /* 시간대를 적어 둔다 — 적지 않으면 UTC 로 서서 로그를 볼 때 헷갈린다
+                   (띄우는 길이는 어느 쪽이든 같다) */
+                $다음 = \Illuminate\Support\Carbon::createFromTimestamp((int) $마지막, config('app.timezone'))
+                        ->addMinutes($분);
+
+                if ($다음->greaterThan($바닥)) {
+                    return $다음;
+                }
+            }
+        } catch (\Throwable) {
+            // 표를 못 읽으면 바닥값으로 간다 — 못 띄우는 것이 안 하는 것보다 낫다
+        }
+
+        return $바닥;
     }
 
     /** 집히지 않은 일거리가 오래 묵었나 — 일꾼이 죽었다는 낌새다 */
@@ -155,9 +198,11 @@ class AgentHookController extends Controller
                 return false;
             }
 
+            /* 차례가 **이미 지났는데도** 집히지 않은 것만 센다 — 미뤄 둔 것은
+               밀린 것이 아니다 (2026-10-10) */
             $오래된 = \Illuminate\Support\Facades\DB::table('jobs')
                 ->whereNull('reserved_at')
-                ->where('queue', 'agent')
+                ->whereIn('queue', ['agent', 'agent-sr'])
                 ->min('available_at');
 
             return $오래된 !== null && (int) $오래된 < now()->subMinutes(5)->getTimestamp();

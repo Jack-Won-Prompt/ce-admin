@@ -39,9 +39,16 @@ class AgentWorkJob implements ShouldQueue
     /** 어긋난 뒤 얼마나 쉬고 다시 할까 */
     public array $backoff = [60, 300];
 
-    public function __construct(public int $자취번호)
+    /**
+     * 줄을 갈래마다 따로 둔다 (2026-10-10 지시).
+     *
+     * 오류는 `agent`, SR 은 `agent-sr` 이다. 일꾼이 `--queue=agent,agent-sr` 로 돌아
+     * **둘 다 차례가 되면 오류를 먼저** 집는다 — SR 이 밀려 있어도 오류가 그 뒤에
+     * 줄 서지 않는다.
+     */
+    public function __construct(public int $자취번호, string $갈래 = 'error.raised')
     {
-        $this->onQueue('agent');
+        $this->onQueue($갈래 === 'sr.created' ? 'agent-sr' : 'agent');
     }
 
     public function handle(AgentWorker $일꾼): void
