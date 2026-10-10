@@ -33,7 +33,10 @@ class PrescriptionUploaded implements ShouldBroadcastNow
         $p = $this->prescription;
         return [
             'rx_number'     => $p->rx_number,
-            'patient_name'  => $p->patient_name_ocr ?? '미인식',
+            /* 고른 환자 이름으로 받친다 (2026-10-10). 앱ㆍH5 업로드는 환자를 거래처에서
+               골라 붙이므로 patient_name_ocr 이 비어, 웹 담당자 화면에 뜨는 실시간 알림이
+               늘 「미인식」으로 보였다. 상세 화면과 같은 잣대로 맞춘다. */
+            'patient_name'  => $p->patient_name_ocr ?: ($p->patient?->name ?? '미인식'),
             'hospital_name' => $p->hospital_name    ?? '',
             'status'        => $p->status,
             'uploader_name' => $this->uploaderName,
