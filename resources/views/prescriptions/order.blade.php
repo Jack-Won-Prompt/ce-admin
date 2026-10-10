@@ -15883,7 +15883,13 @@ window.HELP_TOUR_STEPS = [
 
       const 갈래 = document.getElementById('ol-manager-kind')?.value || 'review';
       const 칸  = 갈래 === 'order' ? 'order_manager' : 'review_manager';
-      fill('ol-manager', OL_ROWS.map(r => r[칸] || r.manager));
+      /* 고른 갈래의 칸만 본다 (2026-10-10 · SR #125ㆍ#126).
+
+         여태 `|| r.manager` 로 되돌렸다. `manager` 와 `review_manager` 는 서버가
+         같은 값(검수 담당자)을 싣는 칸이라, 검수 쪽에서는 아무 일도 안 하고
+         **주문 쪽에서만** 검수 담당자 이름이 흘러들었다. 그래서 주문 담당자가
+         비어 있는 건이 검수 담당자 이름으로 조회되었다. */
+      fill('ol-manager', OL_ROWS.map(r => r[칸]));
     };
     olManagerFill();
     fill('ol-purchase', OL_ROWS.map(r => r.rx_purchase));
@@ -16394,7 +16400,8 @@ window.HELP_TOUR_STEPS = [
       /* 담당자 — 고른 갈래의 칸을 본다. 「미배정」은 목록의 __none__ 이다
          (2026-09-27 확인요청 4쪽 — 단추를 걷고 목록으로 합쳤다). */
       const _갈래 = document.getElementById('ol-manager-kind')?.value || 'review';
-      const _이름 = (_갈래 === 'order' ? r.order_manager : r.review_manager) || r.manager || '';
+      /* 되돌리지 않는다 — 위 olManagerFill 의 까닭과 같다 (SR #125ㆍ#126) */
+      const _이름 = (_갈래 === 'order' ? r.order_manager : r.review_manager) || '';
       if (manager === '__none__') { if (_이름) return false; }
       else if (manager && _이름 !== manager) return false;
 

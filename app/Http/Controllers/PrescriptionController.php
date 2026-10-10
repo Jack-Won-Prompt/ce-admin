@@ -2353,8 +2353,11 @@ class PrescriptionController extends Controller
         /* 담당자 — 고른 갈래의 칸을 본다. 「미배정」은 __none__ 이다 */
         if (($담당 = $글('manager')) !== '') {
             $갈래 = $글('manager_kind') ?: 'review';
-            $이름 = trim((string) (($갈래 === 'order' ? ($줄['order_manager'] ?? '') : ($줄['review_manager'] ?? ''))
-                                   ?: ($줄['manager'] ?? '')));
+            /* 되돌리지 않는다 (2026-10-10 · SR #125ㆍ#126). `manager` 와
+               `review_manager` 는 같은 값이라 검수 쪽에는 영향이 없고, 주문 쪽에서만
+               검수 담당자가 흘러들어 「주문 담당자가 빈 건」이 남의 이름으로 조회됐다. */
+            $이름 = trim((string) ($갈래 === 'order' ? ($줄['order_manager'] ?? '')
+                                                    : ($줄['review_manager'] ?? '')));
 
             if ($담당 === '__none__') { if ($이름 !== '') return false; }
             elseif ($이름 !== $담당)  { return false; }
