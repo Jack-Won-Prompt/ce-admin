@@ -56,6 +56,20 @@ class PaymentLinkController extends Controller
             return response()->json(['success' => false, 'message' => '결제할 금액이 없습니다.'], 422);
         }
 
+        /* 취소된 주문에는 보내지 않는다 (2026-10-10 · SR #81).
+
+           여태 금액ㆍ수금ㆍ위임ㆍ창고만 보고 주문 상태는 보지 않았다. 그래서 취소된
+           주문에도 결제 안내가 나갈 수 있었다 — 환자가 그 링크로 내면 돌려줄 일만
+           남는다. 화면에서도 잠그지만 서버가 마지막 잣대다. */
+        if ($order->status === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'code'    => 'order_cancelled',
+                'message' => '취소된 주문입니다. 결제 안내를 보낼 수 없습니다. '
+                           . '다시 받아야 하는 건이면 주문을 새로 만들어 주십시오.',
+            ], 422);
+        }
+
         /* 이미 다 받은 건에는 보내지 않는다 (2026-09-15 지시).
 
            여태 결제 여부를 보지 않아, 결제가 끝난 뒤에도 링크가 또 나갔다. 그 링크는

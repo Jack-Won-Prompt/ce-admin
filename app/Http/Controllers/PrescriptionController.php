@@ -3171,6 +3171,14 @@ class PrescriptionController extends Controller
                 ['CANCELED', 'PARTIAL_CANCELED'], true),
             'cancelled_amount' => (int) ($prescription->order?->tossPayment?->cancel_amount ?? 0),
 
+            /* 주문 자체가 취소된 건인가 (2026-10-10 · SR #81).
+
+               위 `cancelled` 는 **토스 결제**가 취소됐는가만 본다. 주문이 취소되어도
+               토스 줄이 없으면 거짓이라, 취소된 주문에 「링크 전송완료 · 3회」가 그대로
+               섰다 — 보낸 것은 사실이나 지금은 청할 값이 없는 주문이다. 운영에서
+               EUD202610021046581 이 그랬다. */
+            'order_cancelled' => ($prescription->order?->status === 'cancelled'),
+
             /* 발급된 가상계좌 (2026-10-01 지시).
                환자가 전화로 「계좌를 다시 알려 달라」고 할 때, 담당자가 발송 내역에서
                그 문자를 찾아 본문을 열지 않아도 되게 한다. 이미 담겨 있는 값이다. */

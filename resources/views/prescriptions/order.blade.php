@@ -1913,7 +1913,13 @@ $calcDeposit  = $calcCopay;
         <button class="pib-btn{{ ($payState['paid'] ?? false) ? ' is-paid' : '' }}"
                 id="btnPayTrigger" onclick="togglePayPopover(event)">
           <i class="fa-solid fa-won-sign" style="font-size:12px;"></i> 결제전송
-          @if($payState['cancelled'] ?? false)
+          @if($payState['order_cancelled'] ?? false)
+            {{-- 주문이 취소된 건 (2026-10-10 · SR #81).
+
+                 「링크 전송완료」는 보낸 사실을 말하지만, 취소된 주문에서는 그것이
+                 「아직 받을 것이 남았다」로 읽힌다. 주문 상태를 먼저 적는다. --}}
+            <span class="pay-tag pay-tag-cancelled">주문 취소</span>
+          @elseif($payState['cancelled'] ?? false)
             {{-- 결제가 취소된 건 (2026-09-16 지시).
 
                  「결제완료」도 「링크 전송완료」도 사실이 아니다 — 보낸 적도 받은
@@ -2034,10 +2040,12 @@ $calcDeposit  = $calcCopay;
             {{-- 다 받은 건은 잠근다 (2026-09-15 지시). 서버도 막지만(PaymentLinkController),
                  눌러 보고서야 알면 늦다 — 잠근 까닭을 단추에 적어 둔다. --}}
             <button type="button" class="btn btn-primary btn-sm" id="btnPaySend" onclick="sendPaymentLink(this)"
-                    @if(!$prescription->order || ($payState['settled'] ?? false)) disabled @endif
-                    title="{{ ($payState['settled'] ?? false)
+                    @if(!$prescription->order || ($payState['settled'] ?? false) || ($payState['order_cancelled'] ?? false)) disabled @endif
+                    title="{{ ($payState['order_cancelled'] ?? false)
+                              ? '취소된 주문입니다 — 결제 안내를 보낼 수 없습니다'
+                              : (($payState['settled'] ?? false)
                               ? '이미 결제가 끝난 주문입니다 — 더 보내면 두 번 낼 수 있습니다'
-                              : '결제 안내를 보냅니다' }}">
+                              : '결제 안내를 보냅니다') }}">
               <i class="fa-solid fa-paper-plane"></i> 전송
             </button>
 
