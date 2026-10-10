@@ -108,12 +108,16 @@ class KakaoService extends PopbillBaseService
         array  $messages,
         ?string $reserveDt = null,
         ?string $userId = null,
-        ?string $requestNum = null
+        ?string $requestNum = null,
+        array  $btns = []
     ): string {
         try {
+            /* 버튼을 비워 두면 템플릿에 등록된 버튼이 그대로 나간다 (2026-10-10).
+               채워 보내면 그것이 템플릿 버튼을 대신한다 — 서명ㆍ결제처럼 사람마다
+               주소가 다른 자리를 「전자서명하기」 같은 글씨 뒤로 넣을 때 쓴다. */
             return $this->api->SendATS(
                 $corpNum, $templateCode, $sender, $content,
-                null, null, $messages, $reserveDt, $userId, $requestNum
+                null, null, $messages, $reserveDt, $userId, $requestNum, $btns
             );
         } catch (PopbillException $e) {
             $this->handleException($e);
