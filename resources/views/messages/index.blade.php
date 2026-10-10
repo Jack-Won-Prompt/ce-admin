@@ -270,16 +270,20 @@
         </div>
 
         <div id="msBodyWrap" class="ms-field">
-          <label class="ds-field-label ms-body-label">본문 <span id="msLen" class="ms-count"></span></label>
+          <label class="ds-field-label ms-body-label">
+            <span id="msBodyLabel">본문</span> <span id="msLen" class="ms-count"></span>
+          </label>
           <textarea id="msBody" class="form-control ms-textarea" rows="7"
                     oninput="msUpdateLen()" placeholder="보낼 내용을 입력하십시오"></textarea>
-          <div class="ms-hint">
+          <div class="ms-hint" id="msBodyHint">
             #{고객명} 을 쓰면 받는 분 이름으로 바뀝니다.
           </div>
         </div>
         <div id="msAlimNote" style="display:none;font-size:12px;color:var(--gray-600);line-height:1.7;
              background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:10px 12px;">
-          알림톡 본문은 <b>카카오에 등록된 템플릿</b>이 정합니다. 여기서 고친 내용은 나가지 않습니다.
+          알림톡 본문은 <b>카카오에 등록된 템플릿</b>이 정합니다. 위 칸은 그 승인 본문을
+          <b>보여 주기만</b> 합니다 — 고칠 수 없고, 고쳐도 나가지 않습니다.
+          문구를 바꾸려면 카카오에 다시 승인을 받아야 합니다.
         </div>
       </div>
     </div>
@@ -503,9 +507,17 @@
     btn.classList.add('active');
     channel = btn.dataset.ch;
     tplCode = null;
-    // 알림톡 본문은 카카오가 정한다 — 여기서 쓴 글이 나간다고 오해하지 않게 칸을 감춘다
-    document.getElementById('msBodyWrap').style.display  = channel === 'sms' ? '' : 'none';
-    document.getElementById('msAlimNote').style.display  = channel === 'sms' ? 'none' : 'block';
+    /* 알림톡 본문을 감추지 않는다 (2026-10-10 · SR #109).
+
+       여태 알림톡을 고르면 본문 칸을 통째로 감추고 안내만 남겼다. 그러면 무엇이
+       나가는지 화면에서 볼 길이 없어, 담당자가 보낼 글을 가늠할 수 없었다.
+       이제 승인 본문을 **보기만 되게** 세운다 — 고칠 수 없다는 것은 잠긴 칸과
+       아래 안내가 함께 말한다. */
+    const 문자인가 = channel === 'sms';
+    document.getElementById('msBodyWrap').style.display  = '';
+    document.getElementById('msAlimNote').style.display  = 문자인가 ? 'none' : 'block';
+    document.getElementById('msBody').value = '';
+    ms본문잠금(! 문자인가);
     msRenderTpl();
   };
 
@@ -528,10 +540,29 @@
       </label>`).join('');
   }
 
+  /* 본문 칸을 보기 전용으로 바꾼다 (SR #109) */
+  function ms본문잠금(잠글까) {
+    const 칸 = document.getElementById('msBody');
+    칸.readOnly = 잠글까;
+    칸.style.background = 잠글까 ? 'var(--gray-50)' : '';
+    칸.style.color      = 잠글까 ? 'var(--gray-700)' : '';
+    칸.placeholder = 잠글까
+      ? '메시지 유형을 고르면 카카오에 승인된 본문이 여기에 보입니다'
+      : '보낼 내용을 입력하십시오';
+    document.getElementById('msBodyLabel').textContent =
+      잠글까 ? '본문 — 카카오 승인 문구 (고칠 수 없습니다)' : '본문';
+    /* 바이트 수와 변수 안내는 문자에만 뜻이 있다 */
+    document.getElementById('msLen').style.display      = 잠글까 ? 'none' : '';
+    document.getElementById('msBodyHint').style.display = 잠글까 ? 'none' : '';
+  }
+
   window.msPickTpl = function (code) {
     tplCode = code;
     const t = (TPL[channel] ?? {})[code];
-    if (channel === 'sms' && t) {
+    /* 알림톡도 채운다 — 보기만 되는 칸이다 (2026-10-10 · SR #109).
+       보내는 쪽은 이 글을 쓰지 않는다. 알림톡은 표에 담긴 승인 본문으로 나간다
+       (MessageSender::sendAlimtalkChunk). */
+    if (t) {
       document.getElementById('msBody').value = t.text ?? '';
       msUpdateLen();
     }
