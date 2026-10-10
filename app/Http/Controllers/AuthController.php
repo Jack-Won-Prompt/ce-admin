@@ -80,8 +80,13 @@ class AuthController extends Controller
 
         $가려던곳 = (string) $request->session()->pull('url.intended', '');
 
+        /* **목록 주소로 바로 보낸다** (2026-10-10 지시 「가」).
+
+           `m.home` 은 `/m` 이다. 세션에 남은 자취나 캐시가 끼면 그 한 주소에서
+           길이 갈리는 일이 있었다 — 같은 화면을 그리는 `/m/prescriptions` 로
+           보내면 그 틈이 없다. */
         return redirect()->to(
-            str_starts_with($가려던곳, url('/m')) ? $가려던곳 : route('m.home')
+            str_starts_with($가려던곳, url('/m')) ? $가려던곳 : route('m.prescriptions')
         );
     }
 
@@ -129,8 +134,16 @@ class AuthController extends Controller
 
         // OTP 비활성화 시 즉시 로그인
         if (!config('auth.otp_enabled', true)) {
+            /* 위 verifyOtp 와 같은 까닭 — regenerate 앞에서 읽어 두고 뒤에 다시 심는다 */
+            $모바일 = $this->모바일인가($request);
+
             Auth::loginUsingId($user->id, $request->boolean('remember'));
             $request->session()->regenerate();
+
+            if ($모바일) {
+                $request->session()->put('login_from', 'm');
+            }
+
             $this->dispatchCrawlIfNeeded();
             return $this->끝난뒤($request);
         }
@@ -230,9 +243,23 @@ class AuthController extends Controller
 
         $otp->update(['used_at' => now()]);
 
+        /* **세션을 다시 세우기 전에 모바일 표를 읽어 둔다** (2026-10-10).
+
+           `regenerate()` 는 세션을 갈아 끼운다. 그 뒤에 `login_from` 을 읽으면
+           표가 사라진 채라 「모바일에서 왔다」를 잊고 관리자 화면으로 떨어졌다 —
+           모바일 로그인으로 들어와도 웹 화면이 나오는 것이 이것이다
+           (2026-10-10 ceadmin.co.kr 에서 재현).
+
+           읽어 두었다가 다시 심는다. 끝난뒤() 가 그 표를 보고 길을 가른다. */
+        $모바일 = $this->모바일인가($request);
+
         Auth::loginUsingId($pending['user_id'], $pending['remember']);
         $request->session()->forget('2fa_pending');
         $request->session()->regenerate();
+
+        if ($모바일) {
+            $request->session()->put('login_from', 'm');
+        }
 
         $this->dispatchCrawlIfNeeded();
 

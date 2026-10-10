@@ -1664,7 +1664,12 @@ Route::get('/m/enter', [\App\Http\Controllers\MobileWebController::class, 'enter
 Route::middleware(['auth'])->prefix('m')->name('m.')->group(function () {
     $c = \App\Http\Controllers\MobileWebController::class;
 
-    Route::get('/',                      [$c, 'prescriptions'])->name('home');
+    /* `/m` 은 목록으로 돌려보낸다 (2026-10-10 지시 「나」).
+
+       여태 `/m` 도 같은 화면을 그렸다. 그런데 로그인을 마친 뒤 그 주소로 보냈을 때
+       웹 화면이 나오는 일이 있었다 — 세션에 남은 자취(url.intended)가 끼면 길이
+       갈렸다. 그릴 자리를 둘로 두지 않는다. `/m` 은 한 곳을 가리키기만 한다. */
+    Route::redirect('/', '/m/prescriptions')->name('home');
     Route::get('/prescriptions',         [$c, 'prescriptions'])->name('prescriptions');
     Route::get('/prescriptions/{rx_number}', [$c, 'prescription'])->name('prescription');
     Route::get('/upload',                [$c, 'upload'])->name('upload');
