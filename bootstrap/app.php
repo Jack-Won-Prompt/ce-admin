@@ -20,6 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
            관리자 로그인 화면은 폰에서 읽기 어렵고, 앱을 쓰던 사람에게는 낯선 자리다. */
         $middleware->redirectGuestsTo(fn ($request) =>
             $request->is('m', 'm/*') ? route('m.login') : route('login'));
+
+        /* 그 반대쪽도 가린다 (2026-10-10). 이미 로그인한 사람이 `/m/login` 을 열면
+           라라벨 기본값이 `dashboard` 로 보내, 폰에 웹 대시보드가 뜬다. 모바일에서
+           들어온 사람은 모바일 목록으로 보낸다. */
+        $middleware->redirectUsersTo(fn ($request) =>
+            $request->is('m', 'm/*') ? route('m.prescriptions') : route('dashboard'));
         $middleware->validateCsrfTokens(except: [
             'nhis/fax-callback',
             'toss/webhook',
