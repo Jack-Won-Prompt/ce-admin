@@ -894,7 +894,15 @@ class PrescriptionApiController extends Controller
                 'registration_no'    => $p->registration_no,
                 'serial_no'          => $p->serial_no,
                 'is_reissue'         => $p->is_reissue,
-                'patient_name'       => $p->patient_name_ocr,
+                /* OCR 로 읽힌 이름이 먼저다 — 이 묶음은 「OCR 결과」다. 없으면 고른
+                   환자 이름으로 받친다 (2026-10-10 TR-18 UAT 에서 드러남).
+
+                   앱ㆍH5 업로드는 환자를 거래처에서 골라 붙이므로 createWith() 가
+                   patient_name_ocr 을 채우지 않는다. 그래서 올린 사람이 자기 건의
+                   상세를 열면 성명이 빈 칸이었다 — 한 화면 앞 목록에는 보이는데
+                   상세에는 없었다. 목록(index)과 조회(lookup)는 처음부터 고른 환자를
+                   먼저 보고 있었다. 같은 건이 화면마다 다르게 보이지 않게 맞춘다. */
+                'patient_name'       => $p->patient_name_ocr ?: $p->patient?->name,
                 'resident_no'        => $p->masked_resident_no_ocr
                     ? substr($p->masked_resident_no_ocr, 0, 7) . '******'
                     : null,
