@@ -510,9 +510,10 @@ class NhisAssistController extends Controller
             ? null
             : ($order->cash_receipt_no ? '발행됐으나 서류가 없습니다' : '발행 내역이 없습니다');
 
-        /* 요양비 지급청구서[별지 제12호]는 기초ㆍ차상위경감 건에 만들어 둔다
-           (MedicalAidClaimForm::자격). 여태 지자체 창에만 세워, 차상위경감 건은
-           서류를 들고 있으면서도 공단 창에서 찾을 자리가 없었다(2026-09-21 확인). */
+        /* 요양비 지급청구서[별지 제12호]는 **기초 건에만** 만들어 둔다
+           (MedicalAidClaimForm::자격). 2026-09-21 에는 차상위경감도 들고 있었으나,
+           그 서식은 의료급여법 것이라 공단에 내는 자격에는 맞지 않는다
+           (2026-10-10 지시 · SR #116). 차상위경감 건에서는 이 줄이 서지 않는다. */
         $claimForm = \App\Support\MedicalAidClaimForm::applies($order)
             ? $attached('medical_aid_claim')
             : null;
