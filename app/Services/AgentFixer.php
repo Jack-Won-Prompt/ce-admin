@@ -327,18 +327,43 @@ class AgentFixer
      */
     public function 되물린다(string $해시, string $까닭): array
     {
+        /* 고치는 걸음과 같은 일터를 쓴다 — 겹치면 서로의 변경을 지운다 */
+        $걸쇠 = $this->걸쇠를잡는다();
+
         try {
             $this->맞춘다();
             $this->달린다('git revert --no-edit --no-commit ' . escapeshellarg($해시));
             $this->달린다(
                 "git -c user.name='CE Admin Agent' -c user.email='agent@ce-admin.co.kr' commit --quiet -F -",
-                "Agent 고침을 되물린다 ({$해시})\n\n까닭: {$까닭}\n\n올린 뒤 같은 잘못이 다시 났다. 사람이 보아야 한다."
+                "자동 고침을 되물린다 ({$해시})\n\n까닭: {$까닭}\n\n사람이 보아야 한다."
             );
             $this->달린다('git push --quiet origin HEAD:main');
 
             return ['했나' => true, '글' => "되물렸습니다 ({$해시})"];
         } catch (Throwable $e) {
             return ['했나' => false, '글' => '되물리지 못했습니다 — ' . $e->getMessage()];
+        } finally {
+            $this->걸쇠를놓는다($걸쇠);
+        }
+    }
+
+    /**
+     * 그 커밋을 적은 이의 메일 주소 (2026-10-10).
+     *
+     * 되물리기 전에 묻는다 — **사람이 올린 커밋은 건드리지 않는다.** 배포 점검이
+     * 멈췄다고 남의 일을 되돌리면, 고치던 사람이 영문도 모르고 제 커밋이 사라진 것을
+     * 보게 된다.
+     */
+    public function 적은이(string $해시): ?string
+    {
+        try {
+            $this->달린다('git fetch --quiet origin main');
+
+            return trim($this->달린다('git log -1 --format=%ae ' . escapeshellarg($해시)));
+        } catch (Throwable $e) {
+            Log::warning('[Agent] 적은 이를 묻지 못했습니다', ['sha' => $해시, 'error' => $e->getMessage()]);
+
+            return null;
         }
     }
 

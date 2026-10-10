@@ -67,6 +67,22 @@ jobs:
 
             echo "===== TEST STAGE OK ====="
 
+      # 점검이 멈추면 자동 고침을 되물린다 (2026-10-10 지시).
+      #
+      # 멈춘 커밋은 운영에 가지 않지만 main 에는 남는다 — 다음 사람이 올린 것이
+      # 점검을 지나면 **묻어서 함께 운영으로 올라간다.** 그 구멍을 막는다.
+      # 사람이 올린 커밋은 건드리지 않는다(명령 안에서 적은 이를 보고 가린다).
+      - name: 되물리기 (자동 고침일 때만)
+        if: failure()
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.TEST_HOST }}
+          username: ${{ secrets.TEST_USERNAME }}
+          key: ${{ secrets.TEST_SSH_KEY }}
+          script: |
+            cd ~/www/lcpoint
+            sudo -u www-data env HOME=/tmp php artisan agent:revert ${{ github.sha }}               --reason="배포 점검에서 멈췄습니다 (GitHub Actions 실행 ${{ github.run_id }})"
+
   # ── 2단계: 앞 단계가 통과했을 때만 운영에 배포한다 ───────────────────
   deploy:
     name: 운영 배포
