@@ -1328,14 +1328,61 @@ class PatientController extends Controller
     }
 
     // ── 삭제 (소프트) ─────────────────────────────────────
-    public function destroy(Patient $patient): \Illuminate\Http\JsonResponse
+    /**
+     * 거래처를 가린다 — 지우지 않는다 (2026-10-11 지시 · SR #119).
+     *
+     * 소프트 삭제다. 줄도 딸린 자료도 표에 그대로 남고 조회에서만 빠진다.
+     *
+     * **우선은 관리자만 쓴다.** 권한 묶음은 뒤에 정리해 받기로 했으므로, 그때까지는
+     * 역할 하나로 가린다. 화면에서도 단추를 관리자에게만 세우지만 여기가 마지막
+     * 잣대다 — 화면만 믿지 않는다.
+     *
+     * 딸린 것이 있으면 무엇이 있는지 적어 되묻는다. 막지는 않는다 — 잘못 만든
+     * 거래처를 지우는 것이 이 요청이고, 그런 건에는 대개 딸린 것이 없다.
+     */
+    public function destroy(\Illuminate\Http\Request $request, Patient $patient): \Illuminate\Http\JsonResponse
     {
+        if (auth()->user()?->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => '거래처 삭제는 관리자만 할 수 있습니다.',
+            ], 403);
+        }
+
         $name = $patient->name;
+
+        if (! $request->boolean('force')) {
+            $딸린것 = [];
+
+            if (($n = $patient->prescriptions()->count()) > 0)        { $딸린것[] = "처방전 {$n}건"; }
+            if (($n = \App\Models\Order::where('patient_id', $patient->id)
+                    ->where('status', '!=', 'cancelled')->count()) > 0) { $딸린것[] = "살아 있는 주문 {$n}건"; }
+            if (($n = \App\Models\PatientDocument::where('patient_id', $patient->id)->count()) > 0) {
+                $딸린것[] = "서류함 {$n}장";
+            }
+
+            if ($딸린것) {
+                return response()->json([
+                    'success' => false,
+                    'code'    => 'patient_in_use',
+                    'ask'     => sprintf(
+                        '「%s」에 %s이(가) 딸려 있습니다. 삭제하면 이 거래처가 목록과 조회에서 '
+                        . '가려지고, 딸린 자료도 함께 찾히지 않습니다. 자료가 지워지는 것은 '
+                        . '아니며 되살릴 수 있습니다. 그대로 삭제하시겠습니까?',
+                        $name, implode(' · ', $딸린것)),
+                ]);
+            }
+        }
+
         $patient->delete();
 
-        activity()->causedBy(auth()->user())
-            ->log("{$name} 환자 삭제");
+        activity()->causedBy(auth()->user())->performedOn($patient)
+            ->log("거래처 삭제(가림) — {$name}"
+                  . ($request->boolean('force') ? ' · 딸린 자료가 있는데도 진행' : ''));
 
-        return response()->json(['success' => true, 'message' => "{$name} 환자가 삭제되었습니다."]);
+        return response()->json([
+            'success' => true,
+            'message' => "「{$name}」을(를) 삭제했습니다. 목록에서 가려지며 자료는 남아 있습니다.",
+        ]);
     }
 }

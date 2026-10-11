@@ -339,6 +339,15 @@
     @perm('patients', 'create')
     <button type="button" class="ds-btn ds-btn-primary" onclick="openAddModal()">거래처 등록</button>
     @endperm
+    {{-- 거래처 삭제 (2026-10-11 지시 · SR #119).
+
+         지우는 길(소프트 삭제)은 진작 있었는데 누르는 자리가 없어 쓸 수 없었다.
+         **우선은 관리자만** 쓴다 — 권한 묶음은 뒤에 정리해 받기로 했다.
+         서버도 같은 자리에서 막는다. 화면만 믿지 않는다. --}}
+    @if (auth()->user()?->role === 'admin')
+    <button type="button" class="ds-btn" onclick="ptDelete()"
+            style="color:var(--alert-500);">거래처 삭제</button>
+    @endif
     </div>
   </div>
 </form>
@@ -636,6 +645,21 @@ document.addEventListener('keydown', (e) => {
 
     const r = rows[0];
     csOpen(r.id, r.name, r.mobile);
+  };
+
+  /* 거래처 삭제 — 고른 한 곳만 (2026-10-11 · SR #119).
+
+     지우는 것은 소프트 삭제다. 줄은 표에 남고 조회에서만 가려진다. 딸린 것이
+     있으면 서버가 무엇이 있는지 적어 되묻는다 — 그때 「그대로 삭제」를 고르면
+     지운다. 막지 않는 까닭은 잘못 만든 거래처를 지우려는 것이 이 요청이기
+     때문이다. */
+  window.ptDelete = async function () {
+    const rows = grid.getCheckedRows?.() ?? [];
+    if (!rows.length)    { showToast('삭제할 거래처를 목록에서 선택해 주십시오.', 'warning'); return; }
+    if (rows.length > 1) { showToast('거래처 한 곳만 선택해 주십시오.', 'warning'); return; }
+
+    const r = rows[0];
+    await deletePatient(r.id, r.name);
   };
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
@@ -1162,9 +1186,30 @@ document.addEventListener('keydown', (e) => {
 <script>
   // ── 모달 ──────────────────────────────────────────────
 
-  async function deletePatient(id, name) {
-    if (!await ceConfirm(`"${name}" 환자를 삭제하시겠습니까?`, { tone: 'danger', confirmText: '삭제' })) return;
-    const res = await apiRequest(`/patients/${id}`, 'DELETE');
+  async function deletePatient(id, name, opts = {}) {
+    if (!opts.force
+        && !await ceConfirm(`"${name}" 거래처를 삭제하시겠습니까?
+
+`
+                            + '목록과 조회에서 가려집니다. 자료는 지워지지 않습니다.',
+                            { tone: 'danger', confirmText: '삭제' })) return;
+
+    const res = await apiRequest(`/patients/${id}` + (opts.force ? '?force=1' : ''), 'DELETE');
+
+    /* 딸린 것이 있으면 서버가 무엇이 있는지 적어 되묻는다 (SR #119) */
+    if (res.code === 'patient_in_use') {
+      const 그래도 = await ceConfirm(res.ask, {
+        title: '딸린 자료가 있습니다',
+        tone: 'danger',
+        confirmText: '그대로 삭제',
+        cancelText: '그만두기',
+      });
+
+      if (!그래도) return;
+
+      return await deletePatient(id, name, { force: true });
+    }
+
     if (res.success) {
       showToast(res.message, 'success');
       setTimeout(() => location.reload(), 600);
