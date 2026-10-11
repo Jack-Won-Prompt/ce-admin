@@ -4218,6 +4218,38 @@ class PrescriptionController extends Controller
             }
         }
 
+        /* 같은 환자ㆍ같은 발행일에 이미 선 주문이 있으면 **묻고 넘어간다**
+           (2026-10-11 지시 「나」 · SR #131).
+
+           주문 줄은 유형을 고를 때 선다. 그런데 같은 처방이 두 줄로 들어와 있으면
+           (위드웍스 이관본과 우리가 올린 것, 또는 같은 발행일로 두 번 올린 것) 한쪽으로
+           주문ㆍ출고가 끝난 뒤 다른 줄을 열어 유형을 고르는 순간 주문이 또 섰다.
+           운영에서 (E)한동숙 님이 그랬다 — 10-02 에 출고까지 끝났는데 10-07 에
+           이관본 줄로 주문이 하나 더 섰다(2026-10-11 기준 그런 묶음 14개).
+
+           막지는 않는다. 추가 주문ㆍ정정은 같은 발행일로 더 설 수 있어야 한다 —
+           담당자가 보고 정하도록 무엇이 이미 있는지 적어 되묻는다. 「그대로 만들기」를
+           고르면 dup_ok 를 달고 다시 온다. 저장을 시작하기 전에 묻는다. */
+        if (! $request->boolean('dup_ok')
+            && ! $prescription->order()->exists()
+            && trim((string) $request->input('counsel_acc_add_type')) !== ''
+            && ($이미있는주문 = self::같은발행일주문(
+                    $prescription,
+                    $request->input('issued_date') ?: $prescription->issued_date))) {
+            return response()->json([
+                'success' => false,
+                'code'    => 'duplicate_order',
+                'ask'     => sprintf(
+                    '같은 분의 같은 처방전 발행일(%s)로 이미 주문이 있습니다 — %s · %s'
+                    . ' (처방전 %s). 그대로 만들면 같은 처방으로 주문이 둘이 됩니다.'
+                    . ' 추가 주문이나 정정이라면 그대로 만드십시오.',
+                    \Carbon\Carbon::parse($이미있는주문->prescription?->issued_date)->format('Y-m-d'),
+                    (string) $이미있는주문->order_number,
+                    (string) $이미있는주문->status_label,
+                    (string) ($이미있는주문->prescription?->rx_number ?? '-')),
+            ]);
+        }
+
         $payload = $request->only([
             'patient_name_ocr', 'resident_no_ocr', 'mobile_ocr', 'address_ocr',
             'postcode', 'address_detail',
@@ -4802,6 +4834,30 @@ class PrescriptionController extends Controller
                 'rx' => $prescription->rx_number, 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * 같은 환자ㆍ같은 처방전 발행일로 이미 선 주문 — 없으면 null (SR #131).
+     *
+     * 취소된 주문은 세지 않는다. 이 처방전 자신의 주문도 뺀다 — 묻는 것은 「다른 줄로
+     * 이미 만들었는가」이다.
+     */
+    private static function 같은발행일주문(Prescription $rx, $발행일): ?\App\Models\Order
+    {
+        $날 = trim((string) $발행일);
+
+        if ($날 === '' || ! $rx->patient_id) {
+            return null;
+        }
+
+        return \App\Models\Order::with('prescription')
+            ->where('status', '!=', 'cancelled')
+            ->whereHas('prescription', fn ($q) => $q
+                ->where('patient_id', $rx->patient_id)
+                ->where('id', '!=', $rx->id)
+                ->whereDate('issued_date', \Carbon\Carbon::parse($날)->toDateString()))
+            ->latest('id')
+            ->first();
     }
 
     /** 이 처방전의 주문 줄을 세워 둔다 — 몸통은 App\Support\OrderSync 다. */

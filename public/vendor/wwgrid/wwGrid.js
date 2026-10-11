@@ -2034,7 +2034,12 @@ class wwGrid {
       if (this._sortState.colName === col) {
         this._sortState.direction = this._sortState.direction === 'asc' ? 'desc' : 'asc';
       } else {
-        this._sortState = { colName: col, direction: 'asc' };
+        /* 날짜 칸은 최신이 먼저다 (2026-10-11 지시 · SR #131).
+
+           여태 새 칸은 늘 오름차순으로 시작했다. 날짜에서는 그것이 가장 오래된 것을
+           맨 위에 올려, 바라던 차례를 보려면 한 번 더 눌러야 했다. 빈 칸은 어느
+           날짜보다 작으므로 내림차순에서 아래로 간다 — 그 또한 바라는 자리다. */
+        this._sortState = { colName: col, direction: this._날짜칸인가(col) ? 'desc' : 'asc' };
       }
       this._sortData();
     });
@@ -2632,6 +2637,21 @@ class wwGrid {
     this._못박기다시();
     this._renderBody();
     this._renderSummary();
+  }
+
+  /**
+   * 그 칸이 날짜를 담고 있나 — `YYYY-MM-DD` 로 적힌 **첫 값** 하나로 가린다.
+   *
+   * 칸 설정에 꼴을 적어 두지 않는 화면이 많아 값으로 본다. 빈 칸은 건너뛴다 —
+   * 맨 위 몇 줄이 비었다고 날짜가 아닌 것은 아니다.
+   */
+  _날짜칸인가(colName) {
+    for (const 줄 of this.data) {
+      const v = 줄[colName];
+      if (v === null || v === undefined || v === '') continue;
+      return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v);
+    }
+    return false;
   }
 
   /* ── 정렬 ───────────────────────────────────── */

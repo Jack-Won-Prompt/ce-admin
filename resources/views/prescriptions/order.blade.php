@@ -10773,6 +10773,9 @@ window.HELP_TOUR_STEPS = [
          칸을 걷었고, 그 값은 거래처 관리의 상담 창이 받는다. 여기서 빈 값을 보내면
          이미 적어 둔 것이 지워진다. 「유형」은 병원ㆍ처방 정보에 남아 있어 그대로 보낸다. */
       counsel_acc_add_type: strOrNull('f-acc-add-type'),
+      /* 같은 발행일에 이미 주문이 있을 때 담당자가 「그대로 만들기」를 고르면 참이다
+         (2026-10-11 · SR #131). 서버는 이것이 없으면 되묻는다. */
+      dup_ok: opts.dupOk ? 1 : 0,
       /* 지금 보고 있는 주문 (2026-09-15 지시). 추가 주문을 보고 있으면 서버가
          처방 품목을 건드리지 않는다 — 처방 품목은 처방전 한 장의 값이라, 추가
          주문에서 덮으면 원 주문이 산 수량이 사라진다. */
@@ -10792,6 +10795,24 @@ window.HELP_TOUR_STEPS = [
       if (res.code === 'duplicate_first_purchase') {
         await ceAlert(res.ask, { title: '신구매가 이미 있습니다', tone: 'warning' });
         return;
+      }
+
+      /* **같은 발행일에 이미 주문이 있다** (2026-10-11 지시 「나」 · SR #131).
+
+         막지 않는다 — 추가 주문ㆍ정정은 같은 발행일로 더 설 수 있어야 한다.
+         무엇이 이미 있는지 적어 되묻고, 「그대로 만들기」를 고르면 dup_ok 를 달고
+         다시 보낸다. 서버는 그때 묻지 않는다. */
+      if (res.code === 'duplicate_order') {
+        const 그래도 = await ceConfirm(res.ask, {
+          title: '같은 발행일에 주문이 있습니다',
+          tone: 'warning',
+          confirmText: '그대로 만들기',
+          cancelText: '그만두기',
+        });
+
+        if (!그래도) return;
+
+        return await saveOCR({ ...opts, dupOk: true });
       }
 
       /* 네 칸이 모자라 저장하지 못했다 (2026-10-08 · SR #148).
