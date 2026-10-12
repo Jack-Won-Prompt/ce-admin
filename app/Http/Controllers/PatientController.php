@@ -48,18 +48,19 @@ class PatientController extends Controller
      *
      * 목록에 걸린 거래처만 읽는다 — 12,604명을 통째로 읽으면 이 화면이 또 무너진다.
      */
-    private function 위임장서명들($거래처번호들): \Illuminate\Support\Collection
+    private function 위임장서명들($거래처들): \Illuminate\Support\Collection
     {
         if (! \Illuminate\Support\Facades\Schema::hasTable('patient_delegation_signs')) {
             return collect();
         }
 
-        return \App\Models\PatientDelegationSign::query()
-            ->whereIn('patient_id', $거래처번호들)
-            ->orderByDesc('signed_at')->orderByDesc('id')
-            ->get()
-            ->unique('patient_id')          // 내림차순이라 거래처별 첫 줄이 곧 최신이다
-            ->keyBy('patient_id');
+        /* **원본까지 본다** (2026-10-12 · SR #180).
+
+           여태 옮겨 담은 표만 읽었다. 이관(2026-09-29)은 한 번 돌린 것이라 그 뒤에
+           서명한 사람은 이 표에 없다 — 운영에서 128곳이 그랬다. 주문 등록은
+           DelegationGate 로 원본까지 보므로 「주문은 되는데 거래처 관리는 대기중」이
+           되었다. 찾는 일은 거래처들것() 한 곳에 있다(개명한 사람도 그곳이 잇는다). */
+        return collect(\App\Models\PatientDelegationSign::거래처들것($거래처들, 'agree_delegation'));
     }
 
     /**
@@ -204,7 +205,24 @@ class PatientController extends Controller
         $그린것 = $쪽->getCollection();
 
         /* 처방 동의가 없는 거래처는 옮겨 담은 위임장 서명을 본다 */
-        $위임서명 = $this->위임장서명들($그린것->pluck('id'));
+        $위임서명 = $this->위임장서명들($그린것);
+
+        /* 「서명여부」는 **주문 등록과 같은 잣대**로 본다 (2026-10-12 · SR #180).
+
+           여태 거래처별 **최신 동의 한 줄**의 상태를 그대로 적었다. 그런데 받아 둔 뒤에
+           다시 보낸 건은 최신 줄이 「대기중」이라, 서명을 받아 두고도 대기중으로 섰다 —
+           (E)강종희 님이 그랬다(agreed＋서명 그림이 있는데 그 위에 pending 줄이 하나).
+
+           주문 등록은 「서명이 담긴 agreed 가 하나라도 있는가」로 본다(DelegationGate).
+           같은 것을 본다. 신분증만 받은 줄(kind = id_card)은 서명이 아니다. */
+        $서명받음 = \App\Models\PrescriptionConsent::query()
+            ->where('status', 'agreed')
+            ->where(fn ($q) => $q->whereNull('kind')->orWhere('kind', '!=', 'id_card'))
+            ->whereNotNull('signature_data')->where('signature_data', '!=', '')
+            ->whereHas('prescription', fn ($q) => $q->whereIn('patient_id', $그린것->pluck('id')))
+            ->with('prescription:id,patient_id')
+            ->get(['id', 'prescription_id'])
+            ->pluck('prescription.patient_id')->filter()->unique()->flip();
 
         /* 종이로 받아 서류함에 올려 둔 위임ㆍ서명동의 (2026-10-07 지시 · SR #115ㆍ#123).
            배지와 문은 같은 것을 보아야 한다 — 주문 등록은 이 서류를 서명으로 인정하므로
@@ -219,7 +237,7 @@ class PatientController extends Controller
             ->get(['id', 'patient_id', 'doc_type', 'signed_at'])
             ->keyBy('patient_id');
 
-        $gridData = $그린것->map(function ($p) use ($consents, $마케팅, $위임서명, $종이서명) {
+        $gridData = $그린것->map(function ($p) use ($consents, $마케팅, $위임서명, $종이서명, $서명받음) {
             // 생년월일 + 나이
             $birth = $p->birth_date
                 ? $p->birth_date->format('Y-m-d') . ' (만 ' . $p->age . '세)'
@@ -244,18 +262,28 @@ class PatientController extends Controller
 
             // 위임 서명 — 이 환자의 가장 최근 동의 건
             $c       = $consents[$p->id] ?? null;
-            $agreed  = $c && $c->status === 'agreed';
             $minorRx = $c && $c->is_minor;
+
+            /* 받아 둔 서명이 있는가 — 주문 등록과 같은 잣대 (2026-10-12 · SR #180).
+               최신 줄의 상태가 아니라 **쓸 수 있는 서명이 있는가**를 묻는다. */
+            $agreed  = isset($서명받음[$p->id]);
 
             /* 처방 동의가 없으면 옮겨 담은 위임장 서명이 근거다 (2026-09-29).
                미성년인지는 서명 줄의 생년월일로 센다 — 처방 동의의 is_minor 와 같은
                뜻이고, 보호자 칸이 채워진 열여섯 건이 모두 만 19세 미만이다. */
+            /* 보여 줄 값(미성년ㆍ법정대리인)은 여태대로 — 처방 동의가 있으면 그것이 먼저다 */
             $sg = $c ? null : ($위임서명[$p->id] ?? null);
 
             if ($sg) {
-                $agreed  = (bool) $sg->agree_delegation;
                 $minorRx = $sg->birth_date !== null && $sg->birth_date->age < 19;
             }
+
+            /* **받았는가**는 처방 동의가 있든 없든 셋을 모두 본다 (2026-10-12 · SR #180).
+               동의 줄이 있다고 원본 서명을 못 본 척하면, 다시 보낸 건이 또 대기중이 된다. */
+            $원본서명 = $위임서명[$p->id] ?? null;
+            $agreed   = $agreed
+                     || (bool) ($원본서명?->agree_delegation)
+                     || isset($종이서명[$p->id]);
 
             $addr = $p->addresses->first();
 
@@ -325,9 +353,16 @@ class PatientController extends Controller
                 // ── 위임 서명 ──
                 /* 종이로 받아 올려 둔 것도 서명으로 읽는다 — 어느 길로 받았는지는
                    숨기지 않고 「서명 완료(종이)」라 적는다 (2026-10-07 · SR #115ㆍ#123) */
-                'signed'      => $c ? $c->statusLabel()
-                                    : ($sg ? '서명 완료'
-                                           : (isset($종이서명[$p->id]) ? '서명 완료(종이)' : '')),
+                /* 받아 둔 서명이 있으면 **먼저** 「서명 완료」라 적는다 (2026-10-12 · SR #180).
+                   최신 줄의 상태를 그대로 적던 자리라, 다시 보낸 건이 「대기중」으로 섰다.
+                   어느 길로 받았는지는 숨기지 않는다 — 종이는 종이라 적는다. */
+                'signed'      => match (true) {
+                    isset($서명받음[$p->id])              => '서명 완료',
+                    (bool) ($원본서명?->agree_delegation) => '서명 완료',
+                    isset($종이서명[$p->id])              => '서명 완료(종이)',
+                    (bool) $c                             => $c->statusLabel(),
+                    default                               => '',
+                },
                 'minor'       => $minorRx ? '미성년' : (($c || $sg) ? '성년' : ''),
                 'g_relation'  => $minorRx ? (($c ?: $sg)->guardian_relation ?? '') : '',
                 'g_name'      => $minorRx ? (($c ?: $sg)->guardian_name ?? '') : '',
