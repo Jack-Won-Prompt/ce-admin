@@ -147,10 +147,22 @@
                 <input type="number" step="0.5" min="4" max="20" style="width:100%;"
                        name="fields[{{ $key }}][size]" value="{{ old("fields.$key.size", $f['size'] ?? config('medical_aid_claim.size', 8)) }}">
               </td>
-              {{-- 맞춤은 코드가 쥔다 — 금액ㆍ개수는 오른쪽 끝을 기준으로 삼아야
-                   자릿수가 늘 때 「원」ㆍ「개」 글자를 밀지 않는다 --}}
-              <td style="padding:6px 10px;border-bottom:1px solid var(--border-light);color:var(--gray-600);">
-                {{ ($f['align'] ?? 'L') === 'R' ? '오른쪽' : '왼쪽' }}
+              {{-- 맞춤을 고른다 (2026-10-12 · SR #162 「모든 항목 글씨 위치 중간으로」).
+
+                   여태 코드가 쥐고 화면에는 보여 주기만 했다. 종이 칸의 가운데에
+                   놓고 싶을 때 고칠 길이 없었다.
+
+                   · 왼쪽   — X 가 글자가 **시작**하는 자리
+                   · 오른쪽 — X 가 글자가 **끝나는** 자리. 금액ㆍ개수가 이것이다.
+                              자릿수가 늘면 왼쪽으로 자라 「원」ㆍ「개」를 밀지 않는다
+                   · 가운데 — X 가 **칸의 한가운데**. 글자가 양쪽으로 고르게 자란다 --}}
+              <td style="padding:6px 10px;border-bottom:1px solid var(--border-light);">
+                @php $맞춤 = old("fields.$key.align", $f['align'] ?? 'L'); @endphp
+                <select name="fields[{{ $key }}][align]" style="width:100%;">
+                  <option value="L" @selected($맞춤 === 'L')>왼쪽</option>
+                  <option value="C" @selected($맞춤 === 'C')>가운데</option>
+                  <option value="R" @selected($맞춤 === 'R')>오른쪽</option>
+                </select>
               </td>
             </tr>
             @endforeach

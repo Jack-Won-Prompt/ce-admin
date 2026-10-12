@@ -62,6 +62,12 @@ class MedicalAidClaimSetting extends Model
                     $base[$key][$k] = (float) $s[$k];
                 }
             }
+
+            /* 맞춤은 수가 아니라 글자다 — 위 되풀이에 섞으면 is_numeric 에 걸려
+               돌아오지 못한다 (2026-10-12 · SR #162) */
+            if (isset($s['align']) && in_array($s['align'], ['L', 'R', 'C'], true)) {
+                $base[$key]['align'] = $s['align'];
+            }
         }
 
         return $base;

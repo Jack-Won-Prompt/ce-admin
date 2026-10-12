@@ -198,11 +198,18 @@ final class MedicalAidClaimForm
 
             $pdf->SetFont($font, '', $pos['size'] ?? $cfg['size']);
 
-            if (($pos['align'] ?? 'L') === 'R') {
+            $맞춤 = $pos['align'] ?? 'L';
+
+            if ($맞춤 === 'R') {
                 /* 금액ㆍ개수는 오른쪽으로 맞춘다 — 자릿수가 늘면 왼쪽으로 자라야
                    「원」ㆍ「개」 글자를 밀지 않는다 */
                 $w = $pdf->GetStringWidth((string) $text);
                 $pdf->SetXY($pos['x'] - $w, $pos['y']);
+            } elseif ($맞춤 === 'C') {
+                /* 칸 한가운데에 놓는다 (2026-10-12 · SR #162). 이때 x 는 왼쪽 끝이
+                   아니라 **칸의 가운데**다 — 설정에서 그 자리를 찍는다. */
+                $w = $pdf->GetStringWidth((string) $text);
+                $pdf->SetXY($pos['x'] - $w / 2, $pos['y']);
             } else {
                 $pdf->SetXY($pos['x'], $pos['y']);
             }
@@ -221,7 +228,12 @@ final class MedicalAidClaimForm
         $rx   = $order->prescription;
         $pt   = $order->patient;
         $days = (int) ($rx?->total_days ?? 0);
-        $from = $rx?->buy_date ? Carbon::parse($rx->buy_date) : null;
+        /* 진료기간은 **주문 확정 날짜**다 — 거래명세서 발행일과 같은 날이다
+           (2026-10-12 지시 · SR #162). 여태 처방전의 구매일(buy_date)을 보았는데
+           그 칸은 대개 비어 있어 진료기간이 통째로 공란으로 나갔다. */
+        $from = $order->statement_date
+            ? Carbon::parse($order->statement_date)
+            : ($rx?->buy_date ? Carbon::parse($rx->buy_date) : null);
         $now  = now();
 
         $nhis  = (int) round((float) ($order->items->sum('nhis_amount')   ?? 0));

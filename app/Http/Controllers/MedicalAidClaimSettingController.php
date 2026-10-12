@@ -37,6 +37,8 @@ class MedicalAidClaimSettingController extends Controller
             'fields.*.x'    => "nullable|numeric|min:0|max:{$가로}",
             'fields.*.y'    => "nullable|numeric|min:0|max:{$세로}",
             'fields.*.size' => 'nullable|numeric|min:4|max:20',
+            /* 맞춤 — 왼쪽ㆍ오른쪽ㆍ가운데 (2026-10-12 · SR #162) */
+            'fields.*.align' => 'nullable|in:L,R,C',
         ]);
 
         /* config 에 있는 칸만 받아 둔다. 화면에서 온 이름을 그대로 믿고 담으면
@@ -57,6 +59,14 @@ class MedicalAidClaimSettingController extends Controller
 
             if ($row) {
                 $fields[$key] = array_map('floatval', $row);
+            }
+
+            /* 맞춤은 수가 아니라 글자다 — floatval 을 지나면 0 이 된다.
+               따로 얹는다 (2026-10-12 · SR #162). */
+            $맞춤 = $v['align'] ?? null;
+
+            if (in_array($맞춤, ['L', 'R', 'C'], true)) {
+                $fields[$key]['align'] = $맞춤;
             }
         }
 
