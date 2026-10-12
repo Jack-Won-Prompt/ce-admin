@@ -86,7 +86,7 @@
            않고 「계약된 결제수단이 아닙니다」로 되돌린다 — 고를 수는 있는데 누르면
            실패하는 자리를 환자 앞에 두지 않는다. --}}
       @if(config('toss.virtual_account.selectable'))
-        <div style="font-weight:700; margin-bottom:8px;">결제 수단을 선택해 주십시오</div>
+        <div style="font-weight:700; margin-bottom:8px;">결제 수단을 선택해 주시기 바랍니다</div>
         <div class="ways">
           <label class="way">
             <input type="radio" name="payway" value="CARD" checked>

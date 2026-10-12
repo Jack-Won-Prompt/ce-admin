@@ -267,7 +267,7 @@ class ConsentController extends Controller
                 : ['name' => '성명', 'phone' => '연락처', 'insurance' => '보험'];
             foreach ($need as $k => $label) {
                 if (trim((string) $request->input($k)) === '') {
-                    return response()->json(['success' => false, 'message' => "개인정보 동의의 「{$label}」을(를) 입력해 주십시오."], 422);
+                    return response()->json(['success' => false, 'message' => "개인정보 동의의 「{$label}」을(를) 입력해 주시기 바랍니다."], 422);
                 }
             }
 
@@ -293,7 +293,7 @@ class ConsentController extends Controller
             && count(array_filter((array) $request->input('final_agreements', []))) < 3) {
             return response()->json([
                 'success' => false,
-                'message' => '맨 아래 최종 동의 항목에 모두 체크해 주십시오.',
+                'message' => '맨 아래 최종 동의 항목에 모두 체크해 주시기 바랍니다.',
             ], 422);
         }
 
@@ -351,7 +351,7 @@ class ConsentController extends Controller
         ) {
             return response()->json([
                 'success' => false,
-                'message' => '본인확인을 먼저 완료해 주십시오.',
+                'message' => '본인확인을 먼저 완료해 주시기 바랍니다.',
             ], 422);
         }
 
@@ -737,7 +737,7 @@ class ConsentController extends Controller
         }
 
         if (! isset($payload['patient_id_path']) && ! isset($payload['guardian_id_path'])) {
-            return response()->json(['success' => false, 'message' => '신분증 사진을 한 장 이상 올려 주십시오.'], 422);
+            return response()->json(['success' => false, 'message' => '신분증 사진을 한 장 이상 올려 주시기 바랍니다.'], 422);
         }
 
         $consent->update($payload);

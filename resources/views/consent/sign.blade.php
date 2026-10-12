@@ -493,9 +493,9 @@
             {{-- 미성년자는 보호자가 인증한다. 그렇게 말해 두지 않으면 아이 이름으로
                  인증을 시도하다 막히고, 왜 막혔는지 화면에 없다. --}}
             {{ $verified
-                ? '본인확인이 완료되었습니다. 서명해 주십시오.'
+                ? '본인확인이 완료되었습니다. 서명해 주시기 바랍니다.'
                 : ($consent->is_minor
-                    ? '서명 전 법정대리인(보호자) 휴대폰으로 NICE 본인확인을 해 주십시오.'
+                    ? '서명 전 법정대리인(보호자) 휴대폰으로 NICE 본인확인을 해 주시기 바랍니다.'
                     : '서명 전 NICE 휴대폰 본인확인이 필요합니다.') }}
           </div>
         </div>
@@ -855,7 +855,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
           </svg>
-          <span class="sig-hint">눌러서 서명을 시작하십시오</span>
+          <span class="sig-hint">서명란을 눌러 주시기 바랍니다</span>
         </div>
       </div>
     </div>
@@ -922,7 +922,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
           </svg>
-          <span class="sig-hint">눌러서 보호자 서명을 시작하십시오</span>
+          <span class="sig-hint">보호자 서명란을 눌러 주시기 바랍니다</span>
         </div>
       </div>
 
@@ -933,7 +933,7 @@
       <div class="sig-label" style="margin-top:14px;display:block;">
         법정대리인 또는 가족 신분증 <span style="color:#ef4444;font-size:11px;">* 필수</span>
         <div style="font-size:12px;font-weight:400;color:#6b7280;line-height:1.7;margin-top:4px;">
-          법정대리인 또는 가족의 신분증(주민등록증 또는 운전면허증) 사진을 업로드해 주십시오.
+          법정대리인 또는 가족의 신분증(주민등록증 또는 운전면허증) 사진을 업로드해 주시기 바랍니다.
           생년월일 확인이 가능한 신분증만 제출 가능합니다.<br>
           (JPG, PNG, HEIC 형식, 최대 10MB)
         </div>
@@ -1014,7 +1014,7 @@ const timer = setInterval(tick, 1000);
 
 function showExpired() {
   clearInterval(timer);
-  showResult('⏰', '링크 만료', '서명 링크의 유효 시간({{ \App\Http\Controllers\DelegationSignController::유효분() }}분)이 지났습니다.\n담당자에게 재발송을 요청해 주십시오.', '#f59e0b');
+  showResult('⏰', '링크 만료', '서명 링크의 유효 시간({{ \App\Http\Controllers\DelegationSignController::유효분() }}분)이 지났습니다.\n담당자에게 재발송을 요청해 주시기 바랍니다.', '#f59e0b');
 }
 
 /* ── 서명 패드 ────────────────────────────────────────── */
@@ -1072,7 +1072,7 @@ document.addEventListener('touchstart', (e) => {
 
 function onStart(e) {
   /* 손가락이고 아직 깨우기 전이면, 이 손짓은 깨우는 데만 쓴다 */
-  if (e.touches && 깨우기(sigWrap, placeholder, '이제 이 곳에 서명하십시오')) return;
+  if (e.touches && 깨우기(sigWrap, placeholder, '이곳에 서명해 주시기 바랍니다')) return;
 
   e.preventDefault();
   drawing = true;
@@ -1298,7 +1298,7 @@ function whatIsMissing() {
 }
 
 /* 안내 상자와 팝업이 같은 말을 쓴다 — 두 곳에 따로 적으면 언젠가 갈린다 */
-const BLOCKED_TITLE = '전자서명을 진행하기 전에 아래 항목을 완료해 주십시오.';
+const BLOCKED_TITLE = '전자서명을 진행하기 전에 아래 항목을 완료해 주시기 바랍니다.';
 
 function showWhyBlocked(ok) {
   const box = document.getElementById('whyBlocked');
@@ -1319,7 +1319,7 @@ function showWhyBlocked(ok) {
 /* 주소는 손으로 다 적으면 오타가 난다 — 개인정보동의 페이지와 같은 서비스로 찾는다 */
 function findPrivacyZip() {
   if (typeof daum === 'undefined' || !daum.Postcode) {
-    ceAlert('주소 찾기를 불러오지 못했습니다. 직접 입력해 주십시오.', { tone: 'warning' });
+    ceAlert('주소 찾기를 불러오지 못했습니다. 직접 입력해 주시기 바랍니다.', { tone: 'warning' });
     return;
   }
   new daum.Postcode({
@@ -1364,7 +1364,7 @@ if (IS_MINOR) {
   };
   const gStart = (e) => {
     /* 보호자 칸도 같다 — 한 번 눌러 깨운 뒤에 그린다 (2026-09-19) */
-    if (e.touches && 깨우기(gWrap, gPh, '이제 이 곳에 서명하십시오')) return;
+    if (e.touches && 깨우기(gWrap, gPh, '이곳에 서명해 주시기 바랍니다')) return;
 
     e.preventDefault();
     gDrawing = true;
@@ -1402,7 +1402,7 @@ function clearGuardianSignature() {
   p.style.opacity = '1';
   const h = p.querySelector('.sig-hint');
   if (h) h.textContent = w.classList.contains('armed')
-    ? '이제 이 곳에 서명하십시오' : '눌러서 보호자 서명을 시작하십시오';
+    ? '이곳에 서명해 주시기 바랍니다' : '보호자 서명란을 눌러 주시기 바랍니다';
   refreshAgree();
 }
 
@@ -1412,7 +1412,7 @@ function onGuardianIdPick(input) {
   const file = input.files?.[0];
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) {
-    ceAlert('파일이 너무 큽니다. 10MB 이하로 올려 주십시오.', { tone: 'warning' });
+    ceAlert('파일이 너무 큽니다. 10MB 이하로 올려 주시기 바랍니다.', { tone: 'warning' });
     input.value = ''; return;
   }
 
@@ -1439,7 +1439,7 @@ function onGuardianIdPick(input) {
       refreshAgree();
     };
     img.onerror = () => {
-      ceAlert('이미지를 읽지 못했습니다. 다른 파일로 시도해 주십시오.', { tone: 'warning' });
+      ceAlert('이미지를 읽지 못했습니다. 다른 파일로 시도해 주시기 바랍니다.', { tone: 'warning' });
       input.value = '';
     };
     img.src = reader.result;
@@ -1463,7 +1463,7 @@ function clearSignature() {
   /* 깨운 채로 둔다 — 지우는 사람은 곧바로 다시 그린다 */
   const h = placeholder.querySelector('.sig-hint');
   if (h) h.textContent = sigWrap.classList.contains('armed')
-    ? '이제 이 곳에 서명하십시오' : '눌러서 서명을 시작하십시오';
+    ? '이곳에 서명해 주시기 바랍니다' : '서명란을 눌러 주시기 바랍니다';
   refreshAgree();
 }
 
@@ -1493,7 +1493,7 @@ async function startNice() {
   // 브라우저가 팝업을 막았으면 여기서 중단하고 안내한다(빈 탭이 열리는 것을 방지).
   if (!nicePopup || nicePopup.closed || typeof nicePopup.closed === 'undefined') {
     nicePopup = null;
-    ceAlert('브라우저가 팝업을 차단했습니다.\n주소창의 팝업 차단을 해제한 뒤 다시 시도해 주십시오.', { tone: 'warning' });
+    ceAlert('브라우저가 팝업을 차단했습니다.\n주소창의 팝업 차단을 해제한 뒤 다시 시도해 주시기 바랍니다.', { tone: 'warning' });
     resetVerifyBtn();
     return;
   }
@@ -1606,7 +1606,7 @@ function niceMarkVerified() {
   const t = document.getElementById('verifyTitle');
   if (t) t.textContent = '본인확인 완료';
   const desc = document.getElementById('verifyDesc');
-  if (desc) desc.textContent = '본인확인이 완료되었습니다. 서명해 주십시오.';
+  if (desc) desc.textContent = '본인확인이 완료되었습니다. 서명해 주시기 바랍니다.';
   const btn = document.getElementById('btnVerify');
   if (btn) btn.outerHTML = '<span class="verify-badge">✅</span>';
 
@@ -1666,15 +1666,15 @@ async function submitConsent(action) {
 
   /* 미성년이면 위임인 서명란을 세우지 않는다 — 아래 보호자 서명 하나만 본다 */
   if (action === 'agreed' && !IS_MINOR && (!hasSig || !canvasHasInk(canvas))) {
-    ceAlert('서명이 비어 있습니다. 서명란에 다시 서명해 주십시오.', { tone: 'warning' });
+    ceAlert('서명이 비어 있습니다. 서명란에 다시 서명해 주시기 바랍니다.', { tone: 'warning' });
     return;
   }
   if (action === 'agreed' && IS_MINOR && !canvasHasInk(document.getElementById('gSigCanvas'))) {
-    ceAlert('보호자 서명이 비어 있습니다. 보호자 서명란에 다시 서명해 주십시오.', { tone: 'warning' });
+    ceAlert('보호자 서명이 비어 있습니다. 보호자 서명란에 다시 서명해 주시기 바랍니다.', { tone: 'warning' });
     return;
   }
   if (action === 'agreed' && IS_MINOR && !guardianReady()) {
-    ceAlert('가입자ㆍ피부양자와의 관계, 법정대리인 또는 가족 성명ㆍ생년월일ㆍ서명을 모두 입력해 주십시오.', { tone: 'warning' });
+    ceAlert('가입자ㆍ피부양자와의 관계, 법정대리인 또는 가족 성명ㆍ생년월일ㆍ서명을 모두 입력해 주시기 바랍니다.', { tone: 'warning' });
     return;
   }
 
@@ -1688,7 +1688,7 @@ async function submitConsent(action) {
     if (!갈까) return;
   }
   if (action === 'agreed' && !privacyReady()) {
-    ceAlert('개인정보 수집·이용의 신청 유형ㆍ필수 입력ㆍ필수 동의 항목을 모두 채워 주십시오.', { tone: 'warning' });
+    ceAlert('개인정보 수집·이용의 신청 유형ㆍ필수 입력ㆍ필수 동의 항목을 모두 채워 주시기 바랍니다.', { tone: 'warning' });
     return;
   }
 
@@ -1779,7 +1779,7 @@ async function submitConsent(action) {
       if (action === 'agreed') {
         showResult('✅', '동의가 완료되었습니다', @json(($위임필요 ?? true) ? '건강보험 급여 위임동의가 정상적으로 접수되었습니다.' : '개인정보 수집·이용 동의가 정상적으로 접수되었습니다.') + '\n이 창을 닫으셔도 됩니다.', '#12B76A');
       } else {
-        showResult('❌', '거절 처리되었습니다', '위임동의를 거절하셨습니다.\n문의 사항은 담당자에게 연락해 주십시오.', '#6b7280');
+        showResult('❌', '거절 처리되었습니다', '위임동의를 거절하셨습니다.\n문의 사항은 담당자에게 연락해 주시기 바랍니다.', '#6b7280');
       }
     } else {
       ceAlert(data.message ?? '오류가 발생했습니다.', { tone: 'danger' });
@@ -1788,7 +1788,7 @@ async function submitConsent(action) {
       btnAgree.innerHTML = '동의 및 제출';
     }
   } catch (e) {
-    ceAlert('네트워크 오류가 발생했습니다. 다시 시도해 주십시오.', { tone: 'danger' });
+    ceAlert('네트워크 오류가 발생했습니다. 다시 시도해 주시기 바랍니다.', { tone: 'danger' });
     btnAgree.disabled = false;
     btnDecline.disabled = false;
     btnAgree.innerHTML = '동의 및 제출';

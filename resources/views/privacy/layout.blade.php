@@ -125,7 +125,7 @@
           document.querySelector('[name=addr2]').focus();
         }}).open();
       } else {
-        ceAlert('우편번호는 직접 입력해 주십시오.', { tone: 'warning' });
+        ceAlert('우편번호는 직접 입력해 주시기 바랍니다.', { tone: 'warning' });
       }
     }
   </script>

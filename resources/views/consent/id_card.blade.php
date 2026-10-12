@@ -84,7 +84,7 @@
     {{-- 환자가 보는 화면이다 — 회사 이름을 적는다 (2026-09-30 지시) --}}
     <div class="logo">콜로플라스트 코리아</div>
     <h1>신분증 제출</h1>
-    <p>건강보험공단 등록에 필요한 신분증을 올려 주십시오.</p>
+    <p>건강보험공단 등록에 필요한 신분증을 올려 주시기 바랍니다.</p>
   </div>
 
   {{-- 누가 보냈는지 밝힌다. 모르는 번호에서 온 링크는 열지 않는 것이 옳다.
@@ -104,14 +104,14 @@
   <div class="card-body">
     <div class="who">
       <b>{{ $consent->patient_name }}</b> 님의 건강보험공단 등록 서류입니다.<br>
-      주민등록증ㆍ운전면허증ㆍ여권 등 사진이 있는 신분증을 올려 주십시오.
+      주민등록증ㆍ운전면허증ㆍ여권 등 사진이 있는 신분증을 올려 주시기 바랍니다.
     </div>
 
     {{-- 본인 신분증 --}}
     <div class="sec">
       <label class="sec-label">
         본인 신분증
-        <div class="sec-help">사진을 촬영하거나 파일을 선택하십시오. (JPGㆍPNGㆍHEIC, 최대 10MB)</div>
+        <div class="sec-help">사진을 촬영하거나 파일을 선택해 주시기 바랍니다. (JPGㆍPNGㆍHEIC, 최대 10MB)</div>
       </label>
       <label class="upload" id="pDrop">
         {{-- capture 를 달지 않는다 (2026-09-27 확인요청 10쪽).
@@ -192,7 +192,7 @@ function pick(input, 자리) {
   const file = input.files?.[0];
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) {
-    ceAlert('파일이 너무 큽니다. 10MB 이하로 올려 주십시오.', { tone: 'warning' });
+    ceAlert('파일이 너무 큽니다. 10MB 이하로 올려 주시기 바랍니다.', { tone: 'warning' });
     input.value = ''; return;
   }
 
@@ -219,7 +219,7 @@ function pick(input, 자리) {
       refresh();
     };
     img.onerror = () => {
-      ceAlert('이미지를 읽지 못했습니다. 다른 파일로 시도해 주십시오.', { tone: 'warning' });
+      ceAlert('이미지를 읽지 못했습니다. 다른 파일로 시도해 주시기 바랍니다.', { tone: 'warning' });
       input.value = '';
     };
     img.src = reader.result;
@@ -243,7 +243,7 @@ function refresh() {
     why.innerHTML = 보낼수있다
       ? '아직 올리지 않은 것: <b>' + 남은.join('</b>, <b>') + '</b><br>'
         + '지금 보내셔도 되지만, 담당자가 다시 연락드릴 수 있습니다.'
-      : '올려주셔야 하는 것: <b>' + 남은.join('</b>, <b>') + '</b>';
+      : '제출하셔야 하는 서류: <b>' + 남은.join('</b>, <b>') + '</b>';
   } else {
     why.style.display = 'none';
   }
@@ -282,7 +282,7 @@ async function submitIdCard() {
     document.getElementById('resultMsg').textContent   =
       '신분증을 받았습니다. 확인 후 담당자가 안내드리겠습니다.';
   } catch (e) {
-    ceAlert('제출하지 못했습니다. 잠시 후 다시 시도해 주십시오.', { tone: 'danger' });
+    ceAlert('제출하지 못했습니다. 잠시 후 다시 시도해 주시기 바랍니다.', { tone: 'danger' });
     btn.disabled = false; btn.textContent = '제출';
   }
 }

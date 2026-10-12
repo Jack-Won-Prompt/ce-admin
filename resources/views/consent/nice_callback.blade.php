@@ -21,7 +21,7 @@
   @else
     <div class="icon">⚠️</div>
     <h1>본인확인 실패</h1>
-    <p>{{ $message ?? '본인확인에 실패했습니다.' }}<br>서명 화면에서 다시 시도해 주십시오.</p>
+    <p>{{ $message ?? '본인확인에 실패했습니다.' }}<br>서명 화면에서 다시 시도해 주시기 바랍니다.</p>
   @endif
 
   <script>
@@ -47,7 +47,7 @@
       } else if (payload.ok) {
         var 알림 = document.createElement('div');
         알림.style.cssText = 'margin-top:12px;color:#6B7280;font-size:13px;line-height:1.6;';
-        알림.innerHTML = '이 창을 닫고 <b>서명 화면으로 돌아가</b> 주십시오.<br>'
+        알림.innerHTML = '이 창을 닫고 <b>서명 화면으로 돌아가</b> 주시기 바랍니다.<br>'
                        + '본인확인은 정상으로 처리되었습니다.';
         document.body.appendChild(알림);
       }

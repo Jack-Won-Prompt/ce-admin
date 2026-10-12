@@ -22,7 +22,7 @@
 <div class="card" id="signCard">
   <h2>서명 <span class="req">*</span></h2>
   <p class="note" style="margin:0 0 10px;">
-    아래 칸에 손가락이나 마우스로 서명해 주십시오.
+    아래 칸에 손가락이나 마우스로 서명해 주시기 바랍니다.
     이 서명은 개인정보 수집ㆍ이용 동의와 요양비 위임 동의의 증빙으로 사용됩니다.
   </p>
 
@@ -30,7 +30,7 @@
        background:#fff;overflow:hidden;">
     <canvas id="signPad" style="display:block;width:100%;height:190px;touch-action:none;cursor:crosshair;"></canvas>
     <div id="signHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-         pointer-events:none;color:#94a3b8;font-size:15px;font-weight:600;">여기에 서명해 주십시오</div>
+         pointer-events:none;color:#94a3b8;font-size:15px;font-weight:600;">여기에 서명해 주시기 바랍니다</div>
   </div>
 
   <div style="display:flex;gap:9px;margin-top:10px;">
@@ -118,7 +118,7 @@
   form.addEventListener('submit', function (e) {
     if (!그렸나) {
       e.preventDefault();
-      alert('서명을 입력해 주십시오.');
+      alert('서명을 입력해 주시기 바랍니다.');
       document.getElementById('signCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
       return false;
     }

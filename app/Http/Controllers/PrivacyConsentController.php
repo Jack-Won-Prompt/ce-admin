@@ -62,16 +62,16 @@ class PrivacyConsentController extends Controller
         $rules['signature'] = 'required|string|max:' . (2 * 1024 * 1024);
 
         $data = $request->validate($rules, [
-            'name.required'          => '성명을 입력해 주십시오.',
-            'phone.required'         => '연락처를 입력해 주십시오.',
-            'agree_general.in'         => '필수 동의 항목에 동의해 주십시오.',
-            'agree_third_party.in'     => '필수 동의 항목에 동의해 주십시오.',
-            'agree_sensitive.in'       => '필수 동의 항목에 동의해 주십시오.',
-            'agree_third_sensitive.in' => '필수 동의 항목에 동의해 주십시오.',
-            'insurance.required'     => '보험 구분을 선택해 주십시오.',
-            'birth.required'         => '생년월일을 입력해 주십시오.',
-            'signature.required'     => '서명을 입력해 주십시오.',
-            'signature.max'          => '서명 그림이 너무 큽니다. 다시 서명해 주십시오.',
+            'name.required'          => '성명을 입력해 주시기 바랍니다.',
+            'phone.required'         => '연락처를 입력해 주시기 바랍니다.',
+            'agree_general.in'         => '필수 동의 항목에 동의해 주시기 바랍니다.',
+            'agree_third_party.in'     => '필수 동의 항목에 동의해 주시기 바랍니다.',
+            'agree_sensitive.in'       => '필수 동의 항목에 동의해 주시기 바랍니다.',
+            'agree_third_sensitive.in' => '필수 동의 항목에 동의해 주시기 바랍니다.',
+            'insurance.required'     => '보험 구분을 선택해 주시기 바랍니다.',
+            'birth.required'         => '생년월일을 입력해 주시기 바랍니다.',
+            'signature.required'     => '서명을 입력해 주시기 바랍니다.',
+            'signature.max'          => '서명 그림이 너무 큽니다. 다시 서명해 주시기 바랍니다.',
         ]);
 
         $consent = PrivacyConsent::create(array_merge(
