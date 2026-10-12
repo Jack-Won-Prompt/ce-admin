@@ -370,16 +370,18 @@ class OrderGridExtras
                    'created_at', 'next_repurchase', 'repurchase_date']);
 
         foreach ($줄 as $r) {
-            $날 = $r->next_repurchase ?: $r->repurchase_date;
+            /* 재구매 가능일이 없는 구매도 담는다.
 
-            if (! $날) {
-                continue;                       // 재구매 가능일이 없으면 기준이 못 된다
-            }
+               건너뛰면 그보다 **옛 구매**가 직전인 양 서고, 그 날짜는 이미 지난
+               날이라 「지금 팔아도 된다」로 읽힌다. 직전 구매에 날짜가 없으면
+               모르는 것이고, 모르는 것은 비워 두어야 한다 — RepurchaseWindow 와
+               같은 잣대다(둘이 갈리면 주문 등록 화면과 목록이 다른 날을 적는다). */
+            $날 = $r->next_repurchase ?: $r->repurchase_date;
 
             $this->구매들[(int) $r->patient_id][] = [
                 'id'   => (int) $r->id,
                 '차례' => self::차례($r),
-                '날'   => \Carbon\Carbon::parse($날)->format('Y-m-d'),
+                '날'   => $날 ? \Carbon\Carbon::parse($날)->format('Y-m-d') : '',
             ];
         }
     }
