@@ -569,6 +569,10 @@ window.HELP_TOUR_STEPS = [
       { header: '처방전',     name: 'doc_rx',   width: 76, align: 'center', renderer: 서류칸 },
       { header: '등록신청서', name: 'doc_reg',  width: 92, align: 'center', renderer: 서류칸 },
       { header: '결과지',     name: 'doc_test', width: 76, align: 'center', renderer: 서류칸 },
+      {{-- 월간 보고에서 「위임장만 올린 것」을 빼려면 그 칸이 보여야 한다
+           (2026-10-12 지시). 셋이 모두 「—」인 것으로 짐작하면 아무것도 올라오지
+           않은 줄과 구별되지 않는다. --}}
+      { header: '위임장',     name: 'doc_delegation', width: 76, align: 'center', renderer: 서류칸 },
       { header: '파일 검수',     name: 'review',     width: 120, align: 'center',
         exportable: false, renderer: 검수칸 },
       /* 검수 바로 옆 — 「검수했나」와 「되물었나」는 잇대어 읽는 값이다 (2026-09-12 지시) */
@@ -581,6 +585,9 @@ window.HELP_TOUR_STEPS = [
       { header: '처방유형',      name: 'acc_type',   width: 110, align: 'center', sortable: true },
       { header: '판매유형',      name: 'so_type',    width: 90,  align: 'center', sortable: true },
       { header: '주문번호',      name: 'order_no',   width: 140, sortable: true },
+      {{-- 주문이 서고도 멈춰 선 줄을 가린다 — 월간 보고의 「몇 건이 진행이 안 되고
+           있는지」가 이 칸이다. 주문이 없으면 그 까닭(처방전 상태)을 함께 적는다. --}}
+      { header: '주문 진행',     name: 'order_state', width: 150, sortable: true },
       // 시안은 'WithWorks So' 였으나 화면 낱말을 우리말로 맞춘다(2026-09-11 지시).
       // name 은 그대로 둔다(엑셀 머리글은 이 header 를 그대로 쓴다).
       { header: '위드웍스 판매번호', name: 'so_no',   width: 150, sortable: true },

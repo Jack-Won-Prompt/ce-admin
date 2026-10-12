@@ -75,9 +75,9 @@ class PrescriptionController extends Controller
            보이는 것과 받는 것이 다르면 담당자가 둘을 맞춰 보며 시간을 쓴다. */
         $머리글 = [
             '처방번호', '출처', '환자명', '병원', '요양기관코드', '발행일', '상태',
-            '업로드 파일', '처방전', '등록신청서', '결과지',
+            '업로드 파일', '처방전', '등록신청서', '결과지', '위임장',
             '파일 검수', '요청 여부', '검수 메모',
-            '처방유형', '판매유형', '주문번호', '위드웍스 판매번호',
+            '처방유형', '판매유형', '주문번호', '주문 진행', '위드웍스 판매번호',
             '검수 담당자', '주민등록번호', '업로드 담당자', '검수 일자',
             '검수 요청 메모', '참고 사항', '접수일시',
         ];
@@ -100,12 +100,13 @@ class PrescriptionController extends Controller
                         $줄['rx_number'], $줄['source'], $줄['patient'], $줄['hospital'],
                         $줄['hosp_code'], $줄['issued'], $줄['status'],
                         $줄['files'], $줄['doc_rx'], $줄['doc_reg'], $줄['doc_test'],
+                        $줄['doc_delegation'],
                         /* 「파일 검수」ㆍ「요청 여부」는 화면에서 단추와 뱃지로 서는 자리다 —
                            글로 적어야 엑셀에서 읽힌다. */
                         \App\Models\Prescription::STATUS_LABELS[$줄['review']]['label'] ?? $줄['review'],
                         $줄['reupload'] ? $줄['reupload'] . '건' : '',
                         $줄['admin_note'],
-                        $줄['acc_type'], $줄['so_type'], $줄['order_no'], $줄['so_no'],
+                        $줄['acc_type'], $줄['so_type'], $줄['order_no'], $줄['order_state'], $줄['so_no'],
                         $줄['assignee'], $줄['resident_no'], $줄['uploader'], $줄['reviewed_at'],
                         $줄['review_request_memo'], $줄['review_memo'], $줄['created'],
                     ]);
@@ -277,6 +278,30 @@ class PrescriptionController extends Controller
                                                                                        ? 'O' : '—',
             'doc_reg'   => $rx->attachments->contains('doc_type', 'registration_form') ? 'O' : '—',
             'doc_test'  => $rx->attachments->contains('doc_type', 'test_result')       ? 'O' : '—',
+
+            /* 「위임장」 — 월간 보고에서 **빼는** 줄을 가리는 칸 (2026-10-12 지시).
+
+               「몇 개의 처방전이 등록되었나(위임장만 올린 것은 제외)」를 세려면
+               위임장만 올라온 줄을 가려야 하는데, 여태 처방전ㆍ등록신청서ㆍ결과지
+               세 칸뿐이라 셋이 모두 「—」인 것으로 **짐작**해야 했다. 그러면 아무것도
+               올라오지 않은 줄과 구별되지 않는다 — 10월만 해도 위임장만 올린 것이
+               4장이고 아무 자료도 없는 것이 128장이다. */
+            'doc_delegation' => $rx->attachments
+                ->whereIn('doc_type', \App\Support\DelegationGate::종이서명유형)
+                ->isNotEmpty() ? 'O' : '—',
+
+            /* 「주문 진행」 — 그 처방전이 주문으로 어디까지 갔나 (2026-10-12 지시).
+
+               여태 「주문번호」 칸뿐이라 주문이 **있나 없나**만 읽혔다. 월간 보고가
+               묻는 것은 「그중 몇 건이 진행이 안 되고 있나」라, 주문이 서고도 멈춰 선
+               줄을 가려야 한다.
+
+               주문이 없으면 비워 두지 않고 그 까닭을 적는다 — 빈칸은 「모른다」로
+               읽히는데, 여기서는 「아직 주문을 세우지 않았다」가 분명한 사실이다.
+               처방전 상태가 그 까닭을 말한다(검수 보류ㆍ대기 중 따위). */
+            'order_state' => $order
+                ? $order->status_label
+                : '주문 없음 (' . $rx->status_label . ')',
 
             /* 결제 네 항목 — 다른 목록과 같은 칸을 여기에도 세운다 (2026-09-20 지시).
 
