@@ -934,8 +934,17 @@ class ConsentController extends Controller
         $consent->loadMissing('prescription.patient');
         $patient = $consent->prescription?->patient;
 
-        /* 본인확인은 (E) 를 뗀 이름으로 견준다 — 통신사가 돌려주는 이름에는 그 표시가 없다 */
-        $expectedName  = $patient?->bare_name ?? Patient::bare($consent->patient_name);
+        /* 본인확인은 **법적 이름**으로 견준다 (2026-10-12 고침).
+
+           통신사가 돌려주는 이름에는 (E) 도 동명이인 꼬리도 없다. 여태 bare_name 을
+           썼는데 그것은 (E) 만 뗀다 — 「(E)김종호B」가 「김종호B」로 남아 NICE 의
+           「김종호」와 어긋난다.
+
+           여태 드러나지 않은 까닭은 **서명할 때는 거래처가 아직 이어지지 않아서**다
+           (서명이 돌아온 뒤 PatientLink 가 잇는다). 그때는 동의 줄의 이름으로 견주어
+           지나갔다. 그러나 이미 꼬리 붙은 거래처로 이어진 건에서 다시 받으면 막힌다 —
+           운영에 꼬리가 붙은 거래처가 2,541명이다. */
+        $expectedName  = Patient::실명($patient?->name) ?: Patient::실명($consent->patient_name);
         $expectedBirth = $this->patientBirthYmd($consent);   // YYYYMMDD or null
 
         $norm = fn ($s) => preg_replace('/\s+/', '', (string) $s);
@@ -1788,7 +1797,9 @@ class ConsentController extends Controller
         /* 위임인 칸과 **같은 잣대**로 적는다 (2026-10-12 지시 · 개명).
            여태 이 한 줄만 동의 기록의 이름을 먼저 보아, 개명한 사람은 성명 칸에는 새
            이름이, 바로 아래 서명란에는 옛 이름이 찍혔다 — 한 장에 두 이름이 섰다. */
-        $put('signature_name', $patient?->bare_name ?: Patient::bare($consent->patient_name));
+        /* 위임인 칸과 **같은 식**이어야 한다 — bare_name 은 (E) 만 떼고 동명이인
+           꼬리(김종호B 의 B)를 남긴다. 2026-10-12 에 두 줄을 맞추며 그것을 놓쳤다. */
+        $put('signature_name', Patient::실명($patient?->name) ?: Patient::실명($consent->patient_name));
         if ($consent->is_minor) {
             $put('guardian_sig_name', $consent->guardian_name ?: $patient?->guardian_name);
         }
