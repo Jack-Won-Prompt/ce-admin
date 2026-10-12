@@ -317,10 +317,16 @@ class DelegationSign extends Model
      * 않는다: 그 걸음은 「이름이 하나뿐」이라는 근거로 서는데, 여기 모인 줄은
      * 이름이 애초에 다른 줄이다.
      *
-     * 보는 칸은 **그 사람 제 번호**뿐이다 — phone(원본의 연락처)ㆍmain_contact
-     * (주 연락처)ㆍnice_mobile(본인확인된 번호). guardian_phone 과 sent_to 는
-     * 보지 않는다: 앞은 보호자 번호이고, 뒤는 링크를 보낸 곳이라 보호자 번호가
-     * 적힌 줄이 섞인다.
+     * 보는 칸은 번호가 담기는 셋 — `phone`(명단의 연락처)ㆍ`sent_to`(링크를 보낸
+     * 곳)ㆍ`nice_mobile`(본인확인에 쓴 번호). 뒤의 둘은 **그 사람 제 번호가 아닐
+     * 수 있다**: 보호자가 제 번호로 받아 본인확인까지 하는 건이 있다(서명 1827 이
+     * 그렇다 — 본인확인 이름ㆍ생년월일이 거래처와 다르다). 그래도 모으는 데는
+     * 쓴다. 짝이 맞는지는 **그 줄의 거래처 칸**(resident_no_maskedㆍbirth_date)으로
+     * 다시 보므로, 보호자를 거래처로 잘못 잇지 않는다.
+     *
+     * `main_contact` 는 보지 않는다 — 번호가 아니라 `patient`ㆍ`guardian` 둘만 담는
+     * 구분 칸이다(운영 3,648 대 9).
+     * `guardian_phone` 도 보지 않는다 — 보호자 번호다.
      */
     private static function 연락처것(Patient $patient, string $동의칸): ?self
     {
@@ -332,7 +338,7 @@ class DelegationSign extends Model
 
         $후보 = static::서명된줄($동의칸)
             ->where(function ($q) use ($번호들) {
-                foreach (['phone', 'main_contact', 'nice_mobile'] as $칸) {
+                foreach (['phone', 'sent_to', 'nice_mobile'] as $칸) {
                     $q->orWhereIn(
                         \Illuminate\Support\Facades\DB::raw("REPLACE(REPLACE(IFNULL(`{$칸}`, ''), '-', ''), ' ', '')"),
                         $번호들
@@ -505,7 +511,7 @@ class DelegationSign extends Model
 
         $줄들 = static::서명된줄($동의칸)
             ->where(function ($q) use ($번호들) {
-                foreach (['phone', 'main_contact', 'nice_mobile'] as $칸) {
+                foreach (['phone', 'sent_to', 'nice_mobile'] as $칸) {
                     $q->orWhereIn(
                         \Illuminate\Support\Facades\DB::raw("REPLACE(REPLACE(IFNULL(`{$칸}`, ''), '-', ''), ' ', '')"),
                         $번호들
@@ -524,7 +530,7 @@ class DelegationSign extends Model
         $번호별 = [];
 
         foreach ($줄들 as $줄) {
-            foreach (['phone', 'main_contact', 'nice_mobile'] as $칸) {
+            foreach (['phone', 'sent_to', 'nice_mobile'] as $칸) {
                 $숫자 = preg_replace('/\D/', '', (string) $줄->{$칸});
 
                 if ($숫자 !== '' && isset($번호맵[$숫자])) {
