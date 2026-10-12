@@ -396,10 +396,18 @@ final class DelegationGate
      */
     public static function 서류이름(?Prescription $prescription, ?string $받아둔이름 = null): string
     {
-        $지금 = $prescription?->patient?->bare_name;
+        /* **실명() 이다 — bare_name 이 아니다** (2026-10-12 고침).
+
+           bare_name 은 `(E)` 만 뗀다. 동명이인 꼬리(김경식B 의 B)는 남는다. 이 자리를
+           처음 세울 때 bare_name 을 썼고, 그래서 서명확인 창ㆍ위임장 파일 이름ㆍ
+           위임장 본문에 「김경식B」처럼 알파벳이 그대로 찍혔다 — (E)하나인 님은
+           꼬리가 없어 확인에서 드러나지 않았다.
+
+           꼬리는 우리 쪽 표시이지 법적 이름이 아니다(SR #90ㆍ#102ㆍ#153ㆍ#176). */
+        $지금 = Patient::실명($prescription?->patient?->name);
 
         if (filled($지금)) {
-            return (string) $지금;
+            return $지금;
         }
 
         return Patient::실명((string) ($받아둔이름 ?: $prescription?->patient_name_ocr));
