@@ -2802,7 +2802,10 @@ $calcDeposit  = $calcCopay;
             </select>
           </div>
           {{-- 요청서 8쪽이 적은 조회키 — 유형ㆍ신구매/재구매ㆍ병원명ㆍ처방전종료일ㆍ
-               다음재구매가능일. 선택지는 받아 둔 줄에서 뽑는다(없는 값을 고르게 두지 않는다). --}}
+               재구매가능일. 선택지는 받아 둔 줄에서 뽑는다(없는 값을 고르게 두지 않는다).
+
+               「이번 재구매 가능일」은 직전 구매가 정한 날이다 (2026-10-12 · SR #142) —
+               이 날짜로 걸러야 「지금 팔아도 되는 건」이 추려진다. --}}
           <div class="ol-field">
             <label class="ds-field-label">유형</label>
             <select id="ol-rxtype" class="form-control form-select">
@@ -2847,11 +2850,11 @@ $calcDeposit  = $calcCopay;
             <input type="date" id="ol-rxend" class="form-control">
           </div>
           <div class="ol-field">
-            <label class="ds-field-label">다음재구매가능일 (부터)</label>
+            <label class="ds-field-label">이번 재구매 가능일 (부터)</label>
             <input type="date" id="ol-nextrepur-from" class="form-control">
           </div>
           <div class="ol-field">
-            <label class="ds-field-label">다음재구매가능일 (까지)</label>
+            <label class="ds-field-label">이번 재구매 가능일 (까지)</label>
             <input type="date" id="ol-nextrepur" class="form-control">
           </div>
           <div class="ol-actions">

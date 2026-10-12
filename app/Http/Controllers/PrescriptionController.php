@@ -249,6 +249,11 @@ class PrescriptionController extends Controller
             'hosp_code'  => $rx->hospital_code ?? '',
             'issued'     => $rx->issued_date?->format('Y-m-d') ?? '',
             'status'     => $rx->status_label,
+            /* 「이번 재구매 가능일」 — 직전 구매가 정한, 이 건을 살 수 있는 날
+               (2026-10-12 · SR #142 「처방전목록에서 직전 구매의 재구매 가능일
+               display 요청」). 검수가 끝난 건을 이 날짜로 줄 세워 급한 것부터
+               집으려는 자리다. */
+            'next_repur' => $extras->이번재구매($rx),
             'acc_type'   => $rx->accTypeLabel(),
             'so_type'    => $soType ? (Order::SO_TYPE_LABELS[$soType][0] ?? $soType) : '-',
             'order_no'   => $order?->order_number ?? '',

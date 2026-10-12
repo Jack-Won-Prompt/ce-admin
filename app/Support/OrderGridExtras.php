@@ -41,6 +41,21 @@ class OrderGridExtras
     private array $consent = [];
 
     /**
+     * 사람 id => 그 사람이 **실제로 산 건**들 (2026-10-12 · SR #142 · #160).
+     *
+     * 「이번 재구매 가능일」을 세우는 바탕이다 — 이번 건이 아니라 **직전 구매**가
+     * 정해 둔 날이라, 줄마다 한 번씩 거슬러 물어야 한다. 백 줄이면 백 번이다.
+     * 사람별로 한 번에 담아 두고 줄에서는 PHP 로 고른다.
+     *
+     * 한 줄은 ['id', '차례', '날'] 이다. 차례는 구입일 → 사용 개시일 → 발행일 →
+     * 만든 때 순으로 있는 것을 쓴다 — 이관 건은 구입일ㆍ사용 개시일이 거의 비어
+     * 있고 발행일만 차 있다.
+     *
+     * @var array<int, list<array{id:int, 차례:string, 날:string}>>
+     */
+    private array $구매들 = [];
+
+    /**
      * 처방전 id => 그 **건에서** 받은 위임동의 상태 (2026-09-22 확인요청 2쪽).
      *
      * 동의는 처방전에 달린다. 사람 하나로만 보면 한 건에서 받은 동의가 그 사람의
@@ -103,6 +118,7 @@ class OrderGridExtras
         $self->loadOrderSeq($ids);
         $self->loadPaymentLinks($ids);
         $self->loadAmended($ids);
+        $self->load구매들($ids);
 
         /* 위임동의는 처방전에 달리고 처방전이 사람에 달린다. 사람마다 「가장 최근 하나」를
            본다 — 동의를 받았으면 그것이 사실이고, 없으면 마지막으로 보낸 것이 어떻게
@@ -325,6 +341,91 @@ class OrderGridExtras
      * 사용 시작일ㆍ급여 종료일 두 가지는 처방전이 아니라 사람에 붙는다(환자의 공단
      * 동의 기간). 그래서 환자를 따로 받는다.
      */
+    /**
+     * 이 사람들이 **실제로 산 건**을 한 번에 담는다 (2026-10-12 · SR #142 · #160).
+     *
+     * 「샀다」는 두 가지다 —
+     *   · 우리 주문이 섰고 취소가 아닌 것
+     *   · 위드웍스에서 마감된 것(판매상태2 = 확정)이고 취소가 아닌 것
+     *
+     * 뒤엣것이 없으면 이관 건이 통째로 빠진다. 이관 처방전 84,302장 가운데 우리
+     * 주문이 선 것은 130장뿐이라, 위드웍스에서 몇 번을 산 사람도 「직전 구매 없음」이
+     * 되어 재구매 가능일 칸이 비었다.
+     *
+     * **유형이 처방전인 것만 센다**(counsel_acc_add_type = '10'). 재구매 주기는 공단이
+     * 급여로 대주는 건에 붙는 잣대라 처방외(20)ㆍ그 밖(30)은 주기를 세우지 않는다 —
+     * RepurchaseWindow 와 같은 잣대다.
+     */
+    private function load구매들(Collection $ids): void
+    {
+        $줄 = Prescription::query()
+            ->whereIn('patient_id', $ids)
+            ->where('counsel_acc_add_type', '10')
+            ->where(function ($q) {
+                $q->whereHas('order', fn ($o) => $o->where('status', '!=', 'cancelled'))
+                  ->orWhere(fn ($w) => $w->whereNotNull('ww_closed_at')
+                      ->where(fn ($c) => $c->whereNull('ww_cancelled')->orWhere('ww_cancelled', false)));
+            })
+            ->get(['id', 'patient_id', 'buy_date', 'use_start_date', 'issued_date',
+                   'created_at', 'next_repurchase', 'repurchase_date']);
+
+        foreach ($줄 as $r) {
+            $날 = $r->next_repurchase ?: $r->repurchase_date;
+
+            if (! $날) {
+                continue;                       // 재구매 가능일이 없으면 기준이 못 된다
+            }
+
+            $this->구매들[(int) $r->patient_id][] = [
+                'id'   => (int) $r->id,
+                '차례' => self::차례($r),
+                '날'   => \Carbon\Carbon::parse($날)->format('Y-m-d'),
+            ];
+        }
+    }
+
+    /** 구매의 앞뒤를 가리는 날 — 있는 것을 차례로 본다 */
+    private static function 차례($r): string
+    {
+        $날 = $r->buy_date ?: $r->use_start_date ?: $r->issued_date ?: $r->created_at;
+
+        return $날 ? \Carbon\Carbon::parse($날)->format('Y-m-d H:i:s') : '';
+    }
+
+    /**
+     * 이번 재구매 가능일 — **직전 구매가 정해 둔 날** (2026-10-12 · SR #142 · #160).
+     *
+     * 이 건을 언제부터 살 수 있는가이지, 이 건이 만드는 날이 아니다. 여태 이 칸에
+     * 이 건 제 날짜(next_repurchase)를 적었는데, 그것은 **다음 구매** 때 쓸 날이라
+     * 「지금 팔아도 되나」를 가릴 수 없었다. 담당자가 급한 건을 찾지 못해 일이 쌓인
+     * 자리다(SR #142 「현재 우선순위를 찾지 못해서 처리 못하는 건이 계속 쌓이고
+     * 있습니다」).
+     */
+    public function 이번재구매(?Prescription $p): string
+    {
+        if (! $p?->patient_id) {
+            return '';
+        }
+
+        $이번차례 = self::차례($p);
+        $가장최근 = null;
+
+        foreach ($this->구매들[(int) $p->patient_id] ?? [] as $것) {
+            if ($것['id'] === (int) $p->id) {
+                continue;                                   // 제 자신은 직전이 아니다
+            }
+            if ($이번차례 !== '' && $것['차례'] > $이번차례) {
+                continue;                                   // 뒤에 산 것은 직전이 아니다
+            }
+            if ($가장최근 === null || $것['차례'] > $가장최근['차례']
+                || ($것['차례'] === $가장최근['차례'] && $것['id'] > $가장최근['id'])) {
+                $가장최근 = $것;
+            }
+        }
+
+        return $가장최근['날'] ?? '';
+    }
+
     public function rx(?Prescription $p, ?Patient $pt = null): array
     {
         $d = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
@@ -390,7 +491,13 @@ class OrderGridExtras
             'rx_agree_start' => $d($p?->use_start_date),
             'rx_agree_end'   => $d($p?->benefit_end_date),
             'rx_created'     => $p?->created_at?->format('Y-m-d') ?? '',
-            'rx_next_repur'  => $d($p?->next_repurchase ?: $p?->repurchase_date),
+            /* 「이번 재구매 가능일」 — 직전 구매가 정한 날이다 (2026-10-12 · SR #142).
+               이 건 제 날짜가 아니다. 이 건의 날짜는 다음 구매 때 이 자리에 선다. */
+            'rx_next_repur'  => $this->이번재구매($p),
+            /* 검수가 끝났나 — 재구매 가능일과 나란히 읽는 값이다 (SR #142).
+               「검수 완료이고 위임이 완료된 사람 중에서 재구매 가능일이 보여야
+               우선순위로 처리가 된다」 */
+            'rx_review'      => $p?->status_label ?? '',
             'rx_local_gov'   => $p?->local_gov ?? '',
             'rx_repur_date'  => $d($p?->repurchase_date),
             'rx_inmarket'    => $d($p?->inmarket_due),

@@ -2338,7 +2338,11 @@ document.addEventListener('click', (e) => {
       { header: '담당 의사명',    name: 'rx_doctor',    width: 100, sortable: true },
       { header: '상담 진행',      name: 'ww_counsel',   width: 90,  align: 'center', sortable: true },
       { header: '구입일',         name: 'rx_buy_date',  width: 100, align: 'center', sortable: true },
-      { header: '다음 재구매 가능일', name: 'rx_next_repur', width: 130, align: 'center', sortable: true },
+      {{-- 「이번」이다 — 직전 구매가 정한, **이 건을 살 수 있는 날**이다
+       (2026-10-12 · SR #142 · #160). 이 건이 만드는 날(다음 재구매 가능일)은
+       주문 등록 화면의 제 칸에서 본다. --}}
+      { header: '이번 재구매 가능일', name: 'rx_next_repur', width: 130, align: 'center', sortable: true },
+      { header: '검수',           name: 'rx_review',    width: 100, align: 'center', sortable: true },
       { header: '보호자명',       name: 'ww_guardian',  width: 100 },
       { header: '청구처',         name: 'claim_agency', width: 130, sortable: true },
       { header: '신환master 등록일', name: 'ww_new_master', width: 130, align: 'center', sortable: true },

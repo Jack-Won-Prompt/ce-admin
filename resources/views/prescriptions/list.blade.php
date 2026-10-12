@@ -557,6 +557,9 @@ window.HELP_TOUR_STEPS = [
       { header: '요양기관코드',  name: 'hosp_code',  width: 120, align: 'center', sortable: true },
       { header: '발행일',        name: 'issued',     width: 100, align: 'center', sortable: true },
       { header: '상태',          name: 'status',     width: 90,  align: 'center', sortable: true },
+      {{-- 직전 구매가 정한 날이다 — 검수가 끝난 건을 이 날짜로 줄 세워 급한 것부터
+           집는다 (2026-10-12 · SR #142). 위드웍스에서 산 건도 직전 구매로 센다. --}}
+      { header: '이번 재구매 가능일', name: 'next_repur', width: 130, align: 'center', sortable: true },
       /* 올린 파일과 그것을 보는 단추 (2026-09-10 지시).
          상태 바로 옆에 둔다 — 「무엇이 올라왔나」와 「검수했나」는 잇대어 읽는 값이다. */
       { header: '업로드 파일',   name: 'files',      width: 100, align: 'center', sortable: true,
