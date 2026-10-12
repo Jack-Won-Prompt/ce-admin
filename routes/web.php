@@ -107,6 +107,8 @@ Route::middleware(['auth'])->group(function () {
         /* 작업 대기 리스트에서 이름으로 찾기 (2026-09-14 지시) — 찾을 때는 교환ㆍ반품ㆍ
            취소까지 모두 내준다. 고정 경로라 '/{prescription}' 보다 먼저 세운다. */
         Route::get('/order-list/search', [PrescriptionController::class, 'orderListSearch'])->name('orderList.search');
+        /* 쪽으로 넘긴다 (2026-10-12 지시) — 거르개와 쪽 번호를 받아 그 쪽만 돌려준다 */
+        Route::get('/order-list/page',   [PrescriptionController::class, 'orderListPage'])->name('orderList.page');
         /* 추가 주문 — 처방전 한 장에 주문을 더 세운다 (2026-09-14 확인요청 4쪽) */
         Route::post('/{prescription}/extra-order', [PrescriptionController::class, 'createExtraOrder'])->name('extraOrder');
         // 검수 화면 '환자 조회' — 이름/연락처 검색 + 선택 환자의 과거 상담이력

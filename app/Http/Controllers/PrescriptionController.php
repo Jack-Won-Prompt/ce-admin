@@ -2175,6 +2175,9 @@ class PrescriptionController extends Controller
     /** 작업 대기 리스트가 한 번에 그리는 줄 수 */
     private const 작업대기상한 = 500;
 
+    /** 주문 목록을 한 쪽에 몇 줄씩 그릴까 (2026-10-12 지시 — 쪽으로 넘긴다) */
+    private const 주문목록한쪽 = 100;
+
     /**
      * 처방전 목록에 한 번에 담는 줄 수 (2026-10-03 · 오류 이력 #25).
      *
@@ -2320,6 +2323,89 @@ class PrescriptionController extends Controller
      *
      * 화면이 보던 값 이름을 그대로 쓴다 — 한쪽만 고치는 날 같은 조건에 다른 줄이 나온다.
      */
+    /**
+     * 주문 목록 **한 쪽** — 거른 결과를 쪽으로 나눠 돌려준다 (2026-10-12 지시).
+     *
+     * 여태 최근 500줄만 떠서 보냈다(작업대기상한). 쪽으로 넘길 길이 없어 501번째부터는
+     * 화면 어디에도 서지 않았고, 2026-10-12 기준 485건이라 보름이면 닿을 자리였다.
+     *
+     * 거르는 잣대는 **주문줄걸림 하나**를 쓴다 — 화면이 걸던 것과 같은 조건이고,
+     * 엑셀 내려받기도 이미 그것을 쓴다. 세 자리에서 따로 걸면 언젠가 답이 갈린다.
+     *
+     * 고를 값(담당자ㆍ병원ㆍ진행 상태…)은 **거르기 전 전체**에서 모은다. 거른 뒤에서
+     * 모으면 한 번 고르고 나서 다른 값으로 바꿀 수 없다 — 목록에 그 값이 사라진다.
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: int, 2: array}
+     */
+    private function 주문목록쪽(Request $request, int $쪽, int $한쪽): array
+    {
+        $걸린것 = [];
+        $모음   = ['manager' => [], 'order_manager' => [], 'hospital' => [],
+                   'status' => [], 'purchase' => [], 'consent' => []];
+
+        /* 쌓아 두지 않고 오백 줄씩 펴서 본다 — 엑셀 내려받기와 같은 걸음이다 */
+        $this->작업대기질의(true)->orderByDesc('id')->chunk(500, function ($덩어리) use (&$걸린것, &$모음, $request) {
+            foreach ($this->주문줄들($덩어리) as $줄) {
+                foreach ([
+                    'manager'       => $줄['review_manager'] ?? '',
+                    'order_manager' => $줄['order_manager'] ?? '',
+                    'hospital'      => $줄['rx_hospital'] ?? '',
+                    'status'        => $줄['status'] ?? '',
+                    'purchase'      => $줄['rx_purchase'] ?? '',
+                ] as $열쇠 => $값) {
+                    $값 = trim((string) $값);
+
+                    if ($값 !== '') {
+                        $모음[$열쇠][$값] = true;
+                    }
+                }
+
+                /* 서명동의는 「… 에서 받음」이 건마다 번호를 품어 흩어진다 — 화면과
+                   같이 한 가지로 묶어 고를 값으로 세운다 (2026-10-08 · SR #124). */
+                $동의 = trim((string) ($줄['nhis_consent'] ?? ''));
+
+                if ($동의 !== '') {
+                    $모음['consent'][preg_match('/에서 받음$/u', $동의) ? '다른 건에서 받음' : $동의] = true;
+                }
+
+                if (self::주문줄걸림($줄, $request)) {
+                    $걸린것[] = $줄;
+                }
+            }
+        });
+
+        $총   = count($걸린것);
+        $끝쪽 = (int) max(1, ceil($총 / max(1, $한쪽)));
+        $쪽   = max(1, min($쪽, $끝쪽));
+
+        foreach ($모음 as $열쇠 => $값들) {
+            $모음[$열쇠] = collect(array_keys($값들))->sort(SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
+        }
+
+        $모음['page']      = $쪽;
+        $모음['last_page'] = $끝쪽;
+
+        return [collect(array_slice($걸린것, ($쪽 - 1) * $한쪽, $한쪽)), $총, $모음];
+    }
+
+    /** 주문 목록의 한 쪽을 돌려준다 — 화면이 쪽을 넘길 때 부른다 (2026-10-12 지시) */
+    public function orderListPage(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $한쪽 = min(500, max(20, (int) $request->input('per', self::주문목록한쪽)));
+
+        [$줄, $총, $곁들이] = $this->주문목록쪽($request, (int) $request->input('page', 1), $한쪽);
+
+        return response()->json([
+            'success'   => true,
+            'rows'      => $줄->values(),
+            'total'     => $총,
+            'page'      => $곁들이['page'],
+            'last_page' => $곁들이['last_page'],
+            'per'       => $한쪽,
+            'options'   => \Illuminate\Support\Arr::except($곁들이, ['page', 'last_page']),
+        ]);
+    }
+
     private static function 주문줄걸림(array $줄, Request $request): bool
     {
         $글 = fn ($k) => trim((string) $request->input($k, ''));
@@ -3821,11 +3907,12 @@ class PrescriptionController extends Controller
         /* 입력 검수 — 파일 검수와 다른 칸을 본다 (2026-09-16 지시) */
         $입력검수 = $prescription->입력검수상태();
 
-        $orderListLimit = self::작업대기상한;
-        $orderListTotal = $this->작업대기질의()->count();
-        $orderListRows  = $this->주문줄들(
-            $this->작업대기질의(true)->latest('id')->limit($orderListLimit)->get()
-        );
+        /* 첫 쪽만 싣는다 (2026-10-12 지시 — 쪽으로 넘긴다). 나머지 쪽은 화면이
+           orderListPage 로 받아 온다. 고를 값은 **전체**에서 모아 함께 내려보낸다 —
+           한 쪽에 실린 줄만으로 목록을 세우면 고를 수 있는 값이 쪽마다 달라진다. */
+        $orderListLimit = self::주문목록한쪽;
+        [$orderListRows, $orderListTotal, $orderListOpts] = $this->주문목록쪽(request(), 1, $orderListLimit);
+        $orderListLast  = $orderListOpts['last_page'];
 
         /* 개인정보 수집·이용 동의 — 아직 환자로 맺어지지 않은 처방전도 있어,
            환자가 있으면 그 사람으로, 없으면 처방전에 적힌 이름ㆍ휴대폰으로 찾는다. */
@@ -3908,7 +3995,7 @@ class PrescriptionController extends Controller
             'memosData', 'prevCounselings', 'prevCounselingsData',
             'lastFaxHistory', '닿은팩스', 'attachmentsJson', 'allDocsJson', 'patientsJson',
             'orderManagers', 'assignables', 'privacyState',
-            'orderListRows', 'orderListTotal', 'orderListLimit',
+            'orderListRows', 'orderListTotal', 'orderListLimit', 'orderListOpts', 'orderListLast',
             '입력검수'
         ));
     }

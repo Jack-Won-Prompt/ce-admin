@@ -2890,16 +2890,36 @@ $calcDeposit  = $calcCopay;
              적어 두었더니 표보다 안내가 먼저 눈에 들었다. 넘친 건수만 뒤에 붙인다. --}}
         <div class="section-title" style="margin:8px 0;">
           <i class="fa-solid fa-list-check" style="color:var(--primary);"></i> 주문 목록
-          @if($orderListTotal > $orderListLimit)
-            <span style="font-size:11px;font-weight:500;color:var(--text-muted);margin-left:6px;">
-              {{ number_format($orderListTotal) }}건 가운데 최근 {{ number_format($orderListLimit) }}건
-            </span>
-          @endif
+          {{-- 쪽으로 넘긴다 (2026-10-12 지시). 여태 「최근 500건」만 적고 나머지는
+               볼 길이 없었다 — 이제 몇 건 가운데 몇 번째 쪽인지 적는다. --}}
+          <span id="olCount" style="font-size:11px;font-weight:500;color:var(--text-muted);margin-left:6px;"
+                data-total="{{ (int) $orderListTotal }}">{{ number_format($orderListTotal) }}건</span>
         </div>
         {{-- 표는 흰 카드 안에 담는다. 카드 없이 두었더니 회색 바탕 위에 표가 그대로
              얹혀, 합계줄과 「전체 N건」 띠가 어디에도 붙지 못하고 떠 있었다.
              다른 목록 화면(거래처 관리ㆍ주문 관리)의 아래끝과 같게 맞춘다. --}}
         <div class="card ol-card"><div id="orderListGrid"></div></div>
+
+        {{-- 쪽 넘김 (2026-10-12 지시 「나」 — 진짜 페이징).
+
+             한 쪽은 100줄이다. 거르개를 바꾸면 늘 1쪽으로 돌아간다 — 3쪽을 보던 중에
+             조건을 바꾸면 그 조건의 3쪽이 비어 있을 수 있고, 빈 표를 보고 「없다」로
+             읽는다.
+
+             찾는 말로 조회한 때는 서버가 주문 없는 처방전까지 함께 세워 주므로
+             그 줄들은 화면이 쪽으로 나눈다(olLoad 참고). --}}
+        <div id="olPager" style="display:none;align-items:center;justify-content:center;gap:6px;margin:10px 0 2px;">
+          <button type="button" class="btn btn-sm" id="olPrev" onclick="olLoad(OL_PAGE - 1)">이전</button>
+          <span id="olPagerText" style="font-size:12px;color:var(--text-muted);min-width:120px;text-align:center;"></span>
+          <button type="button" class="btn btn-sm" id="olNext" onclick="olLoad(OL_PAGE + 1)">다음</button>
+          <select id="olPer" class="form-control" style="width:auto;height:28px;font-size:12px;padding:0 6px;"
+                  onchange="olLoad(1)">
+            <option value="50">50줄씩</option>
+            <option value="100" selected>100줄씩</option>
+            <option value="200">200줄씩</option>
+            <option value="500">500줄씩</option>
+          </select>
+        </div>
 
         {{-- ── 담당자 배정 ────────────────────────────────────────
              넘기기 전에 무엇을 넘기는지 보여 준다. 목록에서 체크만 하고 바로
@@ -15988,6 +16008,13 @@ window.HELP_TOUR_STEPS = [
      표는 처음 열 때 한 번만 세운다. 탭을 오갈 때마다 다시 만들면 정렬해 둔 것이 풀린다
      (주문 제품 표에서 겪은 자리다). */
   const OL_ROWS = @json($orderListRows);
+  /* 쪽 넘김이 쥐는 값 (2026-10-12 지시). OL_ROWS 는 **첫 쪽**이다 — 예전처럼
+     전체가 아니므로, 고를 값 목록은 서버가 전체에서 모아 준 OL_OPTS 를 쓴다. */
+  let   OL_PAGE  = 1;
+  let   OL_LAST  = {{ (int) $orderListLast }};
+  let   OL_TOTAL = {{ (int) $orderListTotal }};
+  const OL_OPTS  = @json($orderListOpts);
+  const OL_PAGE_URL = @json(route('prescriptions.orderList.page'));
   let   olGrid  = null;
 
   function olEnsureGrid() {
@@ -16022,24 +16049,27 @@ window.HELP_TOUR_STEPS = [
          같은 값(검수 담당자)을 싣는 칸이라, 검수 쪽에서는 아무 일도 안 하고
          **주문 쪽에서만** 검수 담당자 이름이 흘러들었다. 그래서 주문 담당자가
          비어 있는 건이 검수 담당자 이름으로 조회되었다. */
-      fill('ol-manager', OL_ROWS.map(r => r[칸]));
+      /* 한 쪽만 실려 오므로 **서버가 전체에서 모아 준 목록**을 쓴다
+         (2026-10-12 지시 — 쪽으로 넘긴다). 실린 줄에서 뽑으면 2쪽에서 고를 수
+         있는 값이 1쪽과 달라진다. */
+      fill('ol-manager', 갈래 === 'order' ? (OL_OPTS.order_manager || []) : (OL_OPTS.manager || []));
     };
     olManagerFill();
-    fill('ol-purchase', OL_ROWS.map(r => r.rx_purchase));
-    fill('ol-hospital', OL_ROWS.map(r => r.rx_hospital));
+    fill('ol-purchase', OL_OPTS.purchase || []);
+    fill('ol-hospital', OL_OPTS.hospital || []);
 
     /* 진행 상태ㆍ서명동의 (2026-10-08 · SR #124ㆍ#146).
 
        담아 온 줄에 실제로 있는 값만 세운다 — 고를 수 없는 값을 늘어놓으면
        골라 놓고 0건을 보게 된다. 서명동의의 빈칸은 「아직 아무것도 없다」는
        뜻이라 따로 「미수신」으로 세운다(빈 값으로 두면 「전체」와 같아진다). */
-    fill('ol-status',  OL_ROWS.map(r => r.status));
+    fill('ol-status',  OL_OPTS.status || []);
     (function () {
       const el = document.getElementById('ol-consent');
       if (!el) return;
-      const 값 = [...new Set(OL_ROWS.map(r => ol서명동의(r.nhis_consent)).filter(Boolean))].sort();
+      const 값 = OL_OPTS.consent || [];
       el.innerHTML = '<option value="">전체</option>'
-                   + (OL_ROWS.some(r => !r.nhis_consent) ? '<option value="__none__">미수신</option>' : '')
+                   + '<option value="__none__">미수신</option>'
                    + 값.map(v => `<option value="${v}">${v}</option>`).join('');
     })();
 
@@ -16189,6 +16219,8 @@ window.HELP_TOUR_STEPS = [
       data: OL_ROWS,
     });
     window.__olGrid = olGrid;
+    /* 첫 쪽은 서버가 이미 실어 주었다 — 막대만 그 값으로 세운다 (2026-10-12) */
+    ol쪽막대();
 
     /* 더블클릭하면 그 건으로 간다. 적다 만 것이 있으면 switchTab 이 아니라 여기서
        물어야 한다 — 화면을 통째로 떠나는 걸음이라 되돌릴 수 없다. */
@@ -16496,79 +16528,133 @@ window.HELP_TOUR_STEPS = [
     return /에서 받음$/.test(v) ? '다른 건에서 받음' : v;
   }
 
-  function olFilter() {
-    const 바탕 = OL_FOUND ?? OL_ROWS;
-    const q       = OL_FOUND ? '' : (document.getElementById('ol-q')?.value ?? '').trim().toLowerCase();
-    const from    = document.getElementById('ol-from')?.value ?? '';
-    const to      = document.getElementById('ol-to')?.value ?? '';
-    const manager = document.getElementById('ol-manager')?.value ?? '';
-    // 요청서 8쪽이 적은 조회키
-    const rxtype    = document.getElementById('ol-rxtype')?.value    ?? '';
-    const purchase  = document.getElementById('ol-purchase')?.value  ?? '';
-    const hospital  = document.getElementById('ol-hospital')?.value  ?? '';
-    const rxend     = document.getElementById('ol-rxend')?.value     ?? '';
-    const nextrepur = document.getElementById('ol-nextrepur')?.value ?? '';
-    /* 2026-10-08 · SR #124ㆍ#146 */
-    const status    = document.getElementById('ol-status')?.value  ?? '';
-    const consent   = document.getElementById('ol-consent')?.value ?? '';
-    const rxiFrom   = document.getElementById('ol-rxissued-from')?.value ?? '';
-    const rxiTo     = document.getElementById('ol-rxissued-to')?.value   ?? '';
-    const rxcFrom   = document.getElementById('ol-rxcreated-from')?.value ?? '';
-    const rxcTo     = document.getElementById('ol-rxcreated-to')?.value   ?? '';
-    const rxendFrom = document.getElementById('ol-rxend-from')?.value     ?? '';
-    const nextFrom  = document.getElementById('ol-nextrepur-from')?.value ?? '';
+  /* 거르개 값을 모은다 — 서버(주문줄걸림)가 읽는 이름과 같게 맞춘다.
+     이름이 하나라도 어긋나면 그 조건만 조용히 빠져 「왜 안 걸리지」가 된다. */
+  function ol조건() {
+    const v = (id) => (document.getElementById(id)?.value ?? '').trim();
 
-    const rows = 바탕.filter(r => {
-      if (q) {
-        /* 요양기관코드도 찾는다 (2026-09-10 확인요청 5쪽) — 병원명은 손으로 친
-           자리라 띄어쓰기가 갈리지만 코드는 여덟 자리 하나다. 공단 자료를 보며
-           그 번호로 우리 건을 되짚는 걸음이 있다. */
-        const hay = [r.order_no, r.rx_number, r.patient, r.manager,
-                     r.rx_hospital, r.rx_hosp_code, r.rx_doctor]
-                      .join(' ').toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      if (from && (r.sold_at || '') < from) return false;
-      if (to   && (r.sold_at || '') > to)   return false;
-      /* 담당자 — 고른 갈래의 칸을 본다. 「미배정」은 목록의 __none__ 이다
-         (2026-09-27 확인요청 4쪽 — 단추를 걷고 목록으로 합쳤다). */
-      const _갈래 = document.getElementById('ol-manager-kind')?.value || 'review';
-      /* 되돌리지 않는다 — 위 olManagerFill 의 까닭과 같다 (SR #125ㆍ#126) */
-      const _이름 = (_갈래 === 'order' ? r.order_manager : r.review_manager) || '';
-      if (manager === '__none__') { if (_이름) return false; }
-      else if (manager && _이름 !== manager) return false;
+    return {
+      q:               v('ol-q'),
+      from:            v('ol-from'),
+      to:              v('ol-to'),
+      manager:         v('ol-manager'),
+      manager_kind:    v('ol-manager-kind') || 'review',
+      rxtype:          v('ol-rxtype'),
+      purchase:        v('ol-purchase'),
+      hospital:        v('ol-hospital'),
+      status:          v('ol-status'),
+      consent:         v('ol-consent'),
+      rxissued_from:   v('ol-rxissued-from'),
+      rxissued_to:     v('ol-rxissued-to'),
+      rxcreated_from:  v('ol-rxcreated-from'),
+      rxcreated_to:    v('ol-rxcreated-to'),
+      rxend_from:      v('ol-rxend-from'),
+      rxend:           v('ol-rxend'),
+      nextrepur_from:  v('ol-nextrepur-from'),
+      nextrepur:       v('ol-nextrepur'),
+    };
+  }
 
-      /* 「처방전」을 고르면 「처방전 - 원내」도 함께 온다 — 둘 다 처방전이다 */
-      if (rxtype   && !(r.rx_acc_type || '').startsWith(rxtype)) return false;
-      if (purchase && r.rx_purchase !== purchase) return false;
-      if (hospital && r.rx_hospital !== hospital) return false;
+  /* 쪽 넘김 막대를 다시 적는다 */
+  function ol쪽막대() {
+    const bar = document.getElementById('olPager');
+    const cnt = document.getElementById('olCount');
+    if (cnt) cnt.textContent = OL_TOTAL.toLocaleString() + '건';
+    if (!bar) return;
 
-      /* 날짜 둘은 「그날까지」로 본다 — 처방전이 언제 끝나는지ㆍ다음 재구매가 언제인지를
-         보는 까닭은 「곧 닥치는 것」을 추리기 위해서다. 비어 있는 건은 걸리지 않는다. */
-      if (rxend     && (!r.rx_end        || r.rx_end        > rxend))     return false;
-      if (nextrepur && (!r.rx_next_repur || r.rx_next_repur > nextrepur)) return false;
-      if (rxendFrom && (!r.rx_end        || r.rx_end        < rxendFrom)) return false;
-      if (nextFrom  && (!r.rx_next_repur || r.rx_next_repur < nextFrom))  return false;
+    bar.style.display = OL_LAST > 1 ? 'flex' : 'none';
+    const t = document.getElementById('olPagerText');
+    if (t) t.textContent = `${OL_PAGE} / ${OL_LAST} 쪽`;
+    const prev = document.getElementById('olPrev');
+    const next = document.getElementById('olNext');
+    if (prev) prev.disabled = OL_PAGE <= 1;
+    if (next) next.disabled = OL_PAGE >= OL_LAST;
+  }
 
-      /* 진행 상태ㆍ서명동의 (2026-10-08 · SR #124ㆍ#146).
-         서명동의가 빈칸인 줄은 「아직 아무것도 없다」는 뜻이라 __none__ 으로 고른다 —
-         빈 값으로 고르게 두면 「전체」와 구별되지 않는다. */
-      if (status  && (r.status || '') !== status) return false;
-      if (consent === '__none__') { if ((r.nhis_consent || '') !== '') return false; }
-      else if (consent && ol서명동의(r.nhis_consent) !== consent) return false;
+  /**
+   * 주문 목록 한 쪽을 세운다 (2026-10-12 지시 「나」 — 진짜 페이징).
+   *
+   * 길이 둘이다.
+   *   · 보통 — 서버가 거르고 쪽을 떠 준다(orderListPage). 몇 건이 되어도 안전하다.
+   *   · 찾는 말로 조회한 뒤 — 서버가 **주문 없는 처방전까지** 함께 세워 주므로
+   *     (orderListSearch) 그 줄들은 화면이 나머지 조건으로 걸러 쪽으로 나눈다.
+   */
+  async function olLoad(쪽 = 1) {
+    if (!olGrid) return;
 
-      /* 처방전 발행일 — 기간. 발행일이 없는 건은 걸리지 않는다 */
-      if (rxiFrom && (!r.rx_issued || r.rx_issued < rxiFrom)) return false;
-      if (rxiTo   && (!r.rx_issued || r.rx_issued > rxiTo))   return false;
+    const 한쪽 = parseInt(document.getElementById('olPer')?.value || '100', 10);
 
-      /* 위드웍스 추가정보 등록일 — 비어 있는 건은 걸리지 않는다 */
-      if (rxcFrom && (!r.rx_created || r.rx_created < rxcFrom)) return false;
-      if (rxcTo   && (!r.rx_created || r.rx_created > rxcTo))   return false;
+    /* 찾은 줄 위에서는 화면이 나눈다 — 주문 없는 처방전은 서버 쪽 넘김이 모르는 줄이다 */
+    if (OL_FOUND) {
+      const rows = ol찾은것거르기(OL_FOUND);
+      OL_TOTAL = rows.length;
+      OL_LAST  = Math.max(1, Math.ceil(rows.length / 한쪽));
+      OL_PAGE  = Math.min(Math.max(1, 쪽), OL_LAST);
+      olGrid.rowNumberStart = (OL_PAGE - 1) * 한쪽;
+      olGrid.setData(rows.slice((OL_PAGE - 1) * 한쪽, OL_PAGE * 한쪽));
+      ol쪽막대();
+      showToast(`${rows.length}건`, 'info');
+      return;
+    }
+
+    const 조건 = ol조건();
+    delete 조건.q;                       // 찾는 말은 위 조회 단추가 맡는다
+    const 매개 = new URLSearchParams({ ...조건, page: 쪽, per: 한쪽 });
+
+    try {
+      const res = await fetch(OL_PAGE_URL + '?' + 매개.toString(),
+                              { headers: { 'Accept': 'application/json' } });
+      const out = await res.json();
+      if (!out.success) throw new Error(out.message || '목록을 받지 못했습니다.');
+
+      OL_PAGE  = out.page;
+      OL_LAST  = out.last_page;
+      OL_TOTAL = out.total;
+      olGrid.rowNumberStart = (OL_PAGE - 1) * out.per;
+      olGrid.setData(out.rows || []);
+      ol쪽막대();
+      showToast(`${OL_TOTAL.toLocaleString()}건`, 'info');
+    } catch (e) {
+      showToast('목록을 받지 못했습니다 — ' + (e.message || ''), 'danger', 5000);
+    }
+  }
+
+  /* 거르개를 바꾸면 늘 1쪽부터 — 3쪽을 보던 중에 조건을 바꾸면 그 조건의 3쪽이
+     비어 있을 수 있고, 빈 표를 보고 「없다」로 읽는다. */
+  function olFilter() { olLoad(1); }
+
+  /* 찾은 줄(주문 없는 처방전 포함)을 나머지 조건으로 좁힌다 — 서버의 주문줄걸림과
+     같은 잣대다. 두 벌이 되었으나 이쪽은 **서버가 모르는 줄**을 다루는 자리다. */
+  function ol찾은것거르기(바탕) {
+    const c = ol조건();
+
+    return 바탕.filter(r => {
+      if (c.from && (r.sold_at || '') < c.from) return false;
+      if (c.to   && (r.sold_at || '') > c.to)   return false;
+
+      const 이름 = (c.manager_kind === 'order' ? r.order_manager : r.review_manager) || '';
+      if (c.manager === '__none__') { if (이름) return false; }
+      else if (c.manager && 이름 !== c.manager) return false;
+
+      if (c.rxtype   && !(r.rx_acc_type || '').startsWith(c.rxtype)) return false;
+      if (c.purchase && r.rx_purchase !== c.purchase) return false;
+      if (c.hospital && r.rx_hospital !== c.hospital) return false;
+
+      if (c.rxend          && (!r.rx_end        || r.rx_end        > c.rxend))          return false;
+      if (c.nextrepur      && (!r.rx_next_repur || r.rx_next_repur > c.nextrepur))      return false;
+      if (c.rxend_from     && (!r.rx_end        || r.rx_end        < c.rxend_from))     return false;
+      if (c.nextrepur_from && (!r.rx_next_repur || r.rx_next_repur < c.nextrepur_from)) return false;
+
+      if (c.status && (r.status || '') !== c.status) return false;
+      if (c.consent === '__none__') { if ((r.nhis_consent || '') !== '') return false; }
+      else if (c.consent && ol서명동의(r.nhis_consent) !== c.consent) return false;
+
+      if (c.rxissued_from  && (!r.rx_issued  || r.rx_issued  < c.rxissued_from))  return false;
+      if (c.rxissued_to    && (!r.rx_issued  || r.rx_issued  > c.rxissued_to))    return false;
+      if (c.rxcreated_from && (!r.rx_created || r.rx_created < c.rxcreated_from)) return false;
+      if (c.rxcreated_to   && (!r.rx_created || r.rx_created > c.rxcreated_to))   return false;
       return true;
     });
-
-    olGrid.setData(rows);
-    showToast(`${rows.length}건`, 'info');
   }
 
   /* 지금 걸어 둔 조건을 그대로 서버에 보내 엑셀을 받는다 (2026-10-08 지시 「나」).
