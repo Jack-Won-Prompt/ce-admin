@@ -59,7 +59,13 @@ class OrderController extends Controller
         $머리글 = [
             '주문번호', '원/추가', '환자명', '주문 구분', '교환/반품 접수번호', '교환·반품·취소 상태',
             '판매유형', '신구매/재구매', '상태', '주문 등록일', '교환/반품/취소일자',
-            '청구 진행', '청구 여부', '공단 팩스', '파일', '파일 상세', '배송지',
+            /* 「청구 진행」은 **엑셀에 싣지 않는다** (2026-10-12 정합성 검증에서 찾음).
+
+               그 칸은 화면에서 누르는 단추 자리라 담는 값이 아예 없다 — 운영 548줄을
+               훑으니 548줄 모두 값이 없었다. 화면도 `exportable: false` 로 두는데
+               서버 엑셀만 머리글을 세워, **늘 비어 있는 칸 하나가 끼어** 있었다.
+               화면의 그리드 내보내기와 이 엑셀이 칸 수부터 갈리던 자리다. */
+            '청구 여부', '공단 팩스', '파일', '파일 상세', '배송지',
             // ── 여기부터 2026-10-12 에 더한 칸 ────────────────────────────
             '처방번호', '처방유형', '처방전 발행일', '자격', '병원',
             '제품', '수량', '금액', '본인부담', '공단부담',
@@ -68,7 +74,7 @@ class OrderController extends Controller
         ];
         $칸 = ['order_no', 'order_kind', 'patient', 'deal', 'return_no', 'deal_state',
                'so_type', 'rx_purchase', 'status', 'sold_at', 'deal_at',
-               'nhis_assist', 'claim_done', 'nhis_fax', 'att_count', 'doc_types', 'address',
+               'claim_done', 'nhis_fax', 'att_count', 'doc_types', 'address',
                'rx_no', 'rx_acc_type', 'rx_issued', 'rx_benefit', 'rx_hospital',
                'product', 'qty', 'total_amount', 'copay', 'nhis_amount',
                'pay_method', 'deposit_amount', 'deposit_at', 'paid_at',
