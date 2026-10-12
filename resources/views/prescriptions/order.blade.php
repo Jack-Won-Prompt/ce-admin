@@ -4067,7 +4067,7 @@ $calcDeposit  = $calcCopay;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총 처방일수</span>
-                <input type="text" inputmode="numeric" maxlength="4" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" style="flex:1;" oninput="숫자만(this); syncRxRef()" title="공단 기준 {{ (int) config('nhis.limits.total_days', 90) }}일까지입니다. 초과하여 입력하면 저장 시 한 번 확인합니다." />
+                <input type="text" inputmode="numeric" maxlength="4" class="form-control" id="f-days" value="{{ $prescription->total_days ?? $prescription->total_days ?? '' }}" style="flex:1;" oninput="숫자만(this); syncRxRef()" onchange="calcNextRepurchase()" title="공단 기준 {{ (int) config('nhis.limits.total_days', 90) }}일까지입니다. 초과하여 입력하면 저장 시 한 번 확인합니다." />
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">총계</span>
@@ -10417,20 +10417,32 @@ window.HELP_TOUR_STEPS = [
   function calcNextRepurchase(showWarn = false) {
     const dateVal   = document.getElementById('f-date')?.value;
     const periodVal = parseInt(document.getElementById('f-rx-period')?.value ?? '');
-    if (!dateVal || !periodVal || periodVal < 1) {
-      if (showWarn) showToast('처방전 발행일과 처방기간(일)을 먼저 입력해 주십시오.', 'warning');
+    /* 종료일은 **총 처방일수**로 센다 (2026-10-12 지시 · SR #167).
+
+       여태 「처방전 사용 기간 (교부일로부터)」 칸(f-rx-period)을 보고 셌다. 그 칸에
+       총 처방일수가 실려 있어 나오는 날은 맞았으나, 담당자가 그 칸에 진짜 사용기간
+       (교부일로부터 7ㆍ14일)을 적으면 종료일이 그 날로 틀어진다. 이름과 셈을 맞춘다. */
+    const 총일수 = parseInt(document.getElementById('f-days')?.value ?? '');
+
+    if (!dateVal || ((!periodVal || periodVal < 1) && (!총일수 || 총일수 < 1))) {
+      if (showWarn) showToast('처방전 발행일과 총 처방일수를 먼저 입력해 주십시오.', 'warning');
       return;
     }
     const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-    /* 종료일 = 처방전발행일 + 처방기간 - 1.
+    /* 종료일 = 처방전 발행일 + 총 처방일수 (2026-10-12 지시 「나」 · SR #167).
 
-       하루를 빼지 않으면 기간이 하루 길어진다. 발행일이 첫날로 세어지기 때문이다 —
-       2026-09-09 에 90일을 받으면 마지막 날은 2026-12-07 이지 12-08 이 아니다
-       (2026-09-08 확인요청 10쪽). 위임 기간을 세는 방식과 같다. */
-    const endDate = new Date(dateVal);
-    endDate.setDate(endDate.getDate() + periodVal - 1);
-    document.getElementById('f-rx-end-date').value = fmt(endDate);
+       **하루를 빼지 않는다.** 2026-09-08 확인요청 10쪽에서 「발행일이 첫날로
+       세어진다」며 −1 을 두었는데, 2026-10-12 지시로 되돌린다.
+
+       위드웍스 원본을 전수로 견주어 보니 저쪽의 주된 잣대도 −1 이 **없다** —
+       이관 건 42,721장 가운데 88.9%(37,958장)가 「발행일 + 총 처방일수」와 같고,
+       −1 인 것은 9.6%(4,101장)뿐이다. −1 로 세던 우리 쪽이 어긋나 있었다. */
+    if (총일수 >= 1) {
+      const endDate = new Date(dateVal);
+      endDate.setDate(endDate.getDate() + 총일수);
+      document.getElementById('f-rx-end-date').value = fmt(endDate);
+    }
 
     /* 이 값은 「다음 재구매 가능일 **(발행일 기준)**」 칸의 것이다 (2026-09-30 지시).
 
@@ -10444,14 +10456,18 @@ window.HELP_TOUR_STEPS = [
        위쪽 칸에 서서, 사용 개시일이 비어 있는데 다음 재구매 가능일만 보였다.
        아래쪽 읽기 전용 칸은 「처방전 발행일과 처방 기간으로 자동 계산됩니다」라
        적어 두고 늘 비어 있었다 — 값이 제자리를 벗어나 있었던 것이다. */
-    const nextDate = new Date(dateVal);
-    nextDate.setDate(nextDate.getDate() + periodVal + 1);
+    /* 이 셈은 건드리지 않는다 (2026-09-30 지시 그대로) — SR #167 은 종료일만 말한다.
+       다만 처방기간이 비어 있으면 세지 않는다. 위에서 종료일만 세고 내려올 수 있다. */
+    if (periodVal >= 1) {
+      const nextDate = new Date(dateVal);
+      nextDate.setDate(nextDate.getDate() + periodVal + 1);
 
-    const 발행일기준 = document.getElementById('f-repurchase-date');
-    if (발행일기준) 발행일기준.value = fmt(nextDate);
+      const 발행일기준 = document.getElementById('f-repurchase-date');
+      if (발행일기준) 발행일기준.value = fmt(nextDate);
 
-    const 보임 = document.getElementById('disp-renew-date');
-    if (보임) 보임.textContent = fmt(nextDate);
+      const 보임 = document.getElementById('disp-renew-date');
+      if (보임) 보임.textContent = fmt(nextDate);
+    }
 
     /* 위쪽 칸은 **여기서 적지 않는다** (2026-10-02 지시).
 
