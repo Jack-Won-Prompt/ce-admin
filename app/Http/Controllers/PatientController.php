@@ -374,8 +374,25 @@ class PatientController extends Controller
                         => route('prescriptions.consentSignature', $c->prescription),
                     /* 옮겨 담은 서명은 거래처를 거쳐 내준다 — 남의 서명이 열리지 않게
                        그 자리가 거래처 번호를 함께 견준다 */
-                    (bool) ($sg && $sg->sign_base64)
+                    (bool) ($sg && $sg->sign_base64 && $sg->id)
                         => route('patients.delegationSigns.image', [$p->id, $sg->id]),
+
+                    /* **아직 옮겨 담기 전의 서명** (2026-10-12 오류).
+
+                       거래처들것() 은 옮겨 담은 표에 없으면 원본(운영 데이터 › 위임장
+                       서명)까지 보고, 그때는 **저장되지 않은 객체**를 돌려준다
+                       (PatientDelegationSign::원본꼴 · exists = false). 그 객체는
+                       `sign_base64` 는 들었는데 **`id` 가 없다.**
+
+                       위의 갈래가 `sign_base64` 만 보고 지나보내 `route()` 에 빈
+                       번호가 들어갔고, **거래처 목록 화면이 통째로 500 으로 죽었다**
+                       (2026-10-12 22:51~23:16 · 다섯 번). 「3351」로 찾으면 늘 죽었다.
+
+                       원본은 제 번호(delegation_sign_id)로 연다 — 그 자리가 이 거래처의
+                       것이 맞는지 다시 견준다. */
+                    (bool) ($sg && $sg->sign_base64 && $sg->delegation_sign_id)
+                        => route('patients.delegationSigns.liveImage',
+                                 [$p->id, $sg->delegation_sign_id]),
                     default => null,
                 },
                 
@@ -465,6 +482,39 @@ class PatientController extends Controller
      * 다른 거래처의 서명을 열지 못하게 거래처 번호를 함께 견준다 — 번호만 바꾸면
      * 남의 서명이 열리는 자리가 된다.
      */
+    /**
+     * 아직 옮겨 담기 전의 서명 그림 — 원본(운영 데이터 › 위임장 서명)에서 내준다
+     * (2026-10-12 오류).
+     *
+     * 이관은 한 번 돌린 것이라 그 뒤에 서명한 사람은 옮겨 담은 표에 없다. 그런 사람의
+     * 서명은 화면이 원본을 그대로 보여 주는데(PatientDelegationSign::원본꼴), 그 객체는
+     * 저장된 줄이 아니라 번호가 없어 여느 길로는 열 수 없었다.
+     *
+     * **남의 서명이 열리지 않게 거래처를 다시 견준다.** 원본 표는 거래처 번호를 들고
+     * 있지 않아 이름ㆍ연락처로 잇는데, 그 일을 하는 자리가 `거래처것()` 이다. 그 자리가
+     * 이 거래처의 것으로 집어 준 줄과 번호가 같을 때만 내준다.
+     */
+    public function delegationSignLiveImage(Patient $patient, \App\Models\DelegationSign $sign)
+    {
+        $이거래처것 = collect(['agree_delegation', 'agree_privacy'])
+            ->map(fn ($칸) => \App\Models\DelegationSign::거래처것($patient, $칸)?->id)
+            ->filter()
+            ->contains((int) $sign->id);
+
+        abort_if(! $이거래처것, 404);
+
+        $그림 = $sign->서명그림();
+
+        abort_if($그림 === null, 404, '서명 이미지가 없습니다.');
+
+        return response($그림, 200, [
+            'Content-Type'        => 'image/png',
+            'Content-Disposition' => 'inline; filename="'
+                                   . rawurlencode($sign->sign_filename ?: 'sign.png') . '"',
+            'Cache-Control'       => 'private, no-store',
+        ]);
+    }
+
     public function delegationSignImage(Patient $patient, \App\Models\PatientDelegationSign $sign)
     {
         abort_if($sign->patient_id !== $patient->id, 404);

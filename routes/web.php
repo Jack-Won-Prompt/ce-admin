@@ -385,6 +385,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{patient}/orders',     [PatientController::class, 'orders'])->name('orders');
         /* 옮겨 담은 위임장 서명의 그림 — 웹에서 바로 열리지 않는 폴더에 있어
            이 자리를 거쳐야 보인다(2026-09-29 지시). '/{patient}' 보다 앞에 둔다. */
+        /* 아직 옮겨 담기 전의 서명 — 원본 번호로 연다 (2026-10-12 오류).
+           아래 길은 옮겨 담은 줄만 열 수 있어, 원본을 보는 사람에게 빈 번호가
+           들어가 거래처 목록이 통째로 500 으로 죽었다. */
+        Route::get('/{patient}/delegation-signs/live/{sign}/image',
+            [PatientController::class, 'delegationSignLiveImage'])->name('delegationSigns.liveImage');
         Route::get('/{patient}/delegation-signs/{sign}/image',
             [PatientController::class, 'delegationSignImage'])->name('delegationSigns.image');
         /* 거래처 서류함 (2026-10-07 지시 · SR #115ㆍ#123) — 종이로 받아 둔 위임장ㆍ
