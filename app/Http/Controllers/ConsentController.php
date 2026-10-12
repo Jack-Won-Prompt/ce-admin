@@ -1713,7 +1713,8 @@ class ConsentController extends Controller
 
            이제는 거래처가 바뀌면 **내용을 다시 그리고 서명은 그대로 얹는다.**
            서명 이미지는 동의 기록의 것을 쓰므로 사람이 그은 획은 바뀌지 않는다. */
-        $put('patient_name', $patient?->bare_name ?: Patient::bare($consent->patient_name));
+        /* 서류ㆍ바깥으로 나가는 이름은 동명이인 꼬리까지 뗀다 (2026-10-12 · SR #153ㆍ#176) */
+        $put('patient_name', Patient::실명($patient?->name) ?: Patient::실명($consent->patient_name));
         // 법정서식(요양비 지급청구 위임장) — 평문이 필요한 지점. 감사로그가 남는다(P0-1).
         // 처방전에 적힌 번호를 먼저 쓰고, 없으면 환자 정보의 번호를 쓴다.
         $rrn = $대상?->residentNoOcrFor('nhis_claim_form')

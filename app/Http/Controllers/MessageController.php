@@ -154,7 +154,7 @@ class MessageController extends Controller
                 'rcv'        => $p->mobile ?? $p->phone,
                 /* 「(E)」는 우리끼리 쓰는 표시다 — 문자 수신자명으로 나가지 않게 뗀다
                    (2026-09-27 지시). 모델이 아니므로 정적 함수를 그대로 부른다. */
-                'rcvnm'      => Patient::bare($p->name),
+                'rcvnm'      => Patient::실명($p->name),
                 'patient_id' => $p->id,
             ])
             ->filter(fn ($r) => preg_replace('/\D/', '', (string) $r['rcv']) !== '')

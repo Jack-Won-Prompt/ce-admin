@@ -52,7 +52,7 @@ final class TransactionStatement
 
         try {
             $pdf  = self::render($order);
-            $name = '거래명세서_' . ($order->patient?->bare_name ?? '') . '_' . $order->order_number . '.pdf';
+            $name = '거래명세서_' . \App\Models\Patient::실명($order->patient?->name) . '_' . $order->order_number . '.pdf';
             $path = 'attachments/' . $order->prescription_id . '/' . uniqid('ts_') . '.pdf';
 
             Storage::disk('public')->put($path, $pdf);

@@ -61,7 +61,7 @@ final class CashReceiptForm
             $그릴것 = $덧댈값 ? (clone $order)->forceFill($덧댈값) : $order;
 
             $pdf  = self::render($그릴것);
-            $이름 = self::LABEL . '_' . ($order->patient?->bare_name ?? '')
+            $이름 = self::LABEL . '_' . \App\Models\Patient::실명($order->patient?->name)
                   . '_' . $order->order_number . '.pdf';
             $길   = 'attachments/' . $order->prescription_id . '/' . uniqid(self::PREFIX) . '.pdf';
 

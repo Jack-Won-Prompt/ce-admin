@@ -6388,7 +6388,7 @@ class PrescriptionController extends Controller
         $mobile      = $request->mobile;
         $message     = $request->message;
         // 환자가 받는 문자다 — (E) 를 뗀다(2026-09-10 지시)
-        $patientName = \App\Models\Patient::bare($prescription->patient?->name) ?: ($prescription->patient_name_ocr ?? '');
+        $patientName = \App\Models\Patient::실명($prescription->patient?->name) ?: (\App\Models\Patient::실명($prescription->patient_name_ocr) ?: '');
 
         try {
             $res = $this->sender->sendBulk('sms',
@@ -7298,7 +7298,7 @@ class PrescriptionController extends Controller
      */
     private static function 서류받을이름(Prescription $prescription, string $확장): string
     {
-        $이름 = \App\Models\Patient::bare($prescription->patient?->name) ?: '무명';
+        $이름 = \App\Models\Patient::실명($prescription->patient?->name) ?: '무명';
         /* 구분자를 「~」로 둔다 — 「/」로 두면 그 「/」가 문자 칸 안에 있어도 PHP 가
            거기서 무늬가 끝난 것으로 읽어 뒤가 수식어가 된다(Unknown modifier ':'). */
         $이름 = preg_replace('~[\\\\/:*?"<>|]+~u', '_', $이름) ?? '무명';

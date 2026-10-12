@@ -489,7 +489,7 @@ class DepositAutoIssue
             return null;
         }
 
-        $name = $order->patient?->bare_name ?? '';
+        $name = \App\Models\Patient::실명($order->patient?->name);
         if ($name === '') {
             $out['skipped'][] = '세금계산서: 환자 이름이 없음';
             return null;

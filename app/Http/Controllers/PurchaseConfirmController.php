@@ -57,7 +57,7 @@ class PurchaseConfirmController extends Controller
 
         /* 문구는 메시지 관리에서 고친다 (2026-09-23 지시).
            「(E)」는 우리끼리 쓰는 표시다 — 환자가 읽는 글에 내지 않는다 (2026-09-27 지시). */
-        $이름 = \App\Models\Patient::bare($patient->name) ?: '고객';
+        $이름 = \App\Models\Patient::실명($patient->name) ?: '고객';
 
         $text = \App\Models\MessageTemplate::문구('purchase_confirm', [
             '#{고객명}' => $이름, '#{링크}' => $link, '#{유효일}' => self::LINK_DAYS,
@@ -92,7 +92,7 @@ class PurchaseConfirmController extends Controller
 
         $res = $sender->sendBulk('sms',
             /* 「(E)」는 우리끼리 쓰는 표시다 — 문자 수신자명으로 나가지 않게 뗀다 (2026-09-27 지시) */
-            [['rcv' => $mobile, 'rcvnm' => $patient->bare_name, 'patient_id' => $patient->id]],
+            [['rcv' => $mobile, 'rcvnm' => \App\Models\Patient::실명($patient->name), 'patient_id' => $patient->id]],
             $text, 'purchase_confirm', ['source' => 'purchase-confirm']);
 
         return ($res['success'] ?? false)

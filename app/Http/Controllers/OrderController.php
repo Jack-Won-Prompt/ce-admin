@@ -1619,7 +1619,7 @@ class OrderController extends Controller
                 $order->loadMissing('patient');
                 $pdfBytes = $this->buildCashReceiptPdf($order);
                 $mobile   = preg_replace('/[^0-9]/', '', $order->patient?->mobile ?? '');
-                $pdfName  = '현금영수증_' . \App\Models\Patient::bare($order->patient?->name) . '_' . $mobile . '_' . $order->order_number . '.pdf';
+                $pdfName  = '현금영수증_' . \App\Models\Patient::실명($order->patient?->name) . '_' . $mobile . '_' . $order->order_number . '.pdf';
                 $pdfPath  = 'cash_receipts/' . $order->id . '/' . $pdfName;
                 Storage::put($pdfPath, $pdfBytes);
                 /* 같은 자리를 가리키는 줄이 있으면 그것을 쓴다 (SR #85) */
@@ -1641,7 +1641,7 @@ class OrderController extends Controller
                         ?? $order->prescription?->mobile_ocr
                         ?? null;
             // 환자가 받는 안내다 — (E) 를 뗀다(2026-09-10 지시)
-            $patientName = \App\Models\Patient::bare($order->patient?->name);
+            $patientName = \App\Models\Patient::실명($order->patient?->name);
             if ($mobile) {
                 try {
                     $amountFormatted = number_format((int) $data['cash_receipt_amount']);
@@ -2021,7 +2021,7 @@ class OrderController extends Controller
 
         return $this->inlinePdf(
             \App\Support\CashReceiptForm::render($order),
-            '현금영수증_' . \App\Models\Patient::bare($order->patient?->name) . '_' . $order->order_number . '.pdf'
+            '현금영수증_' . \App\Models\Patient::실명($order->patient?->name) . '_' . $order->order_number . '.pdf'
         );
     }
 
@@ -2055,7 +2055,7 @@ class OrderController extends Controller
         }
 
         $mobile    = preg_replace('/[^0-9]/', '', $order->patient?->mobile ?? '');
-        $filename  = '현금영수증_' . \App\Models\Patient::bare($order->patient?->name) . '_' . $mobile . '_' . $order->order_number . '.pdf';
+        $filename  = '현금영수증_' . \App\Models\Patient::실명($order->patient?->name) . '_' . $mobile . '_' . $order->order_number . '.pdf';
         $pdfOutput = $this->buildCashReceiptPdf($order);
 
         // 스토리지에 저장 + 서류 목록 기록

@@ -84,7 +84,7 @@ table.purchase-tbl td.center { text-align:center; }
     <table class="info-tbl">
       <tr>
         <td class="label">성 명</td>
-        <td>{{ $patient->bare_name ?? (\App\Models\Patient::bare($prescription->patient_name_ocr) ?: '—') }}</td>
+        <td>{{ \App\Models\Patient::실명($patient?->name) ?: (\App\Models\Patient::실명($prescription->patient_name_ocr) ?: '—') }}</td>
         <td class="label">생년월일</td>
         <td>{{ $prescription->masked_resident_no_ocr ? substr(preg_replace('/[^0-9]/','',$prescription->masked_resident_no_ocr),0,6) : '—' }}</td>
       </tr>
