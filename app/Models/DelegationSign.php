@@ -274,6 +274,12 @@ class DelegationSign extends Model
      * 들고 있다. 가린 주민번호가 없는 원본은 생년월일로 좁히고, 그것도 없으면
      * 그 이름이 **원본에도 거래처에도 하나뿐일 때만** 잇는다.
      *
+     * **이름으로 못 찾으면 연락처로 한 번 더 본다** (2026-10-12 지시).
+     * 거래처 이름이 바뀌면 원본에는 서명한 그날의 이름이 그대로 남아 두 이름이
+     * 갈린다 — (E)팜티인 님이 (E)하나인 으로 개명한 건이 그랬다. 운영 데이터에는
+     * 「서명 완료」인데 주문 등록 화면은 「서명 동의 대기중」이고, 첨부 파일에도
+     * 서명이 보이지 않았다. 자세한 잣대는 연락처것() 에 적는다.
+     *
      * @param string $동의칸 agree_delegation | agree_privacy — 무엇에 동의한 줄을 찾는가
      */
     public static function 거래처것(?Patient $patient, string $동의칸 = 'agree_delegation'): ?self
@@ -282,30 +288,108 @@ class DelegationSign extends Model
             return null;
         }
 
-        $맨이름 = Patient::bare((string) $patient->name);
-        if ($맨이름 === '') {
+        $이름들 = static::찾을이름들($patient);
+
+        if ($이름들) {
+            $후보 = static::서명된줄($동의칸)
+                ->whereIn('customer_name', $이름들)
+                ->orderByDesc('signed_at')->orderByDesc('id')
+                ->get();
+
+            if ($후보->isNotEmpty()
+                && $찾음 = static::좁히기($후보, $patient, Patient::whereIn('name', $이름들)->count())) {
+                return $찾음;
+            }
+        }
+
+        return static::연락처것($patient, $동의칸);
+    }
+
+    /**
+     * 연락처로 찾는다 — 개명한 사람을 잇는 길 (2026-10-12 지시).
+     *
+     * 이름이 바뀌어도 번호ㆍ주민번호ㆍ생년월일은 그대로다. 그래서 번호로 줄을
+     * 모으고, **가린 주민번호나 생년월일이 맞아야만** 잇는다(좁히기엄격).
+     *
+     * 번호만으로는 절대 잇지 않는다. 집 전화 한 대를 식구가 함께 쓰고, 보호자
+     * 번호를 제 번호 칸에 적어 둔 줄도 있다 — 번호 하나로 이으면 남의 서명으로
+     * 위임장이 공단에 나간다. 이름만으로 잇는 걸음(좁히기 ③)도 여기서는 쓰지
+     * 않는다: 그 걸음은 「이름이 하나뿐」이라는 근거로 서는데, 여기 모인 줄은
+     * 이름이 애초에 다른 줄이다.
+     *
+     * 보는 칸은 **그 사람 제 번호**뿐이다 — phone(원본의 연락처)ㆍmain_contact
+     * (주 연락처)ㆍnice_mobile(본인확인된 번호). guardian_phone 과 sent_to 는
+     * 보지 않는다: 앞은 보호자 번호이고, 뒤는 링크를 보낸 곳이라 보호자 번호가
+     * 적힌 줄이 섞인다.
+     */
+    private static function 연락처것(Patient $patient, string $동의칸): ?self
+    {
+        $번호들 = static::찾을번호들($patient);
+
+        if (! $번호들) {
             return null;
         }
 
-        $이름들 = array_values(array_unique([$맨이름, '(E)' . $맨이름]));
-
-        /* 서명을 마쳤고, 그 동의에 체크했고, 그림이 남아 있어야 한다 — 옮겨 담은
-           표에 넣을 때 쓰던 조건 그대로다. 그림이 없는 줄을 받아 주면 위임장이
-           빈 서명란으로 공단에 나간다. */
-        $후보 = static::query()
-            ->where('status', 'signed')
-            ->where($동의칸, true)
-            ->whereIn('customer_name', $이름들)
-            ->where(fn ($q) => $q->where('sign_base64', '!=', '')->whereNotNull('sign_base64')
-                                 ->orWhere(fn ($w) => $w->where('sign_path', '!=', '')->whereNotNull('sign_path')))
+        $후보 = static::서명된줄($동의칸)
+            ->where(function ($q) use ($번호들) {
+                foreach (['phone', 'main_contact', 'nice_mobile'] as $칸) {
+                    $q->orWhereIn(
+                        \Illuminate\Support\Facades\DB::raw("REPLACE(REPLACE(IFNULL(`{$칸}`, ''), '-', ''), ' ', '')"),
+                        $번호들
+                    );
+                }
+            })
             ->orderByDesc('signed_at')->orderByDesc('id')
             ->get();
 
-        if ($후보->isEmpty()) {
-            return null;
+        return $후보->isEmpty() ? null : static::좁히기엄격($후보, $patient);
+    }
+
+    /**
+     * 서명을 마쳤고, 그 동의에 체크했고, 그림이 남아 있는 줄 — 찾는 자리 모두 이 조건이다.
+     *
+     * 그림이 없는 줄을 받아 주면 위임장이 빈 서명란으로 공단에 나간다. 옮겨 담은
+     * 표에 넣을 때 쓰던 조건 그대로다.
+     */
+    private static function 서명된줄(string $동의칸): \Illuminate\Database\Eloquent\Builder
+    {
+        return static::query()
+            ->where('status', 'signed')
+            ->where($동의칸, true)
+            ->where(fn ($q) => $q->where('sign_base64', '!=', '')->whereNotNull('sign_base64')
+                                 ->orWhere(fn ($w) => $w->where('sign_path', '!=', '')->whereNotNull('sign_path')));
+    }
+
+    /** 원본에서 찾을 이름 — 맨이름과 「(E)맨이름」 둘. 이름이 없으면 빈 배열 */
+    private static function 찾을이름들(Patient $patient): array
+    {
+        $맨이름 = Patient::bare((string) $patient->name);
+
+        return $맨이름 === '' ? [] : array_values(array_unique([$맨이름, '(E)' . $맨이름]));
+    }
+
+    /**
+     * 거래처에 적힌 번호 모두 — 숫자만. 너무 짧은 것은 버린다.
+     *
+     * 거래처에는 번호가 둘이고(휴대전화ㆍ전화) 어느 쪽에 적어 두었는지는 사람마다
+     * 다르다 — 한 칸만 보면 보조 칸에 적힌 사람이 그대로 끊긴다.
+     *
+     * 아홉 자 미만은 버린다. 「0」ㆍ「-」만 적힌 칸이 섞여 있고, 그런 값으로 모으면
+     * 남남이 한 줄에 묶인다.
+     */
+    private static function 찾을번호들(Patient $patient): array
+    {
+        $번호들 = [];
+
+        foreach ([$patient->mobile, $patient->phone] as $번호) {
+            $숫자 = preg_replace('/\D/', '', (string) $번호);
+
+            if (strlen((string) $숫자) >= 9) {
+                $번호들[] = $숫자;
+            }
         }
 
-        return static::좁히기($후보, $patient, Patient::whereIn('name', $이름들)->count());
+        return array_values(array_unique($번호들));
     }
 
     /**
@@ -327,13 +411,17 @@ class DelegationSign extends Model
             return [];
         }
 
+        /* 두 걸음(이름ㆍ연락처)이 같은 목록을 거닐어야 하므로 한 번 담아 둔다 —
+           부르는 쪽이 제너레이터를 건네면 두 번째 걸음에서 빈 목록이 된다. */
+        $사람들 = collect($patients)->filter(fn ($p) => $p?->id)->values();
+
+        if ($사람들->isEmpty()) {
+            return [];
+        }
+
         $이름맵 = [];          // 맨이름 => [거래처, …]
 
-        foreach ($patients as $p) {
-            if (! $p?->id) {
-                continue;
-            }
-
+        foreach ($사람들 as $p) {
             $맨 = Patient::bare((string) $p->name);
 
             if ($맨 !== '') {
@@ -341,51 +429,160 @@ class DelegationSign extends Model
             }
         }
 
-        if (! $이름맵) {
+        $답 = [];
+
+        if ($이름맵) {
+            $찾을이름 = [];
+
+            foreach (array_keys($이름맵) as $맨) {
+                $찾을이름[] = $맨;
+                $찾을이름[] = '(E)' . $맨;
+            }
+
+            $찾을이름 = array_values(array_unique($찾을이름));
+
+            $후보들 = static::서명된줄($동의칸)
+                ->whereIn('customer_name', $찾을이름)
+                ->orderByDesc('signed_at')->orderByDesc('id')
+                ->get()
+                ->groupBy(fn ($d) => Patient::bare((string) $d->customer_name));
+
+            /* ③ 걸음이 쓰는 잣대 — 거래처에 그 이름이 하나뿐인가 */
+            $거래처수 = Patient::whereIn('name', $찾을이름)->get(['name'])
+                ->groupBy(fn ($p) => Patient::bare((string) $p->name))
+                ->map->count();
+
+            foreach ($이름맵 as $맨 => $같은이름들) {
+                $후보 = $후보들->get($맨);
+
+                if (! $후보 || $후보->isEmpty()) {
+                    continue;
+                }
+
+                foreach ($같은이름들 as $p) {
+                    if ($찾음 = static::좁히기($후보, $p, (int) ($거래처수[$맨] ?? 0))) {
+                        $답[(int) $p->id] = $찾음;
+                    }
+                }
+            }
+        }
+
+        /* 이름으로 못 찾은 사람만 연락처로 한 번 더 본다 (2026-10-12 지시).
+
+           거래처것() 과 같은 길을 걸어야 한다 — 상세가 보는 길과 목록이 보는 길이
+           갈리면 (E)이정현A 때처럼 「상세는 완료, 목록은 빈칸」이 다시 생긴다. */
+        foreach (static::연락처들것($사람들->reject(fn ($p) => isset($답[(int) $p->id])), $동의칸) as $pid => $찾음) {
+            $답[$pid] = $찾음;
+        }
+
+        return $답;
+    }
+
+    /**
+     * 여러 거래처의 것을 연락처로 **한 번에** — `[거래처 id => 서명]` (2026-10-12 지시).
+     *
+     * 잣대는 연락처것() 과 같다(좁히기엄격 을 함께 쓴다). 목록 화면이 줄마다 묻지
+     * 않도록 번호를 모아 한 번 읽는다.
+     *
+     * @param  iterable<Patient>  $patients
+     * @return array<int, self>
+     */
+    private static function 연락처들것($patients, string $동의칸): array
+    {
+        $번호맵 = [];   // 번호(숫자만) => [거래처, …]
+
+        foreach ($patients as $p) {
+            foreach (static::찾을번호들($p) as $번호) {
+                $번호맵[$번호][] = $p;
+            }
+        }
+
+        if (! $번호맵) {
             return [];
         }
 
-        $찾을이름 = [];
+        $번호들 = array_keys($번호맵);
 
-        foreach (array_keys($이름맵) as $맨) {
-            $찾을이름[] = $맨;
-            $찾을이름[] = '(E)' . $맨;
+        $줄들 = static::서명된줄($동의칸)
+            ->where(function ($q) use ($번호들) {
+                foreach (['phone', 'main_contact', 'nice_mobile'] as $칸) {
+                    $q->orWhereIn(
+                        \Illuminate\Support\Facades\DB::raw("REPLACE(REPLACE(IFNULL(`{$칸}`, ''), '-', ''), ' ', '')"),
+                        $번호들
+                    );
+                }
+            })
+            ->orderByDesc('signed_at')->orderByDesc('id')
+            ->get();
+
+        if ($줄들->isEmpty()) {
+            return [];
         }
 
-        $찾을이름 = array_values(array_unique($찾을이름));
+        /* 한 줄이 번호를 셋까지 들고 있어 번호마다 다시 묶는다 — 어느 칸으로 걸렸는지는
+           따지지 않는다. 짝이 맞는지는 좁히기엄격 이 주민번호ㆍ생년월일로 다시 본다. */
+        $번호별 = [];
 
-        $후보들 = static::query()
-            ->where('status', 'signed')
-            ->where($동의칸, true)
-            ->whereIn('customer_name', $찾을이름)
-            ->where(fn ($q) => $q->where('sign_base64', '!=', '')->whereNotNull('sign_base64')
-                                 ->orWhere(fn ($w) => $w->where('sign_path', '!=', '')->whereNotNull('sign_path')))
-            ->orderByDesc('signed_at')->orderByDesc('id')
-            ->get()
-            ->groupBy(fn ($d) => Patient::bare((string) $d->customer_name));
+        foreach ($줄들 as $줄) {
+            foreach (['phone', 'main_contact', 'nice_mobile'] as $칸) {
+                $숫자 = preg_replace('/\D/', '', (string) $줄->{$칸});
 
-        /* ③ 걸음이 쓰는 잣대 — 거래처에 그 이름이 하나뿐인가 */
-        $거래처수 = Patient::whereIn('name', $찾을이름)->get(['name'])
-            ->groupBy(fn ($p) => Patient::bare((string) $p->name))
-            ->map->count();
+                if ($숫자 !== '' && isset($번호맵[$숫자])) {
+                    $번호별[$숫자][$줄->id] = $줄;
+                }
+            }
+        }
 
         $답 = [];
 
-        foreach ($이름맵 as $맨 => $같은이름들) {
-            $후보 = $후보들->get($맨);
+        foreach ($번호별 as $번호 => $줄모음) {
+            $후보 = collect(array_values($줄모음));
 
-            if (! $후보 || $후보->isEmpty()) {
-                continue;
-            }
+            foreach ($번호맵[$번호] as $p) {
+                if (isset($답[(int) $p->id])) {
+                    continue;
+                }
 
-            foreach ($같은이름들 as $p) {
-                if ($찾음 = static::좁히기($후보, $p, (int) ($거래처수[$맨] ?? 0))) {
+                if ($찾음 = static::좁히기엄격($후보, $p)) {
                     $답[(int) $p->id] = $찾음;
                 }
             }
         }
 
         return $답;
+    }
+
+    /**
+     * 주민번호ㆍ생년월일이 **맞아야만** 잇는다 — 이름을 믿을 수 없을 때 쓴다.
+     *
+     * 좁히기() 의 ①ㆍ② 걸음만 쓰고 ③(이름이 하나뿐)은 쓰지 않는다. ③ 은 이름이
+     * 같다는 데서 근거를 얻는 걸음인데, 연락처로 모은 줄은 이름이 애초에 다르다.
+     * 둘을 맞출 길이 하나도 없으면 잇지 않는다 — 모르면 잇지 않는 쪽이 맞다.
+     */
+    private static function 좁히기엄격($후보, Patient $patient): ?self
+    {
+        if (filled($patient->resident_no_masked)) {
+            $좁힘 = $후보->where('resident_no_masked', $patient->resident_no_masked)->values();
+
+            if ($좁힘->isNotEmpty()) {
+                return $좁힘->count() === 1 ? $좁힘->first() : null;
+            }
+        }
+
+        if ($patient->birth_date) {
+            $생년 = $patient->birth_date instanceof \DateTimeInterface
+                ? $patient->birth_date->format('Y-m-d')
+                : substr((string) $patient->birth_date, 0, 10);
+
+            $좁힘 = $후보->filter(fn ($d) => $d->birth_date
+                && $d->birth_date->format('Y-m-d') === $생년)->values();
+
+            if ($좁힘->isNotEmpty()) {
+                return $좁힘->count() === 1 ? $좁힘->first() : null;
+            }
+        }
+
+        return null;
     }
 
     /**
