@@ -143,7 +143,6 @@ Route::middleware(['auth'])->group(function () {
         // 그 사람의 새 건 — 환자만 이어 둔 빈 건이다 (copy=1 이면 지난 건을 베낀다)
         Route::post('/{prescription}/duplicate',      [PrescriptionController::class, 'duplicate'])->name('duplicate');
         // 유형을 고르면 그 자리에서 상세목록에 오더라인을 세운다 (2026-09-22 확인요청 2쪽)
-        Route::post('/{prescription}/order-line',     [PrescriptionController::class, 'createOrderLine'])->name('orderLine');
         // 「파일 검수」 창이 읽는 올린 파일 목록 (2026-09-10 지시)
         Route::get( '/{prescription}/files',         [PrescriptionController::class, 'files'])->name('files');
         Route::post('/{prescription}/approve',       [PrescriptionController::class, 'approve'])->name('approve');

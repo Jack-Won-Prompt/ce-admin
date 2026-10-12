@@ -2278,10 +2278,32 @@ class PrescriptionController extends Controller
            서지 않기 때문이다. 유형을 고르는 순간 주문 줄이 이미 선다. 그러니 이동
            여부를 묻지 않고 바로 세운다 (2026-09-23 지시: 「주문등록에서 신규등록으로
            입력되는 모든 라인이 주문 목록에 다 보여야 함」). */
+        /* **서명을 받아 둔 건도 세운다** (2026-10-12 지시 · 사슬 정합성 검증).
+
+           환자가 위임동의 서명을 마치면 그 자리에서 주문 줄이 선다
+           (ConsentController). 그 자리에 적어 둔 뜻이 이렇다 —
+
+             「위임을 받아 둔 건은 이미 거래가 시작된 것이고, 담당자가 그다음에
+              손댈 것을 찾는 자리가 그 목록이다.」
+
+           그런데 정작 **그 목록에서는 보이지 않았다.** 처방전이 아직 검수 전이면
+           위의 잣대에 걸리지 않기 때문이다. 환자가 서명까지 마친 건이 담당자의 작업
+           대기 목록에 없고 주문 관리에만 있었다 — 2026-10-12 기준 열여섯 장이 그랬다.
+
+           세우는 잣대는 **이 건에서 받은 서명**이다. 주문 줄을 세운 것이 그것이므로
+           같은 것을 본다 — 거래처의 지난 서명까지 보면 이 건에 아무 일도 없었는데
+           목록에 서게 된다. 신분증만 받은 줄은 서명이 아니다(DelegationGate 와 같은
+           잣대). */
         $q = \App\Models\Order::whereDoesntHave('returns')
             ->whereHas('prescription', fn ($p) => $p
                 ->where(fn ($w) => $w->whereIn('status', $검수마침)
-                                     ->orWhere('counsel_acc_add_type', '20')));
+                                     ->orWhere('counsel_acc_add_type', '20')
+                                     ->orWhereHas('consents', fn ($c) => $c
+                                         ->where('status', 'agreed')
+                                         ->where(fn ($k) => $k->whereNull('kind')
+                                                              ->orWhere('kind', '!=', 'id_card'))
+                                         ->whereNotNull('signature_data')
+                                         ->where('signature_data', '!=', ''))));
 
         return $함께 ? $q->with($this->주문줄관계()) : $q;
     }
@@ -8351,101 +8373,17 @@ HTML;
         ]);
     }
 
-    /**
-     * 유형을 고르면 그 자리에서 주문 줄을 세운다 (2026-09-22 확인요청 2쪽).
-     *
-     * 「신규등록을 누르면 상세목록에 새 오더라인이 생성되어야 한다(예: 처방외 등)」는
-     * 요청이다. 여태 신규등록은 빈 초안만 만들고, 주문번호는 병원ㆍ처방을 적어
-     * 저장할 때에야 났다(OrderSync::seed). 그래서 신규등록을 누른 담당자는 상세목록에
-     * **아무 변화가 없는 화면**을 보고 무엇이 시작됐는지 알 수 없었다.
-     *
-     * 유형을 고르는 것이 「이 건은 처방전인가 처방외인가」를 정하는 걸음이라, 그때
-     * 줄을 세운다. 처방외는 병원도 처방전도 없이 사는 건이라 더 적을 것을 기다릴
-     * 까닭이 없다.
-     *
-     * **거래처가 붙은 뒤에만 세운다** (2026-09-20 지시를 지킨다). 주문번호는
-     * 위드웍스ㆍ토스ㆍ팝빌ㆍ공단으로 나가는 대외 식별자라, 누구 것인지 모르는 채
-     * 먼저 태울 번호가 아니다. 이름이 아직이면 세우지 않고 그 까닭을 돌려준다 —
-     * 이름을 고르고 저장하면 그때 선다.
-     */
-    public function createOrderLine(Request $request, Prescription $prescription): JsonResponse
-    {
-        $request->validate([
-            'counsel_acc_add_type' => ['required', 'string', Rule::in(['10', '20', '30'])],
-        ]);
+    /* `createOrderLine` 은 걷었다 (2026-10-12 지시 · 사슬 정합성 검증).
 
-        $유형 = (string) $request->input('counsel_acc_add_type');
+       「유형을 고르면 그 자리에서 주문 줄을 세운다」(2026-09-22 확인요청 2쪽)로 둔
+       자리인데, **2026-10-02 지시로 그 동작을 걷었다** — 둘러보다 유형만 건드린 건에도
+       주문번호가 났기 때문이다. 그 뒤로 화면은 이 길을 부르지 않았다.
 
-        $적을것 = [
-            'counsel_acc_add_type' => $유형,
-            'updated_by'           => Auth::id(),
-        ];
+       오늘 전수로 확인했다 — 저장소 어디에서도(화면ㆍ앱) 부르지 않고, 운영 nginx
+       기록에도 부른 자취가 없다. 이 길로 선 주문은 10-01~10-02 의 여섯 건이 마지막이다.
 
-        /* 처방외를 고르면 청구처도 그 자리에서 「해당 없음」으로 적는다
-           (2026-10-01 CASE 6 점검).
-
-           주문 줄이 서는 자리가 여기다. 여태 유형만 적고 청구처는 비워 두었고,
-           청구처는 다음 저장 때에야 담겼다 — 그 사이 처방외 건이 청구처 빈칸으로
-           남는다. 청구 관리는 빈 청구처를 공단으로 읽으므로(NhisController), 낼 일이
-           없는 건이 공단 청구 대상으로 서게 된다. */
-        if ($유형 === \App\Support\BillingStrategy::TYPE_NONRX) {
-            $적을것['claim_agency'] = \App\Support\ClaimAgency::NONE;
-        }
-
-        $prescription->forceFill($적을것)->save();
-
-        if (! $prescription->patient_id) {
-            return response()->json([
-                'success' => false,
-                'seeded'  => false,
-                'message' => '거래처를 먼저 선택하십시오 — 이름이 정해진 뒤에 주문번호가 발급됩니다.',
-            ]);
-        }
-
-        /* 유형을 적어 저장한 그 순간 OrderSync 가 이미 줄을 세웠을 수 있다
-           (Prescription::booted → seed · 2026-09-22 시험에서 드러남). 그때도 방금
-           세운 줄이므로 번호를 돌려준다 — 안 돌려주면 화면이 제 주문을 모른 채
-           남아, 뒤이어 부르는 자리들이 「주문이 없다」로 걸린다. */
-        if ($order = $prescription->order()->first()) {
-            return response()->json([
-                'success'      => true,
-                'seeded'       => false,
-                'order_id'     => $order->id,
-                'order_number' => $order->order_number,
-                'message'      => '',
-                'row'          => $this->주문줄들(collect([$order->load($this->주문줄관계())]))->first(),
-            ]);
-        }
-
-        /* 빈 초안 표를 걷는다 — OrderSync 가 빈 초안에는 줄을 세우지 않는다.
-           유형을 골랐으면 더는 빈 초안이 아니다. */
-        if ($prescription->is_blank_draft) {
-            $prescription->forceFill(['is_blank_draft' => false])->save();
-        }
-
-        $order = \App\Support\OrderSync::ensure($prescription->refresh());
-
-        if (! $order) {
-            return response()->json([
-                'success' => false,
-                'seeded'  => false,
-                'message' => '주문을 생성하지 못했습니다.',
-            ]);
-        }
-
-        activity()->causedBy(Auth::user())->performedOn($order)->log(
-            "처방유형 선택으로 주문 생성: {$order->order_number} ({$prescription->rx_number})"
-        );
-
-        return response()->json([
-            'success'      => true,
-            'seeded'       => true,
-            'order_id'     => $order->id,
-            'order_number' => $order->order_number,
-            'message'      => "주문 {$order->order_number} 을(를) 생성했습니다.",
-            'row'          => $this->주문줄들(collect([$order->load($this->주문줄관계())]))->first(),
-        ]);
-    }
+       부르는 곳 없는 길을 남겨 두면 언젠가 누가 되살려 쓴다. 길(route)도 함께 걷었다.
+       줄을 세우는 자리는 처방전 목록의 「주문등록 이동」(approve) 하나다. */
 
     /**
      * 그 사람의 새 건을 세운다 — 「신규로 진행」이 부른다.
