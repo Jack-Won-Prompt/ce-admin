@@ -250,7 +250,8 @@ class DuplicatePaymentRefundService
             return ['sent' => false, 'message' => '고객 연락처가 없어 안내는 보내지 못했습니다.'];
         }
 
-        $name = Patient::bare($order->patient?->name) ?: '고객';
+        /* 환자에게 나가는 글의 이름 — 동명이인 꼬리까지 뗀다 (2026-10-12 지시) */
+        $name = Patient::실명($order->patient?->name) ?: '고객';
 
         $body = MessageTemplate::channel('sms')->active()
             ->where('code', self::안내틀)->value('body') ?: self::기본문구();

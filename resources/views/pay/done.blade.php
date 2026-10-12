@@ -28,11 +28,11 @@
 <body>
 <div class="wrap">
   <div class="card">
-    {{-- 가상계좌는 계좌가 나왔을 뿐 아직 낸 것이 아니다 — 「끝났습니다」로 적으면
+    {{-- 가상계좌는 발급되었을 뿐 아직 결제된 것이 아니다 — 「완료되었습니다」로 적으면
          환자가 입금하지 않고 창을 닫는다 --}}
     <div class="mark {{ $ok ? 'ok' : 'no' }}">{{ $ok ? ($waiting ? '!' : '✓') : '!' }}</div>
-    <h1>@if(!$ok)결제하지 못했습니다@elseif($waiting)계좌가 나왔습니다@else결제가 끝났습니다@endif</h1>
-    <p>@if(!$ok){{ $message ?: '다시 시도하시거나 담당자에게 문의해 주십시오.' }}@elseif($waiting)아래 계좌로 입금해 주셔야 결제가 끝납니다.@else{{ $message ?: '결제 내역을 문자로 안내드립니다.' }}@endif</p>
+    <h1>@if(!$ok)결제가 처리되지 않았습니다@elseif($waiting)가상계좌가 발급되었습니다@else결제가 완료되었습니다@endif</h1>
+    <p>@if(!$ok){{ $message ?: '다시 시도하시거나 담당자에게 문의해 주시기 바랍니다.' }}@elseif($waiting)아래 계좌로 입금하시면 결제가 완료됩니다.@else{{ $message ?: '결제 내역을 문자로 안내드립니다.' }}@endif</p>
 
     <div class="rows">
       <div class="row"><span class="k">주문번호</span><span class="v">{{ $link->order?->order_number }}</span></div>
@@ -46,7 +46,7 @@
     @php $va = $toss['virtualAccount'] ?? null; @endphp
     @if($ok && $va)
       <div class="va">
-        <div style="font-weight:700;">아래 계좌로 입금해 주십시오</div>
+        <div style="font-weight:700;">아래 계좌로 입금해 주시기 바랍니다</div>
         {{-- 토스는 은행을 코드로 준다(03) — 그대로 두면 환자가 「03 은행」을 찾는다 --}}
         @php $bankCode = $va['bank'] ?? $va['bankCode'] ?? ''; @endphp
         <div>{{ \App\Services\TossPayments\TossClient::BANK_NAMES[$bankCode] ?? $bankCode }}</div>
@@ -60,9 +60,9 @@
       </div>
     @endif
 
-    {{-- 이미 나온 계좌를 다시 보여 주는 자리에만 선다 (2026-10-06 지시).
-         결제창을 열 때마다 계좌가 새로 나와 앞 계좌로 들어온 돈이 이을 곳을 잃었다.
-         다른 방법으로 내시려면 담당자를 거쳐야 한다는 것을 여기서 알린다. --}}
+    {{-- 이미 발급된 계좌를 다시 보여 주는 자리에만 선다 (2026-10-06 지시).
+         결제창을 열 때마다 계좌가 새로 발급되어 앞 계좌로 입금된 금액이 연결될 곳을
+         잃었다. 다른 수단으로 결제하려면 담당자를 거쳐야 한다는 것을 여기서 알린다. --}}
     @if(!empty($note))
       <p style="font-size:13px;color:#6B7178;margin-top:14px;line-height:1.6;">{{ $note }}</p>
     @endif

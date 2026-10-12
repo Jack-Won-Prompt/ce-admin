@@ -337,7 +337,7 @@ class PaymentLinkController extends Controller
                 'ok'      => false,
                 'waiting' => false,
                 'message' => '취소된 주문입니다. 결제가 필요하지 않습니다. '
-                           . '문의 사항은 담당자에게 연락해 주십시오.',
+                           . '문의 사항은 담당자에게 문의해 주시기 바랍니다.',
                 'toss'    => [],
             ]);
         }
@@ -347,7 +347,7 @@ class PaymentLinkController extends Controller
                 'link'    => $link,
                 'ok'      => true,
                 'waiting' => false,
-                'message' => '이미 결제가 끝난 건입니다. 다시 결제하실 필요가 없습니다.',
+                'message' => '이미 결제가 완료된 건입니다. 추가로 결제하실 필요가 없습니다.',
                 'toss'    => $link->order?->tossPayment?->raw_response ?? [],
             ]);
         }
@@ -382,7 +382,7 @@ class PaymentLinkController extends Controller
                 'waiting' => true,
                 'message' => '',
                 'toss'    => $나온계좌->raw_response ?? [],
-                'note'    => '이미 받으신 계좌입니다. 다른 방법으로 결제하시려면 담당자에게 말씀해 주십시오.',
+                'note'    => '이미 발급된 가상계좌입니다. 다른 결제 수단을 이용하시려면 담당자에게 문의해 주시기 바랍니다.',
             ]);
         }
 
@@ -547,8 +547,8 @@ class PaymentLinkController extends Controller
                 'link'    => $link,
                 'ok'      => true,
                 'waiting' => false,
-                'message' => '이미 결제가 끝난 건이라 이번 결제는 진행하지 않았습니다. '
-                           . '카드에서 빠져나간 금액은 없습니다.',
+                'message' => '이미 결제가 완료된 건이므로 이번 결제는 진행되지 않았습니다. '
+                           . '카드에서 출금된 금액은 없습니다.',
                 'toss'    => $link->order?->tossPayment?->raw_response ?? [],
             ]);
         }
@@ -562,13 +562,13 @@ class PaymentLinkController extends Controller
 
         if (!$paymentKey || !$tossOrder) {
             return view('pay.done', ['link' => $link, 'ok' => false, 'waiting' => false,
-                                     'message' => $error ?: '결제가 완료되지 않았습니다.']);
+                                     'message' => $error ?: '결제가 완료되지 않았습니다.']);  // 사무용어 — 그대로 둔다
         }
 
         if ($amount !== (int) $link->amount) {
             Log::warning('[결제전송] 금액이 다르다', ['link' => $link->id, 'sent' => $link->amount, 'got' => $amount]);
 
-            return view('pay.done', ['link' => $link, 'ok' => false, 'waiting' => false, 'message' => '결제 금액이 맞지 않습니다.']);
+            return view('pay.done', ['link' => $link, 'ok' => false, 'waiting' => false, 'message' => '결제 금액이 일치하지 않습니다.']);
         }
 
         try {

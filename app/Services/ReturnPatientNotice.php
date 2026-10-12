@@ -73,7 +73,7 @@ class ReturnPatientNotice
                         $channel,
                         [[
                             'rcv'        => $mobile,
-                            'rcvnm'      => \App\Models\Patient::bare($return->order?->patient?->name),
+                            'rcvnm'      => \App\Models\Patient::실명($return->order?->patient?->name),
                             'patient_id' => $return->order?->patient_id,
                         ]],
                         $this->compose($return, $channel, $extra, $code),
@@ -117,7 +117,7 @@ class ReturnPatientNotice
         }
 
         $text = strtr($body, [
-            '#{고객명}'   => \App\Models\Patient::bare($return->order?->patient?->name) ?: '고객',
+            '#{고객명}'   => \App\Models\Patient::실명($return->order?->patient?->name) ?: '고객',
             '#{유형}'     => $return->typeLabel(),
             '#{상태}'     => $return->statusLabel(),
             '#{접수번호}' => (string) $return->receipt_no,

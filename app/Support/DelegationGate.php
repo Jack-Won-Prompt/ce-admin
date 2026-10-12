@@ -390,7 +390,8 @@ final class DelegationGate
      * 섰다 — (E)팜티인 님이 (E)하나인 으로 개명한 건이 그랬다. 공단에 내는 서류이므로
      * 지금 이름으로 나가야 한다.
      *
-     * (E) 는 사업부가 IC 라는 우리 쪽 표시라 서류에 설 자리가 없어 떼고 내준다.
+     * (E) 와 **동명이인 꼬리**(김혜경C 의 C)는 우리 쪽 표시라 서류에 설 자리가 없어
+     * 모두 떼고 내준다 (2026-10-12 지시 「알파벳도 없어야 함」).
      * 거래처가 없는 건(이름만 적어 둔 상담)에는 받아 둔 값을 그대로 쓴다.
      */
     public static function 서류이름(?Prescription $prescription, ?string $받아둔이름 = null): string
@@ -401,7 +402,7 @@ final class DelegationGate
             return (string) $지금;
         }
 
-        return Patient::bare((string) ($받아둔이름 ?: $prescription?->patient_name_ocr));
+        return Patient::실명((string) ($받아둔이름 ?: $prescription?->patient_name_ocr));
     }
 
     /**

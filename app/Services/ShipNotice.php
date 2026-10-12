@@ -87,7 +87,7 @@ class ShipNotice
             \App\Models\MessageTemplate::채널마다(self::TEMPLATE,
                 fn (string $채널, ?string $틀코드) => $this->sender->sendBulk(
                     $채널,
-                    [['rcv' => $mobile, 'rcvnm' => \App\Models\Patient::bare($order->patient?->name),
+                    [['rcv' => $mobile, 'rcvnm' => \App\Models\Patient::실명($order->patient?->name),
                       'patient_id' => $order->patient_id]],
                     $text, $틀코드 ?: self::TEMPLATE,
                     ['source' => self::SOURCE, 'prescription_id' => $order->prescription_id],
@@ -171,7 +171,7 @@ class ShipNotice
     public function compose(Order $order, string $tracking): string
     {
         /* 거래처가 받는 글이다 — 사업부 접두 (E) 는 떼고 적는다 (2026-09-11 지시) */
-        $name = \App\Models\Patient::bare($order->patient?->name) ?: '고객';
+        $name = \App\Models\Patient::실명($order->patient?->name) ?: '고객';
 
         $body = MessageTemplate::channel('sms')->active()
             ->where('code', self::TEMPLATE)->value('body');

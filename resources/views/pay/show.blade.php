@@ -45,12 +45,12 @@
 <div class="wrap">
   <div class="card">
     {{-- 「(E)」는 우리끼리 쓰는 표시다 — 환자가 보는 자리에는 내지 않는다 (2026-09-27 지시) --}}
-    <h1>{{ \App\Models\Patient::bare($order->patient?->name) ?: '고객' }}님, 결제 안내입니다</h1>
+    <h1>{{ \App\Models\Patient::실명($order->patient?->name) ?: '고객' }}님, 결제 안내입니다</h1>
     <p class="sub">{{ config('popbill.company.corp_name') ?: config('app.name') }}</p>
 
     <div class="row"><span class="k">주문번호</span><span class="v">{{ $order->order_number }}</span></div>
     <div class="row"><span class="k">제품</span><span class="v">{{ $order->product_name ?: '-' }}</span></div>
-    <div class="row"><span class="k">결제 방법</span><span class="v">{{ $link->method_label }}</span></div>
+    <div class="row"><span class="k">결제 수단</span><span class="v">{{ $link->method_label }}</span></div>
     <div class="row"><span class="k">결제 금액</span><span class="v amount">{{ number_format($link->amount) }}원</span></div>
   </div>
 
@@ -58,26 +58,26 @@
     {{-- 낼 수 없는 상태를 그 자리에서 알려 준다. 눌러도 안 되는 단추만 보이면 왜인지 알 수 없다. --}}
     <div class="card closed">
       <div class="big">
-        @if($link->status === 'paid') 결제가 끝난 건입니다
-        @elseif($link->status === 'expired') 결제 기한이 지났습니다
+        @if($link->status === 'paid') 결제가 완료된 건입니다
+        @elseif($link->status === 'expired') 결제 기한이 만료되었습니다
         @elseif($link->status === 'cancelled') 취소된 결제 요청입니다
-        @else 지금은 결제할 수 없습니다
+        @else 현재 결제가 불가능합니다
         @endif
       </div>
-      <div class="sub" style="margin:0;">담당자에게 문의해 주십시오.</div>
+      <div class="sub" style="margin:0;">담당자에게 문의해 주시기 바랍니다.</div>
     </div>
 
   @elseif($link->method === \App\Models\PaymentLink::METHOD_BANK)
     {{-- 무통장입금은 토스를 타지 않는다 — 계좌를 보여 주고 입금 확인은 사람이 한다 --}}
     <div class="card">
-      <div style="font-weight:700;">아래 계좌로 입금해 주십시오</div>
+      <div style="font-weight:700;">아래 계좌로 입금해 주시기 바랍니다</div>
       <div class="bank">
         <div>{{ config('toss.virtual_account.fallback_bank') ?: '은행 정보 없음' }}</div>
         <div class="acc">{{ config('toss.virtual_account.fallback_account') ?: '-' }}</div>
         <div>예금주 {{ config('popbill.company.corp_name') ?: config('app.name') }}</div>
       </div>
-      <p class="note">입금자명을 주문자 이름({{ \App\Models\Patient::bare($order->patient?->name) ?: '주문자' }})으로 입력해 주시면 확인이 빠릅니다.
-        입금 확인까지 시간이 걸릴 수 있습니다.</p>
+      <p class="note">입금자명을 주문자 성함({{ \App\Models\Patient::실명($order->patient?->name) ?: '주문자' }})으로 입력해 주시면 신속하게 확인됩니다.
+        입금 확인에는 다소 시간이 소요될 수 있습니다.</p>
     </div>
 
   @else
@@ -86,23 +86,23 @@
            않고 「계약된 결제수단이 아닙니다」로 되돌린다 — 고를 수는 있는데 누르면
            실패하는 자리를 환자 앞에 두지 않는다. --}}
       @if(config('toss.virtual_account.selectable'))
-        <div style="font-weight:700; margin-bottom:8px;">결제 방법을 선택하십시오</div>
+        <div style="font-weight:700; margin-bottom:8px;">결제 수단을 선택해 주십시오</div>
         <div class="ways">
           <label class="way">
             <input type="radio" name="payway" value="CARD" checked>
-            <span><b>카드</b>신용·체크카드로 지금 결제합니다</span>
+            <span><b>카드</b>신용ㆍ체크카드로 즉시 결제합니다</span>
           </label>
           <label class="way">
             <input type="radio" name="payway" value="VIRTUAL_ACCOUNT">
-            <span><b>가상계좌</b>계좌를 받아 입금합니다 — 입금이 확인되면 처리됩니다</span>
+            <span><b>가상계좌</b>가상계좌를 발급받아 입금합니다. 입금이 확인되면 결제가 완료됩니다</span>
           </label>
         </div>
       @else
         <div style="font-weight:700; margin-bottom:4px;">카드로 결제합니다</div>
-        <p class="sub" style="margin:0;">버튼을 누르면 토스페이먼츠 결제창이 열립니다.</p>
+        <p class="sub" style="margin:0;">아래 버튼을 누르시면 토스페이먼츠 결제창이 열립니다.</p>
       @endif
       <button class="btn" id="payBtn">{{ number_format($link->amount) }}원 결제</button>
-      <p class="note">결제창은 토스페이먼츠에서 열립니다. 카드 정보는 우리 서버에 남지 않습니다.</p>
+      <p class="note">결제는 토스페이먼츠를 통해 처리되며, 카드 정보는 당사 서버에 저장되지 않습니다.</p>
     </div>
   @endif
 </div>
@@ -113,8 +113,14 @@
      무엇을 사는지 모르는 채로 카드를 꺼내게 된다. 빈 것으로 치고 주문번호를 적는다. */
   $rawName      = trim((string) $order->product_name, " 	-");
   $orderName    = mb_strimwidth($rawName !== '' ? $rawName : '주문 ' . $order->order_number, 0, 90, '…');
-  /* 토스 결제창에 실리는 이름이다 — 「(E)」를 떼고 보낸다 (2026-09-27 지시) */
-  $customerName = \App\Models\Patient::bare($order->patient?->name);
+  /* 토스 결제창에 실리는 이름이고, 가상계좌를 고르면 그대로 **예금주**가 된다.
+
+     「(E)」와 **동명이인 꼬리**를 모두 뗀다 (2026-10-12 지시 「알파벳도 없어야 함」).
+     서버가 발급하는 길(VirtualAccountService)은 2026-10-06 에 실명() 으로 고쳤는데
+     환자가 결제창에서 직접 고르는 이 길이 빠져 있었다 — 홍영철A 님 건이 그랬다
+     (주문 EUD202610121149412 · 예금주 「홍영철A」로 발급). 꼬리는 우리 쪽 표시이지
+     법적 이름이 아니다. */
+  $customerName = \App\Models\Patient::실명($order->patient?->name);
 @endphp
 <script>
   /* 결제창을 연다. 금액과 주문번호는 서버가 정한 값을 그대로 쓴다 —
@@ -216,7 +222,7 @@
         btn.disabled = false;
         /* 환자가 스스로 닫은 것은 잘못이 아니다 — 말없이 단추만 되살린다 */
         if (e && e.code === 'USER_CANCEL') return;
-        ceAlert((e && e.message) || '결제를 시작하지 못했습니다.', { tone: 'danger' });
+        ceAlert((e && e.message) || '결제를 시작할 수 없습니다.', { tone: 'danger' });
       }
     });
   })();

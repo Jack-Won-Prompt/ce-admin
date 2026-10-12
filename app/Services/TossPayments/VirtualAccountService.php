@@ -106,7 +106,8 @@ class VirtualAccountService extends TossClient
                 'bank'           => $bank,
                 'account_number' => $account,
                 /* 임의로 세운 줄도 예금주는 바깥에 보일 이름으로 적는다 — (E) 를 뗀다 */
-                'customer_name'  => \App\Models\Patient::bare($order->patient?->name) ?: '환자',
+                /* 예금주로 나가는 이름이다 — 동명이인 꼬리까지 뗀다 (2026-10-12 지시) */
+                'customer_name'  => \App\Models\Patient::실명($order->patient?->name) ?: '환자',
                 'due_date'       => $dueDate,
                 'raw_response'   => [
                     'simulated' => true,

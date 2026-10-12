@@ -83,7 +83,7 @@ final class CardSalesSlip
                 return null;
             }
 
-            $name = '카드매출전표_' . \App\Models\Patient::bare($order->patient?->name) . '_' . $order->order_number . '.pdf';
+            $name = '카드매출전표_' . \App\Models\Patient::실명($order->patient?->name) . '_' . $order->order_number . '.pdf';
             $path = 'attachments/' . $order->prescription_id . '/' . uniqid('cs_') . '.pdf';
 
             \Illuminate\Support\Facades\Storage::disk('public')->put($path, $pdf);

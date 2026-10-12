@@ -308,10 +308,12 @@ class PaymentLinkService
            그 값이 곧 우리가 토스에 보낸 이름이라, 보내는 쪽을 고치기 전에 발급된
            계좌는 「(E)오지혜」로 남아 있다 — 문자에도 그대로 실렸다.
            여기서 한 번 더 떼면 옛 계좌를 다시 안내할 때도 깨끗하게 나간다. */
-        $holder = \App\Models\Patient::bare(trim((string) ($va['customerName'] ?? '')));
+        /* 토스가 돌려준 예금주를 그대로 적는다 — 꼬리가 붙어 있으면 뗀다 (2026-10-12 지시).
+           결제창에서 환자가 직접 고른 건은 꼬리가 붙은 채로 발급된 것이 있다. */
+        $holder = \App\Models\Patient::실명(trim((string) ($va['customerName'] ?? '')));
 
         $lines = [
-            '[' . $this->company() . '] ' . $name . '님, 입금하실 계좌입니다.',
+            '[' . $this->company() . '] ' . $name . '님, 입금 계좌를 안내드립니다.',
             trim($bank . ' ' . $va['accountNumber']),
         ];
 
