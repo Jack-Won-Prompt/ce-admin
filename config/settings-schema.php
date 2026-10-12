@@ -234,6 +234,10 @@ return [
                                          . '**상점에 가상계좌 계약이 있을 때만 켜십시오** — 계약이 없으면 '
                                          . '토스가 결제창을 열지 않고 「계약된 결제수단이 아닙니다」로 '
                                          . '되돌려, 환자는 우리 잘못으로 읽습니다.'],
+            'va_holder'      => ['label' => '가상계좌 예금주', 'config' => 'toss.virtual_account.holder',
+                                 'help'  => '환자가 은행 앱에서 보는 「받는 사람」입니다. 비워 두면 사업자 상호를 '
+                                          . '씁니다. **은행 앱이 예금주를 몇 자에서 자르는지는 은행마다 다릅니다** — '
+                                          . '잘려 보이면 짧은 이름을 적으십시오.'],
             'va_bank'        => ['label' => '가상계좌 은행 코드', 'config' => 'toss.virtual_account.bank', 'width' => 1],
             'va_valid_hours' => ['label' => '입금 기한(시간)',    'config' => 'toss.virtual_account.valid_hours', 'type' => 'int', 'width' => 1],
             'va_fallback_bank'    => ['label' => '입금계좌 은행',   'config' => 'toss.virtual_account.fallback_bank',

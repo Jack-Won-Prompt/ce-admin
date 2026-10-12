@@ -19,6 +19,25 @@ class VirtualAccountService extends TossClient
      *
      * @return TossPayment  저장된 결제 레코드
      */
+    /**
+     * 가상계좌 **예금주** — 환자가 은행 앱에서 보는 「받는 사람」 (2026-10-12 지시).
+     *
+     * 발급하는 길이 둘이라(서버ㆍ결제창) 두 곳에서 따로 지으면 언젠가 갈린다.
+     * 여기 한 곳에서 짓고 두 길이 함께 쓴다.
+     *
+     * 설정값이 비어 있으면 사업자 상호를 쓴다.
+     */
+    public static function 예금주(): string
+    {
+        $정한것 = trim((string) config('toss.virtual_account.holder'));
+
+        if ($정한것 !== '') {
+            return $정한것;
+        }
+
+        return trim((string) (config('popbill.company.corp_name') ?: config('app.name')));
+    }
+
     public function issueVirtualAccount(Order $order): TossPayment
     {
         $bank       = config('toss.virtual_account.bank', 'IBK');
@@ -38,12 +57,16 @@ class VirtualAccountService extends TossClient
             'amount'       => $amount,
             'orderId'      => $orderId,
             'orderName'    => ($order->product_name ?? '처방조제') . ' 본인부담금',
-            /* 「(E)」는 우리끼리 쓰는 표시다 — 바깥으로 내보내지 않는다 (2026-09-27 지시).
-               이 값이 곧 **가상계좌 예금주**다. 환자가 입금할 때 은행 화면에서 보는
-               이름이라, (E) 가 붙으면 제 이름이 아닌 것으로 읽혀 입금을 망설인다.
-               실제로 09-20ㆍ09-23ㆍ09-27 세 건이 「(E)…」로 나갔다. */
-            /* 토스에 넘기는 이름 — 동명이인 꼬리까지 뗀다 (2026-10-06 · SR #90) */
-            'customerName' => \App\Models\Patient::실명($order->patient?->name) ?: '환자',
+            /* 이 값이 곧 **가상계좌 예금주**다 — 환자가 은행 앱에서 보는 「받는 사람」.
+
+               2026-10-12 지시로 **상호**를 보낸다. 여태 환자 이름을 보냈는데, 제 이름이
+               뜨면 「내가 나에게 보내나」로 읽혀 입금을 망설인다. 대신 내는 분도 많다 —
+               같은 날 홍영철 님 건은 김지원 님이 입금했다.
+
+               환자 이름은 토스에 남기지 않아도 된다. 어느 주문인지는 orderId
+               (CE-{주문번호}-…)가 말하고, 실제 입금한 사람은 토스가 depositorName 에
+               적어 돌려준다. */
+            'customerName' => self::예금주(),
             'bank'         => $bank,
             'validHours'   => $validHours,
         ]);
@@ -106,8 +129,8 @@ class VirtualAccountService extends TossClient
                 'bank'           => $bank,
                 'account_number' => $account,
                 /* 임의로 세운 줄도 예금주는 바깥에 보일 이름으로 적는다 — (E) 를 뗀다 */
-                /* 예금주로 나가는 이름이다 — 동명이인 꼬리까지 뗀다 (2026-10-12 지시) */
-                'customer_name'  => \App\Models\Patient::실명($order->patient?->name) ?: '환자',
+                /* 예금주 — 실제 발급과 같은 값을 적는다 (2026-10-12 지시) */
+                'customer_name'  => self::예금주(),
                 'due_date'       => $dueDate,
                 'raw_response'   => [
                     'simulated' => true,

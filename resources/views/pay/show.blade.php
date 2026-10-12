@@ -115,12 +115,13 @@
   $orderName    = mb_strimwidth($rawName !== '' ? $rawName : '주문 ' . $order->order_number, 0, 90, '…');
   /* 토스 결제창에 실리는 이름이고, 가상계좌를 고르면 그대로 **예금주**가 된다.
 
-     「(E)」와 **동명이인 꼬리**를 모두 뗀다 (2026-10-12 지시 「알파벳도 없어야 함」).
-     서버가 발급하는 길(VirtualAccountService)은 2026-10-06 에 실명() 으로 고쳤는데
-     환자가 결제창에서 직접 고르는 이 길이 빠져 있었다 — 홍영철A 님 건이 그랬다
-     (주문 EUD202610121149412 · 예금주 「홍영철A」로 발급). 꼬리는 우리 쪽 표시이지
-     법적 이름이 아니다. */
-  $customerName = \App\Models\Patient::실명($order->patient?->name);
+     2026-10-12 지시로 **상호**를 보낸다 — 서버가 발급하는 길과 같은 값이다
+     (VirtualAccountService::예금주). 두 곳에서 따로 지으면 같은 회사인데 예금주가
+     갈려 보인다.
+
+     그 전에는 환자 이름을 보냈고, 이 자리만 bare() 를 써서 동명이인 꼬리가 남았다 —
+     홍영철A 님 건이 그랬다(주문 EUD202610121149412 · 예금주 「홍영철A」로 발급). */
+  $customerName = \App\Services\TossPayments\VirtualAccountService::예금주();
 @endphp
 <script>
   /* 결제창을 연다. 금액과 주문번호는 서버가 정한 값을 그대로 쓴다 —
