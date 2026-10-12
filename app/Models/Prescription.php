@@ -118,12 +118,53 @@ class Prescription extends Model
            withworks:closed-sync 가 적는다. 목록이 이 둘로 가린다. */
         'ww_closed_at'    => 'date',
         'ww_cancelled'    => 'boolean',
+        /* 위드웍스 출고 (2026-10-12 지시 「출고 상태 이관 범위이고 우리에게 적용」) */
+        'ww_shipped_at'   => 'datetime',
+    ];
+
+    /**
+     * 위드웍스 출고 상태 코드가 뜻하는 말 — 모르는 코드는 숫자로 남긴다.
+     *
+     * 우리 웹훅이 받아 둔 것과 같은 자리다(운영 주문 208건에서 확인). 저쪽 표에는
+     * 98ㆍ97ㆍ92 같은 코드도 있는데 무엇인지 들은 바가 없다 — 지어 적지 않는다.
+     * 그 건은 출고완료일이 있으면 그것으로, 없으면 코드를 그대로 보여 준다.
+     */
+    public const WW_SHIP_LABELS = [
+        '95' => '출고완료',
+        '02' => '신규',
+        '17' => '할당완료',
     ];
 
     /** 위드웍스에서 이미 구매확정ㆍ취소된 건인가 — 쓸 수 없는 처방전이다 */
     public function 위드웍스마감인가(): bool
     {
         return $this->ww_closed_at !== null || (bool) $this->ww_cancelled;
+    }
+
+    /** 저쪽에서 물건이 나간 건인가 (2026-10-12 지시) */
+    public function 위드웍스출고인가(): bool
+    {
+        return $this->ww_shipped_at !== null;
+    }
+
+    /**
+     * 저쪽 출고 상태를 한 마디로 — 없으면 빈 글.
+     *
+     * 나간 날이 있으면 「출고완료」다. 날이 없으면 코드가 말해 주는 대로 적고,
+     * 모르는 코드면 숫자를 그대로 보여 준다 — 지어 적으면 담당자가 그 말을 믿는다.
+     */
+    public function 위드웍스출고상태(): string
+    {
+        if ($this->ww_shipped_at !== null) {
+            return '출고완료';
+        }
+
+        if (blank($this->ww_ship_status)) {
+            return '';
+        }
+
+        return self::WW_SHIP_LABELS[(string) $this->ww_ship_status]
+            ?? ('출고 상태 ' . $this->ww_ship_status);
     }
 
     /** 화면에 적을 한 줄 — 「왜 안 보이나」에 바로 답하기 위한 것 */
@@ -133,10 +174,17 @@ class Prescription extends Model
             return '';
         }
 
-        return $this->ww_cancelled
-            ? '위드웍스 취소' . ($this->ww_so_no ? ' · ' . $this->ww_so_no : '')
-            : '위드웍스 구매확정 ' . $this->ww_closed_at?->format('Y-m-d')
-              . ($this->ww_so_no ? ' · ' . $this->ww_so_no : '');
+        if ($this->ww_cancelled) {
+            return '위드웍스 취소' . ($this->ww_so_no ? ' · ' . $this->ww_so_no : '');
+        }
+
+        /* 나간 건은 나간 날을 적는다 (2026-10-12 지시 — 출고 상태도 저쪽과 같아야 한다).
+           구매확정일만 적어 두면 「확정은 됐는데 나갔나?」가 남는다. */
+        $글 = $this->ww_shipped_at
+            ? '위드웍스 출고완료 ' . $this->ww_shipped_at->format('Y-m-d')
+            : '위드웍스 구매확정 ' . $this->ww_closed_at?->format('Y-m-d');
+
+        return $글 . ($this->ww_so_no ? ' · ' . $this->ww_so_no : '');
     }
 
     /**

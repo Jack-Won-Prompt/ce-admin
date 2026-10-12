@@ -1135,8 +1135,15 @@ class Order extends Model
            **우리가 직접 연계한 주문은 건드리지 않는다.** 그때는 우리 판매번호가 있고
            창고가 알려 주는 상태가 사실이다 — 저쪽 옛 상태로 덮으면 거꾸로 어긋난다. */
         if (blank($this->withworks_so_no) && $this->prescription?->위드웍스마감인가()) {
-            return $this->prescription->ww_cancelled
-                ? ['label' => '위드웍스 취소', 'badge' => 'danger']
+            if ($this->prescription->ww_cancelled) {
+                return ['label' => '위드웍스 취소', 'badge' => 'danger'];
+            }
+
+            /* 저쪽에서 물건이 나간 건은 「출고완료」라 적는다 (2026-10-12 지시 —
+               판매상태뿐 아니라 **출고 상태도** 저쪽과 같아야 한다). 구매확정만
+               적어 두면 「확정은 됐는데 나갔나?」가 남는다. */
+            return $this->prescription->위드웍스출고인가()
+                ? ['label' => '위드웍스 출고완료', 'badge' => 'success']
                 : ['label' => '위드웍스 구매확정', 'badge' => 'info'];
         }
 

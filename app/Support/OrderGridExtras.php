@@ -565,10 +565,18 @@ class OrderGridExtras
                                 ?: (blank($o?->withworks_so_no) && $p?->위드웍스마감인가()
                                     ? $p->위드웍스마감글()
                                     : ''),
-            'ww_ship_status' => $o?->withworks_ship_status_label ?: '',
+            /* 출고 상태도 저쪽 값을 적는다 (2026-10-12 지시 「출고 상태 이관 범위이고
+               우리에게 적용」). 우리 창고가 알려 준 것이 있으면 그것이 먼저다. */
+            'ww_ship_status' => $o?->withworks_ship_status_label
+                                ?: (blank($o?->withworks_so_no) && $p?->위드웍스마감인가()
+                                    ? $p->위드웍스출고상태()
+                                    : ''),
             /* 출고일자 — 창고가 출고를 확정하며 알려 준다. withworks_ship_at 을 쓰지
                않는다. 그것은 우리가 받아 적은 시각이라 웹훅이 늦으면 날이 어긋난다. */
-            'ww_ship_date'   => $d($o?->shipped_at),
+            'ww_ship_date'   => $d($o?->shipped_at)
+                                ?: (blank($o?->withworks_so_no) && $p?->ww_shipped_at
+                                    ? $p->ww_shipped_at->format('Y-m-d')
+                                    : ''),
             'ww_rcpt'       => $rt?->arrived_at ? '입고완료' : '',
             /* 창고 — 어디서 내보내고 어디로 들이는가 (2026-09-07 지시).
                위드웍스 웹훅이 이름을 함께 실어 온다. 아직 연계하지 않았거나 옛

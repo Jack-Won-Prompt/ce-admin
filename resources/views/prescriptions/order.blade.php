@@ -3061,7 +3061,7 @@ $calcDeposit  = $calcCopay;
               @if($prescription->위드웍스마감인가() && blank($prescription->order?->withworks_so_no))
                 <span class="rx-tabno" id="rxTabNoWwClosed"
                       style="border-color:var(--warning);color:var(--warning);font-weight:700;"
-                      title="위드웍스에서 이미 끝난 건입니다 — 이 주문은 창고로 넘어가지 않았습니다.&#10;새 처방전으로 등록해 진행하십시오.">{{ $prescription->위드웍스마감글() }}</span>
+                      title="위드웍스에서 이미 끝난 건입니다 — 이 주문은 창고로 넘어가지 않았습니다.&#10;{{ $prescription->ww_ship_no ? '저쪽 출고번호 ' . $prescription->ww_ship_no . '  ' : '' }}{{ $prescription->ww_tracking_no ? '운송장 ' . $prescription->ww_tracking_no : '' }}&#10;새 처방전으로 등록해 진행하십시오.">{{ $prescription->위드웍스마감글() }}</span>
               @endif
 
               {{-- 주문 고르개 — 나눠 산 건에만 선다 (2026-09-14 확인요청 4쪽).
