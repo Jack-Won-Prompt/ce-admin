@@ -143,7 +143,7 @@ class WithworksClosedSyncCommand extends Command
 
         $적음 = 0;
 
-        $질의->select('id', 'ww_add_id')->chunkById(2000, function ($묶음) use ($마감, &$적음) {
+        $질의->select('id', 'ww_add_id')->chunkById(2000, function ($묶음) use ($마감, $출고, $운송, &$적음) {
             $고칠것 = [];
 
             foreach ($묶음 as $p) {
