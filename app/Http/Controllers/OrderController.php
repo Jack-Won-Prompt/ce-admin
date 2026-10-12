@@ -87,7 +87,10 @@ class OrderController extends Controller
             fwrite($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
             fputcsv($out, $머리글);
 
-            $query->reorder()->orderByDesc('id')->chunk(500, function ($덩어리) use ($out, $칸) {
+            /* **화면과 같은 차례**를 쓴다 (2026-10-12). 여태 번호만으로 세어, 등록일이
+               같은 줄끼리 화면과 뒤바뀌었다. 등록일ㆍ번호 둘로 못 박으면 묶음으로 나눠
+               읽어도 차례가 흔들리지 않는다. */
+            $query->reorder()->latest()->orderByDesc('id')->chunk(500, function ($덩어리) use ($out, $칸) {
                 foreach ($this->목록줄들($덩어리) as $줄) {
                     fputcsv($out, array_map(function ($이름) use ($줄) {
                         $값 = $줄[$이름] ?? '';
@@ -106,8 +109,14 @@ class OrderController extends Controller
 
     private function 목록거른것(Request $request)
     {
+        /* 차례는 **등록일 뒤 번호**다 (2026-10-12 정합성 검증에서 찾음).
+
+           `latest()` 만 두면 등록일이 같은 줄끼리는 차례가 정해지지 않는다. 한 처방전에
+           원 주문과 추가 주문이 **같은 초에** 서는 일이 있어(EUD…1149411/412), 화면을
+           새로 열 때마다 두 줄이 뒤바뀌었고 엑셀과도 어긋났다. 번호를 둘째 잣대로 두면
+           언제 보아도 같은 차례다 — 엑셀도 같은 차례를 쓴다. */
         $query = Order::with(['patient', 'prescription.billingOffice', 'creator', 'returns', 'tossPayment',
-                              'items.lots', 'operationUser'])->latest();
+                              'items.lots', 'operationUser'])->latest()->orderByDesc('id');
 
         /* 상담만 적어 둔 건은 세우지 않는다 (2026-09-14 지시).
 
