@@ -1122,7 +1122,9 @@ class ConsentController extends Controller
 
                     /* 「서명확인」 창이 채우는 칸 — 이름ㆍ연락처ㆍ서명한 때ㆍ서명 그림.
                        이것을 주지 않으면 그 창이 서명 보내기 창으로 새 나간다. */
-                    'patient_name'   => $쓸것->patient_name,
+                    /* 이름은 **지금 거래처 이름**으로 적는다 (2026-10-12 지시) — 동의 줄에
+                       담긴 것은 서명한 그날의 이름이라, 개명하면 서명자가 옛 이름으로 선다. */
+                    'patient_name'   => \App\Support\DelegationGate::서류이름($prescription, $쓸것->patient_name),
                     'patient_mobile' => $옮긴서명?->phone ?? $쓸것->patient_mobile,
                     'responded_at'   => $쓸것->responded_at?->format('Y-m-d H:i:s'),
                     'signature_data' => $쓸것->signature_data,
@@ -1147,7 +1149,8 @@ class ConsentController extends Controller
             'expires_at'      => ($열린줄 ?? $latest)->expires_at?->format('Y-m-d H:i'),
             'remaining_min'   => ($열린줄 ?? $latest)->remainingMinutes(),
             'has_signature'   => !empty($latest->signature_data),
-            'patient_name'    => $latest->patient_name,
+            /* 지금 거래처 이름이 먼저다 (2026-10-12 지시 · 개명) */
+            'patient_name'    => \App\Support\DelegationGate::서류이름($prescription, $latest->patient_name),
             'patient_mobile'  => $latest->patient_mobile,
             // NICE 본인확인 (CI/DI 등 민감식별정보는 내려보내지 않는다)
             'nice_verified'    => $latest->isIdentityVerified(),
@@ -1216,7 +1219,8 @@ class ConsentController extends Controller
         $dompdf->render();
 
         $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
-        $filename = '위임동의서_' . $consent->patient_name . '_' . $mobile . '_' . $consent->responded_at?->format('Ymd') . '.pdf';
+        $filename = '위임동의서_' . \App\Support\DelegationGate::서류이름($consent->prescription, $consent->patient_name)
+                  . '_' . $mobile . '_' . $consent->responded_at?->format('Ymd') . '.pdf';
 
         return response($dompdf->output(), 200, [
             'Content-Type'        => 'application/pdf',
@@ -1253,7 +1257,8 @@ class ConsentController extends Controller
 
         $ext      = $mime === 'image/jpeg' ? 'jpg' : 'png';
         $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
-        $filename = '서명_' . $consent->patient_name . '_' . $mobile . '_'
+        $filename = '서명_' . \App\Support\DelegationGate::서류이름($prescription, $consent->patient_name)
+                  . '_' . $mobile . '_'
                   . ($consent->responded_at?->format('Ymd') ?? date('Ymd')) . '.' . $ext;
 
         // 서명도 개인정보다 — 누가 언제 받아 갔는지 남긴다
@@ -1301,8 +1306,14 @@ class ConsentController extends Controller
         $dompdf->setPaper('a4', 'portrait');
         $dompdf->render();
 
-        $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
-        $filename = '요양비지급청구위임장_' . $consent->patient_name . '_' . $mobile . '.pdf';
+        /* 파일 이름도 **지금 거래처 이름**으로 적는다 (2026-10-12 지시 · 개명).
+           번호는 동의 줄에 없으면 거래처에서 가져온다 — 비면 「…_하나인_.pdf」로 꼬리가
+           빈 채 나갔다. */
+        $mobile   = preg_replace('/[^0-9]/', '',
+            $consent->patient_mobile ?: ($prescription->patient?->mobile ?? ''));
+        $filename = '요양비지급청구위임장_'
+            . \App\Support\DelegationGate::서류이름($prescription, $consent->patient_name)
+            . '_' . $mobile . '.pdf';
 
         return response($dompdf->output(), 200, [
             'Content-Type'        => 'application/pdf',
@@ -1332,8 +1343,14 @@ class ConsentController extends Controller
         /* 그릴 기준은 **이 건**이다 — 빌려 쓴 동의는 옛 처방전에 달려 있다 */
         $pdfData = $this->buildDelegationOverlayPdf($consent, true, $prescription);
 
-        $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
-        $filename = '요양비지급청구위임장_' . $consent->patient_name . '_' . $mobile . '.pdf';
+        /* 파일 이름도 **지금 거래처 이름**으로 적는다 (2026-10-12 지시 · 개명).
+           번호는 동의 줄에 없으면 거래처에서 가져온다 — 비면 「…_하나인_.pdf」로 꼬리가
+           빈 채 나갔다. */
+        $mobile   = preg_replace('/[^0-9]/', '',
+            $consent->patient_mobile ?: ($prescription->patient?->mobile ?? ''));
+        $filename = '요양비지급청구위임장_'
+            . \App\Support\DelegationGate::서류이름($prescription, $consent->patient_name)
+            . '_' . $mobile . '.pdf';
 
         return response($pdfData, 200, [
             'Content-Type'        => 'application/pdf',
@@ -1522,7 +1539,8 @@ class ConsentController extends Controller
                번호이면, 파일만 보고 고른 사람이 옛 것을 보냈다고 여긴다. */
             $who      = $prescription->patient;
             $mobile   = preg_replace('/[^0-9]/', '', $who?->mobile ?: ($consent->patient_mobile ?? ''));
-            $filename = '요양비위임장_' . ($who?->name ?: $consent->patient_name)
+            /* (E) 를 떼고 적는다 — 종이에는 떼고 찍히는데 파일 이름에만 붙어 있었다 */
+            $filename = '요양비위임장_' . \App\Support\DelegationGate::서류이름($prescription, $consent->patient_name)
                       . '_' . $mobile . '_' . now()->format('Ymd') . '.pdf';
             /* 이름에 초까지만 넣으면 같은 초에 두 번 그릴 때 이름이 겹친다. 그러면 아래에서
                「옛 것 지우기」가 **방금 쓴 파일을 지운다** — 줄만 남고 파일이 없어진다.
@@ -1723,7 +1741,10 @@ class ConsentController extends Controller
         /* 서명란의 이름 — 양식에는 「위임인    (서명 또는 인)」 한 줄뿐이라 이름 적을 자리가
            없다. 서명 그림만 남으면 누가 위임했는지 그림으로 읽어야 한다. 그림 왼쪽에
            이름을 적어 둔다. 자리는 설정에서 고친다(다른 칸과 같은 방식). */
-        $put('signature_name', Patient::bare($consent->patient_name) ?: $patient?->bare_name);
+        /* 위임인 칸과 **같은 잣대**로 적는다 (2026-10-12 지시 · 개명).
+           여태 이 한 줄만 동의 기록의 이름을 먼저 보아, 개명한 사람은 성명 칸에는 새
+           이름이, 바로 아래 서명란에는 옛 이름이 찍혔다 — 한 장에 두 이름이 섰다. */
+        $put('signature_name', $patient?->bare_name ?: Patient::bare($consent->patient_name));
         if ($consent->is_minor) {
             $put('guardian_sig_name', $consent->guardian_name ?: $patient?->guardian_name);
         }
@@ -1746,7 +1767,8 @@ class ConsentController extends Controller
             $consent->update(['pdf_path' => $path]);
 
             $mobile   = preg_replace('/[^0-9]/', '', $consent->patient_mobile ?? '');
-            $filename = '위임동의서_' . $consent->patient_name . '_' . $mobile . '_' . $consent->responded_at?->format('Ymd') . '.pdf';
+            $filename = '위임동의서_' . \App\Support\DelegationGate::서류이름($consent->prescription, $consent->patient_name)
+                      . '_' . $mobile . '_' . $consent->responded_at?->format('Ymd') . '.pdf';
 
             PrescriptionDocument::create([
                 'prescription_id'   => $consent->prescription_id,

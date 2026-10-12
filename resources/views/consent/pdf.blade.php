@@ -1,3 +1,9 @@
+@php
+    /* 이름은 **지금 거래처 이름**이 먼저다 (2026-10-12 지시 · 개명).
+       동의 줄에 담긴 것은 서명한 그날의 이름이라, 개명하면 서류가 옛 이름으로 찍힌다.
+       잣대는 한 곳에 둔다 — DelegationGate::서류이름. */
+    $서류이름 = \App\Support\DelegationGate::서류이름($consent->prescription, $consent->patient_name);
+@endphp
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -173,7 +179,7 @@
     </tr>
     <tr>
       <th>환자명</th>
-      <td><strong>{{ $consent->patient_name }}</strong></td>
+      <td><strong>{{ $서류이름 }}</strong></td>
     </tr>
     <tr>
       <th>연락처</th>
@@ -198,7 +204,7 @@
   {{-- ── 동의 내용 ── --}}
   <div class="consent-box">
     <div class="title">■ 위임동의 내용</div>
-    본인 <strong>{{ $consent->patient_name }}</strong>은(는) 건강보험 요양급여비용 청구와 관련하여
+    본인 <strong>{{ $서류이름 }}</strong>은(는) 건강보험 요양급여비용 청구와 관련하여
     콜로플라스트 코리아(주)가 건강보험공단에 제출하는 서류에 대한
     <strong>급여 위임청구 동의</strong>를 합니다.<br><br>
     위임 내용: 건강보험 급여 대상 보조기기의 급여비용 청구 및 수령에 관한 일체의 행위<br><br>
@@ -222,7 +228,7 @@
     <tr>
       <td class="stamp-cell" style="margin-right:10px;">
         <div class="role">동의인</div>
-        <div class="name">{{ $consent->patient_name }}</div>
+        <div class="name">{{ $서류이름 }}</div>
         <div class="stamp-area">서명 위 참조</div>
       </td>
       <td style="width:20px;"></td>

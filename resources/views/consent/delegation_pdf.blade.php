@@ -1,7 +1,11 @@
 {{-- 국민건강보험법 시행규칙 [별지 제19호의7서식] 요양비 지급청구 위임장 --}}
 @php
     $patient = $consent->prescription?->patient;
-    $name    = $consent->patient_name ?? $patient?->name ?? '';
+    /* 이름은 **지금 거래처 이름**이 먼저다 (2026-10-12 지시 · 개명).
+       동의 줄에 담긴 것은 서명한 그날의 이름이라, 개명한 사람은 위임장 본문이 옛
+       이름으로 찍혔다. 공단에 내는 서류이므로 지금 이름으로 나가야 한다.
+       (E) 는 우리 쪽 표시라 떼고 적는다 — bare_name 이 그 일을 한다. */
+    $name    = $patient?->bare_name ?: ($consent->patient_name ?? '');
     // 국민건강보험법 시행규칙 별지 서식이 주민등록번호 기재를 요구하는 지점.
     // 평문이 필요한 유일한 화면 경로이며, 사유 코드와 함께 감사로그가 남는다(P0-1).
     $rrn     = $patient?->residentNoFor('nhis_claim_form') ?? '';

@@ -3699,7 +3699,8 @@ class PrescriptionController extends Controller
                     'url'       => route('prescriptions.consentSignature', $prescription),
                     'type'      => 'signature',
                     'typeLabel' => '위임 서명',
-                    'name'      => '서명 ' . ($lastConsent->patient_name ?? ''),
+                    /* 지금 거래처 이름으로 적는다 (2026-10-12 지시 · 개명) */
+                    'name'      => '서명 ' . \App\Support\DelegationGate::서류이름($prescription, $lastConsent->patient_name),
                     'isPdf'     => false,
                     'isRx'      => false,
                     'isSign'    => true,

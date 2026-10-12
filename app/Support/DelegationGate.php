@@ -372,13 +372,36 @@ final class DelegationGate
         /* 칸은 하나씩 놓는다 — 생성자에 배열로 주면 $fillable 에 없는 칸이 조용히 빠진다 */
         $동의 = new PrescriptionConsent();
         $동의->prescription_id = $prescription->id;
-        $동의->patient_name    = $서명->customer_name;
+        $동의->patient_name    = self::서류이름($prescription, $서명->customer_name);
+        $동의->patient_mobile  = $prescription->patient?->mobile ?: $서명->phone;
         $동의->status         = 'agreed';
         $동의->signature_data = $그림;
         $동의->responded_at   = $서명->signed_at;
         $동의->exists         = false;
 
         return $동의;
+    }
+
+    /**
+     * 서류와 화면에 적을 이름 — **지금 거래처 이름**이 먼저다 (2026-10-12 지시).
+     *
+     * 동의 줄에 담긴 이름은 **서명한 그날의 이름**이다. 개명하면 그 값이 옛 이름으로
+     * 남아, 서명 확인 창의 서명자ㆍ위임장 파일 이름ㆍ위임장 본문이 모두 옛 이름으로
+     * 섰다 — (E)팜티인 님이 (E)하나인 으로 개명한 건이 그랬다. 공단에 내는 서류이므로
+     * 지금 이름으로 나가야 한다.
+     *
+     * (E) 는 사업부가 IC 라는 우리 쪽 표시라 서류에 설 자리가 없어 떼고 내준다.
+     * 거래처가 없는 건(이름만 적어 둔 상담)에는 받아 둔 값을 그대로 쓴다.
+     */
+    public static function 서류이름(?Prescription $prescription, ?string $받아둔이름 = null): string
+    {
+        $지금 = $prescription?->patient?->bare_name;
+
+        if (filled($지금)) {
+            return (string) $지금;
+        }
+
+        return Patient::bare((string) ($받아둔이름 ?: $prescription?->patient_name_ocr));
     }
 
     /**
