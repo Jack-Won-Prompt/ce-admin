@@ -4088,7 +4088,17 @@ $calcDeposit  = $calcCopay;
                      '일' 글자는 시안에 없지만 단위 안내라 남기고 간격만 4 → 8 로 맞췄다.
                      값은 제 컬럼에서 읽는다. --}}
                 <div style="display:flex;align-items:center;gap:8px;flex:1;">
-                  <input type="number" class="form-control" id="f-rx-period" value="{{ $prescription->total_days ?? $prescription->rx_use_period ?? '' }}" placeholder="일수" style="flex:1;min-width:0;" onchange="calcNextRepurchase()" />
+                  {{-- **제 값만 싣는다** (2026-10-12 지시 · SR #167 ②).
+
+                       여태 `total_days ?? rx_use_period` 로 **총 처방일수를 먼저**
+                       실었다. 이름은 사용 기간인데 다른 값이 보였고, 저장할 때 그
+                       값이 rx_use_period 로 들어가 **열어서 저장만 해도 사용 기간이
+                       총 처방일수로 덮였다**. 우리가 올린 366장이 두 값 예외 없이
+                       같은 것이 그 자취다(이관 건은 675장이 다르다).
+
+                       종료일ㆍ재구매(발행일 기준)는 이제 「총 처방일수」 칸을 보므로
+                       이 칸은 셈을 끌고 가지 않는다 — onchange 도 뗀다. --}}
+                  <input type="number" class="form-control" id="f-rx-period" value="{{ $prescription->rx_use_period ?? '' }}" placeholder="일수" style="flex:1;min-width:0;" />
                   <span style="font-size:13px;font-weight:500;line-height:21px;color:var(--gray-600);white-space:nowrap;">일</span>
                 </div>
               </div>
@@ -4575,7 +4585,9 @@ $calcDeposit  = $calcCopay;
             </tr>
             <tr>
               <th>처방전발행일</th><td data-from="f-date">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</td>
-              <th>처방기간</th><td data-from="f-rx-period">{{ ($prescription->total_days ?? '-') }}</td>
+              {{-- 이름대로 적는다 (2026-10-12 · SR #167 ②) — 여태 「처방기간」이라 적고
+                   총 처방일수를 보였다. 총 처방일수는 아래 「총처방기간」 줄에 있다. --}}
+              <th>처방전 사용 기간</th><td data-from="f-rx-period">{{ $prescription->rx_use_period ?? '-' }}</td>
             </tr>
             {{-- 의사면허번호가 한 자리를 차지해 짝이 하나 밀렸다. 빈 칸을 남기는 대신
                  주소 줄처럼 남은 폭을 채운다 — 빈 th·td 는 표에 구멍으로 보인다. --}}
@@ -10416,15 +10428,15 @@ window.HELP_TOUR_STEPS = [
   // ── 종료일·다음재구매일 자동계산 ──
   function calcNextRepurchase(showWarn = false) {
     const dateVal   = document.getElementById('f-date')?.value;
-    const periodVal = parseInt(document.getElementById('f-rx-period')?.value ?? '');
-    /* 종료일은 **총 처방일수**로 센다 (2026-10-12 지시 · SR #167).
+    /* 종료일도 재구매(발행일 기준)도 **총 처방일수**로 센다 (2026-10-12 지시 · SR #167).
 
        여태 「처방전 사용 기간 (교부일로부터)」 칸(f-rx-period)을 보고 셌다. 그 칸에
        총 처방일수가 실려 있어 나오는 날은 맞았으나, 담당자가 그 칸에 진짜 사용기간
-       (교부일로부터 7ㆍ14일)을 적으면 종료일이 그 날로 틀어진다. 이름과 셈을 맞춘다. */
+       (교부일로부터 7ㆍ14일)을 적으면 두 날짜가 모두 그 날로 틀어진다.
+       이름과 셈을 맞춘다 — 사용 기간은 이제 아무 셈도 끌고 가지 않는다. */
     const 총일수 = parseInt(document.getElementById('f-days')?.value ?? '');
 
-    if (!dateVal || ((!periodVal || periodVal < 1) && (!총일수 || 총일수 < 1))) {
+    if (!dateVal || !총일수 || 총일수 < 1) {
       if (showWarn) showToast('처방전 발행일과 총 처방일수를 먼저 입력해 주십시오.', 'warning');
       return;
     }
@@ -10438,11 +10450,9 @@ window.HELP_TOUR_STEPS = [
        위드웍스 원본을 전수로 견주어 보니 저쪽의 주된 잣대도 −1 이 **없다** —
        이관 건 42,721장 가운데 88.9%(37,958장)가 「발행일 + 총 처방일수」와 같고,
        −1 인 것은 9.6%(4,101장)뿐이다. −1 로 세던 우리 쪽이 어긋나 있었다. */
-    if (총일수 >= 1) {
-      const endDate = new Date(dateVal);
-      endDate.setDate(endDate.getDate() + 총일수);
-      document.getElementById('f-rx-end-date').value = fmt(endDate);
-    }
+    const endDate = new Date(dateVal);
+    endDate.setDate(endDate.getDate() + 총일수);
+    document.getElementById('f-rx-end-date').value = fmt(endDate);
 
     /* 이 값은 「다음 재구매 가능일 **(발행일 기준)**」 칸의 것이다 (2026-09-30 지시).
 
@@ -10456,18 +10466,17 @@ window.HELP_TOUR_STEPS = [
        위쪽 칸에 서서, 사용 개시일이 비어 있는데 다음 재구매 가능일만 보였다.
        아래쪽 읽기 전용 칸은 「처방전 발행일과 처방 기간으로 자동 계산됩니다」라
        적어 두고 늘 비어 있었다 — 값이 제자리를 벗어나 있었던 것이다. */
-    /* 이 셈은 건드리지 않는다 (2026-09-30 지시 그대로) — SR #167 은 종료일만 말한다.
-       다만 처방기간이 비어 있으면 세지 않는다. 위에서 종료일만 세고 내려올 수 있다. */
-    if (periodVal >= 1) {
-      const nextDate = new Date(dateVal);
-      nextDate.setDate(nextDate.getDate() + periodVal + 1);
+    /* 셈은 2026-09-30 지시 그대로 「발행일 + 기간 + 1」이고, **보는 칸만** 총 처방일수로
+       옮겼다 (2026-10-12). 여태 보던 f-rx-period 에 총 처방일수가 실려 있었으므로
+       나오는 날은 바뀌지 않는다 — 틀어질 자리만 막는다. */
+    const nextDate = new Date(dateVal);
+    nextDate.setDate(nextDate.getDate() + 총일수 + 1);
 
-      const 발행일기준 = document.getElementById('f-repurchase-date');
-      if (발행일기준) 발행일기준.value = fmt(nextDate);
+    const 발행일기준 = document.getElementById('f-repurchase-date');
+    if (발행일기준) 발행일기준.value = fmt(nextDate);
 
-      const 보임 = document.getElementById('disp-renew-date');
-      if (보임) 보임.textContent = fmt(nextDate);
-    }
+    const 보임 = document.getElementById('disp-renew-date');
+    if (보임) 보임.textContent = fmt(nextDate);
 
     /* 위쪽 칸은 **여기서 적지 않는다** (2026-10-02 지시).
 
