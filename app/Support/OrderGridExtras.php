@@ -41,6 +41,21 @@ class OrderGridExtras
     private array $consent = [];
 
     /**
+     * 사람 id => **받아 둔 위임 서명이 있다** (2026-10-12 지시).
+     *
+     * 위의 `$consent` 와 다른 것이다. 그쪽은 **이 건에 보낸 동의 링크**가 어떻게
+     * 됐나(대기ㆍ완료ㆍ만료)이고, 이쪽은 **그 사람에게 쓸 수 있는 서명이 있나**다.
+     * 서명은 한 번 받으면 위임기간 안에서 다시 쓰므로 둘이 자주 갈린다 — 링크를
+     * 보낸 적이 없어 빈칸인데 서명은 있는 사람이 흔하다.
+     *
+     * **운영 데이터(위임장 서명)까지 본다** — 거래처 관리의 「위임장 서명」 칸과
+     * 같은 길이다(PatientDelegationSign::거래처들것). 그 표는 거래처 번호가 없어
+     * 이름ㆍ연락처로 잇는데, 그 일을 그 메서드가 한다. 두 화면이 같은 말을 쓰면서
+     * 다른 것을 가리키면 담당자는 어느 쪽을 믿을지 알 수 없다.
+     */
+    private array $위임서명 = [];
+
+    /**
      * 사람 id => 그 사람이 **실제로 산 건**들 (2026-10-12 · SR #142 · #160).
      *
      * 「이번 재구매 가능일」을 세우는 바탕이다 — 이번 건이 아니라 **직전 구매**가
@@ -115,6 +130,7 @@ class OrderGridExtras
         }
 
         $self->loadPrivacy($ids);
+        $self->load위임서명($ids);
         $self->loadOrderSeq($ids);
         $self->loadPaymentLinks($ids);
         $self->loadAmended($ids);
@@ -426,6 +442,67 @@ class OrderGridExtras
         }
 
         return $가장최근['날'] ?? '';
+    }
+
+    /**
+     * 받아 둔 위임 서명을 한 번에 모은다 (2026-10-12 지시).
+     *
+     * 길은 DelegationGate 와 같은 넷이다 — 위임동의 서명ㆍ공개 동의서 서명ㆍ종이
+     * 위임장ㆍ운영 데이터에서 옮겨 온 서명.
+     *
+     * **위임기간이 지났는지는 보지 않는다.** 그것까지 가리려면 줄마다 거래처의
+     * 동의 기간을 다시 읽어야 해서 목록이 느려진다. 이 칸이 답하는 것은 「받아 둔
+     * 것이 있나」이고, 지금 쓸 수 있는가는 주문 등록 화면의 관문이 가린다.
+     */
+    private function load위임서명(Collection $ids): void
+    {
+        /* (가) 위임동의 서명 — 신분증만 받은 줄은 서명이 아니다 */
+        $가 = \App\Models\PrescriptionConsent::query()
+            ->join('prescriptions as p', 'p.id', '=', 'prescription_consents.prescription_id')
+            ->where('prescription_consents.status', 'agreed')
+            ->where(fn ($q) => $q->whereNull('prescription_consents.kind')
+                                 ->orWhere('prescription_consents.kind', '!=', 'id_card'))
+            ->whereNotNull('prescription_consents.signature_data')
+            ->where('prescription_consents.signature_data', '!=', '')
+            ->whereIn('p.patient_id', $ids)
+            ->distinct()->pluck('p.patient_id');
+
+        /* (나) 공개 개인정보동의서의 서명 — 그 한 번으로 위임까지 받는다 */
+        $나 = collect();
+        if (self::칸있나('privacy_consents', 'signature_data')) {
+            $나 = \App\Models\PrivacyConsent::whereIn('patient_id', $ids)
+                ->whereNotNull('signature_data')->where('signature_data', '!=', '')
+                ->distinct()->pluck('patient_id');
+        }
+
+        /* (다) 종이로 받은 위임장 — 거래처 서류함과 처방전 첨부 */
+        $다1 = \App\Models\PatientDocument::whereIn('patient_id', $ids)
+            ->whereIn('doc_type', \App\Models\PatientDocument::서명갈래)
+            ->whereNotNull('signed_at')->distinct()->pluck('patient_id');
+
+        $다2 = \App\Models\PrescriptionAttachment::query()
+            ->join('prescriptions as p', 'p.id', '=', 'prescription_attachments.prescription_id')
+            ->whereIn('prescription_attachments.doc_type', \App\Support\DelegationGate::종이서명유형)
+            ->whereIn('p.patient_id', $ids)
+            ->distinct()->pluck('p.patient_id');
+
+        foreach ([$가, $나, $다1, $다2] as $묶음) {
+            foreach ($묶음 as $pid) { $this->위임서명[(int) $pid] = true; }
+        }
+
+        /* (라) 운영 데이터에서 옮겨 온 서명 — 거래처 관리와 같은 길이다.
+               옮겨 담은 표에 없으면 원본(운영 데이터 › 위임장 서명)까지 본다. */
+        $people = \App\Models\Patient::whereIn('id', $ids)->get();
+
+        foreach (\App\Models\PatientDelegationSign::거래처들것($people, 'agree_delegation') as $pid => $x) {
+            $this->위임서명[(int) $pid] = true;
+        }
+    }
+
+    /** 받아 둔 위임 서명이 있나 — 목록 칸에 적는 글자 */
+    public function 위임서명(?int $patientId): string
+    {
+        return ($patientId && ($this->위임서명[(int) $patientId] ?? false)) ? 'O' : '—';
     }
 
     public function rx(?Prescription $p, ?Patient $pt = null): array

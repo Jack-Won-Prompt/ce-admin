@@ -571,8 +571,16 @@ window.HELP_TOUR_STEPS = [
       { header: '결과지',     name: 'doc_test', width: 76, align: 'center', renderer: 서류칸 },
       {{-- 월간 보고에서 「위임장만 올린 것」을 빼려면 그 칸이 보여야 한다
            (2026-10-12 지시). 셋이 모두 「—」인 것으로 짐작하면 아무것도 올라오지
-           않은 줄과 구별되지 않는다. --}}
-      { header: '위임장',     name: 'doc_delegation', width: 76, align: 'center', renderer: 서류칸 },
+           않은 줄과 구별되지 않는다.
+
+           이름을 「위임장 서류」로 둔다 — 그냥 「위임장」이면 거래처 관리의
+           「위임장 서명」과 같은 말로 읽혀, 서명을 받아 둔 사람인데 「—」로 보인다.
+           이 칸은 **이 건에 올라온 서류**만 본다. --}}
+      { header: '위임장 서류', name: 'doc_delegation', width: 100, align: 'center', renderer: 서류칸 },
+      {{-- 「위임 서명」 — 그 사람에게 받아 둔 서명이 있나. 운영 데이터(위임장 서명)
+           까지 보며, 거래처 관리의 그 칸과 같은 길이다. 위임기간이 지났는지는
+           보지 않는다 — 지금 쓸 수 있는가는 주문 등록 화면의 관문이 가린다. --}}
+      { header: '위임 서명',  name: 'delegation_sign', width: 90, align: 'center', renderer: 서류칸 },
       { header: '파일 검수',     name: 'review',     width: 120, align: 'center',
         exportable: false, renderer: 검수칸 },
       /* 검수 바로 옆 — 「검수했나」와 「되물었나」는 잇대어 읽는 값이다 (2026-09-12 지시) */
