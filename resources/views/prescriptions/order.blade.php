@@ -1364,6 +1364,26 @@ $calcDeposit  = $calcCopay;
                건너뛰기 쉬워, 무엇이 남았는지 한 줄로 적는다(2026-09-08 · 3차 5회 문채아). --}}
           <span id="consentPrivacyStill" style="color:var(--warning);font-weight:600;">개인정보 동의는 받습니다</span>
         </span>
+        {{-- 받아야 하는 건에는 받아야 한다고 적는다 (2026-10-12 지시 · SR #108 ②).
+
+             여태 이 자리는 **받지 않아도 되는 건**에만 말을 걸었다. 처방외는
+             「위임 해당 없음 / 개인정보 동의는 받습니다」가 늘 서 있는데, 정작 받아야
+             하는 처방전 건에는 아무 말이 없었다 — 담당자는 아무 말이 없는 쪽을 끝난
+             것으로 읽는다.
+
+             저장할 때 한 번 알리고(동의확인) 주문을 낼 때 막기는(gateConsent) 하지만,
+             둘 다 **누른 뒤에야** 나온다. 누르기 전에 화면만 보고 알아야 한다.
+
+             적는 말은 **「서명 동의 필요」 한 가지**다. 공단 건과 기초(의료급여)를
+             갈라 「요양비 위임 서명」이라 부르는 자리가 둘 있으나(동의확인ㆍgateConsent),
+             거기는 무슨 서류에 들어가는지까지 풀어 적는 알림 창이다. 이 자리는 바로 옆
+             단추를 가리키는 한 줄이라, 그 단추 이름과 같은 말로 적는다 — 같은 자리의
+             형제 문구(「위임 해당 없음」ㆍ「서명확인완료」)도 갈래를 두지 않는다. --}}
+        <span id="consentNeedNote" style="display:none;align-self:center;flex-direction:column;gap:1px;font-size:11px;white-space:nowrap;"
+              title="요양비 청구를 위임받아야 하는 건입니다.&#10;왼쪽의 「서명 동의」 버튼으로 받으십시오.&#10;서명이 없으면 주문 생성ㆍ위드웍스 연계ㆍ결제 안내 발송이 진행되지 않습니다.">
+          <span id="consentNeedLabel" style="color:var(--warning);font-weight:700;">서명 동의 필요</span>
+          <span id="consentNeedPrivacy" style="color:var(--warning);font-weight:600;">개인정보 동의도 받습니다</span>
+        </span>
         {{-- 위임동의 팝오버 --}}
         <div id="consentPopover" style="display:none;position:absolute;top:calc(100% + 8px);left:0;width:380px;background:var(--bg-card);border:1px solid var(--primary);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:502;">
           <div style="position:absolute;top:-8px;left:24px;width:14px;height:8px;overflow:hidden;">
@@ -8890,6 +8910,27 @@ window.HELP_TOUR_STEPS = [
                   && window.CONSENT_STATUS !== 'agreed';
       지난안내.style.display = 보일까 ? 'inline-flex' : 'none';
     }
+
+    /* 「서명 동의 필요」 — 위 「위임 해당 없음」을 뒤집은 잣대다 (SR #108 ②).
+
+       거래처를 골랐고(누구에게 받으라는 말인지 서야 한다), 유형ㆍ자격으로 위임이
+       필요하다고 갈렸고, 쓸 수 있는 서명이 없고(DELEGATION_SIGNED), 아직 보낸 적도
+       없을 때만 적는다.
+
+       보냈거나 받아 둔 건에는 적지 않는다 — 그때는 배지가 말한다(대기중ㆍ거절ㆍ만료ㆍ
+       완료). 지난 서명ㆍ운영 데이터의 서명을 쓰는 건도 서지 않는다: 그 둘은
+       DelegationGate::쓸서명 이 지나보내므로 DELEGATION_SIGNED 가 참이고, 그 자리는
+       바로 위 「지난 서명을 사용합니다」가 말한다. */
+    const 필요표 = document.getElementById('consentNeedNote');
+    if (필요표) {
+      필요표.style.display = (거래처있나 && bs && bs.needs_delegation
+                              && !window.DELEGATION_SIGNED && !받아둠)
+          ? 'inline-flex' : 'none';
+
+      /* 개인정보 동의까지 받아 두었으면 그 줄은 물러난다 — 남은 것만 적는다 */
+      const 필요개인 = document.getElementById('consentNeedPrivacy');
+      if (필요개인) 필요개인.style.display = 개인정보받아둠 ? 'none' : '';
+    }
   }
 
   /* ── 유형 × 자격 ───────────────────────────────────────────
@@ -12081,6 +12122,8 @@ window.HELP_TOUR_STEPS = [
          주문ㆍ연계ㆍ결제 안내가 모두 멈췄다는 것을 놓치지 않게. */
       if (res.code === 'delegation_unsigned') {
         window.DELEGATION_SIGNED = false;
+        /* 창을 닫은 뒤에도 화면에 남아 있어야 한다 (2026-10-12 · SR #108 ②) */
+        if (typeof renderDelegationNeed === 'function') renderDelegationNeed();
         ceAlert(res.message, { title: '위임 서명 후 진행 가능합니다' });
         return;
       }
@@ -17369,6 +17412,18 @@ window.HELP_TOUR_STEPS = [
      잣대는 서버와 같은 한 곳에 있다(DelegationGate::signed). */
   window.DELEGATION_SIGNED = @json(\App\Support\DelegationGate::signed($prescription));
 
+  /* 값이 선 다음 한 번 다시 그린다 (2026-10-12 · SR #108 ② 작업에서 찾음).
+
+     「서명 동의 필요」는 이 값을 보고 서는데, 그 안내를 여닫는 renderDelegationNeed 는
+     이 줄보다 **먼저** 돈다(bsSyncFromSource 가 9033줄에서 바로 부른다). 그때
+     window.DELEGATION_SIGNED 는 아직 undefined 라 「안 받았다」로 읽힌다.
+
+     대개는 updateConsentStatus 가 뒤따라 바로잡지만, 그 함수는 이 처방전에 동의 줄이
+     없고 reused_sign 도 없으면 `!data.exists` 에서 그냥 돌아선다 — 거래처 서류함에
+     올려 둔 종이 서명(DelegationGate::거래처서면서류)이 그 자리다. 그 건은 받아 둔
+     건인데도 「서명 동의 필요」가 그대로 남는다. */
+  if (typeof renderDelegationNeed === 'function') renderDelegationNeed();
+
   /**
    * 배지를 세운다.
    *
@@ -17692,6 +17747,11 @@ window.HELP_TOUR_STEPS = [
       }
       // 주문 앞문이 보는 값 — 배지와 따로 받는다(DelegationGate)
       if ('delegation_signed' in data) window.DELEGATION_SIGNED = !!data.delegation_signed;
+
+      /* 「서명 동의 필요」는 이 값으로 여닫는다 — 아래 두 자리에서 돌아서기 전에
+         한 번 그린다 (2026-10-12 · SR #108 ②). 아래 `return` 들은 배지를 세울 수
+         없을 때 쓰는 길이지, 받았는지 안 받았는지를 모르는 길이 아니다. */
+      if (typeof renderDelegationNeed === 'function') renderDelegationNeed();
 
       /* 이 처방전에 동의 줄이 없어도 **쓸 수 있는 서명이 있을 수 있다**
          (2026-09-29 지시) — 지난 서명이거나, 운영 데이터에서 옮겨 온 서명이다.
