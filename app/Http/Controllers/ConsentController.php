@@ -1078,6 +1078,47 @@ class ConsentController extends Controller
                받은 줄 알면, 서명 그림이 필요한 자리에서 비어 있는 까닭을 찾지 못한다. */
             $서면위임장 = $쓸것 ? null : \App\Support\DelegationGate::서면위임장($prescription);
 
+            /* **거래처 서류함에 올려 둔 종이도 같이 본다** (2026-10-12 지시 · SR #168).
+
+               위 `서면위임장` 은 **처방전 첨부**만 본다. 그런데 종이는 처방전이 서기
+               전에 받는 일이 잦아 거래처 서류함에 올라간다 — 그 자리는 2026-10-07
+               (SR #115ㆍ#123)에 생겼고, 주문 앞문(DelegationGate::signed)은 이미
+               그것을 지나보낸다.
+
+               그런데 **배지는 그대로 「서명 동의」 단추로 남아** 있었다. 문은 열리는데
+               화면은 안 받은 것으로 보이니, 담당자는 받아 둔 위임장을 또 받으러 간다
+               — (E)김경식B 님이 그랬다(2026-10-07 서류함에 올림).
+
+               서명 그림은 없다. 숨기지 않고 그대로 적는다 — 「거래처 서류함의 위임장」. */
+            $거래처종이 = ($쓸것 || $서면위임장)
+                ? null
+                : \App\Support\DelegationGate::거래처서면서류($prescription);
+
+            if ($거래처종이) {
+                return response()->json([
+                    'exists'            => (bool) $latest,
+                    'status'            => $latest?->status,
+                    'privacy'           => $privacy,
+                    'delegation_signed' => $delegationSigned,
+                    'reused_sign'       => [
+                        'source'      => 'patient_paper',
+                        'label'       => '거래처 서류함의 위임장',
+                        'signed_at'   => $거래처종이->signed_at?->format('Y-m-d'),
+                        'rx_number'   => null,
+                        'valid_until' => \App\Support\DelegationGate::서명유효기간(
+                            $거래처종이->signed_at, $prescription->patient)?->format('Y-m-d'),
+                        'matched_by'  => null,
+
+                        'patient_name'   => \App\Support\DelegationGate::서류이름($prescription),
+                        'patient_mobile' => $prescription->patient?->mobile,
+                        'responded_at'   => $거래처종이->signed_at?->format('Y-m-d H:i:s'),
+                        /* 종이라 서명 그림이 없다 — 꾸미지 않는다. 「서명확인」 창이
+                           「서명 그림이 없습니다」로 선다. */
+                        'signature_data' => null,
+                    ],
+                ]);
+            }
+
             if ($서면위임장) {
                 return response()->json([
                     'exists'            => (bool) $latest,
@@ -1092,7 +1133,9 @@ class ConsentController extends Controller
                         'valid_until' => null,
                         'matched_by'  => null,
 
-                        'patient_name'   => $prescription->patient?->bare_name,
+                        /* 서류ㆍ화면에 적는 이름은 한 곳에서 짓는다 (2026-10-12 —
+                           동명이인 꼬리를 뗀다). 옆 갈래 둘과 같은 잣대다. */
+                        'patient_name'   => \App\Support\DelegationGate::서류이름($prescription),
                         'patient_mobile' => $prescription->patient?->mobile,
                         'responded_at'   => $서면위임장->created_at?->format('Y-m-d H:i:s'),
                         /* 서명 그림은 없다 — 꾸미지 않는다. 「서명확인」 창이
