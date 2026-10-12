@@ -3988,6 +3988,11 @@ class PrescriptionController extends Controller
         $이미주문 = (int) $주문줄들->sum('qty');
         $남은수량 = max(0, $처방총계 - $이미주문);
 
+        /* 이번 재구매 가능일 — 직전 구매가 정해 둔 날이다 (2026-10-12 · SR #160).
+           이번 건에서 셈해 낼 수 있는 값이 아니라 **지난 건에서 끌어오는** 값이라
+           서버에서 세워 보낸다. 위드웍스에서 산 건도 직전 구매로 센다. */
+        $이번재구매 = \App\Support\RepurchaseWindow::이번재구매가능일($prescription)?->format('Y-m-d');
+
         return view('prescriptions.order', compact(
             'prescription', 'prevId', 'nextId', 'repurchaseBlock', 'testPhones', 'payState',
             '주문줄들', '처방총계', '이미주문', '남은수량', '원주문품목',
@@ -3996,7 +4001,7 @@ class PrescriptionController extends Controller
             'lastFaxHistory', '닿은팩스', 'attachmentsJson', 'allDocsJson', 'patientsJson',
             'orderManagers', 'assignables', 'privacyState',
             'orderListRows', 'orderListTotal', 'orderListLimit', 'orderListOpts', 'orderListLast',
-            '입력검수'
+            '입력검수', '이번재구매'
         ));
     }
 

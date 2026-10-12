@@ -960,22 +960,9 @@
   #sameShipping:checked::after { content:''; position:absolute; left:5px; top:1px; width:5px; aspect-ratio:5/9;
                   border:solid var(--primary); border-width:0 1.5px 1.5px 0; transform:rotate(45deg); }
 
-  /* '재구매일' 줄 — 시안 315:58 Frame 48101499(재구매일):
-     [발행일 100 FIXED · bg #F9FAFC][arrow-right-sm 14][재구매일 123 FILL] 사이 8
-     (100+8+14+8+123 = 253). 옛 시안 148:1304 의 '208 · 208' 은 2열 시절 값이라 틀렸다.
-     왼쪽 칸은 calcRenewDate() 가 이미 글자를 채우던 #disp-issued-date 라 상자 모양만 입혔다.
-     오른쪽 칸은 시안 배경이 #FFFFFF 지만 구현은 자동 계산 readonly 라 --gray-50 을 그대로 둔다.
-     기준 폭은 100 이지만 줄이지 못하게 잠그면(flex:0 0 100px) 3열 1600·2열 1280 에서
-     이 줄만 열 밖으로 15~39px 삐져나간다(실측). flex:0 1 100px 로 두면 1920 에서는
-     남는 자리가 오른쪽 입력으로 가서 100 그대로이고, 좁아지면 같이 줄어든다. */
-  .rx-date-flow { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
-  .rx-date-flow > .rx-date-shown { display:flex; align-items:center; box-sizing:border-box;
-                  flex:0 1 100px; min-width:0; height:32px; padding:0 12px;
-                  border:1px solid var(--gray-200); border-radius:8px; background:var(--gray-50);
-                  font-size:13px; font-weight:400; line-height:20px; color:var(--gray-800);
-                  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .rx-date-flow > .rx-date-arrow { flex:0 0 14px; width:14px; text-align:center;
-                  font-size:12px; line-height:14px; color:var(--gray-1000); }
+  /* '재구매일' 줄의 「발행일 → 재구매일」 꾸밈(.rx-date-flow)은 걷었다
+     (2026-10-12 지시 · SR #160). 재구매 가능일을 발행일에서 세지 않게 되어
+     왼쪽 발행일 칸과 화살표가 함께 없어졌고, 남은 것은 여느 한 칸짜리 줄이다. */
   .rx-ocr-badge { display:inline-flex; align-items:center; gap:3px; background:var(--primary-light); color:var(--primary); border:1px solid var(--primary-accent); border-radius:4px; font-size:10px; font-weight:700; padding:1px 5px; }
   .rx-ocr-badge i { font-size:9px; }
   @media(max-width:1100px){ .rx-grid-4 { grid-template-columns:1fr 1fr; } }
@@ -4399,52 +4386,54 @@ $calcDeposit  = $calcCopay;
                    보이던 까닭이다. 1열ㆍ2열 끝으로 한 줄씩 옮겨 세 기둥의 키를 맞춘다.
                    둘은 나란한 한 줄에 앉아 여전히 짝으로 읽힌다. --}}
               <div class="rx-field-row">
-                <span class="rx-field-label">다음 재구매 가능일</span>
-                {{-- 부속 간격은 시안대로 8. '자동' 버튼은 시안에 없지만 계산 버튼이라 남기고,
-                     글자만 같은 자리의 .rx-side-btn 과 같은 13/500 으로 맞췄다(11/500 은 규격에 없다).
-                     min-width:0 이 없으면 이 묶음이 '자동' 버튼 폭(68) 아래로 줄지 못해
-                     3열 1600 에서 열 밖으로 68px, 2열 1280 에서 92px 삐져나갔다(실측).
-                     값은 제 컬럼에서 읽는다. --}}
-                {{-- **손으로 적지 않는다** (2026-10-07 지시 · SR #77 「첫번째 자동의 내용이
-                     있는 사항은 구매 이후 자동으로 생성되어야 하며 입력할 수 없게끔」 ·
-                     SR #103 「block 필요」).
+                {{-- 「이번 재구매 가능일」 — **직전 구매가 정해 둔 날**이다
+                     (2026-10-12 지시 · SR #160).
 
-                     사용 시작일과 총 처방일수에서 서는 값이다. 적을 수 있게 두면 두 값과
-                     어긋난 날짜가 저장되고, 재구매 제한이 그 값을 먼저 본다
-                     (RepurchaseWindow). 「자동」 단추도 걷었다 — 두 값이 들어오는 순간
-                     저절로 서므로 누를 일이 없고, 그 단추의 셈은 아래 칸(발행일 기준)의
-                     것이라 누르면 다른 날짜가 이 칸에 섰다. --}}
-                <input type="text" class="form-control" id="f-next-repurchase" readonly
-                       value="{{ $prescription->next_repurchase ?? '' }}"
-                       placeholder="사용 시작일과 총 처방일수로 자동 계산됩니다"
+                     이번 건을 언제부터 살 수 있는가이고, 이번 건이 만드는 날짜가 아니다.
+                     그래서 이 칸은 사용 개시일ㆍ총 처방일수와 아무 상관이 없다 — 아래
+                     칸이 그 셈을 맡는다.
+
+                     여태 이 자리에 「다음 재구매 가능일」이 서 있었고 값은 이번 건의
+                     사용 개시일＋총 처방일수였다. 두 칸이 같은 이름에 다른 셈이라, 담당자는
+                     「지금 팔아도 되는 날」을 어디서 읽어야 하는지 가릴 수 없었다.
+
+                     값은 서버가 세운다(RepurchaseWindow::이번재구매가능일). 직전 구매는
+                     우리 주문이 선 건뿐 아니라 **위드웍스에서 산 건**도 센다 — 이관 건에는
+                     우리 주문이 없어, 여태 위드웍스에서 몇 번을 산 사람도 이 칸이 비었다. --}}
+                <span class="rx-field-label">이번 재구매 가능일</span>
+                <input type="text" class="form-control" id="f-this-repurchase" readonly
+                       value="{{ $이번재구매 ?? '' }}"
+                       placeholder="직전 구매 건이 정한 다음 재구매 가능일입니다"
+                       title="직전 구매 건의 다음 재구매 가능일입니다. 위드웍스에서 산 건도 함께 봅니다."
                        style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
               </div>
               <div class="rx-field-row">
-                {{-- 이름을 「다음 재구매 가능일 (발행일 기준)」으로 세운다 (2026-09-23 지시).
+                {{-- 「다음 재구매 가능일」 — **이번 건의 사용 개시일 ＋ 총 처방일수**
+                     (2026-10-12 지시 · SR #160 「(발행일기준)은 삭제하고 … 사용 시작일＋
+                     총처방기간 정보 연결 필요」).
 
-                     같은 뜻의 칸이 둘이라 헷갈리던 자리다. 위의 「다음 재구매 가능일」은
-                     담당자가 정하는 값이고(고칠 수 있다), 이 줄은 처방전 발행일과 처방
-                     기간으로 **자동 산출한** 값이다. 이름이 그냥 「재구매일」이어서 어느
-                     것이 무엇인지 읽히지 않았다.
+                     이 자리는 「다음 재구매 가능일 (발행일 기준)」이었고, 왼쪽에 발행일을
+                     세워 두고 「발행일 → 재구매일」로 보여 주었다. 발행일은 이제 이 셈에
+                     들지 않으므로 그 칸과 화살표를 걷는다 — 쓰이지 않는 날짜를 나란히
+                     세워 두면 그것이 근거로 읽힌다.
 
-                     값이 비어 있으면 처방전 발행일이 아직 없는 것이다 — 오른쪽 칸의
-                     안내 글이 그것을 적는다. --}}
-                <span class="rx-field-label">다음 재구매 가능일<br><small style="font-weight:400;color:var(--text-muted);">(발행일 기준)</small></span>
-                {{-- 시안 315:58 Frame 48101499 는 두 칸이다:
-                     [발행일 100 FIXED · bg #F9FAFC][arrow-right-sm 14][재구매일 123 FILL], 사이 8 (= 253).
-                     왼쪽 칸은 calcRenewDate() 가 이미 글자를 채워 두던 #disp-issued-date 를
-                     그대로 쓴다 — display:none 만 풀고 상자 모양을 입혔다(새 로직 없음).
-                     오른쪽은 저장되는 입력(#f-repurchase-date)이고 자동 계산이라 읽기 전용이다.
-                     #disp-renew-date 는 테이블뷰가 글자로 읽어가므로 감춘 채로 남긴다. --}}
-                <div class="rx-date-flow">
-                  <span id="disp-issued-date" class="rx-date-shown">{{ $prescription->issued_date?->format('Y-m-d') ?? '-' }}</span>
-                  <i class="fa-solid fa-arrow-right rx-date-arrow" aria-hidden="true"></i>
-                  <input type="text" class="form-control" id="f-repurchase-date" readonly
-                         value="{{ $prescription->repurchase_date?->format('Y-m-d') ?? '' }}"
-                         placeholder="처방전 발행일과 처방 기간으로 자동 계산됩니다"
-                         style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
-                </div>
-                <span id="disp-renew-date" style="display:none;">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</span>
+                     값은 위에 있던 칸(#f-next-repurchase)을 그대로 내렸다. 담는 자리도
+                     `next_repurchase` 그대로다 — 이 칸이 바로 **다음 사람이 살 때의
+                     「이번 재구매 가능일」**이 되는 값이라, 같은 칸에 담겨 있어야 위 칸이
+                     그것을 읽을 수 있다.
+
+                     **손으로 적지 않는다** (2026-10-07 지시 · SR #77 · SR #103). 두 값에서
+                     저절로 서는 칸이다. 적을 수 있게 두면 두 값과 어긋난 날짜가 저장되고,
+                     재구매 제한이 그 값을 먼저 본다(RepurchaseWindow). --}}
+                <span class="rx-field-label">다음 재구매 가능일</span>
+                <input type="text" class="form-control" id="f-next-repurchase" readonly
+                       value="{{ $prescription->next_repurchase ?? '' }}"
+                       placeholder="사용 시작일과 총 처방일수로 자동 계산됩니다"
+                       title="이번 건의 사용 개시일에 총 처방일수를 더한 날입니다."
+                       style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+                {{-- 테이블뷰가 글자로 읽어가는 자리라 감춘 채 남긴다. 담는 값은 위 칸과
+                     같다 — 여태 (발행일 기준) 값을 읽어 「재구매일」로 세우고 있었다. --}}
+                <span id="disp-renew-date" style="display:none;">{{ $prescription->next_repurchase ?? '-' }}</span>
               </div>
               {{-- 추가정보 탭에서 옮겨 온 두 칸 (요청서 14쪽). 소제목은 두지 않는다 —
                    마지막에 몇 개로 확정했는지ㆍ언제까지 마감인지는 위의 처방ㆍ수량
@@ -4592,7 +4581,7 @@ $calcDeposit  = $calcCopay;
             {{-- 의사면허번호가 한 자리를 차지해 짝이 하나 밀렸다. 빈 칸을 남기는 대신
                  주소 줄처럼 남은 폭을 채운다 — 빈 th·td 는 표에 구멍으로 보인다. --}}
             <tr>
-              <th>재구매일</th><td colspan="3" id="tv-renew-date">{{ $prescription->repurchase_date?->format('Y-m-d') ?? '-' }}</td>
+              <th>재구매일</th><td colspan="3" id="tv-renew-date">{{ $prescription->next_repurchase ?? '-' }}</td>
             </tr>
             <tr class="tbl-sec"><td colspan="4"><i class="fa-solid fa-clipboard-list"></i> 처방 수량 · 상병</td></tr>
             <tr>
@@ -8534,27 +8523,15 @@ window.HELP_TOUR_STEPS = [
   document.addEventListener('DOMContentLoaded', syncNhisRenewBadge);
 
   // ── 재구매일 계산 ────────────────────────────────────────
-  function calcRenewDate() {
-    const dateVal = document.getElementById('f-date')?.value;
-    const daysVal = parseInt(document.getElementById('f-days')?.value) || 0;
-    const dispDate   = document.getElementById('disp-issued-date');
-    const dispRenew  = document.getElementById('disp-renew-date');
-    const hiddenDate = document.getElementById('f-repurchase-date');
-    if (dispDate) dispDate.textContent = dateVal || '-';
-    if (!dateVal || daysVal <= 0) {
-      if (dispRenew)  dispRenew.textContent = '-';
-      if (hiddenDate) hiddenDate.value = '';
-      return;
-    }
-    const d = new Date(dateVal);
-    d.setDate(d.getDate() + daysVal);
-    const y   = d.getFullYear();
-    const m   = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const result = `${y}-${m}-${day}`;
-    if (dispRenew)  dispRenew.textContent = result;
-    if (hiddenDate) hiddenDate.value = result;
-  }
+  /* `calcRenewDate()` 는 걷었다 (2026-10-12 지시 · SR #160).
+
+     적던 칸 셋이 모두 없어졌거나 임자가 바뀌었다 —
+       #disp-issued-date    (발행일 → 재구매일 보임) 칸과 함께 걷었다
+       #f-repurchase-date   (발행일 기준) 칸과 함께 걷었다
+       #disp-renew-date     이제 `calc다음재구매()` 가 맡는다
+
+     같은 칸을 `calcNextRepurchase()` 와 둘이 적고 있었고 셈도 달랐다(＋1 차이).
+     나중에 도는 쪽이 이기는 자리라 어느 날짜가 설지는 그때그때 달랐다. */
 
   // 처방일·처방기간 입력 시 재처방일 갱신
   // ── 상담 유형 변경 → 주문연계 탭 SO type 동기화 ────────
@@ -8607,11 +8584,9 @@ window.HELP_TOUR_STEPS = [
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    const dateEl = document.getElementById('f-date');
-    const daysEl = document.getElementById('f-days');
-    if (dateEl) dateEl.addEventListener('change', calcRenewDate);
-    if (daysEl) daysEl.addEventListener('input',  calcRenewDate);
-    calcRenewDate(); // 초기 계산
+    /* 발행일ㆍ총 처방일수가 바뀌면 종료일과 다음 재구매 가능일이 따라 선다.
+       그 셈은 `calcNextRepurchase()` 가 맡는다 — 그 칸들은 이미 제 자리에서
+       onchange 로 그 함수를 부른다 (2026-10-12 · SR #160). */
 
     /* 배송 주소 동일 — 체크가 켜져 있을 때만 맞춘다. 예전에는 true 가 박혀 있어,
        따로 적어 둔 배송지가 화면을 여는 것만으로 이 건의 주소로 덮였다. */
@@ -10468,37 +10443,17 @@ window.HELP_TOUR_STEPS = [
     endDate.setDate(endDate.getDate() + 총일수);
     document.getElementById('f-rx-end-date').value = fmt(endDate);
 
-    /* 이 값은 「다음 재구매 가능일 **(발행일 기준)**」 칸의 것이다 (2026-09-30 지시).
+    /* 「발행일 ＋ 기간 ＋ 1」 셈은 걷었다 (2026-10-12 지시 · SR #160).
 
-       화면에는 같은 이름의 칸이 둘이고 셈이 서로 다르다 —
+       여태 이 함수가 그 날짜를 「다음 재구매 가능일 (발행일 기준)」 칸에 적었다. 그
+       칸이 없어졌다 — 재구매 가능일은 **사용 개시일**에서 세는 것이지 발행일에서 세는
+       것이 아니라는 것이 이번 지시다. 발행일로 세는 날짜는 이제 종료일 하나뿐이고,
+       그것은 바로 위에서 세운다.
 
-         다음 재구매 가능일            사용 개시일 + 총 처방일수   (#f-next-repurchase)
-         다음 재구매 가능일(발행일 기준)  처방전 발행일 + 처방기간 + 1 (#f-repurchase-date)
+       같은 칸을 `calcRenewDate()` 도 적고 있었다 — 그쪽은 「발행일 ＋ 총일수」(＋1 없음)라
+       나중에 도는 쪽이 이기는 자리였다. 그 함수도 함께 걷었다.
 
-       그런데 여태 이 함수가 **위쪽 칸**에 적었다. 처방전 발행일이나 처방 기간만
-       넣어도, 화면을 열기만 해도(초기 자동 계산) 사용 개시일과 아무 상관 없는 날짜가
-       위쪽 칸에 서서, 사용 개시일이 비어 있는데 다음 재구매 가능일만 보였다.
-       아래쪽 읽기 전용 칸은 「처방전 발행일과 처방 기간으로 자동 계산됩니다」라
-       적어 두고 늘 비어 있었다 — 값이 제자리를 벗어나 있었던 것이다. */
-    /* 셈은 2026-09-30 지시 그대로 「발행일 + 기간 + 1」이고, **보는 칸만** 총 처방일수로
-       옮겼다 (2026-10-12). 여태 보던 f-rx-period 에 총 처방일수가 실려 있었으므로
-       나오는 날은 바뀌지 않는다 — 틀어질 자리만 막는다. */
-    const nextDate = new Date(dateVal);
-    nextDate.setDate(nextDate.getDate() + 총일수 + 1);
-
-    const 발행일기준 = document.getElementById('f-repurchase-date');
-    if (발행일기준) 발행일기준.value = fmt(nextDate);
-
-    const 보임 = document.getElementById('disp-renew-date');
-    if (보임) 보임.textContent = fmt(nextDate);
-
-    /* 위쪽 칸은 **여기서 적지 않는다** (2026-10-02 지시).
-
-       셈이 다르다 — 위쪽은 「사용 시작일 ＋ 총 처방일수」이고, 이 함수가 세는 것은
-       「처방전 발행일 ＋ 처방기간」이다. 한때 아래쪽 값을 위쪽에 채워 넣었으나
-       그것은 **다른 날짜를 같은 칸에 적는 일**이라 걷어 냈다.
-
-       위쪽 칸은 `calc다음재구매()` 가 맡는다. */
+       재구매 가능일 두 칸은 `calc다음재구매()` 한 곳에서 돈다. */
     calc다음재구매();
   }
 
@@ -10520,13 +10475,19 @@ window.HELP_TOUR_STEPS = [
     const 시작 = document.getElementById('f-use-start')?.value;
     const 일수 = parseInt(document.getElementById('f-days')?.value ?? '', 10);
 
+    const 비움 = () => {
+      칸.value = '';
+      const 글 = document.getElementById('disp-renew-date');
+      if (글) 글.textContent = '-';
+    };
+
     if (!시작 || !일수 || 일수 < 1) {
-      칸.value = '';            // 하나라도 없으면 비운다
+      비움();                   // 하나라도 없으면 비운다
       return;
     }
 
     const d = new Date(시작);
-    if (isNaN(d.getTime())) { 칸.value = ''; return; }
+    if (isNaN(d.getTime())) { 비움(); return; }
 
     /* Five/Six 프로그램이면 스무 날 뒤다 (2026-10-07 지시 · SR #103).
 
@@ -10545,6 +10506,11 @@ window.HELP_TOUR_STEPS = [
 
     const 두자리 = (n) => String(n).padStart(2, '0');
     칸.value = `${d.getFullYear()}-${두자리(d.getMonth() + 1)}-${두자리(d.getDate())}`;
+
+    /* 테이블뷰가 읽어 가는 숨은 글자도 같이 맞춘다 — 여태 걷어 낸 (발행일 기준)
+       값을 읽어 「재구매일」로 세우고 있었다 (2026-10-12 · SR #160). */
+    const 보임 = document.getElementById('disp-renew-date');
+    if (보임) 보임.textContent = 칸.value;
   }
   window.calc다음재구매 = calc다음재구매;
 
@@ -10851,7 +10817,9 @@ window.HELP_TOUR_STEPS = [
       })(),
       reason:           strOrNull('f-reason'),
       issued_date:      strOrNull('f-date'),
-      repurchase_date:  strOrNull('f-repurchase-date'),
+      /* `repurchase_date` 는 보내지 않는다 (2026-10-12 · SR #160).
+         그 칸(발행일 기준)을 걷었다. 그대로 두면 없는 칸이라 null 이 실려 나가
+         **저장만으로 이미 적힌 값이 지워진다** — 담는 칸은 `next_repurchase` 다. */
       rx_period:        intOrNull('f-rx-period'),
       rx_end_date:      strOrNull('f-rx-end-date'),
       diagnosis_date:   strOrNull('f-diagnosis-date'),
@@ -11082,7 +11050,9 @@ window.HELP_TOUR_STEPS = [
     items = @json($_itemsData);
     if (!items.length) items = [{ product_name:'', product_code:'', quantity:DEFAULT_QTY, product_price:'', insurance_price:'', nhis_status:'eligible', nhis_amount:0, patient_copay:0 }];
     renderItems();
-    calcRenewDate();
+    /* 되돌린 값으로 종료일ㆍ재구매 가능일을 다시 세운다 (2026-10-12 · SR #160 —
+       걷어 낸 calcRenewDate() 자리다) */
+    calcNextRepurchase();
     // 되돌린 값에 맞춰 담당 의사명도 다시 본다 (산재ㆍ자동차보험 재구매 건)
     sync담당의사(true);
     showToast('저장된 값으로 되돌렸습니다.', 'info');

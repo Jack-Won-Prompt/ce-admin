@@ -63,6 +63,78 @@ class RepurchaseWindow
     }
 
     /**
+     * 직전 구매 — **우리 주문이 선 건이거나, 위드웍스에서 이미 산 건** (2026-10-12 · SR #160).
+     *
+     * 화면의 「이번 재구매 가능일」이 읽는 자리다.
+     *
+     * 아래 `dueFromLastPurchase()` 는 우리 주문이 선 건만 직전 구매로 센다. 그것이
+     * 재구매 제한의 잣대인데, **이관 건에는 우리 주문이 없다** — 이관 처방전 84,302장
+     * 가운데 주문이 선 것은 130장뿐이다. 그래서 위드웍스에서 몇 번을 산 사람도 우리
+     * 화면에서는 「직전 구매 없음」으로 보였고, 이번 재구매 가능일이 비어 있었다.
+     *
+     *   (E)전은영  WW-ADD0024066  위드웍스 마감 2026-04-21 · 다음 재구매 2026-07-21
+     *              RX-20261008-023 ← 이 건의 「이번 재구매 가능일」이 비어 있었다
+     *
+     * 위드웍스에서 산 것도 산 것이다. **마감(판매상태2 = 확정)되고 취소가 아닌 건**을
+     * 직전 구매로 함께 센다 — 운영 이관 건 80,220장이 여기에 든다.
+     *
+     * **유형이 처방전인 것만 센다**(`counsel_acc_add_type = '10'`). 재구매 주기는 공단이
+     * 급여로 대주는 건에 붙는 잣대라, 처방외(20)ㆍ그 밖(30)은 주기를 세우지 않는다 —
+     * `block()` 이 처방외를 막지 않는 것과 같은 잣대다.
+     *
+     * 차례는 구입일 → 사용 개시일 → 발행일 → 만든 때 순으로 있는 것을 본다. 이관 건은
+     * 구입일ㆍ사용 개시일이 거의 비어 있고(각 61장) 발행일만 52,921장 차 있어, 구입일만
+     * 보면 이관 건이 통째로 차례에서 빠진다.
+     */
+    public static function 직전구매(?Prescription $rx): ?Prescription
+    {
+        if (! $rx?->patient_id) {
+            return null;
+        }
+
+        $차례 = 'COALESCE(buy_date, use_start_date, issued_date, created_at)';
+        $이번 = $rx->buy_date ?: $rx->use_start_date ?: $rx->issued_date ?: $rx->created_at;
+
+        return Prescription::query()
+            ->where('patient_id', $rx->patient_id)
+            ->whereKeyNot($rx->getKey())
+            ->where('counsel_acc_add_type', '10')
+            ->where(function ($q) {
+                /* 우리 주문이 선 것 — 취소는 산 것이 아니다 */
+                $q->whereHas('order', fn ($o) => $o->where('status', '!=', 'cancelled'))
+                  /* 또는 위드웍스에서 마감된 것 — 판매상태2 확정이고 취소가 아니다 */
+                  ->orWhere(fn ($w) => $w->whereNotNull('ww_closed_at')
+                      ->where(fn ($c) => $c->whereNull('ww_cancelled')->orWhere('ww_cancelled', false)));
+            })
+            /* 이번 건보다 뒤에 산 것은 직전 구매가 아니다 */
+            ->when($이번, fn ($q) => $q->whereRaw(
+                $차례 . ' <= ?', [\Carbon\Carbon::parse($이번)->toDateTimeString()]
+            ))
+            ->orderByRaw($차례 . ' DESC')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * 이번 재구매 가능일 — 직전 구매가 정해 둔 「다음 재구매 가능일」 (2026-10-12 · SR #160).
+     *
+     * 이번 건을 **언제부터 살 수 있는가**이고, 이번 건이 만드는 날짜가 아니다. 그래서
+     * 이번 건의 사용 개시일ㆍ총 처방일수와는 아무 상관이 없다.
+     *
+     * 이관 건은 위드웍스 원천의 udf30(다음 재구매 가능일)이 `next_repurchase` 에 담겨
+     * 왔다(MigratePrescriptionsFromWithworksCommand). 우리가 올린 건은 저장할 때
+     * 「사용 개시일 + 총 처방일수」가 같은 칸에 선다(Prescription::saving). 두 길이 한
+     * 칸으로 모이므로 여기서는 그 칸 하나만 읽으면 된다.
+     */
+    public static function 이번재구매가능일(?Prescription $rx): ?Carbon
+    {
+        $직전 = self::직전구매($rx);
+        $날   = $직전?->next_repurchase ?: $직전?->repurchase_date;
+
+        return $날 ? Carbon::parse($날)->startOfDay() : null;
+    }
+
+    /**
      * 같은 거래처의 이전 구매가 정한 재구매 가능일.
      *
      * 「이전 구매」는 실제로 주문이 선 처방전이다. 주문 없이 적다 만 처방전은 산 것이
