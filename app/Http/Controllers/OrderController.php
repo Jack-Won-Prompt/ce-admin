@@ -43,14 +43,36 @@ class OrderController extends Controller
         $query = $this->목록거른것($request);
 
         /* 머리글과 차례는 **화면에 선 열 그대로**다 — 보이는 것과 받는 것이 달라서는 안 된다 */
+        /* 뒤에 열여섯 칸을 더 붙였다 (2026-10-12 지시).
+
+           여태 열일곱 칸뿐이라 **처방번호도 처방유형도 금액도 없었다.** 그래서 이
+           엑셀로는 처방전 단위로 셀 수도, 처방전과 처방외를 가를 수도, 매출을 뽑을
+           수도 없었다 — 줄을 만드는 코드는 그 값을 모두 세고 있는데 내보내지 않았다.
+
+           **앞의 열일곱 칸 차례는 건드리지 않았다.** 담당자가 보던 자리가 밀리면
+           쓰던 수식이 어긋난다. 새 칸은 뒤에 이어 붙인다.
+
+           금액은 `total_amount` 를 쓴다 — `total` 이 아니다. 정정한 주문은 한 건이
+           세 줄로 펴지는데(원 주문ㆍ취소ㆍ지금 값), 그때 물러난 줄의 금액을 다시
+           세우는 칸이 `total_amount` 다. `total` 은 지금 값 그대로라 물러난 줄에도
+           지금 금액이 실린다. */
         $머리글 = [
             '주문번호', '원/추가', '환자명', '주문 구분', '교환/반품 접수번호', '교환·반품·취소 상태',
             '판매유형', '신구매/재구매', '상태', '주문 등록일', '교환/반품/취소일자',
             '청구 진행', '청구 여부', '공단 팩스', '파일', '파일 상세', '배송지',
+            // ── 여기부터 2026-10-12 에 더한 칸 ────────────────────────────
+            '처방번호', '처방유형', '처방전 발행일', '자격', '병원',
+            '제품', '수량', '금액', '본인부담', '공단부담',
+            '결제수단', '입금액', '입금일', '결제일',
+            '세금계산서', '현금영수증', '위드웍스 판매번호',
         ];
         $칸 = ['order_no', 'order_kind', 'patient', 'deal', 'return_no', 'deal_state',
                'so_type', 'rx_purchase', 'status', 'sold_at', 'deal_at',
-               'nhis_assist', 'claim_done', 'nhis_fax', 'att_count', 'doc_types', 'address'];
+               'nhis_assist', 'claim_done', 'nhis_fax', 'att_count', 'doc_types', 'address',
+               'rx_no', 'rx_acc_type', 'rx_issued', 'rx_benefit', 'rx_hospital',
+               'product', 'qty', 'total_amount', 'copay', 'nhis_amount',
+               'pay_method', 'deposit_amount', 'deposit_at', 'paid_at',
+               'tax_invoice', 'cash_receipt', 'ww_so_no'];
 
         $파일이름 = '주문관리_' . now()->format('Ymd_Hi') . '.csv';
 

@@ -645,6 +645,33 @@ window.HELP_TOUR_STEPS = [
          보냈는지는 줄을 더블클릭해 상세에서 본다.
          배송지는 남긴다 — 어디로 가는지는 훑으면서 가리는 값이다. */
       { header: '배송지',   name: 'address',  width: 240 },
+      {{-- ── 2026-10-12 지시로 더한 칸 ──────────────────────────────────
+
+           여태 열일곱 칸뿐이라 처방번호도 처방유형도 금액도 없었다. 그래서 이 화면과
+           엑셀로는 처방전 단위로 셀 수도, 처방전과 처방외를 가를 수도, 매출을 뽑을
+           수도 없었다 — 줄을 만드는 코드는 그 값을 모두 세고 있었다.
+
+           앞의 열일곱 칸 차례는 건드리지 않고 뒤에 이어 붙인다. 보던 자리가 밀리면
+           쓰던 수식이 어긋난다. --}}
+      { header: '처방번호',   name: 'rx_no',       width: 150, sortable: true },
+      { header: '처방유형',   name: 'rx_acc_type', width: 100, align: 'center', sortable: true },
+      { header: '처방전 발행일', name: 'rx_issued', width: 120, align: 'center', sortable: true },
+      { header: '자격',       name: 'rx_benefit',  width: 100, align: 'center', sortable: true },
+      { header: '병원',       name: 'rx_hospital', width: 160, sortable: true },
+      { header: '제품',       name: 'product',     width: 200 },
+      { header: '수량',       name: 'qty',         width: 70,  align: 'right', sortable: true },
+      {{-- 금액은 total_amount 다 — 정정한 주문이 세 줄로 펴질 때 물러난 줄의 금액을
+           다시 세우는 칸이 이것이다. --}}
+      { header: '금액',       name: 'total_amount', width: 110, align: 'right', sortable: true },
+      { header: '본인부담',   name: 'copay',       width: 110, align: 'right', sortable: true },
+      { header: '공단부담',   name: 'nhis_amount', width: 110, align: 'right', sortable: true },
+      { header: '결제수단',   name: 'pay_method',  width: 100, align: 'center', sortable: true },
+      { header: '입금액',     name: 'deposit_amount', width: 110, align: 'right', sortable: true },
+      { header: '입금일',     name: 'deposit_at',  width: 110, align: 'center', sortable: true },
+      { header: '결제일',     name: 'paid_at',     width: 130, align: 'center', sortable: true },
+      { header: '세금계산서', name: 'tax_invoice', width: 100, align: 'center', sortable: true },
+      { header: '현금영수증', name: 'cash_receipt', width: 100, align: 'center', sortable: true },
+      { header: '위드웍스 판매번호', name: 'ww_so_no', width: 150, sortable: true },
 
 
       // 네 목록 화면이 함께 쓰는 칸 — 위드웍스 판매주문 현황의 차례다
