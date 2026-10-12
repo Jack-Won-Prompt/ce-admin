@@ -283,6 +283,38 @@ class Prescription extends Model
             && in_array($this->status, self::UPLOADER_EDITABLE_STATUSES, true);
     }
 
+    /**
+     * 주문 담당자 칸에 **보일 글자** — 위드웍스 꼬리표를 떼고 사람 이름만 남긴다
+     * (2026-10-12 지시 · SR #165).
+     *
+     * 이관이 위드웍스 원천의 udf25 를 이 칸에 담았는데, 그 칸은 사람 이름이 아니라
+     * 상태ㆍ날짜ㆍ사람이 한 줄로 붙은 글귀다.
+     *
+     *   [완료]2026-07-07 Blue      → Blue
+     *   [진행중]2026-09-30 Wade    → Wade
+     *   [취소] 2025-03-28 Sienna   → Sienna
+     *
+     * 운영 62,035장 가운데 53,365장(86%)이 이 꼴이라, 목록의 「주문 담당자」 칸에
+     * 이름 대신 저 글귀가 서 있었다 — 담당자로 거르거나 정렬할 수 없었다.
+     *
+     * **담긴 값은 그대로 둔다.** 위드웍스로 되돌려 보낼 때 udf25 로 그대로 싣고
+     * (PrescriptionController 의 연계 꾸러미), 상태ㆍ날짜는 저쪽 자료라 우리가 지울
+     * 것이 아니다. 보이는 자리에서만 다듬는다.
+     */
+    public static function 주문담당자글(?string $값): string
+    {
+        $값 = trim((string) $값);
+
+        if ($값 === '' || ! str_starts_with($값, '[')) {
+            return $값;                       // 우리가 적은 이름은 그대로다
+        }
+
+        /* [상태] 다음에 날짜가 붙는 것이 대부분이지만 없는 것도 있어 날짜는 선택으로 둔다 */
+        $뗀것 = preg_replace('/^\[[^\]]*\]\s*(\d{4}-\d{2}-\d{2})?\s*/u', '', $값);
+
+        return trim((string) $뗀것) ?: $값;   // 다 떼고 나니 비면 원래 글자를 둔다
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return self::STATUS_LABELS[$this->status]['label'] ?? $this->status;

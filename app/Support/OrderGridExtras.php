@@ -469,7 +469,8 @@ class OrderGridExtras
             'rx_doctor'      => $p?->doctor_name ?? '',
             'rx_license'     => $p?->license_no ?? '',
             'rx_reason'      => $p?->reason ?? '',
-            'rx_order_mgr'   => $p?->order_manager ?? '',
+            /* 위드웍스 꼬리표를 떼고 이름만 (2026-10-12 · SR #165) */
+            'rx_order_mgr'   => Prescription::주문담당자글($p?->order_manager),
             'rx_five'        => match ((string) ($p?->five_program ?? '')) {
                                     '05' => 'Five', '06' => 'Six', '00' => 'N/A', default => '',
                                 },

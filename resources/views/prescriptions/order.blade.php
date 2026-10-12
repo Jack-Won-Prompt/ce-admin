@@ -4180,6 +4180,12 @@ $calcDeposit  = $calcCopay;
                      열어 본 사람이 담당자로 남는 일도 생긴다. 고르는 것은 사람이 한다. --}}
                 @php
                   $omCur  = (string) ($prescription->order_manager ?? '');
+                  /* 위드웍스에서 온 값은 「[완료]2026-07-07 Blue」 꼴이다 — 보일 때만
+                     이름으로 다듬는다 (2026-10-12 지시 · SR #165).
+                     **고르개의 값(value)은 담긴 글자 그대로** 둔다. 보이는 글자로
+                     바꿔 두면 저장만 해도 담긴 값이 조용히 갈린다 — 그 값은 위드웍스로
+                     udf25 로 되돌아가는 자리라 우리가 바꿀 것이 아니다. */
+                  $omShow = \App\Models\Prescription::주문담당자글($omCur);
                   $omList = collect($orderManagers ?? []);
                   // 목록에 없는 이름이 적혀 있으면(그만둔 사람 등) 그 이름도 함께 둔다
                   if ($omCur && !$omList->contains($omCur)) { $omList = $omList->prepend($omCur); }
@@ -4187,7 +4193,7 @@ $calcDeposit  = $calcCopay;
                 <select class="form-control" id="f-order-manager" style="flex:1;">
                   <option value="">선택</option>
                   @foreach($omList as $om)
-                    <option value="{{ $om }}" @selected($omCur === $om)>{{ $om }}</option>
+                    <option value="{{ $om }}" @selected($omCur === $om)>{{ $om === $omCur ? $omShow : $om }}</option>
                   @endforeach
                 </select>
               </div>
