@@ -2792,8 +2792,17 @@ class PrescriptionController extends Controller
      */
     private static function patientPickerList(?string $q = null, ?string $이름 = null, int $한도 = 50): \Illuminate\Support\Collection
     {
+        /* 추가정보가 가장 늦게 등록된 사람이 먼저다 (2026-10-12 지시 · SR #78).
+
+           여태 이름순이었다. 그런데 이 창을 여는 자리는 「방금 들어온 건의 그 사람」을
+           찾는 자리다 — 같은 이름이 여럿일 때 이름순은 아무 도움이 안 되고, 오래전에
+           한 번 오고 만 사람이 맨 위에 선다. 가장 최근에 처방ㆍ추가정보가 들어온
+           사람을 앞에 세운다. 한 번도 없던 사람은 뒤로 간다. */
         $질의 = \App\Models\Patient::query()
             ->select(['id', 'name', 'mobile', 'phone', 'birth_date', 'resident_no_masked'])
+            ->withMax('prescriptions', 'created_at')
+            ->orderByRaw('prescriptions_max_created_at IS NULL')   // 없는 사람은 뒤로
+            ->orderByDesc('prescriptions_max_created_at')
             ->orderBy('name');
 
         if ($이름 !== null && trim($이름) !== '') {
@@ -2852,6 +2861,11 @@ class PrescriptionController extends Controller
                    앞자리에서 읽는다(뒷자리 첫 숫자가 1900ㆍ2000 년대를 가른다). */
                 'birth'  => $p->birth_date?->format('Y-m-d') ?: self::birthFromMasked($p->resident_no_masked),
                 'rn'     => $p->resident_no_masked ? substr($p->resident_no_masked, 0, 6) . '-*' : '',
+                /* 무엇으로 줄을 세웠는지 보이게 한다 (SR #78) — 보이지 않으면
+                   「왜 이 사람이 맨 위인가」를 알 길이 없다. */
+                'last_add' => $p->prescriptions_max_created_at
+                    ? \Carbon\Carbon::parse($p->prescriptions_max_created_at)->format('Y-m-d')
+                    : '',
             ])->values();
     }
 
@@ -4218,6 +4232,41 @@ class PrescriptionController extends Controller
             }
         }
 
+        /* **옛 이관 처방전에는 주문을 내지 않는다 — 묻고 넘어간다**
+           (2026-10-12 지시 「가」 + 되묻기 · SR #78).
+
+           위드웍스에서 옮겨 온 처방전은 두 가지다. `WW-ADD…` 는 추가정보이고,
+           `WW-#####` 는 **지난 처방전을 읽어 보라고 옮겨 둔 것**이다. 뒤엣것은
+           위드웍스에서 이미 구매가 끝났거나 취소된 건이고, 처방전 자체도 몇 해 전
+           것이라 지금 쓸 수 없다.
+
+           그런데 그 줄을 열어 유형을 고르면 주문번호가 나고 「출고 대기」로 섰다 —
+           (E)김봉식 님이 그랬다(WW-62544 · 2023-02-03 이관 · 발행일 없음). 2026-10-12
+           기준 그렇게 선 주문이 10건이고 모두 창고로는 넘어가지 않았다.
+
+           막지는 않는다. 옛 건으로 손봐야 하는 일이 있을 수 있으므로 무엇인지 적어
+           되묻고, 담당자가 고르면 만든다. */
+        if (! $request->boolean('legacy_ok')
+            && ! $prescription->order()->exists()
+            && trim((string) $request->input('counsel_acc_add_type')) !== ''
+            && self::옛이관처방전인가($prescription)) {
+            return response()->json([
+                'success' => false,
+                'code'    => 'legacy_prescription',
+                'ask'     => sprintf(
+                    '%s 는 위드웍스에서 옮겨 온 **지난 처방전**입니다 (이관 %s · 발행일 %s). '
+                    . '위드웍스에서 이미 구매가 끝났거나 취소된 건일 수 있고, 처방전도 '
+                    . '지금 쓸 수 있는 것이 아닐 수 있습니다. 그대로 만들면 주문번호가 '
+                    . '나고 출고 대기로 섭니다. 새 처방전으로 등록하는 것이 맞지 '
+                    . '않겠습니까?',
+                    (string) $prescription->rx_number,
+                    (string) ($prescription->created_at?->format('Y-m-d') ?: '-'),
+                    (string) ($prescription->issued_date
+                        ? \Carbon\Carbon::parse($prescription->issued_date)->format('Y-m-d')
+                        : '없음')),
+            ]);
+        }
+
         /* 같은 환자ㆍ같은 발행일에 이미 선 주문이 있으면 **묻고 넘어간다**
            (2026-10-11 지시 「나」 · SR #131).
 
@@ -4834,6 +4883,19 @@ class PrescriptionController extends Controller
                 'rx' => $prescription->rx_number, 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * 위드웍스에서 옮겨 온 **지난 처방전**인가 (SR #78).
+     *
+     * `WW-ADD…` 는 추가정보라 여기 들지 않는다 — 그것은 지금 일하는 자료다.
+     * `WW-#####` 만 지난 처방전이다.
+     */
+    private static function 옛이관처방전인가(Prescription $rx): bool
+    {
+        $번호 = (string) $rx->rx_number;
+
+        return str_starts_with($번호, 'WW-') && ! str_starts_with($번호, 'WW-ADD');
     }
 
     /**

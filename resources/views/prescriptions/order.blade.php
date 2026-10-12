@@ -7898,6 +7898,9 @@ window.HELP_TOUR_STEPS = [
           { header: '전화번호', name: 'mobile', width: 160, sortable: true },
           { header: '생년월일', name: 'birth',  width: 130, align: 'center', sortable: true },
           { header: '주민번호', name: 'rn',     width: 140, align: 'center' },
+          /* 무엇으로 줄을 세웠는지 보인다 (2026-10-12 · SR #78) — 서버가 이 날짜의
+             최신순으로 보내 준다. 한 번도 없던 사람은 비어 있고 맨 뒤에 선다. */
+          { header: '추가정보 등록일', name: 'last_add', width: 130, align: 'center', sortable: true },
         ],
         data: rows,
       });
@@ -10776,6 +10779,9 @@ window.HELP_TOUR_STEPS = [
       /* 같은 발행일에 이미 주문이 있을 때 담당자가 「그대로 만들기」를 고르면 참이다
          (2026-10-11 · SR #131). 서버는 이것이 없으면 되묻는다. */
       dup_ok: opts.dupOk ? 1 : 0,
+      /* 옛 이관 처방전(WW-#####)에 그대로 만들겠다고 고르면 참이다
+         (2026-10-12 · SR #78) */
+      legacy_ok: opts.legacyOk ? 1 : 0,
       /* 지금 보고 있는 주문 (2026-09-15 지시). 추가 주문을 보고 있으면 서버가
          처방 품목을 건드리지 않는다 — 처방 품목은 처방전 한 장의 값이라, 추가
          주문에서 덮으면 원 주문이 산 수량이 사라진다. */
@@ -10802,6 +10808,24 @@ window.HELP_TOUR_STEPS = [
          막지 않는다 — 추가 주문ㆍ정정은 같은 발행일로 더 설 수 있어야 한다.
          무엇이 이미 있는지 적어 되묻고, 「그대로 만들기」를 고르면 dup_ok 를 달고
          다시 보낸다. 서버는 그때 묻지 않는다. */
+      /* **옛 이관 처방전이다** (2026-10-12 지시 「가」 + 되묻기 · SR #78).
+
+         위드웍스에서 옮겨 온 지난 처방전(WW-#####)에 주문을 내려 한다. 막지 않고
+         무엇인지 적어 되묻는다 — 「그대로 만들기」를 고르면 legacy_ok 를 달고 다시
+         보낸다. 서버는 그때 묻지 않는다. */
+      if (res.code === 'legacy_prescription') {
+        const 그래도 = await ceConfirm(res.ask, {
+          title: '지난 처방전입니다',
+          tone: 'danger',
+          confirmText: '그대로 만들기',
+          cancelText: '그만두기',
+        });
+
+        if (!그래도) return;
+
+        return await saveOCR({ ...opts, legacyOk: true });
+      }
+
       if (res.code === 'duplicate_order') {
         const 그래도 = await ceConfirm(res.ask, {
           title: '같은 발행일에 주문이 있습니다',
