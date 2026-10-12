@@ -184,9 +184,15 @@ class DelegationSign extends Model
         return \App\Support\ResidentNo::isMinorByMasked($this->resident_no_masked) === true;
     }
 
+    /**
+     * 받는 사람이 보는 이름 — (E) 와 **동명이인 꼬리**를 모두 뗀다.
+     *
+     * 2026-09-14 에 (E) 만 뗐는데, 꼬리(김예나A 의 A)가 남아 문자에 그대로 찍혔다 —
+     * 2026-10-12 기준 86건이 그렇게 나갔다. 꼬리는 우리 쪽 표시이지 법적 이름이 아니다.
+     */
     public function 이름(): string
     {
-        return Patient::bare($this->customer_name);
+        return Patient::실명($this->customer_name);
     }
 
     /**
@@ -364,6 +370,50 @@ class DelegationSign extends Model
             ->where($동의칸, true)
             ->where(fn ($q) => $q->where('sign_base64', '!=', '')->whereNotNull('sign_base64')
                                  ->orWhere(fn ($w) => $w->where('sign_path', '!=', '')->whereNotNull('sign_path')));
+    }
+
+    /**
+     * 이 명단 줄이 가리키는 **거래처의 지금 이름** — 못 고르면 null (2026-10-12 · SR #118).
+     *
+     * 명단에는 **보낼 때의 이름**이 남는다. 개명하면 옛 이름으로 문자가 나가고,
+     * 환자는 「내 이름이 아닌데」로 읽는다 — (E)팜티인 → (E)하나인 이 그랬다.
+     *
+     * 잣대는 연락처것() 과 같다. 번호로 모으고 **가린 주민번호나 생년월일이 맞아
+     * 하나로 좁혀질 때만** 쓴다. 번호만으로는 잇지 않는다 — 집 전화를 식구가 함께
+     * 쓰는 건이 있고, 그때 남의 이름으로 문자가 나간다.
+     */
+    public function 거래처지금이름(): ?string
+    {
+        $숫자 = preg_replace('/\D/', '', (string) $this->phone);
+
+        if (strlen((string) $숫자) < 9) {
+            return null;
+        }
+
+        $후보 = Patient::query()
+            ->whereRaw("REPLACE(REPLACE(IFNULL(mobile, ''), '-', ''), ' ', '') = ?", [$숫자])
+            ->orWhereRaw("REPLACE(REPLACE(IFNULL(phone, ''), '-', ''), ' ', '') = ?", [$숫자])
+            ->get(['id', 'name', 'resident_no_masked', 'birth_date']);
+
+        if ($후보->isEmpty()) {
+            return null;
+        }
+
+        /* 가린 주민번호 → 생년월일 차례로 좁힌다. 하나로 좁혀지지 않으면 쓰지 않는다. */
+        foreach ([
+            fn ($p) => filled($this->resident_no_masked)
+                    && $p->resident_no_masked === $this->resident_no_masked,
+            fn ($p) => $this->birth_date && $p->birth_date
+                    && $p->birth_date->format('Y-m-d') === $this->birth_date->format('Y-m-d'),
+        ] as $좁히기) {
+            $좁힘 = $후보->filter($좁히기)->values();
+
+            if ($좁힘->isNotEmpty()) {
+                return $좁힘->count() === 1 ? (Patient::실명($좁힘->first()->name) ?: null) : null;
+            }
+        }
+
+        return null;
     }
 
     /** 원본에서 찾을 이름 — 맨이름과 「(E)맨이름」 둘. 이름이 없으면 빈 배열 */
