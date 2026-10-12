@@ -150,10 +150,31 @@ class PrivacyConsent extends Model
      */
     public static function findFor(?int $patientId, ?string $name = null, ?string $phone = null): ?self
     {
-        $digits = preg_replace('/\D/', '', (string) $phone);
+        $맨 = fn ($v) => trim(preg_replace('/^\s*\(E\)\s*/u', '', (string) $v));
+        $숫 = fn ($v) => preg_replace('/\D/', '', (string) $v);
+
         // (E) 는 사업부 표시다 — 동의서에 적히는 이름에는 없다
-        $bare   = trim(preg_replace('/^\s*\(E\)\s*/u', '', (string) $name));
-        $byName = $bare !== '' && $digits !== '';
+        $bare    = $맨($name);
+        $digits  = [$숫($phone)];
+
+        /* **거래처에 적힌 번호를 모두 본다** (2026-10-12 · SR #108).
+
+           여태 부르는 쪽이 건넨 번호 하나만 견주었다. 그런데 거래처에는 번호가 둘이고
+           (mobile·phone), 목록(OrderGridExtras)은 둘 다 본다. 그래서 동의서에 적힌
+           번호가 보조 쪽이면 **목록에서는 완료, 상세에서는 빈칸**으로 갈렸다
+           ((E)박기도 님). 이름도 비어 오면 거래처에서 읽는다. */
+        if ($patientId && ($사람 = \App\Models\Patient::find($patientId))) {
+            foreach ([$사람->mobile, $사람->phone] as $번호) {
+                $digits[] = $숫($번호);
+            }
+
+            if ($bare === '') {
+                $bare = $맨($사람->name);
+            }
+        }
+
+        $digits = array_values(array_unique(array_filter($digits, fn ($d) => $d !== '')));
+        $byName = $bare !== '' && $digits !== [];
 
         if (!$patientId && !$byName) {
             return null;
@@ -167,7 +188,9 @@ class PrivacyConsent extends Model
                 if ($byName) {
                     $q->orWhere(function ($w) use ($bare, $digits) {
                         $w->where('name', $bare)
-                          ->whereRaw("REPLACE(REPLACE(phone, '-', ''), ' ', '') = ?", [$digits]);
+                          ->whereIn(
+                              \DB::raw("REPLACE(REPLACE(phone, '-', ''), ' ', '')"),
+                              $digits);
                     });
                 }
             })

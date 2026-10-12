@@ -305,6 +305,96 @@ class DelegationSign extends Model
             return null;
         }
 
+        return static::좁히기($후보, $patient, Patient::whereIn('name', $이름들)->count());
+    }
+
+    /**
+     * 여러 거래처의 서명을 **한 번에** — `[거래처 id => 서명]` (2026-10-12 · SR #108).
+     *
+     * 잣대는 거래처것() 과 같다(좁히기 를 함께 쓴다). 목록 화면은 한 번에 500줄을
+     * 그리므로 줄마다 묻게 두면 쓸 수 없다 — 한 번 읽어 메모리에서 좁힌다.
+     *
+     * 이 자리가 없어서 목록(OrderGridExtras)은 옮겨 담은 표만 보고 원본은 보지
+     * 않았다. 그래서 이관 뒤에 서명한 사람이 **상세에서는 완료, 목록에서는 빈칸**
+     * 으로 갈렸다 — (E)이정현A 님이 그랬다.
+     *
+     * @param  iterable<Patient>  $patients
+     * @return array<int, self>
+     */
+    public static function 거래처들것($patients, string $동의칸 = 'agree_delegation'): array
+    {
+        if (! in_array($동의칸, ['agree_delegation', 'agree_privacy'], true)) {
+            return [];
+        }
+
+        $이름맵 = [];          // 맨이름 => [거래처, …]
+
+        foreach ($patients as $p) {
+            if (! $p?->id) {
+                continue;
+            }
+
+            $맨 = Patient::bare((string) $p->name);
+
+            if ($맨 !== '') {
+                $이름맵[$맨][] = $p;
+            }
+        }
+
+        if (! $이름맵) {
+            return [];
+        }
+
+        $찾을이름 = [];
+
+        foreach (array_keys($이름맵) as $맨) {
+            $찾을이름[] = $맨;
+            $찾을이름[] = '(E)' . $맨;
+        }
+
+        $찾을이름 = array_values(array_unique($찾을이름));
+
+        $후보들 = static::query()
+            ->where('status', 'signed')
+            ->where($동의칸, true)
+            ->whereIn('customer_name', $찾을이름)
+            ->where(fn ($q) => $q->where('sign_base64', '!=', '')->whereNotNull('sign_base64')
+                                 ->orWhere(fn ($w) => $w->where('sign_path', '!=', '')->whereNotNull('sign_path')))
+            ->orderByDesc('signed_at')->orderByDesc('id')
+            ->get()
+            ->groupBy(fn ($d) => Patient::bare((string) $d->customer_name));
+
+        /* ③ 걸음이 쓰는 잣대 — 거래처에 그 이름이 하나뿐인가 */
+        $거래처수 = Patient::whereIn('name', $찾을이름)->get(['name'])
+            ->groupBy(fn ($p) => Patient::bare((string) $p->name))
+            ->map->count();
+
+        $답 = [];
+
+        foreach ($이름맵 as $맨 => $같은이름들) {
+            $후보 = $후보들->get($맨);
+
+            if (! $후보 || $후보->isEmpty()) {
+                continue;
+            }
+
+            foreach ($같은이름들 as $p) {
+                if ($찾음 = static::좁히기($후보, $p, (int) ($거래처수[$맨] ?? 0))) {
+                    $답[(int) $p->id] = $찾음;
+                }
+            }
+        }
+
+        return $답;
+    }
+
+    /**
+     * 후보 가운데 이 거래처의 것을 가린다 — 거래처것()ㆍ거래처들것() 이 함께 쓴다.
+     *
+     * 좁히는 걸음이 두 벌이 되면 목록과 상세가 또 갈린다. 한 곳에 둔다.
+     */
+    private static function 좁히기($후보, Patient $patient, int $같은이름거래처수): ?self
+    {
         // ① 가린 주민번호로 좁힌다 — 이관 명령의 name_birth 와 같은 자리다
         if (filled($patient->resident_no_masked)) {
             $좁힘 = $후보->where('resident_no_masked', $patient->resident_no_masked)->values();
@@ -334,6 +424,6 @@ class DelegationSign extends Model
             return null;
         }
 
-        return Patient::whereIn('name', $이름들)->count() === 1 ? $후보->first() : null;
+        return $같은이름거래처수 === 1 ? $후보->first() : null;
     }
 }

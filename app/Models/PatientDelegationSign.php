@@ -137,6 +137,43 @@ class PatientDelegationSign extends Model
         return $원본 ? static::원본꼴($원본, $patient->id) : null;
     }
 
+    /**
+     * 여러 거래처의 것을 **한 번에** — `[거래처 id => 서명]` (2026-10-12 · SR #108).
+     *
+     * 거래처것() 과 같은 길이다 — 옮겨 담은 표를 먼저 보고, 없으면 원본까지 본다.
+     * 목록 화면이 500줄을 그리면서 줄마다 묻지 않도록 한 번에 읽는다.
+     *
+     * @param  iterable<Patient>  $patients
+     * @return array<int, self>
+     */
+    public static function 거래처들것($patients, string $동의칸 = 'agree_delegation'): array
+    {
+        $사람들 = collect($patients)->filter(fn ($p) => $p?->id)->keyBy('id');
+
+        if ($사람들->isEmpty()) {
+            return [];
+        }
+
+        $답 = static::whereIn('patient_id', $사람들->keys())
+            ->where($동의칸, true)
+            ->whereNotNull('signed_at')
+            ->orderByDesc('signed_at')->orderByDesc('id')
+            ->get()
+            ->groupBy('patient_id')
+            ->map->first()
+            ->all();
+
+        /* 옮겨 담은 표에 없는 사람만 원본까지 본다 — 이관은 한 번 돌린 것이라
+           그 뒤에 서명한 사람은 이 표에 없다 (거래처것() 과 같은 까닭). */
+        $남은 = $사람들->reject(fn ($p, $id) => isset($답[$id]));
+
+        foreach (DelegationSign::거래처들것($남은, $동의칸) as $pid => $원본) {
+            $답[(int) $pid] = static::원본꼴($원본, (int) $pid);
+        }
+
+        return $답;
+    }
+
     /** 무엇으로 이었는지 사람이 읽을 말 */
     public function 짝지은말(): string
     {

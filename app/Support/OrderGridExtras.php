@@ -792,13 +792,17 @@ class OrderGridExtras
            판정 한 곳(PrivacyConsent::stateFor)은 옮겨 온 서명의 agree_privacy 를 본다.
            목록이 그것을 보지 않으면 같은 사람이 목록에서는 빈칸, 주문 등록 화면에서는
            「완료」로 갈린다 — 담당자는 어느 쪽을 믿어야 할지 알 수 없다. */
-        $옮긴것 = \App\Models\PatientDelegationSign::whereIn('patient_id', $ids)
-            ->where('agree_privacy', true)
-            ->whereNotNull('signed_at')
-            ->get(['patient_id', 'agree_marketing']);
+        /* **원본까지 본다** (2026-10-12 · SR #108).
 
-        foreach ($옮긴것 as $s) {
-            $pid = (int) $s->patient_id;
+           여태 옮겨 담은 표(patient_delegation_signs)만 보았다. 그런데 판정 한 곳
+           (PrivacyConsent::옮겨온동의 → PatientDelegationSign::거래처것)은 그 표에
+           없으면 원본(운영 데이터 › 위임장 서명)까지 본다. 이관은 한 번 돌린 것이라
+           그 뒤에 서명한 사람은 옮겨 담은 표에 없다 — 그래서 같은 사람이 상세에서는
+           「완료」, 목록에서는 빈칸으로 갈렸다((E)이정현A 님). 같은 길을 쓴다. */
+        $옮긴것 = \App\Models\PatientDelegationSign::거래처들것($people, 'agree_privacy');
+
+        foreach ($옮긴것 as $pid => $s) {
+            $pid = (int) $pid;
             if (! ($this->privacy[$pid] ?? false)) {
                 $this->privacy[$pid]   = true;
                 $this->marketing[$pid] = $s->agree_marketing ? '동의함' : '동의하지 않음';
@@ -808,7 +812,9 @@ class OrderGridExtras
         /* 서면 위임장을 받아 둔 거래처도 개인정보 동의로 센다 (2026-10-01 지시).
            판정 한 곳(PrivacyConsent::stateFor)과 같은 잣대여야 목록과 상세가
            갈리지 않는다. 마케팅 동의는 적지 않는다 — 위임장에 그 항목이 없다. */
-        $위임장받은곳 = \App\Models\PrescriptionAttachment::where('doc_type', 'delegation')
+        /* 유형도 판정 한 곳과 같게 본다 (2026-10-12 · SR #108) — 여태 `delegation`
+           하나만 보아, 서명본으로 올린 요양비 지급청구서가 목록에서만 빠졌다. */
+        $위임장받은곳 = \App\Models\PrescriptionAttachment::whereIn('doc_type', \App\Support\DelegationGate::종이서명유형)
             ->whereIn('prescription_id',
                 \App\Models\Prescription::whereIn('patient_id', $ids)->select('id'))
             ->join('prescriptions', 'prescriptions.id', '=', 'prescription_attachments.prescription_id')
