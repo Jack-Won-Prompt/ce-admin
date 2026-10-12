@@ -8928,8 +8928,11 @@ window.HELP_TOUR_STEPS = [
       개인정보받아둠 = !!PRIVACY_STATE?.agreed;
       서명으로확인  = !!(PRIVACY_STATE?.agreed && PRIVACY_STATE?.signed);
     } catch (e) {}
+    /* 「개인정보 동의는 받습니다」 — **처방외에는 적지 않는다** (2026-10-12 지시).
+       2026-09-08 에 세운 줄인데, 처방외는 그 동의를 묻지 않기로 했으므로 그대로 두면
+       화면이 「받습니다」라 적고 문은 묻지 않는 어긋남이 생긴다. */
     const still = document.getElementById('consentPrivacyStill');
-    if (still) still.style.display = 개인정보받아둠 ? 'none' : '';
+    if (still) still.style.display = (개인정보받아둠 || ol처방외()) ? 'none' : '';
 
     /* 서명까지 받아 두었으면 「위임 해당 없음」이 아니라 **확인됐다**고 적는다
        (2026-10-02 지시 「서명확인완료(위임, 개인정보 모두)로 보이게」).
@@ -10425,6 +10428,17 @@ window.HELP_TOUR_STEPS = [
     if (typeof calc다음재구매 === 'function') { calc다음재구매(); }
   };
 
+  /**
+   * 이 건이 **처방외**인가 (2026-10-12 지시 · SR #144ㆍ#155).
+   *
+   * 처방외는 개인정보 동의를 묻지 않는다. 산재ㆍ자동차보험은 위임이 필요 없을 뿐
+   * 처방전 건이라 동의는 받는다 — 그래서 「위임이 필요한가」로 가르지 않고 유형으로
+   * 가린다. 서버도 같은 값을 본다(BillingStrategy::TYPE_NONRX).
+   */
+  function ol처방외() {
+    return (document.getElementById('f-acc-add-type')?.value ?? '') === '20';
+  }
+
   // ── 종료일·다음재구매일 자동계산 ──
   function calcNextRepurchase(showWarn = false) {
     const dateVal   = document.getElementById('f-date')?.value;
@@ -10637,7 +10651,8 @@ window.HELP_TOUR_STEPS = [
     /* 기초(의료급여)는 위임장이 아니라 지급청구서에 서명한다 — 이름을 갈라 적는다 */
     if (bs && bs.needs_delegation && !window.DELEGATION_SIGNED)
       남은.push(bs.needs_delegation_form ? '요양비 위임 서명' : '서명 동의');
-    if (!PRIVACY_STATE?.agreed) 남은.push('개인정보 수집·이용 동의');
+    /* 처방외는 개인정보 동의를 묻지 않는다 (2026-10-12 지시 · SR #144ㆍ#155) */
+    if (!PRIVACY_STATE?.agreed && !ol처방외()) 남은.push('개인정보 수집·이용 동의');
     if (!남은.length) return;
 
     _동의알림함 = true;
@@ -11713,13 +11728,15 @@ window.HELP_TOUR_STEPS = [
             + '주문 생성, 위드웍스 연계, 결제 안내 발송이 모두 진행되지 않았습니다.\n\n'
             + '화면 위쪽의 「서명 동의」 버튼으로 서명을 받은 뒤 다시 눌러 주십시오. '
             + '이미 보냈는데 시간이 지났으면 그 자리의 「재발송」을 누릅니다.'
-            + (PRIVACY_STATE?.agreed ? '' : '\n\n개인정보 수집·이용 동의도 아직 받지 않았습니다.'),
+            + ((PRIVACY_STATE?.agreed || ol처방외()) ? '' : '\n\n개인정보 수집·이용 동의도 아직 받지 않았습니다.'),
               { title: 서명이름 + ' 후 진행 가능합니다' });
       return false;
     }
 
     const missing = [];
-    if (!PRIVACY_STATE?.agreed) missing.push('개인정보 수집·이용 동의');
+    /* 처방외는 개인정보 동의를 묻지 않는다 (2026-10-12 지시 · SR #144ㆍ#155).
+       서버도 같은 잣대로 한 번 더 본다(OrderController::consentBlock). */
+    if (!PRIVACY_STATE?.agreed && !ol처방외()) missing.push('개인정보 수집·이용 동의');
 
     if (!missing.length) return true;
 

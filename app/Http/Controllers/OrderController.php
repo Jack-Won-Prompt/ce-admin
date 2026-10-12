@@ -603,7 +603,19 @@ class OrderController extends Controller
             $prescription->patient?->mobile    ?? $prescription->mobile_ocr,
         );
 
-        if (! ($privacy['agreed'] ?? false)) {
+        /* **처방외는 개인정보 동의를 묻지 않는다** (2026-10-12 지시 · SR #144ㆍ#155).
+
+           처방전이 우리 쪽으로 들어오지 않고, 전에도 동의서를 받지 않고 진행하던
+           건이다. 지금처럼 막으면 구매가 한참 걸린다는 요청이 두 번 왔다.
+
+           **처방외만이다.** 산재ㆍ자동차보험은 위임이 필요 없을 뿐 처방전 건이라
+           동의는 받는다 — needsDelegation 으로 가르면 그 둘까지 함께 풀린다.
+
+           2026-09-08 에 「위임이 없다고 개인정보 동의까지 없는 것이 아니다」로 정한
+           것을 이 갈래에서만 되돌린다. */
+        $처방외 = (string) $prescription->counsel_acc_add_type === \App\Support\BillingStrategy::TYPE_NONRX;
+
+        if (! $처방외 && ! ($privacy['agreed'] ?? false)) {
             $missing[] = '개인정보 수집·이용 동의';
         }
 
