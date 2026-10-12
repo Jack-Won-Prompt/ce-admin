@@ -3048,6 +3048,21 @@ $calcDeposit  = $calcCopay;
                     style="display:{{ $prescription->order?->withworks_so_no ? '' : 'none' }};"
                     title="위드웍스 판매번호 — 누르면 베낍니다"
                     onclick="rxCopyNo(this)">위드웍스 판매번호 <b>{{ $prescription->order?->withworks_so_no }}</b></span>
+              {{-- 저쪽에서 이미 끝난 처방전이면 그 사실을 탭줄에 적는다
+                   (2026-10-12 지시 · (E)김원진 건).
+
+                   우리 주문이 창고로 넘어가지 않았는데 저쪽에서는 이미 구매확정된 건이다.
+                   그 말이 화면에 없으면 담당자는 「출고 대기」만 보고 창고가 늦는 것으로
+                   읽는다. 탭줄은 어느 탭에서나 서 있는 자리라 여기 둔다.
+
+                   우리가 직접 연계한 주문에는 적지 않는다 — 그때는 바로 왼쪽의 우리
+                   판매번호가 사실이고, 두 번호가 나란히 서면 어느 것이 이 주문의 것인지
+                   알 수 없다. --}}
+              @if($prescription->위드웍스마감인가() && blank($prescription->order?->withworks_so_no))
+                <span class="rx-tabno" id="rxTabNoWwClosed"
+                      style="border-color:var(--warning);color:var(--warning);font-weight:700;"
+                      title="위드웍스에서 이미 끝난 건입니다 — 이 주문은 창고로 넘어가지 않았습니다.&#10;새 처방전으로 등록해 진행하십시오.">{{ $prescription->위드웍스마감글() }}</span>
+              @endif
 
               {{-- 주문 고르개 — 나눠 산 건에만 선다 (2026-09-14 확인요청 4쪽).
 
@@ -10823,6 +10838,9 @@ window.HELP_TOUR_STEPS = [
       /* 옛 이관 처방전(WW-#####)에 그대로 만들겠다고 고르면 참이다
          (2026-10-12 · SR #78) */
       legacy_ok: opts.legacyOk ? 1 : 0,
+      /* 위드웍스에서 이미 끝난 처방전(구매확정ㆍ취소)에 그대로 만들겠다고 고르면 참이다
+         (2026-10-12 · (E)김원진 건) */
+      ww_ok: opts.wwOk ? 1 : 0,
       /* 지금 보고 있는 주문 (2026-09-15 지시). 추가 주문을 보고 있으면 서버가
          처방 품목을 건드리지 않는다 — 처방 품목은 처방전 한 장의 값이라, 추가
          주문에서 덮으면 원 주문이 산 수량이 사라진다. */
@@ -10854,6 +10872,25 @@ window.HELP_TOUR_STEPS = [
          위드웍스에서 옮겨 온 지난 처방전(WW-#####)에 주문을 내려 한다. 막지 않고
          무엇인지 적어 되묻는다 — 「그대로 만들기」를 고르면 legacy_ok 를 달고 다시
          보낸다. 서버는 그때 묻지 않는다. */
+      /* 위드웍스에서 이미 구매확정ㆍ취소된 처방전이면 되묻는다
+         (2026-10-12 · (E)김원진 건). 「그대로 만들기」를 고르면 ww_ok 를 달고 다시 부른다.
+
+         아래 「지난 처방전」보다 먼저 묻는다 — 이쪽은 판매번호와 확정일을 아는
+         사실이고, 저쪽은 「일 수 있다」는 미룸말이다. 두 앞문에 함께 걸리는 건
+         (WW-##### 이면서 마감된 것)에는 사실을 먼저 보여 준다. */
+      if (res.code === 'withworks_closed') {
+        const 그래도 = await ceConfirm(res.ask, {
+          title: '위드웍스에서 이미 끝난 건입니다',
+          tone: 'danger',
+          confirmText: '그대로 만들기',
+          cancelText: '그만두기',
+        });
+
+        if (!그래도) return;
+
+        return await saveOCR({ ...opts, wwOk: true });
+      }
+
       if (res.code === 'legacy_prescription') {
         const 그래도 = await ceConfirm(res.ask, {
           title: '지난 처방전입니다',

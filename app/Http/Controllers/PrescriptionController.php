@@ -4233,6 +4233,41 @@ class PrescriptionController extends Controller
             }
         }
 
+        /* **위드웍스에서 이미 끝난 처방전에는 주문을 내지 않는다 — 묻고 넘어간다**
+           (2026-10-12 지시 · (E)김원진 건).
+
+           아래 「옛 이관 처방전」 앞문은 번호 꼴(`WW-#####`)로 가린다. 그런데 추가정보
+           (`WW-ADD…`)도 저쪽에서 이미 구매확정된 것이 많다 — 13,414장 가운데 12,490장에
+           판매번호와 확정일이 적혀 있다. 그 줄은 번호 꼴로는 걸리지 않아 그대로 지나갔고,
+           2026-10-12 기준 그렇게 선 주문이 **38건**이다(모두 창고 미연계).
+
+           (E)김원진 님 건이 그랬다 — WW-ADD0058244(발행 2026-08-11)은 저쪽에서
+           2026-08-14 에 S2608140040 으로 구매확정되었는데, 10-08 에 그 줄을 열어 유형을
+           고르자 우리 주문이 새로 서고 「출고 대기」로 보였다.
+
+           잣대는 처방전이 이미 들고 있다(`위드웍스마감인가` — withworks:closed-sync 가
+           적는다). 막지는 않는다 — 저쪽 건을 정리해야 하는 일이 있을 수 있으므로 번호와
+           확정일을 적어 되묻고, 담당자가 고르면 만든다. */
+        if (! $request->boolean('ww_ok')
+            && ! $prescription->order()->exists()
+            && trim((string) $request->input('counsel_acc_add_type')) !== ''
+            && $prescription->위드웍스마감인가()) {
+            return response()->json([
+                'success' => false,
+                'code'    => 'withworks_closed',
+                'ask'     => sprintf(
+                    '%s 는 위드웍스에서 이미 끝난 건입니다 — %s. 발행일 %s. '
+                    . '그대로 만들면 우리 주문번호가 나지만 창고로는 넘어가지 않아 '
+                    . '「출고 대기」로 남습니다. 새 처방전으로 등록하는 것이 맞지 '
+                    . '않겠습니까?',
+                    (string) $prescription->rx_number,
+                    $prescription->위드웍스마감글(),
+                    (string) ($prescription->issued_date
+                        ? \Carbon\Carbon::parse($prescription->issued_date)->format('Y-m-d')
+                        : '없음')),
+            ]);
+        }
+
         /* **옛 이관 처방전에는 주문을 내지 않는다 — 묻고 넘어간다**
            (2026-10-12 지시 「가」 + 되묻기 · SR #78).
 

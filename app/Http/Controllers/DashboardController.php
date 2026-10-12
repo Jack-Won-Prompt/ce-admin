@@ -39,6 +39,13 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
+        /* 주문의 상태 이름은 그 주문의 처방전을 본다(Order::대기이름 — 위드웍스에서
+           이미 끝난 건인가). 여기서는 그 처방전을 손에 들고 있으므로 그대로 이어 준다 —
+           묻지 않아도 되는 것을 줄마다 묻지 않게 한다 (2026-10-12). */
+        foreach ($recentPrescriptions as $rx) {
+            $rx->order?->setRelation('prescription', $rx);
+        }
+
         // wwGrid용: 최근 처방전 현황(배지→텍스트, 더블클릭 시 상세 이동용 rx_number 포함)
         $recentRxGrid = $recentPrescriptions->map(fn ($rx) => [
             'rx_number' => $rx->rx_number,

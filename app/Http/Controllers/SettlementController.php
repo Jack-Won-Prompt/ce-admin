@@ -99,7 +99,9 @@ class SettlementController extends Controller
         };
 
         // ── 가상계좌 현황 ──────────────────────────────────────
-        $vaQuery = Order::with(['patient', 'tossPayment'])
+        /* 처방전도 함께 담아 온다 (2026-10-12) — 상태 이름이 「위드웍스에서 이미 끝난
+           건인가」를 보므로(Order::대기이름), 담지 않으면 줄마다 한 번씩 더 묻는다. */
+        $vaQuery = Order::with(['patient', 'tossPayment', 'prescription'])
             ->whereIn('status', \App\Models\Order::OPEN_AFTER_CONFIRM)
             ->where('patient_copay', '>', 0)
             ->latest();
