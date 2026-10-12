@@ -155,8 +155,26 @@ class PrescriptionController extends Controller
            상태나 찾는 말을 준 때는 그 잣대를 따른다 — 아래 「주문이 접수된 건」과
            같은 까닭이다. */
         if (! $request->filled('status') && ! $request->filled('search')) {
-            $query->whereNot(fn ($q) => $q->where('counsel_acc_add_type', '20')
-                                          ->doesntHave('attachments'));
+            /* **유형이 비어 있는 건까지 빼서는 안 된다** (2026-10-12 · 네 단계 정합성 검증).
+
+               여기 `whereNot(유형 = 20 AND 첨부 없음)` 으로 두었는데, 유형이 아직 비어
+               있으면(NULL) SQL 에서 이렇게 된다 —
+
+                 NULL = '20'        → NULL
+                 NULL AND true      → NULL
+                 NOT NULL           → NULL   → **그 줄이 통째로 빠진다**
+
+               「처방외를 뺀다」고 적어 두고 **「아직 유형을 안 고른 건」까지** 빼고
+               있었다. 운영에서 39장이 그렇게 사라졌고, 기본 화면(최근 7일)에서만
+               19장이다. 그중 10장은 주문까지 섰고, 10장은 처방전 그림이 올라와
+               검수(approvedㆍ검수 보류ㆍ검수 필요)까지 거친 건이다 — 올려 놓고
+               목록에서 찾을 수 없었다.
+
+               빼는 것을 적지 말고 **남길 것을 적는다.** 유형이 처방외가 아니거나,
+               아직 비었거나, 첨부가 하나라도 있으면 띄운다. */
+            $query->where(fn ($q) => $q->where('counsel_acc_add_type', '!=', '20')
+                                       ->orWhereNull('counsel_acc_add_type')
+                                       ->orWhereHas('attachments'));
         }
 
         /* **위드웍스에서 이미 끝난 건은 띄우지 않는다** (2026-10-06 지시 · SR #78).
