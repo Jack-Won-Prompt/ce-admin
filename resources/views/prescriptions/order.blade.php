@@ -1361,8 +1361,13 @@ $calcDeposit  = $calcCopay;
               title="환자가 보험사ㆍ근로복지공단에 직접 청구하는 건이라 급여 위임이 필요하지 않습니다.&#10;다만 개인정보 수집ㆍ이용 동의는 처음 오는 거래처라면 받아야 합니다 — 같은 링크로 함께 받습니다.">
           <span id="consentNotNeededLabel">위임 해당 없음</span>
           {{-- 위임이 없다고 개인정보 동의까지 없는 것이 아니다. 「해당 없음」만 보고
-               건너뛰기 쉬워, 무엇이 남았는지 한 줄로 적는다(2026-09-08 · 3차 5회 문채아). --}}
-          <span id="consentPrivacyStill" style="color:var(--warning);font-weight:600;">개인정보 동의는 받습니다</span>
+               건너뛰기 쉬워, 무엇이 남았는지 한 줄로 적는다(2026-09-08 · 3차 5회 문채아).
+
+               이 줄이 보이는 건은 산재ㆍ자동차보험뿐이다 — 처방외는 아예 감추고
+               (SR #144ㆍ#155), 받아 둔 건도 감춘다. 그 둘은 이제 이 동의로 주문이
+               막히지 않으므로(SR #182 ③) 그 사실을 함께 적는다. 받으라는 말만 적고
+               실제로는 막지 않으면, 담당자는 멈춰 서서 안 와도 되는 서명을 기다린다. --}}
+          <span id="consentPrivacyStill" style="color:var(--warning);font-weight:600;">개인정보 동의는 받습니다 — 진행은 막지 않습니다</span>
         </span>
         {{-- 받아야 하는 건에는 받아야 한다고 적는다 (2026-10-12 지시 · SR #108 ②).
 
@@ -10433,6 +10438,25 @@ window.HELP_TOUR_STEPS = [
     return (document.getElementById('f-acc-add-type')?.value ?? '') === '20';
   }
 
+  /**
+   * 개인정보 동의를 못 받았다고 **주문을 막을** 건인가
+   * (2026-10-12 지시 · SR #182 ③ 「막지는 않되 알리기만」).
+   *
+   *   처방외           묻지 않는다
+   *   산재ㆍ자동차보험  물어 두되 막지 않는다
+   *   그 밖            못 받으면 막는다
+   *
+   * 잣대는 서버가 가린다(BillingStrategy::개인정보동의로막나) — 그 값이 전략 표에
+   * 실려 온다. 화면에서 자격 이름을 다시 적지 않는다, 두 곳에 적으면 언젠가 어긋난다.
+   *
+   * 유형ㆍ자격을 아직 안 골랐으면 **막는 쪽**으로 둔다 — 무엇을 낼지 모르는 건을
+   * 동의 없이 내보냈다가 공단 건으로 밝혀지면 받을 길이 없다(위임과 같은 잣대).
+   */
+  function ol개인정보막나() {
+    const bs = bsCurrent();
+    return bs ? !!bs.blocks_privacy : true;
+  }
+
   // ── 종료일·다음재구매일 자동계산 ──
   function calcNextRepurchase(showWarn = false) {
     const dateVal   = document.getElementById('f-date')?.value;
@@ -10636,8 +10660,12 @@ window.HELP_TOUR_STEPS = [
     /* 기초(의료급여)는 위임장이 아니라 지급청구서에 서명한다 — 이름을 갈라 적는다 */
     if (bs && bs.needs_delegation && !window.DELEGATION_SIGNED)
       남은.push(bs.needs_delegation_form ? '요양비 위임 서명' : '서명 동의');
-    /* 처방외는 개인정보 동의를 묻지 않는다 (2026-10-12 지시 · SR #144ㆍ#155) */
-    if (!PRIVACY_STATE?.agreed && !ol처방외()) 남은.push('개인정보 수집·이용 동의');
+    /* 처방외는 개인정보 동의를 묻지 않는다 (2026-10-12 지시 · SR #144ㆍ#155).
+
+       산재ㆍ자동차보험은 **그대로 알린다** — 막지 않기로 했을 뿐 받지 않기로 한
+       것이 아니다(SR #182 ③). 알리지 않으면 받을 일이 있다는 것을 아무도 모른다. */
+    if (!PRIVACY_STATE?.agreed && !ol처방외())
+      남은.push('개인정보 수집·이용 동의' + (ol개인정보막나() ? '' : ' (진행은 막지 않습니다)'));
     if (!남은.length) return;
 
     _동의알림함 = true;
@@ -11717,15 +11745,19 @@ window.HELP_TOUR_STEPS = [
             + '주문 생성, 위드웍스 연계, 결제 안내 발송이 모두 진행되지 않았습니다.\n\n'
             + '화면 위쪽의 「서명 동의」 버튼으로 서명을 받은 뒤 다시 눌러 주십시오. '
             + '이미 보냈는데 시간이 지났으면 그 자리의 「재발송」을 누릅니다.'
-            + ((PRIVACY_STATE?.agreed || ol처방외()) ? '' : '\n\n개인정보 수집·이용 동의도 아직 받지 않았습니다.'),
+            + ((PRIVACY_STATE?.agreed || ol처방외()) ? ''
+               : (ol개인정보막나()
+                   ? '\n\n개인정보 수집·이용 동의도 아직 받지 않았습니다.'
+                   : '\n\n개인정보 수집·이용 동의도 아직 받지 않았습니다. (이 건은 그것으로 막지는 않습니다.)')),
               { title: 서명이름 + ' 후 진행 가능합니다' });
       return false;
     }
 
     const missing = [];
-    /* 처방외는 개인정보 동의를 묻지 않는다 (2026-10-12 지시 · SR #144ㆍ#155).
+    /* 처방외는 묻지 않고, 산재ㆍ자동차보험은 물어 두되 막지 않는다
+       (2026-10-12 지시 · SR #144ㆍ#155ㆍ#182 ③).
        서버도 같은 잣대로 한 번 더 본다(OrderController::consentBlock). */
-    if (!PRIVACY_STATE?.agreed && !ol처방외()) missing.push('개인정보 수집·이용 동의');
+    if (!PRIVACY_STATE?.agreed && ol개인정보막나()) missing.push('개인정보 수집·이용 동의');
 
     if (!missing.length) return true;
 

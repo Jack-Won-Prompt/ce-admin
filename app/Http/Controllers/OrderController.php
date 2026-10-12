@@ -613,9 +613,24 @@ class OrderController extends Controller
 
            2026-09-08 에 「위임이 없다고 개인정보 동의까지 없는 것이 아니다」로 정한
            것을 이 갈래에서만 되돌린다. */
-        $처방외 = (string) $prescription->counsel_acc_add_type === \App\Support\BillingStrategy::TYPE_NONRX;
+        /* 2026-10-12 지시 · SR #182 ③ — **산재ㆍ자동차보험도 막지 않는다.**
 
-        if (! $처방외 && ! ($privacy['agreed'] ?? false)) {
+           위에 적은 「처방외만이다」를 이 줄에서 넓힌다. 운영이 올린 #182 를 두고
+           재어 보니, 그 건에서 막던 것은 위임이 아니라 이 동의였다 — 최근 120장의
+           8%만 받아 두었고 주문을 내려 하면 서른에 스물 넘게 멈췄다.
+
+           **묻기는 그대로 한다.** 화면에는 아직 못 받았다고 적어 두고 문만 연다
+           (consentNotNeeded 의 「개인정보 동의는 받습니다 — 진행은 막지 않습니다」).
+           받지 못한 건이 무엇인지는 목록의 「개인정보동의」 칸에 그대로 남는다.
+
+           갈래는 한 곳이 가린다(BillingStrategy::개인정보동의로막나) — 화면도 같은
+           값을 본다(BILLING_STRATEGY 의 blocks_privacy). */
+        $막나 = \App\Support\BillingStrategy::개인정보동의로막나(
+            $prescription->counsel_acc_add_type,
+            $prescription->benefit_class,
+        );
+
+        if ($막나 && ! ($privacy['agreed'] ?? false)) {
             $missing[] = '개인정보 수집·이용 동의';
         }
 

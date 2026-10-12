@@ -173,6 +173,43 @@ class BillingStrategy
     /** 자격 목록 — 화면의 「자격」 칸과 전략 목록이 같은 순서를 쓴다 */
     public const CLASSES = ['일반', '차상위경감', '기초', '산재', '자동차보험'];
 
+    /** 환자가 보험사ㆍ근로복지공단에 직접 청구하는 자격 */
+    public const 직접청구자격 = ['산재', '자동차보험'];
+
+    /**
+     * 개인정보 수집ㆍ이용 동의를 아직 못 받았다고 **주문을 막을** 건인가
+     * (2026-10-12 지시 · SR #182 ③ 「막지는 않되 알리기만」).
+     *
+     * 세 갈래다.
+     *
+     *   처방외           묻지 않는다            (SR #144ㆍ#155)
+     *   산재ㆍ자동차보험  물어 두되 막지 않는다   ← 이번 지시
+     *   그 밖            못 받으면 막는다
+     *
+     * 가운데 갈래를 둔 까닭. 운영이 「서명동의완료 없이 진행 필요」라 올렸는데
+     * (SR #182), 그 건에서 실제로 막던 것은 위임이 아니라 개인정보 동의였다 —
+     * 위임은 이미 면제되어 있다(needsDelegation 이 기관 부담 0% 로 가른다).
+     * 화면의 「서명 동의」 단추 하나가 개인정보 동의와 위임 서명을 함께 보내므로
+     * (2026-09-10 지시) 운영은 둘을 통틀어 그렇게 부른다.
+     *
+     * 최근 120장을 세어 보니 산재ㆍ자동차보험의 개인정보 동의는 **8%**만 받아
+     * 두었고, 주문을 내려 하면 서른에 스물 넘게 막혔다.
+     *
+     * 그래도 **묻기는 한다.** 개인정보 수집ㆍ이용 동의는 누가 돈을 내는가와 상관없는
+     * 법상의 동의이고, 이 건도 처방전을 받고 주민등록번호를 적고 배송하고 현금영수증을
+     * 낸다. 처방외를 아예 뺀 까닭(「처방전이 우리 쪽으로 들어오지 않는다」)이 여기에는
+     * 없다. 그래서 화면에는 그대로 적어 두고 문만 연다 — 받지 못한 건이 무엇인지는
+     * 목록의 「개인정보동의」 칸에 그대로 남는다.
+     */
+    public static function 개인정보동의로막나(?string $accAddType, ?string $benefitClass): bool
+    {
+        if ((string) $accAddType === self::TYPE_NONRX) {
+            return false;                       // 처방외는 묻지도 않는다
+        }
+
+        return ! in_array((string) $benefitClass, self::직접청구자격, true);
+    }
+
     /* 고를 수 있는 전략 목록(options)은 두지 않는다. 주문 제품 탭의 전략 고르개를
        걷었고, 유형ㆍ자격은 각자 제자리에서 고른다 — 부르는 곳이 없는 표는 언젠가
        실제와 어긋난 채로 남는다. 이름은 아래 resolve() 가 짓는다. */
@@ -184,11 +221,14 @@ class BillingStrategy
         foreach (self::CLASSES as $b) {
             $out[self::TYPE_OUT . "|{$b}"] = self::resolve(self::TYPE_OUT, $b)
                 + ['needs_delegation'      => self::needsDelegation(self::TYPE_OUT, $b),
-                   'needs_delegation_form' => self::위임장받나(self::TYPE_OUT, $b)];
+                   'needs_delegation_form' => self::위임장받나(self::TYPE_OUT, $b),
+                   /* 개인정보 동의를 못 받았다고 막을 건인가 (2026-10-12 · SR #182 ③) */
+                   'blocks_privacy'        => self::개인정보동의로막나(self::TYPE_OUT, $b)];
         }
         $out[self::TYPE_NONRX . '|'] = self::resolve(self::TYPE_NONRX, null)
             + ['needs_delegation'      => self::needsDelegation(self::TYPE_NONRX, null),
-               'needs_delegation_form' => self::위임장받나(self::TYPE_NONRX, null)];
+               'needs_delegation_form' => self::위임장받나(self::TYPE_NONRX, null),
+               'blocks_privacy'        => self::개인정보동의로막나(self::TYPE_NONRX, null)];
 
         return $out;
     }
