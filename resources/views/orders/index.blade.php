@@ -547,7 +547,11 @@ window.HELP_TOUR_STEPS = [
       {{-- 판 날과 되돌아온 날. 되돌아오지 않은 건은 뒤 칸이 비어 있다. --}}
       // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
       ...ceMoneyCols(),
-      { header: '판매일자',   name: 'sold_at',   width: 100, sortable: true, align: 'center' },
+      /* 「판매일자」가 아니다 — 주문 줄이 선 날(orders.created_at)이다 (2026-10-12 지시).
+         주문 줄은 주문 등록에서 **유형을 고를 때** 서므로 사실상 등록일이다. 실제로
+         물건이 나간 날은 옆의 「출고일자」(창고가 알려 준 shipped_at)다 — 출고가 있는
+         189건 가운데 122건이 이 둘의 날이 다르다. 이름을 사실에 맞춘다. */
+      { header: '주문 등록일', name: 'sold_at',   width: 110, sortable: true, align: 'center' },
       { header: '교환/반품/취소일자', name: 'deal_at', width: 130, sortable: true, align: 'center' },
       {
         /* 청구처에 따라 하는 일이 다르다 — 공단은 사이트에 옮겨 적고, 지자체는 등기로

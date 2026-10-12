@@ -16147,7 +16147,9 @@ window.HELP_TOUR_STEPS = [
         // 요청서 8쪽 «등록일(접수일이 등록일이면 명칭만 변경)»
         // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
         ...ceMoneyCols(),
-        { header: '등록일',    name: 'sold_at',   width: 100, align: 'center', sortable: true },
+        /* 주문 관리와 같은 이름으로 적는다 (2026-10-12 지시) — 같은 값(orders.created_at)을
+           한쪽은 「등록일」, 다른 쪽은 「판매일자」로 적고 있었다. */
+        { header: '주문 등록일', name: 'sold_at',   width: 110, align: 'center', sortable: true },
         /* 언제 되돌아왔나 — 등록일과 벌어진 건은 눈에 띄어야 한다 */
         { header: '교환/반품/취소일자', name: 'deal_at', width: 130, align: 'center', sortable: true },
         /* 청구 진행 — 낼 것이 다 모였는지 보고 공단에 부치는 자리.
