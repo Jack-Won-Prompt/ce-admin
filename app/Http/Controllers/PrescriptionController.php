@@ -73,8 +73,14 @@ class PrescriptionController extends Controller
 
         /* 머리글과 차례는 **화면에 선 열 그대로**다 (2026-10-08).
            보이는 것과 받는 것이 다르면 담당자가 둘을 맞춰 보며 시간을 쓴다. */
+        /* 「이번 재구매 가능일」을 빠뜨렸다 (2026-10-13 · 엑셀과 화면을 견주다 찾음).
+
+           2026-10-12 에 화면에만 그 칸을 세우고 **엑셀에는 넣지 않아**, 여덟 번째
+           칸부터 화면과 엑셀이 한 칸씩 어긋났다. 받아서 화면과 나란히 놓고 맞춰 보는
+           사람이 번번이 헤맨다. 차례도 화면 그대로 — 「상태」 바로 뒤다. */
         $머리글 = [
             '처방번호', '출처', '환자명', '병원', '요양기관코드', '발행일', '상태',
+            '이번 재구매 가능일',
             '업로드 파일', '처방전', '등록신청서', '결과지', '위임장 서류', '위임 서명',
             '파일 검수', '요청 여부', '검수 메모',
             '처방유형', '판매유형', '주문번호', '주문 진행', '위드웍스 판매번호',
@@ -89,7 +95,13 @@ class PrescriptionController extends Controller
             fwrite($out, chr(0xEF) . chr(0xBB) . chr(0xBF));          // 엑셀이 한글을 깨뜨리지 않게
             fputcsv($out, $머리글);
 
-            $query->reorder()->orderByDesc('id')->chunk(500, function ($덩어리) use ($out) {
+            /* **화면과 같은 차례**를 쓴다 (2026-10-13 · 주문 관리와 같은 자리를 고쳤다).
+
+               화면은 `latest()`(접수일시 내림차순)만 두고 엑셀은 번호 내림차순을 썼다.
+               같은 초에 올라온 처방전끼리는 차례가 정해지지 않아 화면과 엑셀이 뒤바뀔
+               수 있다. 접수일시ㆍ번호 둘로 못 박으면 묶음으로 나눠 읽어도 흔들리지
+               않는다. */
+            $query->reorder()->latest()->orderByDesc('id')->chunk(500, function ($덩어리) use ($out) {
                 /* 결제 칸은 묶음마다 한 번에 세어 온다 — 줄마다 물으면 오백 줄에 오백 번이다 */
                 $extras = \App\Support\OrderGridExtras::forPatients($덩어리->pluck('patient_id'));
 
@@ -99,6 +111,7 @@ class PrescriptionController extends Controller
                     fputcsv($out, [
                         $줄['rx_number'], $줄['source'], $줄['patient'], $줄['hospital'],
                         $줄['hosp_code'], $줄['issued'], $줄['status'],
+                        $줄['next_repur'],
                         $줄['files'], $줄['doc_rx'], $줄['doc_reg'], $줄['doc_test'],
                         $줄['doc_delegation'], $줄['delegation_sign'],
                         /* 「파일 검수」ㆍ「요청 여부」는 화면에서 단추와 뱃지로 서는 자리다 —
@@ -126,7 +139,10 @@ class PrescriptionController extends Controller
             /* 아직 안 닫힌 다시 올리기 요청이 몇 건인가 (2026-09-12 지시).
                줄마다 물으면 마흔 줄에 마흔 번을 묻는다 — 한 번에 세어 온다. */
             ->withCount(['reuploadRequests as open_reuploads_count' => fn ($q) => $q->whereNull('resolved_at')])
-            ->latest();
+            /* 차례는 **접수일시 뒤 번호**다 (2026-10-13). `latest()` 만 두면 같은 초에
+               올라온 처방전끼리 차례가 정해지지 않아, 화면을 새로 열 때마다 뒤바뀌고
+               엑셀과도 어긋난다. 번호는 겹치지 않아 언제 보아도 같은 차례다. */
+            ->latest()->orderByDesc('id');
 
         // '처방전 관리' 로 화면만 열고 아무것도 입력하지 않은 초안은 목록에 띄우지 않는다
         $query->whereNot(fn ($q) => $q->blankDraft());
