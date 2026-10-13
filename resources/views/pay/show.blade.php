@@ -113,15 +113,26 @@
      무엇을 사는지 모르는 채로 카드를 꺼내게 된다. 빈 것으로 치고 주문번호를 적는다. */
   $rawName      = trim((string) $order->product_name, " 	-");
   $orderName    = mb_strimwidth($rawName !== '' ? $rawName : '주문 ' . $order->order_number, 0, 90, '…');
-  /* 토스 결제창에 실리는 이름이고, 가상계좌를 고르면 그대로 **예금주**가 된다.
+  /* 토스에 보내는 이름은 **고른 결제수단에 따라 뜻이 다르다** (2026-10-13 확인요청).
 
-     2026-10-12 지시로 **상호**를 보낸다 — 서버가 발급하는 길과 같은 값이다
-     (VirtualAccountService::예금주). 두 곳에서 따로 지으면 같은 회사인데 예금주가
-     갈려 보인다.
+     가상계좌를 고르면 이 값이 그대로 **예금주**가 된다 — 환자가 은행 앱에서 보는
+     「받는 사람」이다. 2026-10-12 지시로 여기에 **상호**를 보낸다(서버가 발급하는 길과
+     같은 값 — VirtualAccountService::예금주). 그 전에는 환자 이름을 보냈고, 이 자리만
+     bare() 를 써서 동명이인 꼬리가 남았다 — 홍영철A 님 건이 그랬다
+     (주문 EUD202610121149412 · 예금주 「홍영철A」로 발급).
 
-     그 전에는 환자 이름을 보냈고, 이 자리만 bare() 를 써서 동명이인 꼬리가 남았다 —
-     홍영철A 님 건이 그랬다(주문 EUD202610121149412 · 예금주 「홍영철A」로 발급). */
-  $customerName = \App\Services\TossPayments\VirtualAccountService::예금주();
+     **그런데 카드ㆍ간편결제에서는 같은 값이 「구매자명」이 된다.** 10-12 에 상호로 바꾸면서
+     카드ㆍ간편결제까지 함께 바뀌어, 토스 「신용ㆍ체크카드 조회」의 구매자명이
+     「콜로플라스트 코리아 주식회사」로 찍혔다 — 산 사람은 환자인데 회사 이름이 적힌 것이다.
+     결제 내역을 사람으로 찾을 수 없고, 분쟁이 나면 누가 샀는지 토스 쪽 기록이 말해 주지
+     않는다.
+
+     그래서 둘을 갈라 짓는다. 가상계좌면 상호, 그 밖이면 환자 이름이다.
+     환자 이름은 Patient::실명 으로 짓는다 — 동명이인 꼬리는 우리 표시이지 사람 이름이
+     아니라 밖으로 내보내지 않는다(2026-10-06 · SR #90ㆍ#102). */
+  $예금주이름 = \App\Services\TossPayments\VirtualAccountService::예금주();
+  $구매자이름 = \App\Models\Patient::실명($order->patient?->name)
+                ?: (\App\Models\Patient::실명($order->shipping_recipient) ?: $예금주이름);
 @endphp
 <script>
   /* 결제창을 연다. 금액과 주문번호는 서버가 정한 값을 그대로 쓴다 —
@@ -182,6 +193,9 @@
     const newOrderId = () => ORDER_BASE + '-' + Math.random().toString(36).slice(2, 10);
     const btn      = document.getElementById('payBtn');
     const VA_HOURS = {{ (int) config('toss.virtual_account.valid_hours', 72) }};
+    /* 가상계좌의 예금주와, 카드ㆍ간편결제의 구매자명은 서로 다른 값이다 */
+    const VA_HOLDER  = @json($예금주이름);
+    const BUYER_NAME = @json($구매자이름);
 
     let payment;
     try {
@@ -206,7 +220,8 @@
           amount:     { currency: 'KRW', value: AMOUNT },
           orderId:    newOrderId(),
           orderName:  @json($orderName),
-          customerName: @json($customerName),
+          /* 가상계좌면 예금주(상호), 그 밖이면 산 사람의 이름 — 위 주석 참고 */
+          customerName: (way === 'VIRTUAL_ACCOUNT') ? VA_HOLDER : BUYER_NAME,
           successUrl: @json(route('pay.done', $link->token)),
           failUrl:    @json(route('pay.done', $link->token)),
         };
