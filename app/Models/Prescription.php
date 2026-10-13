@@ -70,7 +70,7 @@ class Prescription extends Model
         'product_name', 'product_code', 'quantity',
         'nhis_status', 'product_price', 'insurance_price', 'nhis_amount', 'patient_copay',
         // Review
-        'status', 'is_blank_draft', 'reviewed_by', 'reviewed_at', 'review_memo', 'review_request_memo', 'admin_note',
+        'status', 'is_blank_draft', 'is_consent_only', 'reviewed_by', 'reviewed_at', 'review_memo', 'review_request_memo', 'admin_note',
         /* 입력 검수 — 파일 검수(위 status·reviewed_*)와 다른 일이다 (2026-09-16 지시).
            파일 검수는 올라온 이미지를 보고, 입력 검수는 적어 넣은 값을 본다. */
         'input_review_status', 'input_review_requested_at', 'input_review_requested_by',
@@ -99,6 +99,7 @@ class Prescription extends Model
     protected $casts = [
         'is_reissue'      => 'boolean',
         'is_blank_draft'  => 'boolean',
+        'is_consent_only' => 'boolean',
         'ocr_raw_data'    => 'array',
         'issued_date'      => 'date',
         // 상담일시는 시간까지 담는다 (2026-09-11 확인요청 4쪽)
