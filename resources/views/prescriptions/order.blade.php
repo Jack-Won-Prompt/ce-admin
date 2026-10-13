@@ -4437,7 +4437,7 @@ $calcDeposit  = $calcCopay;
                        title="직전 구매 건의 다음 재구매 가능일입니다. 위드웍스에서 산 건도 함께 봅니다."
                        style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
               </div>
-              <div class="rx-field-row">
+              <div class="rx-field-row" style="flex-wrap:wrap;">
                 {{-- 「다음 재구매 가능일」 — **이번 건의 사용 개시일 ＋ 총 처방일수**
                      (2026-10-12 지시 · SR #160 「(발행일기준)은 삭제하고 … 사용 시작일＋
                      총처방기간 정보 연결 필요」).
@@ -4456,11 +4456,14 @@ $calcDeposit  = $calcCopay;
                      저절로 서는 칸이다. 적을 수 있게 두면 두 값과 어긋난 날짜가 저장되고,
                      재구매 제한이 그 값을 먼저 본다(RepurchaseWindow). --}}
                 <span class="rx-field-label">다음 재구매 가능일</span>
+                {{-- 아래의 풀이가 **제 줄로 내려가게** 둔다 (2026-10-13).
+                     줄바꿈을 막아 두면 셋이 한 줄을 나눠 가져 날짜 칸이 눌린다 —
+                     실제로 26px 로 찌그러져 값이 보이지 않았다. --}}
                 <input type="text" class="form-control" id="f-next-repurchase" readonly
                        value="{{ $prescription->next_repurchase ?? '' }}"
                        placeholder="사용 시작일과 총 처방일수로 자동 계산됩니다"
                        title="이번 건의 사용 개시일에 총 처방일수를 더한 날입니다."
-                       style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+                       style="flex:1 1 140px;min-width:120px;background:var(--gray-50);cursor:default;" />
                 {{-- **왜 그 날짜인지 옆에 적는다** (2026-10-13 지시).
 
                      Five/Six 프로그램 건은 스무 날이 더 붙는데 그 까닭이 화면 어디에도
@@ -10574,11 +10577,12 @@ window.HELP_TOUR_STEPS = [
     const 보임 = document.getElementById('disp-renew-date');
     if (보임) 보임.textContent = 칸.value;
 
-    /* 셈한 식을 그대로 적는다 — 스무 날이 왜 붙었는지 여기서 읽힌다 */
+    /* **스무 날이 붙은 건에만 적는다** (2026-10-13).
+
+       붙지 않은 건의 「사용개시일 + 총처방일수」는 이미 아는 셈이라 적어 봐야 줄만
+       길어진다. 묻게 되는 자리는 스무 날이 붙었는데 까닭이 안 보이는 그 하나다. */
     if (풀이) {
-      풀이.textContent = 백십일
-        ? `${시작} + ${일수}일 + 20일 (Five/Six 프로그램)`
-        : `${시작} + ${일수}일`;
+      풀이.textContent = 백십일 ? `${시작} + ${일수}일 + 20일 (Five/Six 프로그램)` : '';
     }
 
     칸.title = 백십일
