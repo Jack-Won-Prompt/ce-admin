@@ -134,8 +134,9 @@ class OrderController extends Controller
      *
      * 차례도 화면과 같게 둔다(등록일 뒤 번호).
      *
-     * 양식에 관한 결정은 모두 `App\Support\EscrowSheet` 안에 있다 — 토스의 빈
-     * 양식을 받으면 그 파일만 고치면 된다.
+     * 양식은 2026-10-13 에 담당자가 토스 상점관리자의 「배송정보 한 번에 등록하기」에서
+     * 받아 준 **빈 양식 그대로**다. 양식에 관한 결정은 모두 `App\Support\EscrowSheet`
+     * 안에 있다.
      */
     public function escrowExport(Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
@@ -150,8 +151,8 @@ class OrderController extends Controller
                 }
             });
 
-        $경로 = \App\Support\XlsxWriter::한장('에스크로 배송정보',
-            \App\Support\EscrowSheet::머리글, $줄들, \App\Support\EscrowSheet::숫자칸);
+        /* 토스가 준 빈 양식 그대로 — 장 셋ㆍ예시 줄ㆍ안내문ㆍ택배사 코드까지 같다 */
+        $경로 = \App\Support\XlsxWriter::여러장(\App\Support\EscrowSheet::장들($줄들));
 
         return response()
             ->download($경로, '토스_에스크로_배송정보_' . now()->format('Ymd_Hi') . '.xlsx', [
