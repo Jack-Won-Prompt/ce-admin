@@ -79,7 +79,26 @@ class CashbillSyncService
     public function refreshPendingStatus(string $corpNum, int $limit = 200): array
     {
         $records = CashbillRecord::where('corp_num', $corpNum)
-            ->where(fn($q) => $q->where('nts_result', '!=', 2)->orWhereNull('nts_result'))
+            /* **문서번호가 없는 줄은 여기서 묻지 못한다** (2026-10-13 확인).
+
+               팝빌 상점관리자에서 사람이 직접 발행ㆍ취소한 건은 연동 문서번호가 없다
+               (`interOPYN = false`). GetInfo 는 문서번호로만 묻으므로 그 줄에서는 늘
+               터져 실패만 쌓였고, 그 줄의 상태는 **영영 갱신되지 않았다** —
+               2026-10-06 (E)김지수B 의 취소 문서가 그랬다. 국세청 전송까지 끝났는데
+               우리 표에는 전송 칸이 비어 있어 화면이 「전송전」이라 적었다.
+
+               그런 줄은 Search 로 도는 `syncFromPopbill` 이 `item_key` 로 갱신한다. */
+            ->whereNotNull('mgt_key')->where('mgt_key', '!=', '')
+            /* **끝난 줄은 다시 묻지 않는다** (2026-10-13 확인).
+
+               잣대가 `nts_result` 였는데 **팝빌은 현금영수증에 그 칸을 주지 않는다** —
+               조회 응답을 통째로 떠 보니 늘 null 이다. 그래서 137줄이 모두 「아직 안
+               끝났다」로 남아, 돌 때마다 팝빌에 137번씩 물었다. 줄이 쌓일수록 그만큼
+               늘어난다.
+
+               끝났는지는 국세청 결과 코드가 말한다 — `0000` 이면 정상승인이다. */
+            ->where(fn ($q) => $q->whereNull('nts_result_code')
+                                 ->orWhere('nts_result_code', '!=', '0000'))
             ->where('state_code', '<', 400)
             ->orderBy('trade_dt', 'desc')
             ->limit($limit)
