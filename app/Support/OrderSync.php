@@ -52,10 +52,52 @@ class OrderSync
      */
     public static function seed(Prescription $prescription): ?Order
     {
-        if ($prescription->is_blank_draft
-            || $prescription->상담만인가()
-            || $prescription->order()->exists()) {
+        /* 이미 줄이 있으면 손대지 않는다 — 이것만이 seed 와 ensure 가 갈리는 자리다.
+
+           만들어도 되는 건인가는 ensure 가 본다(만들수있는가). 여기서 한 번 더 보면
+           저장마다 같은 조회가 두 벌 돈다 — 상담만인가() 하나가 관계를 세 번 묻는데,
+           이 자리는 처방전이 저장될 때마다 지나간다(Prescription::booted). */
+        if ($prescription->order()->exists()) {
             return null;
+        }
+
+        return self::ensure($prescription);
+    }
+
+    /**
+     * 이 처방전에 주문을 **새로 만들어도 되는가**.
+     *
+     * 2026-10-13 확인요청 — 이 잣대가 `seed` 안에만 있어서, `ensure` 를 바로 부르는
+     * 자리가 그대로 빠져나갔다. 서명 완료(ConsentController)와 검수 승인(approve)이
+     * 그랬다. 운영에서 되돌리는 거래로 확인하니 검수 전인 건과 위임동의 껍데기에도
+     * 주문이 만들어졌다.
+     *
+     * 호출하는 자리마다 막는 방식은 2026-09-22ㆍ2026-10-02ㆍ2026-10-13 세 번 샜다.
+     * **만드는 자리 하나**에 두어, 앞으로 어느 길로 들어와도 같은 잣대를 지나게 한다.
+     *
+     * 값을 맞추는 일에는 쓰지 않는다 — 이미 선 주문은 이 잣대와 상관없이 그대로 둔다.
+     */
+    public static function 만들수있는가(Prescription $prescription): bool
+    {
+        if ($prescription->is_blank_draft || $prescription->상담만인가()) {
+            return false;
+        }
+
+        /* **위드웍스에서 이미 구매확정ㆍ취소된 건은 만들지 않는다** (2026-10-13 확인요청).
+
+           이관된 처방전 가운데 저쪽에서 이미 팔려 나간 건이 있다. 담당자가 그 건을 열어
+           「주문등록 이동」을 누르면 새 주문번호가 발급되고 주문 등록일이 **누른 날**로
+           기록되었다. 2026-10-13 기준 61건이 그랬다 — 실제로 나간 때는 2021-10 부터
+           2026-09 까지 16개 달에 걸쳐 있는데 주문 등록일은 모두 10월이었다.
+
+           그래서 등록일로 월 집계를 내면 같은 거래가 두 번 잡힌다. 저쪽 장부에는 팔린
+           달에, 우리 장부에는 10월에 들어간다. 10월 주문 610건 가운데 61건(10%)이
+           10월에 판 것이 아니었다.
+
+           검수 승인 자체는 막지 않는다 — 서류 검수와 주문 진행은 다른 단계다
+           (PrescriptionController::approve 가 담당자에게 그 사실을 알린다). */
+        if ($prescription->위드웍스마감인가()) {
+            return false;
         }
 
         /* **유형을 고른 건만 세운다** (2026-09-22 확인요청 2ㆍ4쪽).
@@ -80,7 +122,7 @@ class OrderSync
 
            이미 선 줄은 건드리지 않는다. 지난 건이 이 잣대로 사라지지 않는다. */
         if ((string) ($prescription->counsel_acc_add_type ?? '') === '') {
-            return null;
+            return false;
         }
 
         /* **「주문등록 이동」을 누른 건만 세운다** (2026-10-02 지시).
@@ -95,7 +137,7 @@ class OrderSync
            **이미 선 줄은 건드리지 않는다** — 이 잣대로 지난 건이 사라지지 않는다.
            승인 뒤의 저장에서는 `status` 가 `approved`ㆍ`ordered` 라 그대로 지나간다. */
         if (! in_array((string) $prescription->status, ['approved', 'ordered'], true)) {
-            return null;
+            return false;
         }
 
         /* 거래처가 붙지 않았으면 주문을 세우지 않는다 (2026-09-20 지시).
@@ -109,39 +151,24 @@ class OrderSync
            것인지 모르는 채 먼저 태울 번호가 아니다. 거래처가 붙은 뒤에 세운다 —
            그때 다시 저장하면 이 자리가 만든다. */
         if (! $prescription->patient_id) {
-            return null;
+            return false;
         }
 
-        return self::ensure($prescription);
+        return true;
     }
 
     public static function ensure(Prescription $prescription): ?Order
     {
         $order = $prescription->order()->first();
 
-        /* **위드웍스에서 이미 구매확정ㆍ취소된 건은 주문을 만들지 않는다**
-           (2026-10-13 확인요청).
+        /* **없는 주문을 만들 때는 문턱을 지난다** (2026-10-13 확인요청).
 
-           이관된 처방전 가운데 저쪽에서 이미 팔려 나간 건이 있다. 담당자가 그 건을
-           열어 「주문등록 이동」을 누르면 여기까지 와서 새 주문번호가 발급되고,
-           주문 등록일이 **누른 날**로 기록되었다. 2026-10-13 기준 61건이 그랬다 —
-           실제로 나간 때는 2021-10 부터 2026-09 까지 16개 달에 걸쳐 있는데
-           주문 등록일은 모두 10월이었다.
+           잣대는 만들수있는가() 한 곳에 있다. 이 자리가 그것을 보지 않던 동안,
+           `ensure` 를 바로 부르는 길(서명 완료ㆍ검수 승인)로 빈 주문이 생겼다.
 
-           그래서 등록일로 월 집계를 내면 같은 거래가 두 번 잡힌다. 저쪽 장부에는
-           팔린 달에, 우리 장부에는 10월에 들어간다. 10월 주문 610건 가운데 61건
-           (10%)이 10월에 판 것이 아니었다.
-
-           주문번호는 위드웍스ㆍ토스ㆍ팝빌ㆍ공단으로 나가는 대외 식별자다. 이미 저쪽에서
-           끝난 거래에 우리 번호를 새로 발급할 일이 없다.
-
-           **이미 만들어진 주문은 건드리지 않는다.** 지난 건이 이 조건으로 사라지지
-           않고, 우리가 창고로 보낸 주문(withworks_so_no 가 있는 것)은 우리가 실제로
-           판 것이라 금액 맞추기가 아래에서 그대로 돈다.
-
-           검수 승인 자체는 막지 않는다 — 서류 검수와 주문 진행은 다른 단계다
-           (PrescriptionController::approve 가 담당자에게 그 사실을 알린다). */
-        if (! $order && $prescription->위드웍스마감인가()) {
+           **값을 맞추는 일은 막지 않는다.** 이미 선 주문은 그대로 두고 금액ㆍ품목만
+           따라간다 — 자격이 바뀌어 본인부담이 달라지는 일은 문턱과 상관없다. */
+        if (! $order && ! self::만들수있는가($prescription)) {
             return null;
         }
 

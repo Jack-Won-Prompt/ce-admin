@@ -5199,7 +5199,13 @@ class PrescriptionController extends Controller
             ->first();
     }
 
-    /** 이 처방전의 주문 줄을 세워 둔다 — 몸통은 App\Support\OrderSync 다. */
+    /**
+     * 이 처방전의 주문 줄을 만들어 둔다 — 몸통은 App\Support\OrderSync 다.
+     *
+     * 지금 부르는 곳이 없다(2026-10-13 확인). 남겨 두는 것은 OrderController 의 주석이
+     * 이 이름을 가리키기 때문이다. `ensure` 는 2026-10-13 부터 만들기 전에
+     * `OrderSync::만들수있는가` 를 보므로, 다시 이어 쓰더라도 빈 주문이 나지 않는다.
+     */
     private function ensureOrder(Prescription $prescription): ?\App\Models\Order
     {
         return \App\Support\OrderSync::ensure($prescription);
@@ -5575,9 +5581,14 @@ class PrescriptionController extends Controller
            (2026-10-02 17:45:14 · 품목 0줄). 주문번호는 위드웍스ㆍ토스ㆍ팝빌ㆍ공단으로
            나가는 대외 식별자라, 화면을 만지는 동안 저절로 태울 번호가 아니다.
 
-           유형이나 거래처가 아직이면 `OrderSync::ensure` 가 세우지 않는다 — 그때는
-           주문 등록 화면에서 채운 뒤 저장하면 선다(OrderSync::seed). 승인 자체는
-           막지 않는다. 서류 검수와 주문 진행은 다른 걸음이다. */
+           유형이나 거래처가 아직이면 주문이 만들어지지 않는다 — 그때는 주문 등록
+           화면에서 채운 뒤 저장하면 만들어진다. 승인 자체는 막지 않는다. 서류 검수와
+           주문 진행은 다른 걸음이다.
+
+           **2026-10-13 에 바로잡았다.** 이 주석은 오래 그렇게 적혀 있었는데 사실이
+           아니었다 — `OrderSync::ensure` 에는 문턱이 없어, 유형도 거래처도 없는 건에
+           그대로 주문번호가 났다. 운영에서 되돌리는 거래로 확인했다. 잣대는 이제
+           `OrderSync::만들수있는가` 한 곳에 있고 `ensure` 가 만들기 전에 그것을 본다. */
         $주문 = \App\Support\OrderSync::ensure($prescription->refresh());
 
         if ($주문) {
