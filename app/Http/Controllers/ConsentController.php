@@ -424,13 +424,31 @@ class ConsentController extends Controller
                 $this->savePrivacyConsent($consent, $request);
             }
 
-            /* 서명이 끝난 건은 주문 관리에도 선다. 처방전 그림이 없어도, 아직 제품을
-               고르지 않았어도 그렇다 — 위임을 받아 둔 건은 이미 거래가 시작된 것이고,
-               담당자가 그다음에 손댈 것을 찾는 자리가 그 목록이다.
-               우리 쪽 줄만 세운다. 창고로 보내는 것은 「주문 생성 및 연계」가 할 일이다. */
+            /* **서명만으로는 주문을 만들지 않는다** (2026-10-13 확인요청).
+
+               여기는 오래 `ensure` 를 바로 불렀다 — 「위임을 받아 둔 건은 이미 거래가
+               시작된 것」이라는 뜻이었다. 그런데 `ensure` 에는 문턱이 없다. `seed` 가
+               가지고 있는 다섯 문턱(빈 초안ㆍ상담만ㆍ유형ㆍ검수 승인ㆍ거래처)을 모두
+               건너뛰고 주문번호를 발급한다.
+
+               그래서 처방전도 없이 모바일로 서명만 받은 건에 주문 줄이 생겼다.
+               2026-10-13 기준 23건이 그 모양으로 서 있었다 — 품목 0줄ㆍ0원이고,
+               그 가운데 19건은 「주문등록 이동」을 누른 적이 없다.
+
+               주문번호는 위드웍스ㆍ토스ㆍ팝빌ㆍ공단으로 나가는 대외 식별자다. 그 뜻을
+               밝히는 자리는 2026-10-02 지시로 처방전 목록의 「주문등록 이동」 하나다.
+               서명은 그 앞 단계이지 그 자리가 아니다.
+
+               이미 주문이 있는 건은 `ensure` 로 금액만 맞춘다 — 자격이 바뀌면 본인부담이
+               달라지는데, 그것은 서명 뒤에 정해지는 값이다. 주문 등록의 저장이 쓰는
+               갈림과 같은 모양으로 둔다(PrescriptionController::updateOcr). */
             $consent->loadMissing('prescription');
             if ($consent->prescription) {
-                \App\Support\OrderSync::ensure($consent->prescription->refresh());
+                $처방전 = $consent->prescription->refresh();
+
+                $처방전->order()->exists()
+                    ? \App\Support\OrderSync::ensure($처방전)
+                    : \App\Support\OrderSync::seed($처방전);
             }
             $this->generateConsentPdf($consent);
 
