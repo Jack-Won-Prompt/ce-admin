@@ -469,6 +469,10 @@ document.addEventListener('keydown', (e) => {
       { header: '사업부',     name: 'care_type',       width: 70, align: 'center', sortable: true },
       { header: '환자명',       name: 'name',            width: 110, sortable: true },
       { header: '주민등록번호', name: 'resident_no',     width: 130 },
+      {{-- 공단이 통장에 찍는 입금자명 (2026-10-13 · SR #171ㆍ#191).
+           그 사람의 가장 최근 처방전의 청구처로 센다 — 건보 건에만 선다. --}}
+      { header: 'NB주민번호',  name: 'nb_resident_no',  width: 120,
+        headerTooltip: 'NB주민번호 — 예) NB801234. 건보는 NB + 주민번호 앞 6자리로 입금합니다. 지자체는 정해진 것이 없어 기관마다 다릅니다.' },
       /* 생년월일 셋 — 위드웍스 표는 「1982. 11. 11.」, 우리 표는 「1982-11-11」, 해만
          맞춰 보는 자리도 있다. 만 나이는 요청대로 따로 세운다(요청서 2쪽). */
       { header: '생년월일(1)', name: 'birth_dotted',   width: 120, align: 'center', sortable: true },

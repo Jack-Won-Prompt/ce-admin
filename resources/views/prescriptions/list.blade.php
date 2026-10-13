@@ -611,6 +611,11 @@ window.HELP_TOUR_STEPS = [
       { header: '검수 담당자',   name: 'assignee',   width: 90,  align: 'center', sortable: true },
       // 요청서 6쪽 — 주민등록번호ㆍ업로드 담당자ㆍ검수 일자ㆍ검수 메모
       { header: '주민등록번호',  name: 'resident_no', width: 130 },
+      {{-- 공단이 통장에 찍는 입금자명 (2026-10-13 · SR #171ㆍ#191).
+           「NB + 주민번호 앞 여섯 자리」가 규칙이고, 건보 청구 건에만 선다.
+           지자체는 기관마다 달라 정해진 것이 없으므로 빈칸으로 둔다. --}}
+      { header: 'NB주민번호',   name: 'nb_resident_no', width: 120,
+        headerTooltip: 'NB주민번호 — 예) NB801234. 건보는 NB + 주민번호 앞 6자리로 입금합니다. 지자체는 정해진 것이 없어 기관마다 다릅니다.' },
       { header: '업로드 담당자', name: 'uploader',   width: 110, align: 'center', sortable: true },
       { header: '검수 일자',     name: 'reviewed_at', width: 130, align: 'center', sortable: true },
       { header: '검수 요청 메모', name: 'review_request_memo', width: 200 },

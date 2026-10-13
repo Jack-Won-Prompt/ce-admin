@@ -84,7 +84,8 @@ class PrescriptionController extends Controller
             '업로드 파일', '처방전', '등록신청서', '결과지', '위임장 서류', '위임 서명',
             '파일 검수', '요청 여부', '검수 메모',
             '처방유형', '판매유형', '주문번호', '주문 진행', '위드웍스 판매번호',
-            '검수 담당자', '주민등록번호', '업로드 담당자', '검수 일자',
+            /* NB주민번호 — 화면에 세운 그 자리에 맞춰 넣는다 (2026-10-13 · SR #171ㆍ#191) */
+            '검수 담당자', '주민등록번호', 'NB주민번호', '업로드 담당자', '검수 일자',
             '검수 요청 메모', '참고 사항', '접수일시',
         ];
 
@@ -120,7 +121,8 @@ class PrescriptionController extends Controller
                         $줄['reupload'] ? $줄['reupload'] . '건' : '',
                         $줄['admin_note'],
                         $줄['acc_type'], $줄['so_type'], $줄['order_no'], $줄['order_state'], $줄['so_no'],
-                        $줄['assignee'], $줄['resident_no'], $줄['uploader'], $줄['reviewed_at'],
+                        $줄['assignee'], $줄['resident_no'], $줄['nb_resident_no'],
+                        $줄['uploader'], $줄['reviewed_at'],
                         $줄['review_request_memo'], $줄['review_memo'], $줄['created'],
                     ]);
                 }
@@ -366,6 +368,15 @@ class PrescriptionController extends Controller
             ...$extras->of($order, $rx->patient_id),
             // 요청서 6쪽 — 목록에서 바로 견주는 값들
             'resident_no'  => $rx->resident_no_ocr_masked ?? $rx->patient?->masked_resident_no ?? '',
+            /* 공단이 통장에 찍는 입금자명 — 「NB + 주민번호 앞 여섯 자리」
+               (2026-10-13 · SR #171ㆍ#191). 이 화면에만 없어 담당자가 주문 관리로
+               건너가 보고 있었다. 셈하는 잣대는 다른 화면과 한 곳을 쓴다.
+
+               **건보 청구 건에만 선다.** 지자체는 기관마다 달라 정해진 규칙이 없다 —
+               (E)진춘자 님처럼 기초(의료급여) 건이 빈칸인 것은 그 때문이다. */
+            'nb_resident_no' => \App\Support\OrderGridExtras::nb주민번호(
+                                   $rx->claim_agency,
+                                   $rx->resident_no_ocr_masked ?: ($rx->patient?->masked_resident_no ?? '')),
             'uploader'     => $rx->creator?->name ?? '',
             'reviewed_at'  => $rx->reviewed_at?->format('Y-m-d H:i') ?? '',
             'review_memo'  => $rx->review_memo ?? '',

@@ -207,6 +207,21 @@ class PatientController extends Controller
         /* 처방 동의가 없는 거래처는 옮겨 담은 위임장 서명을 본다 */
         $위임서명 = $this->위임장서명들($그린것);
 
+        /* NB주민번호를 세려면 **청구처**가 있어야 한다 (2026-10-13 · SR #171ㆍ#191).
+
+           청구처는 처방전에 붙는 값이라 거래처에는 없다. 그 사람의 **가장 최근
+           처방전**의 청구처로 센다 — 자격이 바뀌지 않는 한 사람마다 하나로 정해진다
+           (기초는 지자체, 일반ㆍ차상위는 건보).
+
+           이 쪽에 선 사람만 한 번에 긁는다 — 줄마다 물으면 한 쪽에 쉰 번을 묻는다. */
+        $청구처들 = \App\Models\Prescription::query()
+            ->whereIn('patient_id', $그린것->pluck('id'))
+            ->whereNotNull('claim_agency')->where('claim_agency', '!=', '')
+            ->orderByDesc('id')
+            ->get(['patient_id', 'claim_agency'])
+            ->unique('patient_id')
+            ->keyBy('patient_id');
+
         /* 「서명여부」는 **주문 등록과 같은 잣대**로 본다 (2026-10-12 · SR #180).
 
            여태 거래처별 **최신 동의 한 줄**의 상태를 그대로 적었다. 그런데 받아 둔 뒤에
@@ -292,6 +307,11 @@ class PatientController extends Controller
                 'care_type'       => $p->care_type ?: '',
                 'name'            => $p->name,
                 'resident_no'     => $p->masked_resident_no ?? '-',
+                /* 공단이 통장에 찍는 입금자명 — 건보 청구 건에만 선다.
+                   셈하는 잣대는 다른 화면과 한 곳을 쓴다(OrderGridExtras). */
+                'nb_resident_no'  => \App\Support\OrderGridExtras::nb주민번호(
+                                         $청구처들[$p->id]->claim_agency ?? null,
+                                         $p->masked_resident_no ?? ''),
                 // 생년월일은 세 가지 표기로 나란히 둔다 — 위드웍스 표와 눈으로 맞춰 본다
                 'birth_dotted'    => $p->birth_dotted,
                 'birth_iso'       => $p->birth_iso,

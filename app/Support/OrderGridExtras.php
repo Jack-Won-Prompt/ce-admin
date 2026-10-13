@@ -201,7 +201,9 @@ class OrderGridExtras
      * 지자체와 청구처가 없는 건은 빈칸이다. 규칙이 없는데 무엇이든 적어 두면
      * 담당자가 그것과 통장을 맞추려 들고, 안 맞는 까닭도 알 수 없게 된다.
      */
-    private static function nb주민번호(?string $청구처, ?string $가린것): string
+    /* 처방전 목록ㆍ거래처 관리도 이 잣대를 그대로 쓴다 (2026-10-13 · SR #171ㆍ#191) —
+       화면마다 따로 세면 같은 사람이 화면마다 다른 값으로 선다. */
+    public static function nb주민번호(?string $청구처, ?string $가린것): string
     {
         if ($청구처 !== ClaimAgency::NHIS) {
             return '';
