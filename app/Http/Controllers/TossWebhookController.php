@@ -281,6 +281,29 @@ class TossWebhookController extends Controller
            되돌리는 판단은 여전히 담당자의 몫이다. 여기서는 토스가 준 사실만 옮겨
            적고 알린다(PaymentCancelSync). */
         if (in_array($res['status'] ?? '', ['CANCELED', 'PARTIAL_CANCELED'], true)) {
+            /* **다른 결제의 취소를 이 줄에 적지 않는다** (2026-10-13).
+
+               결제창은 누를 때마다 새 주문번호를 만들고, 가상계좌를 고르면 계좌가
+               그때마다 새로 난다. 그런데 `toss_payments` 는 한 주문에 한 줄이라, 같은
+               주문의 **다른 시도**가 취소된 알림이 이 줄에 닿는다.
+
+               그 취소액을 적으면 `Order::결제기준금액()` 이 「받은 돈 − 취소액」을
+               0 으로 읽는다 — 실제로 받은 돈이 장부에서 사라진다. 2026-10-13 에
+               두 건이 그렇게 되었다((E)임귀라ㆍ(E)김정수C, 각 81,000원).
+
+               취소는 **그 결제 줄 자신의 것**일 때만 적는다. */
+            if (($res['paymentKey'] ?? null) !== $tp->payment_key) {
+                Log::warning('[Toss] 다른 결제의 취소라 이 줄에 적지 않는다', [
+                    'order'  => $tp->order_id,
+                    '줄의키' => substr((string) $tp->payment_key, 0, 24),
+                    '온키'   => substr((string) ($res['paymentKey'] ?? ''), 0, 24),
+                ]);
+
+                return response()->json([
+                    'ok' => true, 'skipped' => '다른 결제의 취소입니다',
+                ]);
+            }
+
             $맞춤 = app(\App\Services\TossPayments\PaymentCancelSync::class)
                         ->맞추기($tp, $res, '카드 결제 취소 웹훅');
 

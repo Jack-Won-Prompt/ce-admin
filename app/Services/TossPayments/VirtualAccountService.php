@@ -228,16 +228,48 @@ class VirtualAccountService extends TossClient
     // 결제 조회
     // ─────────────────────────────────────────────────────────────
 
-    /** paymentKey로 결제 정보 조회 후 DB 갱신 */
+    /**
+     * paymentKey 로 결제 정보 조회 후 DB 갱신.
+     *
+     * **입금 시각을 오늘로 덮지 않는다** (2026-10-13).
+     *
+     * 여태 `now()` 를 적었다. 같은 결제에 웹훅이 두 번 닿거나 뒤늦게 되살리면, 실제로
+     * 돈이 들어온 날이 아니라 **마지막으로 물어본 날**이 적혔다. 그 날짜에서 급여
+     * 종료일과 다음 재구매 가능일을 세므로 그만큼 밀린다.
+     *
+     *   · 이미 적혀 있으면 그대로 둔다
+     *   · 없으면 토스가 준 승인 시각(`approvedAt`)을 쓴다 — 가상계좌는 입금 시각이다
+     *   · 그것도 없을 때만 지금을 쓴다
+     */
     public function fetchByPaymentKey(string $paymentKey): array
     {
         $data = $this->get('/v1/payments/' . urlencode($paymentKey));
 
-        TossPayment::where('payment_key', $paymentKey)->update([
-            'status'       => $data['status'],
-            'raw_response' => $data,
-            'deposited_at' => $data['status'] === 'DONE' ? now() : null,
-        ]);
+        $줄 = TossPayment::where('payment_key', $paymentKey)->first();
+
+        if ($줄) {
+            $입금 = null;
+
+            if (($data['status'] ?? '') === 'DONE') {
+                $입금 = $줄->deposited_at;
+
+                if (! $입금) {
+                    try {
+                        $입금 = filled($data['approvedAt'] ?? null)
+                            ? \Illuminate\Support\Carbon::parse($data['approvedAt'])
+                            : now();
+                    } catch (\Throwable) {
+                        $입금 = now();
+                    }
+                }
+            }
+
+            $줄->forceFill([
+                'status'       => $data['status'],
+                'raw_response' => $data,
+                'deposited_at' => $입금,
+            ])->save();
+        }
 
         return $data;
     }
