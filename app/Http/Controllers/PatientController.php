@@ -252,7 +252,7 @@ class PatientController extends Controller
             ->get(['id', 'patient_id', 'doc_type', 'signed_at'])
             ->keyBy('patient_id');
 
-        $gridData = $그린것->map(function ($p) use ($consents, $마케팅, $위임서명, $종이서명, $서명받음) {
+        $gridData = $그린것->map(function ($p) use ($consents, $마케팅, $위임서명, $종이서명, $서명받음, $청구처들) {
             // 생년월일 + 나이
             $birth = $p->birth_date
                 ? $p->birth_date->format('Y-m-d') . ' (만 ' . $p->age . '세)'
