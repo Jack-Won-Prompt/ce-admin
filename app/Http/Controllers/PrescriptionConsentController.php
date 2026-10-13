@@ -120,20 +120,43 @@ class PrescriptionConsentController extends Controller
             return response()->json(['success' => false, 'message' => '수신 번호 형식이 올바르지 않습니다.'], 422);
         }
 
+        /* **이미 등록된 거래처면 찾아서 연결한다** (2026-10-13 확인요청).
+
+           (E)이순옥 님이 그랬다 — 010-6202-2667 로 위임동의를 보냈는데, 같은 번호의
+           거래처 #2764 가 이미 있고 2021-10 부터 처방전 19장이 쌓여 있었다. 그런데도
+           거래처가 연결되지 않은 처방전이 새로 만들어져, 담당자가 서명이 들어온 뒤에
+           손으로 이어 주어야 했다.
+
+           번호는 붙임표 없이 저장된 것이 거의 전부지만(12,550곳 가운데 425곳만 붙임표)
+           둘 다 찾는다. **같은 번호를 쓰는 거래처가 둘 이상이면 연결하지 않는다** —
+           32개 번호가 그렇다(가족이 같은 번호를 적은 것으로 보인다). 누구인지 확실하지
+           않은 채로 이어 두면 엉뚱한 분의 처방전이 된다. */
+        $번호붙임 = \App\Support\PhoneNo::format($mobile);
+        $찾은것   = \App\Models\Patient::where('mobile', $mobile)
+            ->orWhere('mobile', $번호붙임)->limit(2)->get();
+        $거래처   = $찾은것->count() === 1 ? $찾은것->first() : null;
+
         $prescription = Prescription::create([
             'rx_number'        => Prescription::generateRxNumber(),
             'created_by'       => auth()->id(),
             'status'           => 'pending',
             'upload_source'    => 'web',
+            'patient_id'       => $거래처?->id,
             'patient_name_ocr' => $name,
             'mobile_ocr'       => $request->input('mobile'),
             // 이름·번호가 들어 있으니 '아무것도 없는 초안' 은 아니다.
             // true 로 두면 다음에 메뉴를 눌렀을 때 이 건이 재사용돼 덮어써진다.
             'is_blank_draft'   => false,
+            /* 위임동의를 보내려고 만든 껍데기라는 표시 (2026-10-13 확인요청).
+               이미지도 첨부도 품목도 없는 이 건이 주문 등록 목록에 「주문 없음」 줄로
+               나왔다. 서류가 올라오면 그때부터는 보통 처방전과 똑같이 다룬다 —
+               이 표시는 어디서 시작했는지를 적어 둘 뿐 지우지 않는다. */
+            'is_consent_only'  => true,
         ]);
 
         activity()->causedBy(auth()->user())->performedOn($prescription)
-            ->log("위임동의용 처방전 생성 → {$name} {$mobile}");
+            ->log("위임동의용 처방전 생성 → {$name} {$mobile}"
+                . ($거래처 ? " · 거래처 {$거래처->name}(#{$거래처->id}) 연결" : ' · 연결할 거래처 없음'));
 
         $res  = app(PrescriptionController::class)->issueConsent($prescription, $mobile, $name);
         $data = $res->getData(true);

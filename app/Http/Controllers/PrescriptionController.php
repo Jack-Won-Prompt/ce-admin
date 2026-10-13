@@ -2770,6 +2770,38 @@ class PrescriptionController extends Controller
         $것들 = Prescription::with(['patient', 'assignedUser', 'creator', 'updater', 'billingOffice'])
             ->whereDoesntHave('orders')
             ->where('is_blank_draft', false)
+            /* **상담만 적어 둔 건은 뺀다** (2026-10-13 확인요청).
+
+               주문을 만드는 쪽(OrderSync::seed)은 상담만 적어 둔 건을 2026-09-14 지시로
+               이미 빼고 있다 — 통화 한 번이 곧 한 거래는 아니기 때문이다. 그런데 보여
+               주는 이쪽은 빼지 않아, 주문으로는 넘어갈 수 없는 건이 목록에만 나왔다.
+
+               조건은 Prescription::scopeCounselOnly 를 그대로 뒤집은 것이다. 그 스코프를
+               여기서 바로 쓰지 못하는 것은, 뒤집으려면 닫힌 묶음으로 감싸야 하는데 그
+               안에서는 스코프를 부를 수 없기 때문이다. 하나라도 어긋나면 상담만인 건이
+               아니다 — 상담번호가 없거나, 처방전ㆍ병원ㆍ발행일이 적혔거나, 첨부ㆍ동의ㆍ
+               서류가 붙었으면 담당자가 손댈 것이 있는 건이다.
+
+               판매주문 조건은 여기서 보지 않는다. 이 조회는 주문이 없는 것만 모은다. */
+            ->where(fn ($q) => $q->whereNull('counsel_no')
+                                 ->orWhereNotNull('image_path')
+                                 ->orWhereNotNull('hospital_name')
+                                 ->orWhereNotNull('issued_date')
+                                 ->orWhereHas('attachments')
+                                 ->orWhereHas('consents')
+                                 ->orWhereHas('documents'))
+            /* **위임동의를 보내려고 만든 껍데기도 뺀다** (2026-10-13 확인요청).
+
+               「신규 위임동의」 화면은 이름ㆍ휴대폰만 받아 알림톡을 보내는데, 동의 기록이
+               처방전에 매달려야 해서 처방전을 한 건 만든다. 이미지도 첨부도 품목도 없는
+               그 건이 목록에 「주문 없음」 줄로 나왔다 — (E)이순옥 님 RX-20261013-020.
+
+               서류가 올라오거나 품목이 담기면 그때부터는 보여 준다. 그 뒤로는 담당자가
+               손댈 것이 생긴 것이라 보여 주는 편이 맞다. */
+            ->where(fn ($q) => $q->where('is_consent_only', false)
+                                 ->orWhereNotNull('image_path')
+                                 ->orWhereHas('attachments')
+                                 ->orWhereHas('items'))
             ->where(function ($w) use ($말, $숫자) {
                 $w->where('rx_number', 'like', "%{$말}%")
                     ->orWhere('patient_name_ocr', 'like', "%{$말}%")
@@ -5553,6 +5585,15 @@ class PrescriptionController extends Controller
                 ->log('주문등록 이동 — 주문 ' . $주문->order_number . ' 세움');
         }
 
+        /* 위드웍스에서 이미 끝난 건은 주문이 만들어지지 않는다 (2026-10-13 확인요청).
+           아무 말 없이 넘어가면 담당자는 주문이 생긴 줄 알고 주문 등록에서 찾는다. */
+        $위드웍스마감 = ! $주문 && $prescription->위드웍스마감인가();
+
+        if ($위드웍스마감) {
+            activity()->causedBy(Auth::user())->performedOn($prescription)->log(
+                '주문등록 이동 — 주문을 만들지 않았습니다. ' . $prescription->위드웍스마감글());
+        }
+
         /* 요청한 담당자에게 되돌려 알린다 — 승인됐는지도 목록을 다시 봐야 알았다 */
         app(\App\Services\ReviewNotice::class)->tellApproved($prescription->refresh());
 
@@ -5561,7 +5602,10 @@ class PrescriptionController extends Controller
 
         return response()->json([
             'success'           => true,
-            'message'           => '검수 승인 완료',
+            'message'           => $위드웍스마감
+                ? '검수 승인 완료 — 위드웍스에서 이미 판매가 끝난 건이라 주문은 만들지 않았습니다.'
+                    . ' (' . $prescription->위드웍스마감글() . ')'
+                : '검수 승인 완료',
             'status'            => $prescription->status,
             'status_label'      => $prescription->status_label,
             'status_badge'      => $prescription->status_badge,
