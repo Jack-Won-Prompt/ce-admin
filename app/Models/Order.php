@@ -565,33 +565,33 @@ class Order extends Model
     public function 지울수있나(): ?string
     {
         if ($this->items->isNotEmpty()) {
-            return '주문 제품이 담겨 있어 지울 수 없습니다. 제품을 먼저 비우십시오.';
+            return '주문 제품이 등록되어 있어 삭제할 수 없습니다. 주문 제품을 먼저 삭제해 주십시오.';
         }
 
         if (filled($this->withworks_so_no)) {
-            return '창고로 보낸 주문이라 지울 수 없습니다 — 되돌리는 일은 교환ㆍ반품ㆍ취소가 맡습니다.';
+            return '출고 처리된 주문은 삭제할 수 없습니다. 교환ㆍ반품ㆍ취소 메뉴에서 처리해 주십시오.';
         }
 
         if ($this->tossPayment) {
-            return '결제 줄이 있는 주문이라 지울 수 없습니다.';
+            return '결제 정보가 있는 주문은 삭제할 수 없습니다.';
         }
 
         if ($this->returns->isNotEmpty()) {
-            return '교환ㆍ반품ㆍ취소 접수가 있는 주문이라 지울 수 없습니다.';
+            return '교환ㆍ반품ㆍ취소가 접수된 주문은 삭제할 수 없습니다.';
         }
 
         if ($this->paymentLinks->contains(fn ($l) => (string) $l->status === 'paid')) {
-            return '결제가 끝난 주문이라 지울 수 없습니다.';
+            return '결제가 완료된 주문은 삭제할 수 없습니다.';
         }
 
         if (\Illuminate\Support\Facades\DB::table('popbill_taxinvoices')
                 ->where('order_id', $this->id)->exists()) {
-            return '세금계산서가 발행된 주문이라 지울 수 없습니다.';
+            return '세금계산서가 발행된 주문은 삭제할 수 없습니다.';
         }
 
         if (\Illuminate\Support\Facades\DB::table('cashbill_records')
                 ->where('order_id', $this->id)->exists()) {
-            return '현금영수증이 발행된 주문이라 지울 수 없습니다.';
+            return '현금영수증이 발행된 주문은 삭제할 수 없습니다.';
         }
 
         return null;

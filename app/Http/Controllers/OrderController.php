@@ -1355,20 +1355,20 @@ class OrderController extends Controller
         }
 
         activity()->causedBy(Auth::user())->performedOn($order)->log(
-            "{$order->order_number} 주문 삭제 — 주문 제품이 없는 빈 줄입니다. "
-            . '소프트 삭제라 줄은 남습니다. 되살리려면 주문 #' . $order->id . ' 을 restore 하십시오.');
+            "{$order->order_number} 주문을 삭제했습니다. 주문 제품이 등록되지 않은 주문입니다. "
+            . '삭제 후에도 데이터는 보관되며 복구할 수 있습니다 (내부 관리번호 ' . $order->id . ').');
 
         if ($prescription) {
             activity()->causedBy(Auth::user())->performedOn($prescription)->log(
-                "주문 {$order->order_number} 을 삭제했습니다 — 주문 제품이 없는 빈 줄입니다. "
-                . '다시 주문을 세우려면 주문 등록에서 제품을 담고 저장하십시오.');
+                "주문 {$order->order_number} 을(를) 삭제했습니다. 주문 제품이 등록되지 않은 주문입니다. "
+                . '주문을 다시 생성하려면 주문 등록에서 주문 제품을 등록한 뒤 저장해 주십시오.');
         }
 
         $order->delete();
 
         return response()->json([
             'success' => true,
-            'message' => $order->order_number . ' 주문을 삭제했습니다.',
+            'message' => $order->order_number . ' 주문이 삭제되었습니다.',
             'order_id' => $order->id,
         ]);
     }

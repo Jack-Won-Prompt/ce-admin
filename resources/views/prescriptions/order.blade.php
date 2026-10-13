@@ -16331,7 +16331,7 @@ window.HELP_TOUR_STEPS = [
             b.type = 'button';
             b.className = 'btn btn-outline btn-sm';
             b.textContent = '삭제';
-            b.title = '주문 제품이 없는 빈 주문입니다. 삭제해도 줄은 남으며 되살릴 수 있습니다.';
+            b.title = '주문 제품이 등록되지 않은 주문입니다. 삭제 후에도 데이터는 보관되며 복구할 수 있습니다.';
             b.style.cssText = 'padding:2px 10px;font-size:11px;color:var(--danger);border-color:var(--danger);';
             b.addEventListener('click', (e) => { e.stopPropagation(); ol빈주문지우기(row, b); });
             return b;
@@ -16357,13 +16357,11 @@ window.HELP_TOUR_STEPS = [
       const 번호 = row.order_no || ('#' + row.id);
 
       if (!await ceConfirm(
-            `${번호} 주문을 삭제하시겠습니까?
-
-`
-          + `${row.patient || ''} · 주문 제품이 없는 빈 주문입니다.
-`
-          + '삭제해도 줄은 남으며 되살릴 수 있습니다.',
-            { title: '빈 주문 삭제', confirmText: '삭제', tone: 'danger' })) {
+            `${번호} 주문을 삭제하시겠습니까?`
+          + `\n\n환자명 ${row.patient || '-'}`
+          + `\n주문 제품이 등록되지 않은 주문입니다.`
+          + `\n삭제 후에도 데이터는 보관되며 복구할 수 있습니다.`,
+            { title: '주문 삭제', confirmText: '삭제', tone: 'danger' })) {
         return;
       }
 
@@ -16381,11 +16379,11 @@ window.HELP_TOUR_STEPS = [
 
         if (!out.success) {
           btn.disabled = false;
-          ceAlert(out.message || '삭제하지 못했습니다.', { tone: 'danger' });
+          ceAlert(out.message || '주문을 삭제하지 못했습니다.', { tone: 'danger' });
           return;
         }
 
-        showToast(out.message || '삭제했습니다.', 'success');
+        showToast(out.message || '주문이 삭제되었습니다.', 'success');
 
         /* 받아 둔 줄에서 그 줄을 빼고 늘 쓰는 길로 다시 그린다.
            OL_ROWS 는 const 라 다시 넣을 수 없다 — 배열을 그 자리에서 줄인다. */
@@ -16403,7 +16401,7 @@ window.HELP_TOUR_STEPS = [
         ol쪽막대();
       } catch (e) {
         btn.disabled = false;
-        ceAlert('삭제하지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', { tone: 'danger' });
+        ceAlert('주문을 삭제하지 못했습니다. 잠시 후 다시 시도해 주십시오.', { tone: 'danger' });
       }
     }
 
