@@ -2601,6 +2601,10 @@ class PrescriptionController extends Controller
             $rx = $o->prescription;
             $d  = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('Y-m-d') : '';
 
+            /* 한 번만 셈한다 — 제품이 담긴 줄은 첫 걸음에서 돌아서므로 비싼 조회는
+               빈 줄에만 간다(Order::지울수있나). 두 번 부르면 그 조회도 두 번이다. */
+            $못지우는까닭 = $o->지울수있나();
+
             return [
             'id'        => $o->id,
             'order_no'  => $o->order_number,
@@ -2633,6 +2637,15 @@ class PrescriptionController extends Controller
             'deal_state' => $rt
                 ? (\App\Models\OrderReturn::STATUS_LABELS[$rt->status] ?? $rt->status) : '',
             'sold_at'   => $o->created_at?->format('Y-m-d') ?? '',
+            /* **지울 수 있는 빈 줄인가** (2026-10-13 지시).
+
+               주문 제품이 없는 줄은 담당자가 그 자리에서 지운다. 지울 수 있는지는
+               Order::지울수있나 하나가 정하고, 서버도 같은 것으로 막는다.
+               못 지우는 까닭은 함께 실어 단추에 적는다 — 왜 못 지우는지 눌러 보기 전에
+               알 수 있어야 한다. */
+            'item_count'  => $o->items->count(),
+            'can_delete'  => $못지우는까닭 === null,
+            'no_delete'   => $못지우는까닭 ?? '',
 
             /* ── 주문 관리 목록에만 있던 칸들 (2026-09-30 지시) ────────────────
                두 목록이 같은 항목을 세운다. 여기 없던 탓에 담당자가 같은 것을 보려고
@@ -2838,6 +2851,11 @@ class PrescriptionController extends Controller
                 /* 판매일은 주문이 선 날이다 — 아직 없으므로 비운다.
                    처방전이 언제 담겼는지는 처방 정보 칸(rx)이 들고 있다. */
                 'sold_at'        => '',
+                /* 지울 주문이 아직 없다 — 단추도 서지 않는다. 칸은 갖춘다,
+                   하나라도 빠지면 그 줄만 표에서 칸이 밀린다. */
+                'item_count'     => 0,
+                'can_delete'     => false,
+                'no_delete'      => '',
                 'url'            => route('prescriptions.show', [
                     'prescription' => $rx,
                     'claim'        => 1,

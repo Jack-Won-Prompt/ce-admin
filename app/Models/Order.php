@@ -546,6 +546,57 @@ class Order extends Model
             && $this->status !== 'cancelled';
     }
 
+    /**
+     * 이 주문을 **지워도 되는가** — 지울 수 있으면 null, 아니면 못 지우는 까닭을 돌려준다
+     * (2026-10-13 지시 「주문 제품이 없는 상태 삭제 버튼」).
+     *
+     * 지우는 것은 **소프트 삭제**다. 줄은 남고 목록에서만 빠지며, 되살릴 수 있다.
+     *
+     * 그래도 아무 줄이나 지울 수는 없다. 주문번호는 위드웍스ㆍ토스ㆍ팝빌ㆍ공단으로 나가는
+     * 대외 식별자라, 밖으로 한 번이라도 나간 건은 지우면 저쪽과 우리가 어긋난다. 그래서
+     * **아직 아무 데도 닿지 않은 빈 줄만** 지운다.
+     *
+     * 화면이 단추를 가리는 잣대와 서버가 막는 잣대가 **같은 이 자리**를 쓴다 — 두 곳에
+     * 따로 적으면 화면은 안 보여 주는데 주소로 부르면 지워지는 날이 온다.
+     *
+     * 값이 비싼 조회(세금계산서ㆍ현금영수증)는 **맨 뒤**에 둔다. 제품이 담긴 줄은 첫
+     * 걸음에서 돌아서므로, 목록 오백 줄을 그릴 때 그 조회는 빈 줄에만 간다.
+     */
+    public function 지울수있나(): ?string
+    {
+        if ($this->items->isNotEmpty()) {
+            return '주문 제품이 담겨 있어 지울 수 없습니다. 제품을 먼저 비우십시오.';
+        }
+
+        if (filled($this->withworks_so_no)) {
+            return '창고로 보낸 주문이라 지울 수 없습니다 — 되돌리는 일은 교환ㆍ반품ㆍ취소가 맡습니다.';
+        }
+
+        if ($this->tossPayment) {
+            return '결제 줄이 있는 주문이라 지울 수 없습니다.';
+        }
+
+        if ($this->returns->isNotEmpty()) {
+            return '교환ㆍ반품ㆍ취소 접수가 있는 주문이라 지울 수 없습니다.';
+        }
+
+        if ($this->paymentLinks->contains(fn ($l) => (string) $l->status === 'paid')) {
+            return '결제가 끝난 주문이라 지울 수 없습니다.';
+        }
+
+        if (\Illuminate\Support\Facades\DB::table('popbill_taxinvoices')
+                ->where('order_id', $this->id)->exists()) {
+            return '세금계산서가 발행된 주문이라 지울 수 없습니다.';
+        }
+
+        if (\Illuminate\Support\Facades\DB::table('cashbill_records')
+                ->where('order_id', $this->id)->exists()) {
+            return '현금영수증이 발행된 주문이라 지울 수 없습니다.';
+        }
+
+        return null;
+    }
+
     /** 청해 두고 기다리는 중인가 — 그 동안 다른 단추를 잠근다 */
     public function 취소기다리는중인가(): bool
     {

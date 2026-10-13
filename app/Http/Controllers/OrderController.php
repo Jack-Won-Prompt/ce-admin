@@ -1329,8 +1329,21 @@ class OrderController extends Controller
     }
 
     // ── 주문 삭제 ─────────────────────────────────────────
+    /**
+     * 주문을 **소프트 삭제**한다 — 줄은 남고 목록에서만 빠진다.
+     *
+     * **막는 잣대는 Order::지울수있나 한 곳에 있다** (2026-10-13 지시).
+     * 주문 목록의 삭제 단추도 그 값으로 가린다. 화면만 가리면 주소로 바로 불러
+     * 지울 수 있다 — 주문번호는 밖으로 나가는 식별자라 그래서는 안 된다.
+     */
     public function destroy(Order $order): \Illuminate\Http\JsonResponse
     {
+        $order->loadMissing('items', 'tossPayment', 'returns', 'paymentLinks');
+
+        if ($왜 = $order->지울수있나()) {
+            return response()->json(['success' => false, 'message' => $왜], 422);
+        }
+
         $prescription = $order->prescription;
 
         /* 처방전 상태 복원.
@@ -1341,13 +1354,23 @@ class OrderController extends Controller
             $prescription->update(['status' => 'approved']);
         }
 
-        activity()->causedBy(Auth::user())
-            ->performedOn($order)
-            ->log("{$order->order_number} 주문 삭제");
+        activity()->causedBy(Auth::user())->performedOn($order)->log(
+            "{$order->order_number} 주문 삭제 — 주문 제품이 없는 빈 줄입니다. "
+            . '소프트 삭제라 줄은 남습니다. 되살리려면 주문 #' . $order->id . ' 을 restore 하십시오.');
+
+        if ($prescription) {
+            activity()->causedBy(Auth::user())->performedOn($prescription)->log(
+                "주문 {$order->order_number} 을 삭제했습니다 — 주문 제품이 없는 빈 줄입니다. "
+                . '다시 주문을 세우려면 주문 등록에서 제품을 담고 저장하십시오.');
+        }
 
         $order->delete();
 
-        return response()->json(['success' => true, 'message' => '주문이 삭제되었습니다.']);
+        return response()->json([
+            'success' => true,
+            'message' => $order->order_number . ' 주문을 삭제했습니다.',
+            'order_id' => $order->id,
+        ]);
     }
 
 

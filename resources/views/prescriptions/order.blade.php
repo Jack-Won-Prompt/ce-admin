@@ -16304,12 +16304,108 @@ window.HELP_TOUR_STEPS = [
            마케팅 동의는 이 목록에서만 켠다 (2026-09-14 지시) — 안내 문자를 보내도
            되는 사람인지 개인정보동의 옆에서 바로 읽는다. */
         ...ceWwCols({ marketing: true, orderKind: false, rrn: false }),
+
+        /* **주문 제품이 없는 빈 줄을 그 자리에서 지운다** (2026-10-13 지시).
+
+           제품을 한 줄도 담지 않은 주문이 목록에 남는다. 유형만 고르고 그만둔 건,
+           서명만 받고 멈춘 건이 그렇다. 여태 지우려면 그 건을 열고 들어가야 했다.
+
+           **지울 수 있는 줄에만 선다.** 가리는 잣대는 서버의 Order::지울수있나 하나이고,
+           그 값(can_delete)과 까닭(no_delete)을 줄에 실어 온다. 지울 수 없는 줄에는
+           까닭을 적어 둔다 — 왜 못 지우는지 눌러 보기 전에 알 수 있어야 한다. */
+        { header: '삭제', name: 'can_delete', width: 72, align: 'center',
+          sortable: false, exportable: false,
+          renderer: (v, row) => {
+            /* 주문이 아직 없는 줄에는 지울 것이 없다 */
+            if (!row || !row.id) return document.createTextNode('');
+
+            if (!v) {
+              const s = document.createElement('span');
+              s.textContent = '-';
+              s.title = row.no_delete || '';
+              s.style.cssText = 'color:var(--text-muted);cursor:' + (row.no_delete ? 'help' : 'default') + ';';
+              return s;
+            }
+
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn btn-outline btn-sm';
+            b.textContent = '삭제';
+            b.title = '주문 제품이 없는 빈 주문입니다. 삭제해도 줄은 남으며 되살릴 수 있습니다.';
+            b.style.cssText = 'padding:2px 10px;font-size:11px;color:var(--danger);border-color:var(--danger);';
+            b.addEventListener('click', (e) => { e.stopPropagation(); ol빈주문지우기(row, b); });
+            return b;
+          } },
       ],
       data: OL_ROWS,
     });
     window.__olGrid = olGrid;
     /* 첫 쪽은 서버가 이미 실어 주었다 — 막대만 그 값으로 세운다 (2026-10-12) */
     ol쪽막대();
+
+    /**
+     * 주문 제품이 없는 빈 주문을 지운다 (2026-10-13 지시).
+     *
+     * **소프트 삭제**다 — 줄은 남고 목록에서만 빠진다. 그래도 한 번 묻는다. 주문번호는
+     * 위드웍스ㆍ토스ㆍ팝빌ㆍ공단으로 나가는 식별자라, 지운 뒤에 「그 번호가 어디 갔나」를
+     * 묻는 일이 생기기 때문이다.
+     *
+     * 지워도 되는지는 **서버가 다시 본다**(Order::지울수있나). 여기서 단추를 가리는 것은
+     * 담당자가 헛걸음하지 않도록 하는 일일 뿐이다.
+     */
+    async function ol빈주문지우기(row, btn) {
+      const 번호 = row.order_no || ('#' + row.id);
+
+      if (!await ceConfirm(
+            `${번호} 주문을 삭제하시겠습니까?
+
+`
+          + `${row.patient || ''} · 주문 제품이 없는 빈 주문입니다.
+`
+          + '삭제해도 줄은 남으며 되살릴 수 있습니다.',
+            { title: '빈 주문 삭제', confirmText: '삭제', tone: 'danger' })) {
+        return;
+      }
+
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`{{ url('orders') }}/${row.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+          },
+        });
+        const out = await res.json();
+
+        if (!out.success) {
+          btn.disabled = false;
+          ceAlert(out.message || '삭제하지 못했습니다.', { tone: 'danger' });
+          return;
+        }
+
+        showToast(out.message || '삭제했습니다.', 'success');
+
+        /* 받아 둔 줄에서 그 줄을 빼고 늘 쓰는 길로 다시 그린다.
+           OL_ROWS 는 const 라 다시 넣을 수 없다 — 배열을 그 자리에서 줄인다. */
+        const 빼기 = (arr) => {
+          const i = Array.isArray(arr) ? arr.findIndex(r => r && r.id === row.id) : -1;
+          if (i >= 0) arr.splice(i, 1);
+        };
+        빼기(OL_ROWS);
+        if (Array.isArray(OL_FOUND)) 빼기(OL_FOUND);
+
+        /* 표는 **그 자리에서** 줄만 뺀다. olFilter 를 부르면 서버에서 1쪽을 다시
+           받아 와, 보고 있던 쪽과 자리가 날아간다. */
+        olGrid.setData(olGrid.getData().filter(r => !r || r.id !== row.id));
+        OL_TOTAL = Math.max(0, OL_TOTAL - 1);
+        ol쪽막대();
+      } catch (e) {
+        btn.disabled = false;
+        ceAlert('삭제하지 못했습니다 — 잠시 뒤 다시 시도해 주십시오.', { tone: 'danger' });
+      }
+    }
 
     /* 더블클릭하면 그 건으로 간다. 적다 만 것이 있으면 switchTab 이 아니라 여기서
        물어야 한다 — 화면을 통째로 떠나는 걸음이라 되돌릴 수 없다. */
