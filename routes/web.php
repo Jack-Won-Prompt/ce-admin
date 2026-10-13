@@ -632,6 +632,9 @@ Route::middleware(['auth'])->group(function () {
         /* 엑셀은 **{order} 보다 먼저** 세운다 — 뒤에 두면 'export' 를 주문 번호로 읽는다
            (2026-10-08 · SR #80) */
         Route::get('/export',                   [OrderController::class, 'exportList'])->name('export');
+        /* 토스 에스크로 배송정보 엑셀 (2026-10-13 지시 · SR #141).
+           이것도 {order} 보다 먼저 세운다 — 뒤에 두면 주문 번호로 읽는다. */
+        Route::get('/escrow-export',            [OrderController::class, 'escrowExport'])->name('escrow-export');
         Route::get('/{order}',                  [OrderController::class, 'show'])->name('show');
         /* 처방전이 없어도 주문 등록 화면을 연다 — 「작업 대기 리스트」 더블클릭이 여기로 온다 */
         Route::get('/{order}/open',             [PrescriptionController::class, 'openFromOrder'])->name('open');

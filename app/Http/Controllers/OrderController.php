@@ -121,6 +121,45 @@ class OrderController extends Controller
         }, $파일이름, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
+    /**
+     * 토스 에스크로 배송정보 엑셀 (2026-10-13 지시 · SR #141).
+     *
+     * 에스크로 결제는 **배송정보를 등록해야 정산이 돈다.** 여태 담당자가 토스
+     * 상점관리자에서 건마다 손으로 적었다 — 2026-10-07 에 올려 준 내려받기 파일에
+     * 「배송정보 미등록」이 스물다섯 줄 쌓여 있었고, 그만큼 정산이 멈춰 있었다.
+     *
+     * **거르는 잣대는 이 화면의 검색조건 그대로다**(`목록거른것`). 보고 있는 것과
+     * 받는 것이 달라서는 안 된다 — 「엑셀 다운」이 지키는 규칙과 같다(SR #80).
+     * 그 가운데 **에스크로 결제이고 결제가 끝난 것**만 담는다(`EscrowSheet`).
+     *
+     * 차례도 화면과 같게 둔다(등록일 뒤 번호).
+     *
+     * 양식에 관한 결정은 모두 `App\Support\EscrowSheet` 안에 있다 — 토스의 빈
+     * 양식을 받으면 그 파일만 고치면 된다.
+     */
+    public function escrowExport(Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $줄들 = [];
+
+        $this->목록거른것($request)->reorder()->latest()->orderByDesc('id')
+            ->chunk(500, function ($덩어리) use (&$줄들) {
+                foreach ($덩어리 as $주문) {
+                    if ($줄 = \App\Support\EscrowSheet::줄($주문)) {
+                        $줄들[] = $줄;
+                    }
+                }
+            });
+
+        $경로 = \App\Support\XlsxWriter::한장('에스크로 배송정보',
+            \App\Support\EscrowSheet::머리글, $줄들, \App\Support\EscrowSheet::숫자칸);
+
+        return response()
+            ->download($경로, '토스_에스크로_배송정보_' . now()->format('Ymd_Hi') . '.xlsx', [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])
+            ->deleteFileAfterSend(true);
+    }
+
     private function 목록거른것(Request $request)
     {
         /* 차례는 **등록일 뒤 번호**다 (2026-10-12 정합성 검증에서 찾음).

@@ -292,6 +292,15 @@ window.HELP_TOUR_STEPS = [
          정정 건이 세 줄로 펴지는 것도 화면과 같다. --}}
     <a class="ds-btn" href="{{ route('orders.export', request()->query()) }}"
        data-no-loading title="지금 검색조건에 걸린 전부를 엑셀로 받습니다">엑셀 다운</a>
+    {{-- 토스 에스크로 배송정보 (2026-10-13 지시 · SR #141).
+
+         에스크로 결제는 배송정보를 등록해야 정산이 돈다. 지금 검색조건에 걸린 것
+         가운데 에스크로 결제이고 결제가 끝난 건을 모아, 토스 상점관리자에 올릴 수
+         있는 꼴로 내려받는다. 송장번호ㆍ발송일은 우리 출고 자료에서 채운다. --}}
+    <a class="ds-btn" href="{{ route('orders.escrow-export', request()->query()) }}"
+       data-no-loading title="에스크로 결제 건의 배송정보를 토스에 올릴 엑셀로 받습니다">
+      <i class="fa-solid fa-truck-fast"></i> 토스 에스크로 엑셀
+    </a>
     {{-- 찾는 일과 나란히 둔다. 네비바에 두었더니 탭 안에서 통째로 사라졌다.
          data-ce-tab 이 붙어 있어 지금 탭을 갈아치우지 않고 새 화면 탭으로 열린다. --}}
     <a href="{{ route('prescriptions.index') }}" class="ds-btn"
