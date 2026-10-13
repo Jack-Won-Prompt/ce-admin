@@ -391,27 +391,43 @@ class VirtualAccountService extends TossClient
              → 16:12 환자가 **먼저 받은 계좌**로 81,000원 입금 → 화면은 「입금 대기」
 
            앞 계좌를 토스에서 닫으면 그 계좌로는 넣을 수 없다. */
+        /* **받은 돈이 있는 줄은 덮지 않는다** — 결제수단을 가리지 않는다.
+
+           2026-10-13 에 이 잣대를 가상계좌 갈래 안에만 두었다. 그래서 **카드 줄은
+           그대로 덮였다** — 같은 날 저녁 점검에서 드러났다.
+
+             (E)주기철 · EUD202610011420371
+               14:02 카드로 81,000원 결제 → 세금계산서ㆍ위드웍스 확정ㆍ결제완료 안내까지 나감
+               14:32 같은 링크로 다시 들어온 **만료된 시도**가 돌아오는 화면(pay.done)을
+                     지나며 그 줄을 EXPIRED 로 덮음 → 「받은 돈 0원」
+             (E)정성만 · EUD202610131416041 도 같다(16:03 결제 → 16:32 덮임)
+
+           돌아오는 화면은 환자가 다시 눌러도 열리고, 토스 결제창은 시간이 지나면
+           만료로 돌아온다. 그때마다 이미 받은 돈이 장부에서 사라져서는 안 된다.
+
+           들어오는 쪽도 다 낸 것이면(카드로 다시 낸 일 따위) 그때는 덮는다 —
+           두 번 낸 것을 가리는 일은 DuplicatePaymentFinder 가 맡는다. */
+        if ($tp->exists && ($tp->deposited_at || (string) $tp->status === 'DONE')
+            && ($res['status'] ?? '') !== 'DONE') {
+            Log::error('[Toss] 이미 입금된 결제 줄을 덮으려 했다 — 멈춘다', [
+                'order'    => $tp->order_id,
+                '수단'     => $tp->method,
+                '있던것'   => $tp->toss_order_id,
+                '오는것'   => $res['orderId'] ?? null,
+                '오는상태' => $res['status']  ?? null,
+            ]);
+
+            self::소리내기('이미 입금된 결제 줄을 덮으려 했습니다 — 주문 '
+                . ($tp->order?->order_number ?? $tp->order_id)
+                . ' · 있던 것 ' . $tp->toss_order_id
+                . ' · 오는 것 ' . ($res['orderId'] ?? '-')
+                . ' (' . ($res['status'] ?? '-') . ')');
+
+            return $tp;
+        }
+
+        /* ── 앞 가상계좌를 닫는다 ── */
         if ($tp->exists && $새결제 && (string) $tp->method === 'VIRTUAL_ACCOUNT') {
-            /* **받은 돈이 있는 줄은 덮지 않는다.** 덮으면 들어온 돈이 장부에서 사라진다.
-               들어오는 쪽도 다 낸 것이면(카드로 다시 낸 일 따위) 그때는 덮는다 —
-               두 번 낸 것을 가리는 일은 DuplicatePaymentFinder 가 맡는다. */
-            if (($tp->deposited_at || (string) $tp->status === 'DONE')
-                && ($res['status'] ?? '') !== 'DONE') {
-                Log::error('[Toss] 이미 입금된 결제 줄을 덮으려 했다 — 멈춘다', [
-                    'order'    => $tp->order_id,
-                    '있던것'   => $tp->toss_order_id,
-                    '오는것'   => $res['orderId'] ?? null,
-                    '오는상태' => $res['status']  ?? null,
-                ]);
-
-                self::소리내기('이미 입금된 결제 줄을 덮으려 했습니다 — 주문 '
-                    . ($tp->order?->order_number ?? $tp->order_id)
-                    . ' · 있던 것 ' . $tp->toss_order_id
-                    . ' · 오는 것 ' . ($res['orderId'] ?? '-'));
-
-                return $tp;
-            }
-
             $this->가상계좌닫기($tp, '가상계좌를 다시 발급했습니다');
         }
 
@@ -425,7 +441,14 @@ class VirtualAccountService extends TossClient
             'account_number' => $va['accountNumber'] ?? null,
             'customer_name'  => $va['customerName']  ?? ($link->order?->patient?->name),
             'due_date'       => $va['dueDate']       ?? null,
-            'deposited_at'   => $va ? null : now(),
+            /* **다 냈을 때만 입금 시각을 적는다** (2026-10-13 저녁 점검에서 드러남).
+
+               여태 가상계좌가 아니면 상태를 보지 않고 `now()` 를 적었다. 그래서 만료ㆍ
+               실패로 돌아온 시도에도 입금 시각이 찍혀, 정산 화면이 「입금 2026-10-13
+               18:30」이라 적는데 상태는 만료인 줄이 생겼다. */
+            'deposited_at'   => ($va || ($res['status'] ?? 'DONE') !== 'DONE')
+                                ? ($va ? null : $tp->deposited_at)
+                                : ($tp->deposited_at ?? now()),
             'raw_response'   => $res,
             'deleted_at'     => null,
         ] + ($새결제 ? [
