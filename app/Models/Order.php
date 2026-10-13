@@ -154,6 +154,150 @@ class Order extends Model
         return $전체;
     }
 
+    /**
+     * 환자에게 적어 보낼 배송지 한 줄.
+     *
+     * `shipping_address` 에는 기본주소와 상세주소를 합쳐 담는다. 그런데 거래처
+     * 주소 줄의 `address` 가 이미 「…2204호((E)이름 전화)」 꼴로 상세까지 품은
+     * 것이 있어, 저장할 때 상세가 한 벌 더 붙었다 — 운영 277건 가운데 191건이
+     * 그랬다(2026-10-13 확인). 환자가 받은 글은 이랬다:
+     *
+     *   2. 주소: 인천 … 2204호((E)최상은 010-3061-3623) (E)최상은 010-3061-3623
+     *
+     * 이미 그렇게 담긴 값을 되돌릴 수는 없으므로 — 거래처 주소는 이관분이라
+     * 손대지 않는다 — **적어 보낼 때** 한 벌로 줄인다.
+     *
+     * 「(E)」도 함께 뗀다. 우리끼리 쓰는 사업부 표시라 환자에게 갈 것이 아니다
+     * (2026-09-27 지시). 결제 링크 문자 308통 가운데 212통에 그대로 실려 갔다.
+     */
+    public function 배송지한줄(): string
+    {
+        $주소 = trim((string) ($this->shipping_address ?? ''));
+        $상세 = trim((string) ($this->shipping_address_detail ?? ''));
+
+        /* 이어 붙지 않은 옛 건에만 덧댄다 — 이미 품고 있으면 그대로 둔다 */
+        if ($상세 !== '' && $주소 !== '' && ! str_contains($주소, $상세)) {
+            $주소 = trim($주소 . ' ' . $상세);
+        }
+
+        /* 두 번째부터를 뒤에서 걷어 낸다. 앞의 것을 남기는 까닭은 「…2204호(…)」
+           처럼 괄호 안에 든 쪽이 먼저 오고, 뒤에 덧댄 쪽이 떼어도 글이 멀쩡하기
+           때문이다. */
+        while ($상세 !== '' && mb_substr_count($주소, $상세) > 1) {
+            $자리 = mb_strrpos($주소, $상세);
+
+            if ($자리 === false) {
+                break;
+            }
+
+            $주소 = trim(mb_substr($주소, 0, $자리) . mb_substr($주소, $자리 + mb_strlen($상세)));
+        }
+
+        /* 상세를 떼고 괄호만 남은 자리 — 「…2204호()」 */
+        $주소 = (string) preg_replace('/\(\s*\)/u', '', $주소);
+
+        /* 「(E)」는 우리 표시다 */
+        $주소 = str_replace('(E)', '', $주소);
+
+        return trim((string) preg_replace('/\s{2,}/u', ' ', $주소));
+    }
+
+    /**
+     * 환자에게 적어 보낼 「주문사항」 — 품목 줄마다 코드ㆍ이름ㆍ수량을 적는다.
+     *
+     * 여태는 `orders` 의 요약 칸 셋(`product_code`ㆍ`product_name`ㆍ`quantity`)을
+     * 그대로 꺼내 썼다. 그런데 **품목이 여럿이면 앞의 둘은 첫 품목이고 `quantity`
+     * 는 합계**라, 코드와 수량이 어긋난 글이 나갔다 (2026-10-13 (E)최상은 건):
+     *
+     *   받은 글  1. 주문사항: 5372, EasiCath … 20cm - White, 470개
+     *   참 값    5372, EasiCath … 20cm - White, 350개 / 28582, SpeediCath …, 120개
+     *
+     * 운영에서 품목이 둘 이상인 주문 24건 가운데 21건에 틀린 글이 289통 나갔다.
+     *
+     * **승인된 문구는 한 글자도 고칠 수 없다.** 알림톡 본문은 팝빌이 승인 본문과
+     * 견주어 받으므로 「#{제품번호},#{제품명}, #{주문수량}개」라는 자리와 사이의
+     * 글자를 그대로 두어야 한다. 그래서 변수를 늘리는 대신 **셋에 나누어 담는다** —
+     * 다 이었을 때 아래 글이 되도록 가른다.
+     *
+     *   코드1,이름1, 수량1개 / 코드2,이름2, 수량2개
+     *
+     * 곧 #{제품번호}=코드1, #{주문수량}=마지막 수량, 가운데 전부가 #{제품명} 이다.
+     * 품목이 하나면 가르기 전과 똑같은 값이 나온다.
+     *
+     * 이어 붙여 본 것이 원래 글과 한 글자라도 다르면 요약 칸으로 되돌린다 —
+     * 어긋난 글을 보내는 것보다 여태 보내던 글이 낫다.
+     *
+     * @return array{'#{제품번호}': string, '#{제품명}': string, '#{주문수량}': string}
+     */
+    public function 주문사항칸들(): array
+    {
+        $요약 = [
+            '#{제품번호}' => (string) ($this->product_code ?? ''),
+            '#{제품명}'   => (string) ($this->product_name ?? ''),
+            '#{주문수량}' => (string) ((int) ($this->quantity ?? 0)),
+        ];
+
+        /* 품목 줄은 sort_order 차례다(관계가 그렇게 정해 둔다) — 화면에 선 차례와
+           같아야 담당자가 글을 되짚을 수 있다. */
+        $줄들 = ($this->relationLoaded('items') ? $this->items : $this->items()->get())
+            ->filter(fn ($i) => trim((string) $i->product_code) !== ''
+                             || trim((string) $i->product_name) !== '')
+            ->values();
+
+        /* 품목 줄이 없는 옛 건 — 2026-08-28 앞의 57건은 줄을 세우지 않았다 */
+        if ($줄들->count() < 2) {
+            return $요약;
+        }
+
+        $조각들 = $줄들->map(fn ($i) => trim((string) $i->product_code) . ','
+                                     . trim((string) $i->product_name) . ', '
+                                     . (int) $i->quantity . '개')->all();
+
+        $전체 = implode(' / ', $조각들);
+        $앞   = trim((string) $줄들->first()->product_code) . ',';
+        $뒤   = ', ' . (int) $줄들->last()->quantity . '개';
+
+        if (! str_starts_with($전체, $앞) || ! str_ends_with($전체, $뒤)) {
+            return $요약;
+        }
+
+        $가운데 = mb_substr($전체, mb_strlen($앞),
+                           mb_strlen($전체) - mb_strlen($앞) - mb_strlen($뒤));
+
+        $나눈것 = [
+            '#{제품번호}' => trim((string) $줄들->first()->product_code),
+            '#{제품명}'   => $가운데,
+            '#{주문수량}' => (string) ((int) $줄들->last()->quantity),
+        ];
+
+        /* 다시 이어 붙여 본다 — 틀리면 쓰지 않는다 */
+        $이은것 = $나눈것['#{제품번호}'] . ',' . $나눈것['#{제품명}'] . ', '
+                . $나눈것['#{주문수량}'] . '개';
+
+        return $이은것 === $전체 ? $나눈것 : $요약;
+    }
+
+    /**
+     * 「주문하신 상품」 한 마디 — 품목이 여럿이면 외 몇 건인지 적는다.
+     *
+     * 글머리의 「○○ 결제 안내입니다」 자리에 선다. 품목 전부를 늘어놓을 자리가
+     * 아니므로 첫 것만 적고 나머지는 세어 준다.
+     */
+    public function 상품한마디(): string
+    {
+        $줄들 = ($this->relationLoaded('items') ? $this->items : $this->items()->get())
+            ->filter(fn ($i) => trim((string) $i->product_name) !== '')
+            ->values();
+
+        if ($줄들->isEmpty()) {
+            return (string) ($this->product_name ?: '주문');
+        }
+
+        $첫 = trim((string) $줄들->first()->product_name);
+
+        return $줄들->count() > 1 ? $첫 . ' 외 ' . ($줄들->count() - 1) . '건' : $첫;
+    }
+
 
     /**
      * 정정해 놓고 **고객의 재결제를 기다리는 중**인가 (2026-09-25 지시).

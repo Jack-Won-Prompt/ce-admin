@@ -117,16 +117,12 @@ class PaymentLinkService
      * `shipping_address` 에는 저장할 때 상세주소까지 합쳐 담는다. 그런데 이어 붙지
      * 않은 옛 건이 있어 상세주소 칸을 따로 본다 — 이미 들어 있으면 덧대지 않는다.
      */
+    /* 규칙은 `Order::배송지한줄()` 한 곳에 둔다 — 알림톡도 같은 줄을 적는다.
+       여기에만 두었더니 알림톡의 「2. 주소:」 는 상세가 두 번 적힌 채 나갔다
+       (2026-10-13 확인). */
     private static function 주소한줄(Order $order): string
     {
-        $주소   = trim((string) ($order->shipping_address ?? ''));
-        $상세   = trim((string) ($order->shipping_address_detail ?? ''));
-
-        if ($상세 === '' || $주소 === '' || str_contains($주소, $상세)) {
-            return $주소;
-        }
-
-        return trim($주소 . ' ' . $상세);
+        return $order->배송지한줄();
     }
 
     /** 채널 이름 — 화면과 이력에 같은 말로 적는다 */
@@ -142,7 +138,9 @@ class PaymentLinkService
         /* 환자가 받는 글에 서는 이름 — 동명이인 꼬리까지 뗀다 (2026-10-06 · SR #102) */
         $name   = \App\Models\Patient::실명($order->patient?->name) ?: '고객';
         $amount = number_format($link->amount);
-        $item   = $order->product_name ?: '주문';
+        /* 품목이 여럿이면 「… 외 1건」으로 적는다 — 첫 것만 적으면 환자가
+           나머지를 빠뜨린 줄 안다 (2026-10-13) */
+        $item   = $order->상품한마디();
 
         /* 정정으로 다시 내는 건이면 **먼저 물린 돈을 한 줄로 알린다** (2026-09-25 지시).
 
@@ -210,9 +208,10 @@ class PaymentLinkService
         return \App\Models\MessageTemplate::문구(self::유형_링크, [
             '#{회사}' => $this->company(), '#{고객명}' => $name, '#{이름}' => $name,
             '#{제품}' => $item,
-            '#{제품번호}' => (string) ($order->product_code ?? ''),
-            '#{제품명}' => (string) ($order->product_name ?? ''),
-            '#{주문수량}' => (string) ((int) ($order->quantity ?? 0)),
+            /* 「1. 주문사항: #{제품번호},#{제품명}, #{주문수량}개」 — 품목이 여럿이면
+               요약 칸으로는 **첫 품목 코드에 합계 수량**이 붙는다. 품목 줄에서 짓는다
+               (2026-10-13 (E)최상은 건 · Order::주문사항칸들). */
+            ...$order->주문사항칸들(),
             /* 배송지 칸에는 **이미 상세주소까지 담겨 있다** — 저장할 때 합쳐 넣는다.
                여기서 또 이으면 「…배재정동빌딩 B동 10층 배재정동빌딩 B동 10층」처럼
                두 번 적힌다(2026-09-30 확인). 상세주소는 이어 붙지 않은 옛 건에만

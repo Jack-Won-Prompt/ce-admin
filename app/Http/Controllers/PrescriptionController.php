@@ -5598,6 +5598,14 @@ class PrescriptionController extends Controller
         $order = $prescription->order;
         $tp    = $order?->tossPayment;
 
+        /* 「주문사항: #{제품번호},#{제품명}, #{주문수량}개」 — 품목이 여럿이면 주문의
+           요약 칸으로는 **첫 품목 코드에 합계 수량**이 붙는다. 품목 줄에서 짓는다
+           (2026-10-13 (E)최상은 건 · Order::주문사항칸들).
+
+           승인 본문은 한 글자도 고칠 수 없으므로 자리를 늘리지 않고 셋에 나누어
+           담는다 — 다 이으면 「코드1,이름1, 수량1개 / 코드2,이름2, 수량2개」가 된다. */
+        $품목 = $order ? $order->주문사항칸들() : [];
+
         $params = [
             /* 「(E)」는 우리끼리 쓰는 표시다 — 알림톡 본문과 수신자명(rcvnm)에 그대로
                실려 환자에게 갔다 (2026-09-27 지시로 고침) */
@@ -5605,7 +5613,9 @@ class PrescriptionController extends Controller
                               ?: (\App\Models\Patient::실명($prescription->patient_name_ocr) ?: '고객'),
             '#{처방번호}'  => $prescription->rx_number,
             '#{주문번호}'  => $order?->order_number ?? '-',
-            '#{제품명}'    => $order?->product_name ?? $prescription->rx_number,
+            '#{제품명}'    => ($품목['#{제품명}'] ?? '') !== ''
+                              ? $품목['#{제품명}']
+                              : ($order?->product_name ?? $prescription->rx_number),
             // 배송비는 없다(2026-09-03 확정) — 받을 돈은 본인부담금 그대로다
             '#{금액}'      => $order ? number_format($order->expectedDeposit()) : '-',
             '#{본인부담금}'=> $order ? number_format($order->patient_copay ?? 0) : '-',
@@ -5639,9 +5649,11 @@ class PrescriptionController extends Controller
             '#{재구매 가능일}' => self::날짜글($prescription->repurchase_date
                                    ?: $prescription->next_repurchase),
             '#{송장번호}'      => (string) ($order?->tracking_number ?? ''),
-            '#{주소}'          => (string) ($order?->shipping_address ?? ''),
-            '#{제품번호}'      => (string) ($order?->product_code ?: ($prescription->product_code ?: '')),
-            '#{주문수량}'      => (string) ($order?->quantity ?: $prescription->quantity ?: ''),
+            /* 상세주소가 두 번 적히고 「(E)」가 섞여 나갔다 — 규칙은 한 곳에 둔다
+               (2026-10-13 · Order::배송지한줄) */
+            '#{주소}'          => (string) ($order?->배송지한줄() ?? ''),
+            '#{제품번호}'      => (string) (($품목['#{제품번호}'] ?? '') ?: ($prescription->product_code ?: '')),
+            '#{주문수량}'      => (string) (($품목['#{주문수량}'] ?? '') ?: ($prescription->quantity ?: '')),
         ], fn ($값) => trim((string) $값) !== '');
 
         /* 뜻이 템플릿마다 갈리는 변수 — 팝빌 템플릿 코드로 정한다.

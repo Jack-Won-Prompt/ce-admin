@@ -12211,8 +12211,14 @@ window.HELP_TOUR_STEPS = [
        들어가 있었다. */
     const shippingBase   = document.getElementById('shippingAddr')?.value?.trim() || '';
     const shippingDetail = document.getElementById('shippingAddrDetail')?.value?.trim() || '';
+    /* 기본주소가 이미 상세를 품고 있으면 덧대지 않는다 (2026-10-13).
+
+       거래처 주소 줄의 `address` 가 「…2204호((E)이름 전화)」 꼴로 상세까지 품은
+       것이 있어 — 이관분이 그렇다 — 그대로 이으면 상세가 한 벌 더 붙었다. 환자가
+       받은 글이 「…2204호((E)최상은 010-…) (E)최상은 010-…」였다. */
     const shippingAddress = shippingBase
-      ? (shippingDetail ? shippingBase + ' ' + shippingDetail : shippingBase)
+      ? ((shippingDetail && !shippingBase.includes(shippingDetail))
+          ? shippingBase + ' ' + shippingDetail : shippingBase)
       : null;
 
     const shippingRecipient = document.getElementById('shippingRecipient')?.value?.trim() || null;
@@ -12817,8 +12823,14 @@ window.HELP_TOUR_STEPS = [
        들어가 있었다. */
     const shippingBase   = document.getElementById('shippingAddr')?.value?.trim() || '';
     const shippingDetail = document.getElementById('shippingAddrDetail')?.value?.trim() || '';
+    /* 기본주소가 이미 상세를 품고 있으면 덧대지 않는다 (2026-10-13).
+
+       거래처 주소 줄의 `address` 가 「…2204호((E)이름 전화)」 꼴로 상세까지 품은
+       것이 있어 — 이관분이 그렇다 — 그대로 이으면 상세가 한 벌 더 붙었다. 환자가
+       받은 글이 「…2204호((E)최상은 010-…) (E)최상은 010-…」였다. */
     const shippingAddress = shippingBase
-      ? (shippingDetail ? shippingBase + ' ' + shippingDetail : shippingBase)
+      ? ((shippingDetail && !shippingBase.includes(shippingDetail))
+          ? shippingBase + ' ' + shippingDetail : shippingBase)
       : null;
 
     const shippingRecipient = document.getElementById('shippingRecipient')?.value?.trim() || null;
@@ -13091,7 +13103,10 @@ window.HELP_TOUR_STEPS = [
       const res = await apiRequest(`/orders/${existingOrder.id}`, 'PUT', {
         items:              items.filter(i => i.product_name),
         shipping_postcode:  document.getElementById('shippingPostcode')?.value?.trim() || null,
-        shipping_address:   base ? (detail ? base + ' ' + detail : base) : null,
+        /* 기본주소가 이미 상세를 품고 있으면 덧대지 않는다 (2026-10-13) */
+        shipping_address:   base
+                              ? ((detail && !base.includes(detail)) ? base + ' ' + detail : base)
+                              : null,
         shipping_address_detail: detail || null,
         shipping_recipient: document.getElementById('shippingRecipient')?.value?.trim() || null,
         so_type:            currentSoType,
