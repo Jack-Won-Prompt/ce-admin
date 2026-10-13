@@ -16090,6 +16090,16 @@ window.HELP_TOUR_STEPS = [
   let   OL_PAGE  = 1;
   let   OL_LAST  = {{ (int) $orderListLast }};
   let   OL_TOTAL = {{ (int) $orderListTotal }};
+  /* 그 가운데 **주문이 아직 없는 처방전**이 몇 줄인가 (2026-10-13 지시).
+
+     찾는 말로 조회하면 서버가 주문 없는 처방전까지 함께 세운다(orderListSearch ·
+     2026-09-29 지시 — 「이 사람 건이 지금 어떻게 되어 있나」를 찾는 자리라 주문 전인
+     것이야말로 손댈 것이다). 그 줄은 주문번호와 주문 등록일이 비어 있고 「진행 상태」만
+     「주문 없음」이라 적는다.
+
+     그런데 건수는 한 덩어리로 「6건」이라고만 적어, 빈 칸이 왜 빈지 세어 보기 전에는
+     알 수 없었다. 몇 줄이 주문 전인지 함께 적는다. */
+  let   OL_RX_TOTAL = 0;
   const OL_OPTS  = @json($orderListOpts);
   const OL_PAGE_URL = @json(route('prescriptions.orderList.page'));
   let   olGrid  = null;
@@ -16638,7 +16648,15 @@ window.HELP_TOUR_STEPS = [
   function ol쪽막대() {
     const bar = document.getElementById('olPager');
     const cnt = document.getElementById('olCount');
-    if (cnt) cnt.textContent = OL_TOTAL.toLocaleString() + '건';
+    if (cnt) {
+      cnt.textContent = OL_RX_TOTAL > 0
+        ? `${OL_TOTAL.toLocaleString()}건 (주문 ${(OL_TOTAL - OL_RX_TOTAL).toLocaleString()} · 주문 전 ${OL_RX_TOTAL.toLocaleString()})`
+        : OL_TOTAL.toLocaleString() + '건';
+      cnt.title = OL_RX_TOTAL > 0
+        ? '「주문 전」은 아직 주문 줄이 서지 않은 처방전입니다 — 주문번호와 주문 등록일이 비어 있고 진행 상태가 「주문 없음」입니다.'
+            + ' 처방전 목록에서 「주문등록 이동」을 누르면 그 자리에서 주문번호가 납니다.'
+        : '';
+    }
     if (!bar) return;
 
     bar.style.display = OL_LAST > 1 ? 'flex' : 'none';
@@ -16667,6 +16685,8 @@ window.HELP_TOUR_STEPS = [
     if (OL_FOUND) {
       const rows = ol찾은것거르기(OL_FOUND);
       OL_TOTAL = rows.length;
+      /* 주문 전 줄은 주문번호가 비어 있다 — 서버가 그렇게 세운다 */
+      OL_RX_TOTAL = rows.filter(r => !(r.order_no ?? '')).length;
       OL_LAST  = Math.max(1, Math.ceil(rows.length / 한쪽));
       OL_PAGE  = Math.min(Math.max(1, 쪽), OL_LAST);
       olGrid.rowNumberStart = (OL_PAGE - 1) * 한쪽;
@@ -16689,6 +16709,8 @@ window.HELP_TOUR_STEPS = [
       OL_PAGE  = out.page;
       OL_LAST  = out.last_page;
       OL_TOTAL = out.total;
+      /* 이 길은 주문에서 세우므로 주문 전 줄이 없다 (작업대기질의) */
+      OL_RX_TOTAL = 0;
       olGrid.rowNumberStart = (OL_PAGE - 1) * out.per;
       olGrid.setData(out.rows || []);
       ol쪽막대();
