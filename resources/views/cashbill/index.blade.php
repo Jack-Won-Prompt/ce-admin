@@ -934,13 +934,38 @@ function renderHistPage(page) {
      펴 준다 — 그대로 세우면 정렬은 되지만 눈으로 훑을 수가 없다. */
   const ymd  = (v) => String(v ?? '').replace(/^(\d{4})(\d{2})(\d{2}).*$/, '$1-$2-$3');
   const ymdt = (v) => String(v ?? '').replace(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1-$2-$3 $4:$5');
-  const STATE = { 1:'등록', 2:'발행예정', 3:'발행완료', 4:'발행취소', 5:'발행실패', 6:'폐기' };
+  /* 현금영수증 상태코드는 **세 자리**다 (2026-10-13 확인).
+
+     여태 한 자리 표(1~6)를 쓰고 있어 팝빌 줄의 「상태」 칸이 **늘 비어** 있었다.
+     운영 137줄에서 실제로 선 값은 둘뿐이다 — 300 발행완료(국세청 전송 전) ·
+     304 전송까지 끝남(123줄 모두 「정상승인」을 받았다).
+
+     그 밖의 코드는 **지어내지 않고** 코드 그대로 적는다. 모르는 값에 이름을 붙이면
+     담당자가 그 이름을 믿는다. */
+  const STATE = { 300:'발행완료', 304:'발행완료(전송)' };
 
   const rows = slice.map(r => {
     const tradeDt = ymdt(r.tradeDT ?? r.issueDT ?? '');
+    /* 국세청 전송 — **팝빌은 현금영수증에 `ntsresult` 를 주지 않는다** (2026-10-13 확인).
+
+       늘 null 이라 여태 `?? '0'` 에 걸려 **전부 「전송전」**이라 적었다. 운영 137줄 가운데
+       123줄은 이미 전송이 끝나 「정상승인」을 받은 것들이다.
+
+       팝빌이 실제로 주는 칸은 셋이다 —
+
+         ntsresultCode  '0000' 이면 정상승인, 그 밖이면 실패(까닭은 ntsresultMessage)
+         ntssendDT      국세청으로 보낸 때
+         (상태코드도 따라 바뀐다 — 300 발행완료 · 304 전송까지 끝남)
+
+       모르면 「전송전」이라 **단정하지 않는다** — 보낸 자취가 없을 때만 전송전이다. */
     const ntsTxt  = r._source === 'card'  ? '해당 없음'
                   : r._source === 'order' ? '처방전 발행'
-                  : ({ '0':'전송전','1':'전송중','2':'성공','3':'실패' }[String(r.ntsresult??'0')] ?? '—');
+                  : (() => {
+                      const 코드 = String(r.ntsresultCode ?? '').trim();
+                      if (코드 === '0000') return '성공';
+                      if (코드 !== '')     return '실패';
+                      return String(r.ntsSendDT ?? '').trim() !== '' ? '전송중' : '전송전';
+                    })();
     /* 취소는 금액을 마이너스로 세운다(요청서 6쪽). 팝빌은 취소 건도 양수로 주므로
        여기서 부호를 뒤집는다 — 그래야 합계가 이 기간에 남은 금액이 된다. */
     const isCancel = String(r.tradeType ?? '').includes('취소') || r.status === 'cancelled';
@@ -956,9 +981,17 @@ function renderHistPage(page) {
        팝빌에서 직접 발행해 이을 주문이 없는 줄은 팝빌 관리번호가 선다. 비우면 그
        줄을 목록에서 무엇으로도 가리킬 수 없다 — 같은 값이 아래 「연동관리번호」
        열에도 있지만 그 열은 멀리 있어 훑을 때 눈에 들어오지 않는다. */
-    const num     = r._source === 'order'
-      ? (r.orderNumber ?? '—')
-      : (r.mgtKey ?? '—');
+    /* 주문번호가 있으면 **어느 갈래든 그것을 세운다** (2026-10-13 지시).
+
+       여태 팝빌 줄은 늘 팝빌 관리번호(CR…)를 세웠다. 그런데 우리가 낸 건은 발행할 때
+       주문번호를 함께 보내 두므로(`orderNumber`) 팝빌 줄에도 그 값이 있다 — 운영
+       137줄 모두 차 있었다. 그래서 담당자 눈에는 주문등록의 주문번호와 **다른 번호가
+       붙은 줄**로 보였다((E)한동숙 · EUD202610021213221 인데 CR20261007000151 로 섰다).
+
+       위 주석이 말하던 「이을 주문이 없는 줄은 관리번호가 선다」는 본디 이 뜻이다 —
+       있으면 주문번호, 없을 때만 관리번호. */
+    const num     = (r.orderNumber ?? '') !== '' ? r.orderNumber
+                  : (r.mgtKey ?? '—');
     const source  = r.status === 'pending' ? '대기'
                   : r._source === 'card'  ? '카드'
                   : r._source === 'order' ? '처방전' : '팝빌';
@@ -993,7 +1026,9 @@ function renderHistPage(page) {
          카드 줄은 제 걸음 이름(발송ㆍ승인ㆍ환불ㆍ취소)을 그대로 세운다. */
       stateLabel:  r.status === 'pending' ? (r.payReady === false ? '입금 대기' : '발행 대기')
                    : (r._source === 'card' ? (r.stateLabel ?? r.status ?? '')
-                   : (STATE[Number(r.stateCode)] ?? (r._source === 'order' ? (isCancel ? '발행취소' : '발행완료') : ''))),
+                   : (STATE[Number(r.stateCode)]
+                      ?? (r._source === 'order' ? (isCancel ? '발행취소' : '발행완료')
+                                                : (r.stateCode ? '코드 ' + r.stateCode : '')))),
       stateMemo:   r.stateMemo ?? '',
       ntsMessage:  r.ntsresultMessage ?? '',
       ntsSendDt:   ymdt(r.ntsSendDT ?? ''),

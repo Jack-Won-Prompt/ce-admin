@@ -388,7 +388,22 @@ class CashbillController extends Controller
             return $e->method === \App\Models\PaymentLink::METHOD_CARD;
         }
 
-        return $주문->payMethod() === \App\Models\PaymentLink::METHOD_CARD;
+        /* **카드 승인 자료가 있는가**로 가린다 (2026-10-13 지시).
+
+           여태 `Order::payMethod()` 로 가렸다. 그 값은 토스가 알려 준 유형인데,
+           **간편결제를 머니로 낸 건도 토스는 CARD 로 승인한다** — 카카오페이 머니가
+           그렇다. 그 건은 카드 승인 자료(`card`)가 없어 카드매출전표를 그릴 수 없고,
+           그래서 **현금영수증이 증빙**이다(2026-10-07 · SR #89 로 그렇게 정했다).
+
+           그런데 이 자리만 수단으로 가려, 현금영수증이 난 그 건이 **카드 줄로도 서서
+           한 건이 두 줄**로 보였다 — 운영에서 9건이 그랬다(2026-10-13 확인).
+
+           증빙을 가르는 자리(`CardSalesSlip::applies`)와 **같은 것**을 본다. 다만
+           그 쪽은 주문마다 표를 다시 읽으므로, 여기서는 미리 담아 둔 결제 줄을 본다
+           — 한 주문에 한 줄이라 같은 값이 나온다. */
+        $원본 = $주문->tossPayment?->raw_response;
+
+        return is_array($원본) && ! empty($원본['card']);
     }
 
     public function orderReceipts(Request $request): JsonResponse
