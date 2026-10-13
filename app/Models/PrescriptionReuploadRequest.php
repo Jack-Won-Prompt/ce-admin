@@ -18,7 +18,7 @@ class PrescriptionReuploadRequest extends Model
         'reason', 'memo',
         'requested_by', 'requested_by_name', 'requested_at',
         'target_user_id', 'target_user_name',
-        'fcm_sent', 'fcm_error',
+        'fcm_sent', 'fcm_error', 'web_sent',
         'resolved_at', 'resolved_attachment_id',
     ];
 
@@ -26,6 +26,7 @@ class PrescriptionReuploadRequest extends Model
         'requested_at' => 'datetime',
         'resolved_at'  => 'datetime',
         'fcm_sent'     => 'boolean',
+        'web_sent'     => 'boolean',
     ];
 
     /** 고를 수 있는 까닭. 앞의 둘이 실제로 겪는 일이고, etc 는 그 밖을 적는 자리다. */

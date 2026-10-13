@@ -5393,7 +5393,10 @@ class PrescriptionController extends Controller
             'by'        => $r->requested_by_name,
             'at'        => $r->requested_at?->format('Y-m-d H:i'),
             'to'        => $r->target_user_name,
-            'sent'      => (bool) $r->fcm_sent,
+            /* 앱으로 갔든 화면으로 갔든 「알렸다」다 (2026-10-13 · SR #175).
+               여태 앱만 보아, 화면으로 알린 것도 「알림 못 감」으로 섰다. */
+            'sent'      => (bool) ($r->fcm_sent || $r->web_sent),
+            'how'       => $r->fcm_sent ? '앱' : ($r->web_sent ? '화면' : null),
             'error'     => $r->fcm_error,
             'resolved'  => $r->resolved_at?->format('Y-m-d H:i'),
         ])->values();
@@ -5486,10 +5489,13 @@ class PrescriptionController extends Controller
 
         return response()->json([
             'success'      => true,
+            /* 앱ㆍ화면 어느 쪽으로든 갔으면 갔다고 말한다 (2026-10-13 · SR #175) */
             'message'      => $요청->fcm_sent
                 ? ($요청->target_user_name . '님 앱으로 전송했습니다.')
-                : ('요청을 남겼습니다 — ' . ($요청->fcm_error ?: '앱 알림은 가지 않았습니다.')),
-            'sent'         => $요청->fcm_sent,
+                : ($요청->web_sent
+                    ? ($요청->target_user_name . '님 화면으로 알렸습니다.')
+                    : ('요청을 남겼습니다 — ' . ($요청->fcm_error ?: '알림은 가지 않았습니다.'))),
+            'sent'         => (bool) ($요청->fcm_sent || $요청->web_sent),
             'status'       => $prescription->fresh()->status,
             'status_label' => $prescription->fresh()->status_label,
         ]);

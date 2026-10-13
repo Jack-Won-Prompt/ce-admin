@@ -81,6 +81,35 @@ class ReuploadRequestService
     }
 
     /**
+     * 받는 사람의 화면에 띄운다 (2026-10-13 · SR #175).
+     *
+     * Pusher 로 그 사람에게만 간다. 앱 토큰이 없어도 웹을 켜 두었으면 바로 본다.
+     */
+    private function 화면으로알리기(
+        PrescriptionReuploadRequest $요청,
+        Prescription $처방전,
+        User $받는이,
+        string $환자,
+    ): void {
+        try {
+            event(new \App\Events\WithworksStatusChanged(
+                event: 'rx.reupload',
+                title: '자료 다시 올리기 요청',
+                body:  $환자 . ' · ' . $요청->doc_label . ' — ' . $요청->사유말(),
+                url:   route('prescriptions.index', ['search' => $처방전->rx_number]),
+                tone:  'warning',
+                userId: $받는이->id,
+            ));
+
+            $요청->update(['web_sent' => true]);
+        } catch (\Throwable $e) {
+            Log::warning('[자료 재요청] 화면 알림 실패', [
+                'id' => $요청->id, 'error' => mb_substr($e->getMessage(), 0, 200),
+            ]);
+        }
+    }
+
+    /**
      * 새 자료가 올라오면 그 서류를 물었던 요청을 닫는다.
      *
      * 사람이 손으로 닫게 하면 닫히지 않는다 — 올린 사람은 다시 올렸으니 끝났다고
@@ -148,6 +177,20 @@ class ReuploadRequestService
         }
 
         $환자 = $처방전->patient?->name ?: $처방전->patient_name_ocr ?: $처방전->rx_number;
+
+        /* **화면으로도 알린다** (2026-10-13 지시 · SR #175).
+
+           여태 알리는 길이 앱 푸시 하나였다. 그런데 요청을 받는 담당자들은 앱 토큰이
+           없다 — 운영의 요청 29건이 **모두** 「앱 알림 토큰이 없습니다」로 남았고,
+           사용자 25명 가운데 토큰이 있는 사람은 둘뿐이다. 담당자는 웹으로 일한다.
+           그래서 요청을 걸어도 받는 사람은 끝내 알지 못했다.
+
+           창고 소식이 도는 길을 그대로 쓴다 — 받는 사람 한 명에게만 띄운다.
+           앱으로 갔는지와 따로 적는다(`web_sent`) — 섞으면 뒤에 어느 길로 갔는지를
+           물을 수 없다.
+
+           여기서 나는 어떤 오류도 요청 자체를 그르치지 않는다 — 삼킨다. */
+        $this->화면으로알리기($요청, $처방전, $받는이, $환자);
 
         try {
             /* 제목ㆍ본문은 메시지 관리에서 고친다 (2026-09-23 지시) */

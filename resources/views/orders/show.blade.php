@@ -1605,12 +1605,16 @@ async function cancelCashReceipt() {
 }
 
 // ── 출력 ─────────────────────────────────────────────────
+/* 「출력」은 **미리보기 주소**를 연다 (2026-10-13 지시 · SR #177).
+
+   여태 `/tax-invoice/print` · `/cash-receipt/print` 를 열었는데 **그런 길이 없다.**
+   라우트에 있는 것은 `-preview`(그 자리에서 펼쳐 봄)와 `-pdf`(내려받기)뿐이다.
+   그래서 누를 때마다 404 가 떴다 — 자료는 멀쩡히 있는데 뽑을 수가 없었다.
+
+   미리보기는 PDF 를 새 창에 그대로 펼친다. 거기서 브라우저의 인쇄를 쓰면 된다 —
+   「출력」이 하려던 일이 그것이다. */
 function printDoc(type) {
-  const title = type === 'tax' ? '세금계산서' : '현금영수증';
-  const no    = type === 'tax'
-    ? '{{ $order->tax_invoice_no ?? "" }}'
-    : '{{ $order->cash_receipt_no ?? "" }}';
-  window.open(ORDER_URL + (type === 'tax' ? '/tax-invoice/print' : '/cash-receipt/print'), '_blank');
+  window.open(ORDER_URL + (type === 'tax' ? '/tax-invoice-preview' : '/cash-receipt-preview'), '_blank');
 }
 
 // 모달 외부 클릭 닫기

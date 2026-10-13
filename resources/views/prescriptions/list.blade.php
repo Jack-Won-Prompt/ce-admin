@@ -781,7 +781,9 @@ window.HELP_TOUR_STEPS = [
             </span>
             <span style="white-space:nowrap;font-weight:700;color:${r.resolved ? 'var(--success)' : (r.sent ? 'var(--primary)' : '#B54708')};"
                   title="${_esc(r.error ?? '')}">
-              ${r.resolved ? '받음 ' + _esc(r.resolved) : (r.sent ? '알림 보냄' : '알림 못 감')}
+              ${r.resolved ? '받음 ' + _esc(r.resolved)
+                           : (r.sent ? '알림 보냄' + (r.how ? ' (' + _esc(r.how) + ')' : '')
+                                     : '알림 못 감')}
             </span>
           </div>`).join('')}
       </div>`;
