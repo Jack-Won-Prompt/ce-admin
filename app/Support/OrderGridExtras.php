@@ -582,6 +582,37 @@ class OrderGridExtras
             'rx_repur_date'  => $d($p?->repurchase_date),
             'rx_inmarket'    => $d($p?->inmarket_due),
             'rx_last_qty'    => $n($p?->last_confirmed_qty),
+
+            /* ── 2026-10-13 · SR #193 로 더한 칸 ─────────────────────────
+
+               「주문목록/주문관리 화면 및 엑셀 다운 시 항목 보이게 설정 요청」.
+               값은 이미 세고 있었고 목록에 세우지 않았을 뿐이다. */
+
+            /* 상병코드 — 상병명은 있었는데 코드가 없었다 */
+            'rx_dz_code'     => $p?->disease_code ?? '',
+
+            /* 「다음 재구매 가능일」 — **이 건이 만드는 날**이다.
+
+               옆의 `rx_next_repur` 는 2026-10-12 지시로 「이번 재구매 가능일」이 되어
+               직전 구매가 정해 둔 날을 적는다. 둘은 다른 것이라 칸을 따로 둔다 —
+               이 건의 사용 개시일 + 총 처방일수이고, 다음 구매 때 그 건의 「이번」이 된다. */
+            'rx_next_own'    => $d($p?->next_repurchase),
+
+            /* ── 거래처(사람)에 붙는 건보ㆍ기초 ──────────────────────────
+
+               처방전이 아니라 사람에 붙는 값이다. 위의 `rx_agree_start`ㆍ`rx_agree_end`
+               와 헷갈리지 않게 이름을 가른다 — 그 둘은 **급여 기간**(사용 개시일 + 총
+               처방일수)이고, 아래는 **건보 위임동의 기간**(시작일 + 5년 − 1일)이다.
+               2026-09-30 에 그 둘이 한 칸에 섞여 있어 목록의 「급여 종료일」에 5년 뒤
+               날짜가 서 있었다. 같은 일이 되풀이되지 않게 이름을 멀리 둔다. */
+            'pt_nhis_agree_start' => $d($pt?->nhis_agree_start),
+            'pt_nhis_agree_end'   => $d($pt?->nhis_agree_end),
+            'pt_nhis_reg'         => $pt?->nhis_reg_status ?? '',
+            'pt_nhis_reg_date'    => $d($pt?->nhis_reg_date),
+            'pt_nhis_renew'       => $pt?->nhis_renew ?? '',
+            'pt_nhis_renew_due'   => $d($pt?->nhis_renew_due),
+            'pt_basic_reeval'     => $pt?->basic_reeval ?? '',
+            'pt_basic_reeval_due' => $d($pt?->basic_reeval_due),
         ];
     }
 

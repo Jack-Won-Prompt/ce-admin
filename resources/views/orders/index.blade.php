@@ -543,7 +543,10 @@ window.HELP_TOUR_STEPS = [
       { header: '판매유형',   name: 'so_type',   width: 110, align: 'center' },
       /* 신구매/재구매 (2026-10-08 · SR #133) — 값은 줄에 이미 있었다(rx_purchase) */
       { header: '신구매/재구매', name: 'rx_purchase', width: 110, align: 'center', sortable: true },
-      { header: '상태',       name: 'status',    width: 90,  sortable: true, align: 'center' },
+      {{-- 이름을 「진행 상태」로 둔다 (2026-10-13 지시 · SR #192).
+           주문 등록 화면이 같은 값을 「진행 상태」라 부르는데 여기만 「상태」였다.
+           한 값을 두 이름으로 부르면 같은 것인지 아닌지를 매번 가늠하게 된다. --}}
+      { header: '진행 상태',   name: 'status',    width: 100, sortable: true, align: 'center' },
       {{-- 판 날과 되돌아온 날. 되돌아오지 않은 건은 뒤 칸이 비어 있다. --}}
       // 정산 — 「언제 팔았고 얼마였나」는 나란히 본다
       ...ceMoneyCols(),
@@ -672,6 +675,30 @@ window.HELP_TOUR_STEPS = [
       { header: '세금계산서', name: 'tax_invoice', width: 100, align: 'center', sortable: true },
       { header: '현금영수증', name: 'cash_receipt', width: 100, align: 'center', sortable: true },
       { header: '위드웍스 판매번호', name: 'ww_so_no', width: 150, sortable: true },
+      {{-- ── 2026-10-13 · SR #193 ────────────────────────────────────────
+           요청한 항목 가운데 이 화면에 없던 것을 뒤에 이어 붙인다. 앞의 차례는
+           건드리지 않는다 — 보던 자리가 밀리면 쓰던 수식이 어긋난다. --}}
+      { header: '처방번호',      name: 'rx_no',       width: 150, sortable: true },
+      { header: '청구',          name: 'nhis_claim',  width: 90,  align: 'center', sortable: true },
+      { header: '주민등록번호',   name: 'resident_no', width: 130 },
+      { header: '총 처방일수',    name: 'rx_days',     width: 100, align: 'right', sortable: true },
+      { header: '처방전 종료일',  name: 'rx_end',      width: 120, align: 'center', sortable: true },
+      { header: '다음 재구매 가능일', name: 'rx_next_own', width: 130, align: 'center', sortable: true },
+      { header: '담당 의사명',    name: 'rx_doctor',   width: 100, sortable: true },
+      { header: '의사면허번호',   name: 'rx_license',  width: 110 },
+      { header: '요양기관코드',   name: 'rx_hosp_code', width: 120, align: 'center', sortable: true },
+      { header: '상병코드',      name: 'rx_dz_code',  width: 100 },
+      { header: 'Five/Six',     name: 'rx_five',     width: 90,  align: 'center', sortable: true },
+      { header: 'Five(110days)', name: 'rx_five110', width: 120, align: 'center', sortable: true },
+      { header: '주문담당자',     name: 'rx_order_mgr', width: 110, sortable: true },
+      { header: '건보위임동의 시작일', name: 'pt_nhis_agree_start', width: 130, align: 'center', sortable: true },
+      { header: '건보위임동의 종료일', name: 'pt_nhis_agree_end',   width: 130, align: 'center', sortable: true },
+      { header: '건보등록',      name: 'pt_nhis_reg',       width: 100, align: 'center', sortable: true },
+      { header: '건보등록일',    name: 'pt_nhis_reg_date',  width: 110, align: 'center', sortable: true },
+      { header: '건보 재등록 대상자', name: 'pt_nhis_renew',     width: 130, sortable: true },
+      { header: '건보 재등록 기한',   name: 'pt_nhis_renew_due', width: 120, align: 'center', sortable: true },
+      { header: '기초 재평가 대상자', name: 'pt_basic_reeval',     width: 130, sortable: true },
+      { header: '기초 재평가 기한',   name: 'pt_basic_reeval_due', width: 120, align: 'center', sortable: true },
 
 
       // 네 목록 화면이 함께 쓰는 칸 — 위드웍스 판매주문 현황의 차례다

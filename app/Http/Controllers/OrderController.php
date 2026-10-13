@@ -58,7 +58,8 @@ class OrderController extends Controller
            지금 금액이 실린다. */
         $머리글 = [
             '주문번호', '원/추가', '환자명', '주문 구분', '교환/반품 접수번호', '교환·반품·취소 상태',
-            '판매유형', '신구매/재구매', '상태', '주문 등록일', '교환/반품/취소일자',
+            /* 「상태」 → 「진행 상태」 (2026-10-13 지시 · SR #192) — 화면과 같은 이름 */
+            '판매유형', '신구매/재구매', '진행 상태', '주문 등록일', '교환/반품/취소일자',
             /* 「청구 진행」은 **엑셀에 싣지 않는다** (2026-10-12 정합성 검증에서 찾음).
 
                그 칸은 화면에서 누르는 단추 자리라 담는 값이 아예 없다 — 운영 548줄을
@@ -71,6 +72,14 @@ class OrderController extends Controller
             '제품', '수량', '금액', '본인부담', '공단부담',
             '결제수단', '입금액', '입금일', '결제일',
             '세금계산서', '현금영수증', '위드웍스 판매번호',
+            /* ── 2026-10-13 · SR #193 ────────────────────────────────────
+               「주문목록/주문관리 화면 및 엑셀 다운 시 항목 보이게 설정 요청」.
+               화면에 세운 것과 **같은 차례**로 잇는다. */
+            '처방번호', '청구', '주민등록번호', '총 처방일수', '처방전 종료일',
+            '다음 재구매 가능일', '담당 의사명', '의사면허번호', '요양기관코드', '상병코드',
+            'Five/Six', 'Five(110days)', '주문담당자',
+            '건보위임동의 시작일', '건보위임동의 종료일', '건보등록', '건보등록일',
+            '건보 재등록 대상자', '건보 재등록 기한', '기초 재평가 대상자', '기초 재평가 기한',
         ];
         $칸 = ['order_no', 'order_kind', 'patient', 'deal', 'return_no', 'deal_state',
                'so_type', 'rx_purchase', 'status', 'sold_at', 'deal_at',
@@ -78,7 +87,12 @@ class OrderController extends Controller
                'rx_no', 'rx_acc_type', 'rx_issued', 'rx_benefit', 'rx_hospital',
                'product', 'qty', 'total_amount', 'copay', 'nhis_amount',
                'pay_method', 'deposit_amount', 'deposit_at', 'paid_at',
-               'tax_invoice', 'cash_receipt', 'ww_so_no'];
+               'tax_invoice', 'cash_receipt', 'ww_so_no',
+               'rx_no', 'nhis_claim', 'resident_no', 'rx_days', 'rx_end',
+               'rx_next_own', 'rx_doctor', 'rx_license', 'rx_hosp_code', 'rx_dz_code',
+               'rx_five', 'rx_five110', 'rx_order_mgr',
+               'pt_nhis_agree_start', 'pt_nhis_agree_end', 'pt_nhis_reg', 'pt_nhis_reg_date',
+               'pt_nhis_renew', 'pt_nhis_renew_due', 'pt_basic_reeval', 'pt_basic_reeval_due'];
 
         $파일이름 = '주문관리_' . now()->format('Ymd_Hi') . '.csv';
 

@@ -2343,6 +2343,24 @@ document.addEventListener('click', (e) => {
        주문 등록 화면의 제 칸에서 본다. --}}
       { header: '이번 재구매 가능일', name: 'rx_next_repur', width: 130, align: 'center', sortable: true },
       { header: '검수',           name: 'rx_review',    width: 100, align: 'center', sortable: true },
+      {{-- ── 2026-10-13 · SR #193 로 더한 칸 ──────────────────────────
+           「주문목록/주문관리 화면 및 엑셀 다운 시 항목 보이게 설정 요청」.
+           값은 이미 세고 있었고 목록에 세우지 않았을 뿐이다. --}}
+      { header: '상병코드',     name: 'rx_dz_code',  width: 100 },
+      {{-- 「이번」과 「다음」은 다른 것이다 — 위의 「이번 재구매 가능일」은 직전 구매가
+           정한 날이고, 이것은 이 건이 만드는 날(사용 개시일 + 총 처방일수)이다. --}}
+      { header: '다음 재구매 가능일', name: 'rx_next_own', width: 130, align: 'center', sortable: true },
+      {{-- 아래 여덟은 **거래처(사람)에 붙는** 값이다. 위의 「사용 시작일ㆍ급여 종료일」은
+           처방전의 급여 기간이고, 「건보위임동의」는 사람의 동의 기간(시작일 + 5년 − 1일)이다.
+           2026-09-30 에 둘이 한 칸에 섞여 급여 종료일에 5년 뒤 날짜가 섰다. --}}
+      { header: '건보위임동의 시작일', name: 'pt_nhis_agree_start', width: 130, align: 'center', sortable: true },
+      { header: '건보위임동의 종료일', name: 'pt_nhis_agree_end',   width: 130, align: 'center', sortable: true },
+      { header: '건보등록',      name: 'pt_nhis_reg',       width: 100, align: 'center', sortable: true },
+      { header: '건보등록일',    name: 'pt_nhis_reg_date',  width: 110, align: 'center', sortable: true },
+      { header: '건보 재등록 대상자', name: 'pt_nhis_renew', width: 130, sortable: true },
+      { header: '건보 재등록 기한',   name: 'pt_nhis_renew_due', width: 120, align: 'center', sortable: true },
+      { header: '기초 재평가 대상자', name: 'pt_basic_reeval', width: 130, sortable: true },
+      { header: '기초 재평가 기한',   name: 'pt_basic_reeval_due', width: 120, align: 'center', sortable: true },
       { header: '보호자명',       name: 'ww_guardian',  width: 100 },
       { header: '청구처',         name: 'claim_agency', width: 130, sortable: true },
       { header: '신환master 등록일', name: 'ww_new_master', width: 130, align: 'center', sortable: true },
