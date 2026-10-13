@@ -4461,6 +4461,16 @@ $calcDeposit  = $calcCopay;
                        placeholder="사용 시작일과 총 처방일수로 자동 계산됩니다"
                        title="이번 건의 사용 개시일에 총 처방일수를 더한 날입니다."
                        style="flex:1;min-width:0;background:var(--gray-50);cursor:default;" />
+                {{-- **왜 그 날짜인지 옆에 적는다** (2026-10-13 지시).
+
+                     Five/Six 프로그램 건은 스무 날이 더 붙는데 그 까닭이 화면 어디에도
+                     없었다. 그래서 「사용개시일 + 총처방일수」로 셈해 본 담당자 눈에는
+                     스무 날이 어긋난 값으로 보였고, 같은 물음이 되풀이됐다
+                     (SR #186 · 2026-10-13 (E)이건우 건).
+
+                     셈한 식을 그대로 적는다 — 「2026-10-01 + 90일 + 20일(Five/Six)」. --}}
+                <small id="next-repur-why"
+                       style="flex-basis:100%;margin-top:3px;font-size:11px;color:var(--text-muted);"></small>
                 {{-- 테이블뷰가 글자로 읽어가는 자리라 감춘 채 남긴다. 담는 값은 위 칸과
                      같다 — 여태 (발행일 기준) 값을 읽어 「재구매일」로 세우고 있었다. --}}
                 <span id="disp-renew-date" style="display:none;">{{ $prescription->next_repurchase ?? '-' }}</span>
@@ -10524,10 +10534,13 @@ window.HELP_TOUR_STEPS = [
     const 시작 = document.getElementById('f-use-start')?.value;
     const 일수 = parseInt(document.getElementById('f-days')?.value ?? '', 10);
 
+    const 풀이 = document.getElementById('next-repur-why');
+
     const 비움 = () => {
       칸.value = '';
       const 글 = document.getElementById('disp-renew-date');
       if (글) 글.textContent = '-';
+      if (풀이) 풀이.textContent = '';
     };
 
     if (!시작 || !일수 || 일수 < 1) {
@@ -10560,6 +10573,19 @@ window.HELP_TOUR_STEPS = [
        값을 읽어 「재구매일」로 세우고 있었다 (2026-10-12 · SR #160). */
     const 보임 = document.getElementById('disp-renew-date');
     if (보임) 보임.textContent = 칸.value;
+
+    /* 셈한 식을 그대로 적는다 — 스무 날이 왜 붙었는지 여기서 읽힌다 */
+    if (풀이) {
+      풀이.textContent = 백십일
+        ? `${시작} + ${일수}일 + 20일 (Five/Six 프로그램)`
+        : `${시작} + ${일수}일`;
+    }
+
+    칸.title = 백십일
+      ? `사용 개시일 ${시작} + 총 처방일수 ${일수}일 + Five/Six 프로그램 20일.`
+        + ' 그 프로그램은 한 번에 더 많이 받아 가므로 다음 구매가 그만큼 늦습니다.'
+        + ' 급여 종료일은 그대로입니다 — 언제까지 쓰는가와 언제 다시 살 수 있는가는 다른 물음입니다.'
+      : `사용 개시일 ${시작} + 총 처방일수 ${일수}일 (= 급여 종료일 다음 날).`;
   }
   window.calc다음재구매 = calc다음재구매;
 

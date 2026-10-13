@@ -2349,7 +2349,8 @@ document.addEventListener('click', (e) => {
       { header: '상병코드',     name: 'rx_dz_code',  width: 100 },
       {{-- 「이번」과 「다음」은 다른 것이다 — 위의 「이번 재구매 가능일」은 직전 구매가
            정한 날이고, 이것은 이 건이 만드는 날(사용 개시일 + 총 처방일수)이다. --}}
-      { header: '다음 재구매 가능일', name: 'rx_next_own', width: 130, align: 'center', sortable: true },
+      { header: '다음 재구매 가능일', name: 'rx_next_own', width: 130, align: 'center', sortable: true,
+        headerTooltip: '사용 개시일 + 총 처방일수. Five/Six 프로그램 건은 20일이 더 붙습니다(한 번에 더 많이 받아 가므로). 급여 종료일은 그대로입니다.' },
       {{-- 아래 여덟은 **거래처(사람)에 붙는** 값이다. 위의 「사용 시작일ㆍ급여 종료일」은
            처방전의 급여 기간이고, 「건보위임동의」는 사람의 동의 기간(시작일 + 5년 − 1일)이다.
            2026-09-30 에 둘이 한 칸에 섞여 급여 종료일에 5년 뒤 날짜가 섰다. --}}
