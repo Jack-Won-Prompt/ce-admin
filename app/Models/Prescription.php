@@ -696,15 +696,16 @@ class Prescription extends Model
                 return;
             }
 
-            /* Five/Six 프로그램(05 Fiveㆍ06 Six)이면 스무 날 늦다 — 90일 처방이지만
-               110일분을 받아 가기 때문이다. 이미 110일이 적힌 건에는 더하지 않는다
-               (2026-10-07 지시). 깃발은 `five_program` 이다 — `five_110days` 는 날짜를
-               적는 칸이라 깃발로 쓸 수 없다(App\Support\BenefitDates 에 자세히 적어 두었다). */
-            $더할것 = in_array(trim((string) ($rx->five_program ?? '')), ['05', '06'], true)
-                        && $일수 < 110
-                            ? 20 : 0;
+            /* 더 붙는 것은 없다 — 스무 날을 더하던 것을 걷었다 (2026-10-13 지시).
 
-            $셈한것 = $날->copy()->addDays($일수 + $더할것)->toDateString();
+               더하는 까닭이 「90일 처방이지만 110일분을 받아 간다」였는데, 그 전제가
+               운영에서 한 장도 성립하지 않았다(110일분을 받아 간 처방전 0장).
+               자세한 것은 App\Support\BenefitDates 에 적어 두었다.
+
+               **이 자리가 마지막 말을 한다.** 저장할 때마다 다시 세므로, 다른 곳에서
+               무엇을 적어 두었든 여기서 정한 값이 담긴다 — 2026-10-13 에 BenefitDates
+               쪽만 고치고 되돌리려 했더니 이 훅이 다시 +20 으로 덮어썼다. */
+            $셈한것 = $날->copy()->addDays($일수)->toDateString();
 
             if ((string) $rx->next_repurchase !== $셈한것) {
                 $rx->next_repurchase = $셈한것;
