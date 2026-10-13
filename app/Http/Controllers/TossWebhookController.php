@@ -240,9 +240,18 @@ class TossWebhookController extends Controller
            승인 알림만 오고, 여기서 그냥 지나가 **돈은 받았는데 장부에 한 줄도 남지
            않는다.** 우리가 200 으로 답하므로 토스도 다시 보내지 않는다. */
         if (! $tp?->order) {
+            /* **링크 토큰 앞 40자로도 찾는다** (2026-10-13 지시 — 입금 웹훅과 같다).
+
+               결제창이 만드는 주문번호는 `링크 토큰 앞 40자 + '-' + 무작위 8자`다.
+               뒤 여덟 자는 결제 단추를 누를 때마다 바뀌므로, 링크에 적힌 주문번호와
+               어긋나도 앞 40자는 그 링크를 가리킨다. */
+            $온주문번호 = (string) ($payload['data']['orderId'] ?? '');
+            $앞40 = $온주문번호 !== '' ? substr($온주문번호, 0, 40) : null;
+
             $링크 = \App\Models\PaymentLink::query()
                 ->where(fn ($q) => $q->where('payment_key', $key)
-                                     ->orWhere('toss_order_id', $payload['data']['orderId'] ?? ''))
+                                     ->orWhere('toss_order_id', $온주문번호)
+                                     ->when($앞40, fn ($w) => $w->orWhere('token', 'like', $앞40 . '%')))
                 ->with('order')->latest('id')->first();
 
             if ($링크?->order) {

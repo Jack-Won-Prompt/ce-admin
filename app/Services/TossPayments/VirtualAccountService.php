@@ -89,6 +89,21 @@ class VirtualAccountService extends TossClient
             return $this->mockVirtualAccount($order, $orderId, $amount, $bank, $dueDate, $e->getMessage());
         }
 
+        /* ── 앞서 받아 둔 가상계좌를 닫는다 (2026-10-13 지시) ──────────────
+
+           이 줄은 **한 주문에 하나**다. 새 계좌를 내면 앞 계좌의 자취가 덮여 사라지는데,
+           토스 쪽에서는 앞 계좌가 그대로 살아 있다. 환자가 **먼저 받은 계좌**에 넣으면
+           우리는 그 주문번호를 모르니 입금을 보지 못한다.
+
+           새 계좌가 선 **뒤에** 닫는다 — 먼저 닫았다가 발급이 엎어지면 환자에게 넣을
+           곳이 하나도 남지 않는다. */
+        $앞것 = TossPayment::where('order_id', $order->id)->first();
+
+        if ($앞것 && (string) $앞것->method === 'VIRTUAL_ACCOUNT'
+            && $앞것->payment_key !== ($response['paymentKey'] ?? null)) {
+            $this->가상계좌닫기($앞것, '가상계좌를 다시 발급했습니다');
+        }
+
         return TossPayment::updateOrCreate(
             ['order_id' => $order->id],
             [
@@ -233,6 +248,25 @@ class VirtualAccountService extends TossClient
         return $this->get('/v1/payments/orders/' . urlencode($tossOrderId));
     }
 
+    /**
+     * 사람이 보게 오류 목록에 세운다 (2026-10-13 지시).
+     *
+     * 돈이 걸린 자리에서 조용히 지나가면 아무도 모른다. 로그만으로는 찾아보지 않으면
+     * 보이지 않으므로 오류 화면에 줄을 세운다.
+     *
+     * 여기서 나는 어떤 오류도 본래 하려던 일을 그르치지 않는다 — 삼킨다.
+     */
+    private static function 소리내기(string $글월): void
+    {
+        try {
+            \App\Support\ErrorRecorder::담기(new \RuntimeException('[토스] ' . $글월));
+        } catch (\Throwable $e) {
+            Log::warning('[Toss] 오류 목록에 세우지 못했다', [
+                'error' => mb_substr($e->getMessage(), 0, 200),
+            ]);
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────
     // 웹훅 처리 — 가상계좌 입금
     // ─────────────────────────────────────────────────────────────
@@ -309,6 +343,42 @@ class VirtualAccountService extends TossClient
            그때까지 지우면 부분취소한 금액이 없던 일이 되므로, 키가 같으면 둔다. */
         $새결제 = ($res['paymentKey'] ?? $link->payment_key) !== $tp->payment_key;
 
+        /* ── 앞서 받아 둔 가상계좌를 닫는다 (2026-10-13 지시) ──────────────
+
+           결제창은 누를 때마다 **새 주문번호**를 만든다 — `링크 토큰 앞 40자 + 무작위
+           8자`(pay/show.blade.php 의 `newOrderId`). 가상계좌를 고르면 그때마다 계좌가
+           새로 난다. 그런데 이 줄은 한 주문에 하나라 새 계좌가 앞 계좌를 덮는다.
+
+           2026-10-12 (E)김정수C 님 건이 그랬다 —
+
+             15:57 가상계좌 발급 → 16:02 **다시 발급**(우리 줄이 덮임)
+             → 16:12 환자가 **먼저 받은 계좌**로 81,000원 입금 → 화면은 「입금 대기」
+
+           앞 계좌를 토스에서 닫으면 그 계좌로는 넣을 수 없다. */
+        if ($tp->exists && $새결제 && (string) $tp->method === 'VIRTUAL_ACCOUNT') {
+            /* **받은 돈이 있는 줄은 덮지 않는다.** 덮으면 들어온 돈이 장부에서 사라진다.
+               들어오는 쪽도 다 낸 것이면(카드로 다시 낸 일 따위) 그때는 덮는다 —
+               두 번 낸 것을 가리는 일은 DuplicatePaymentFinder 가 맡는다. */
+            if (($tp->deposited_at || (string) $tp->status === 'DONE')
+                && ($res['status'] ?? '') !== 'DONE') {
+                Log::error('[Toss] 이미 입금된 결제 줄을 덮으려 했다 — 멈춘다', [
+                    'order'    => $tp->order_id,
+                    '있던것'   => $tp->toss_order_id,
+                    '오는것'   => $res['orderId'] ?? null,
+                    '오는상태' => $res['status']  ?? null,
+                ]);
+
+                self::소리내기('이미 입금된 결제 줄을 덮으려 했습니다 — 주문 '
+                    . ($tp->order?->order_number ?? $tp->order_id)
+                    . ' · 있던 것 ' . $tp->toss_order_id
+                    . ' · 오는 것 ' . ($res['orderId'] ?? '-'));
+
+                return $tp;
+            }
+
+            $this->가상계좌닫기($tp, '가상계좌를 다시 발급했습니다');
+        }
+
         $tp->forceFill([
             'payment_key'    => $res['paymentKey'] ?? $link->payment_key,
             'toss_order_id'  => $res['orderId'] ?? $link->toss_order_id,
@@ -376,6 +446,26 @@ class VirtualAccountService extends TossClient
             $tossPayment = TossPayment::where('toss_order_id', $tossOrderId)->latest('id')->first();
         }
 
+        /* ── 주문번호로 못 찾으면 **결제키로 다시 찾는다** (2026-10-13 지시) ────
+
+           가상계좌 입금 콜백에는 결제키가 실려 오지 않는다 — 주문번호와 secret 뿐이다.
+           그래서 주문번호가 어긋나면 더 찾아볼 데가 없었다. 토스에 그 주문번호로 물으면
+           결제키를 알려 주므로, 그것으로 한 번 더 찾는다. */
+        if (! $tossPayment && $tossOrderId && ! $paymentKey) {
+            try {
+                $저쪽 = $this->fetchByOrderId($tossOrderId);
+                $paymentKey = $저쪽['paymentKey'] ?? null;
+
+                if ($paymentKey) {
+                    $tossPayment = TossPayment::where('payment_key', $paymentKey)->first();
+                }
+            } catch (\Throwable $e) {
+                Log::warning('[Toss] 주문번호로 결제키를 받아 오지 못했다', [
+                    'order' => $tossOrderId, 'error' => mb_substr($e->getMessage(), 0, 200),
+                ]);
+            }
+        }
+
         /* **결제 줄이 없으면 결제 링크로 찾는다** (2026-10-01 지시).
 
            결제를 마치고 돌아오는 화면(/pay/{token}/done)이 그 줄을 세운다. 그 요청이
@@ -388,8 +478,21 @@ class VirtualAccountService extends TossClient
            본문을 믿고 세우는 것이 아니다: 아래에서 토스에 다시 물어 확인한 값으로만
            줄을 세운다. */
         if (! $tossPayment) {
+            /* **링크 토큰 앞 40자로도 찾는다** (2026-10-13 지시).
+
+               결제창이 만드는 주문번호는 `링크 토큰 앞 40자 + '-' + 무작위 8자`다
+               (pay/show.blade.php 의 `newOrderId`). 뒤 여덟 자는 누를 때마다 바뀌므로
+               주문번호가 통째로는 어긋나도 **앞 40자는 그 링크를 가리킨다.**
+
+               링크의 `toss_order_id` 는 마지막 시도만 담는다. 그래서 앞선 시도로 입금이
+               들어오면 여태 이을 데가 없었다 — 2026-10-08 (E)임귀라 님,
+               2026-10-12 (E)김정수C 님 두 건이 그렇게 「입금 대기」로 서 있었다. */
+            $앞40 = $tossOrderId ? substr((string) $tossOrderId, 0, 40) : null;
+
             $링크 = \App\Models\PaymentLink::query()
-                ->when($tossOrderId, fn ($q) => $q->where('toss_order_id', $tossOrderId))
+                ->when($tossOrderId, fn ($q) => $q->where(fn ($w) => $w
+                    ->where('toss_order_id', $tossOrderId)
+                    ->orWhere('token', 'like', $앞40 . '%')))
                 ->when(! $tossOrderId && $paymentKey, fn ($q) => $q->where('payment_key', $paymentKey))
                 ->with('order')
                 ->latest('id')
@@ -413,9 +516,19 @@ class VirtualAccountService extends TossClient
         }
 
         if (! $tossPayment) {
-            Log::warning('[Toss] 웹훅 매칭 실패 — 이어진 결제가 없다', [
+            /* **소리를 낸다** (2026-10-13 지시).
+
+               여태는 `Log::warning` 한 줄로 조용히 지나갔고, 우리가 200 으로 답하므로
+               토스도 다시 보내지 않았다. 입금 콜백을 잇지 못한다는 것은 **돈은 들어왔는데
+               장부에 없다**는 뜻이다. 오류 목록에 세워 사람이 보게 한다. */
+            Log::error('[Toss] 입금 웹훅을 이을 결제를 찾지 못했다 — 받은 돈이 장부에 없을 수 있다', [
                 'key' => $paymentKey, 'order' => $tossOrderId,
             ]);
+
+            self::소리내기('입금 웹훅을 이을 결제를 찾지 못했습니다 — 토스 주문번호 '
+                . ($tossOrderId ?: '(없음)') . ' · 결제키 ' . ($paymentKey ?: '(없음)')
+                . '. 받은 돈이 장부에 없을 수 있습니다.');
+
             $this->건너뛴까닭 = '이어진 결제를 조회하지 못했습니다 (' . ($tossOrderId ?: $paymentKey ?: '값 없음') . ')';
 
             return null;
