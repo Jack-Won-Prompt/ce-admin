@@ -4199,8 +4199,10 @@ $calcDeposit  = $calcCopay;
               </div>
               <div class="rx-field-row">
                 <span class="rx-field-label">Five/Six</span>
-                {{-- Five(05)ㆍSix(06)를 고르면 다음 재구매 가능일이 스무 날 뒤로 선다
-                     (2026-10-07 지시 · SR #103). 고치면 그 자리에서 다시 센다. --}}
+                {{-- 고르는 값일 뿐 다음 재구매 가능일에는 닿지 않는다 (2026-10-13 지시).
+                     한때 이 칸이 05ㆍ06 이면 스무 날이 더 붙었는데, 더하는 까닭인
+                     「90일 처방이지만 110일분을 받아 간다」가 운영에서 한 장도 성립하지
+                     않아 걷었다. onchange 는 그대로 둔다 — 셈은 늘 한 곳에서 돈다. --}}
                 <select class="form-control" id="f-five-program" style="flex:1;"
                         onchange="if (typeof calc다음재구매 === 'function') calc다음재구매();">
                   <option value="">선택</option>
@@ -4249,10 +4251,12 @@ $calcDeposit  = $calcCopay;
                      브라우저가 「Five/Six(110days」 와 「)」 로 갈라 괄호 하나만
                      아랫줄에 남았다. 끊을 자리를 우리가 정한다. --}}
                 <span class="rx-field-label">Five/Six<br>(110days)</span>
-                {{-- 이 칸은 **날짜를 적는 자리**다 — 이관된 건에 모두 날짜가 담겨 있다.
-                     한때 이 칸에 값이 있으면 다음 재구매 가능일이 스무 날 뒤로 섰는데,
-                     이관 뒤에는 그 잣대로 프로그램이 아닌 건까지 뒤로 밀렸다. 깃발은
-                     위의 「Five/Six」 고르는 칸이다 (2026-10-07 지시 · SR #103). --}}
+                {{-- 이 칸은 **날짜를 적는 자리**다 — 이관된 건 73,754장에 날짜가 담겨 있고
+                     우리가 올린 처방전에는 한 장도 적힌 적이 없다.
+
+                     한때 이 칸(그리고 뒤에는 위의 「Five/Six」 칸)에 값이 있으면 다음
+                     재구매 가능일이 스무 날 뒤로 섰다. 2026-10-13 지시로 걷었다 —
+                     110일분을 받아 가는 거래가 운영에 한 장도 없었다. --}}
                 <input type="text" class="form-control" id="f-five" value="{{ $prescription->five_110days ?? '' }}"
                        style="flex:1;" />
               </div>
@@ -10399,13 +10403,10 @@ window.HELP_TOUR_STEPS = [
     const e = document.getElementById('f-benefit-end');
     if (e) e.value = fmt(end);
 
-    /* Five/Six(110days) 인 건은 다음 구매가 스무 날 뒤다(2026-09-08 확인요청 10쪽).
-       급여 종료일은 그대로 둔다 — 언제까지 쓰는가와 언제 다시 살 수 있는가는 다른
-       물음이다. 그 프로그램은 한 번에 더 많이 받아 가므로 다음 구매가 그만큼 늦다.
-
-       그 칸에 값이 적혀 있으면 그 프로그램으로 본다 — 고르는 칸이 아니라 적는 칸이고,
-       적혀 있다는 것 자체가 그 프로그램이라는 뜻이다. 서버도 같은 잣대를 쓴다. */
     /* 셈은 `calc다음재구매()` 한 곳에 둔다 (2026-10-07 · SR #103).
+
+       스무 날을 더하던 규칙은 2026-10-13 지시로 걷었다 — 여기 적혀 있던 그 설명도
+       함께 지운다. 남겨 두면 다음 사람이 그것을 지금 규칙으로 읽는다.
 
        여태 이 자리에서도 그 칸에 적었다. 그런데 바로 뒤에 도는 `calc다음재구매()` 가
        **+20 없이** 같은 칸을 다시 적어, Five/Six 건의 다음 재구매 가능일이 화면에서
@@ -10538,20 +10539,12 @@ window.HELP_TOUR_STEPS = [
     const d = new Date(시작);
     if (isNaN(d.getTime())) { 비움(); return; }
 
-    /* Five/Six 프로그램이면 스무 날 뒤다 (2026-10-07 지시 · SR #103).
+    /* 더 붙는 것은 없다 — 스무 날을 더하던 것을 걷었다 (2026-10-13 지시).
 
-       깃발은 **「Five/Six」 고르는 칸**(05 Fiveㆍ06 Six)이다. 아래의 「Five/Six(110days)」
-       는 날짜를 적는 칸이라 깃발로 쓸 수 없다 — 이관된 73,754건에 날짜가 담겨 있어,
-       그것을 깃발로 보면 프로그램이 아닌 건에도 +20 이 붙는다.
-
-       이미 110일이 적힌 건에는 더하지 않는다 — 스무 날을 더하는 까닭이 「90일 처방이지만
-       110일분을 받아 간다」는 것이라, 두 번 세게 된다.
-
-       서버도 같은 잣대를 쓴다(App\Support\BenefitDates). */
-    const 프로그램 = (document.getElementById('f-five-program')?.value ?? '').trim();
-    const 백십일 = (프로그램 === '05' || 프로그램 === '06') && 일수 < 110;
-
-    d.setDate(d.getDate() + 일수 + (백십일 ? 20 : 0));
+       「Five/Six(110days)」 건에 스무 날을 더하던 규칙이 있었는데, 더하는 까닭인
+       「90일 처방이지만 110일분을 받아 간다」가 운영에서 한 장도 성립하지 않았다
+       (110일분을 받아 간 처방전 0장). 서버도 같은 잣대를 쓴다(App\Support\BenefitDates). */
+    d.setDate(d.getDate() + 일수);
 
     const 두자리 = (n) => String(n).padStart(2, '0');
     칸.value = `${d.getFullYear()}-${두자리(d.getMonth() + 1)}-${두자리(d.getDate())}`;
