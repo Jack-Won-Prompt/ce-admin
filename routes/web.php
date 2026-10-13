@@ -1563,6 +1563,14 @@ Route::get('/dev/migrate-order-cols', function () {
 Route::get('/pay/{token}',      [\App\Http\Controllers\PaymentLinkController::class, 'show'])->name('pay.show');
 Route::get('/pay/{token}/done', [\App\Http\Controllers\PaymentLinkController::class, 'done'])->name('pay.done');
 
+/* 결제창을 열기 바로 앞에 **무엇을 보내는지** 적어 둔다 (2026-10-13 지시).
+   토스가 승인 응답에 구매자명을 돌려주지 않아, 우리 자료만으로는 무엇을 보냈는지
+   셀 수 없었다. 이름과 금액은 서버가 짓는다 — 브라우저가 적어 보낸 이름은 담지 않는다.
+   결제 화면과 한 토큰을 쓰므로 로그인 밖에 둔다. */
+Route::post('/pay/{token}/attempt', [\App\Http\Controllers\PaymentLinkController::class, '시도적기'])
+    ->middleware('throttle:30,1')
+    ->name('pay.attempt');
+
 /* 시험 환경 자동 승인 (2026-09-16 지시). 결제창을 끝까지 지나려면 카드사 앱 인증과
    보안프로그램 설치를 거쳐야 해, 결제 뒤에 도는 일(세무 서류ㆍ카드매출전표ㆍ창고
    확정)을 화면으로 확인할 길이 없었다. 컨트롤러가 사용 환경이 test 인지 다시 본다 —

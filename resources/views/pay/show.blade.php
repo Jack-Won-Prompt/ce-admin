@@ -130,9 +130,8 @@
      그래서 둘을 갈라 짓는다. 가상계좌면 상호, 그 밖이면 환자 이름이다.
      환자 이름은 Patient::실명 으로 짓는다 — 동명이인 꼬리는 우리 표시이지 사람 이름이
      아니라 밖으로 내보내지 않는다(2026-10-06 · SR #90ㆍ#102). */
-  $예금주이름 = \App\Services\TossPayments\VirtualAccountService::예금주();
-  $구매자이름 = \App\Models\Patient::실명($order->patient?->name)
-                ?: (\App\Models\Patient::실명($order->shipping_recipient) ?: $예금주이름);
+  $예금주이름 = \App\Support\PayNames::예금주();
+  $구매자이름 = \App\Support\PayNames::구매자($order);
 @endphp
 <script>
   /* 결제창을 연다. 금액과 주문번호는 서버가 정한 값을 그대로 쓴다 —
@@ -232,6 +231,31 @@
         } else {
           opts.card = { useEscrow: false, flowMode: 'DEFAULT', useCardPoint: false, useAppCardOnly: false };
         }
+
+        /* **보낸 값을 적어 둔다** (2026-10-13 지시).
+
+           토스는 승인 응답에 구매자명을 돌려주지 않는다. 결제창이 열리고 나면 무엇을
+           보냈는지 되짚을 자리가 없어, 2026-10-12 에 구매자명이 상호로 나간 일을
+           확인할 때 코드가 바뀐 시각으로 가려 세어야 했다.
+
+           **결제를 막지 않는다.** 적는 일이 늦거나 실패해도 결제창은 그대로 열린다 —
+           keepalive 로 띄워 두고 기다리지 않는다. 이름과 금액은 서버가 다시 짓는다. */
+        try {
+          fetch(@json(route('pay.attempt', $link->token)), {
+            method:    'POST',
+            keepalive: true,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept':       'application/json',
+              'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+            },
+            body: JSON.stringify({
+              orderId:   opts.orderId,
+              method:    way,
+              orderName: opts.orderName,
+            }),
+          }).catch(() => {});
+        } catch (e) { /* 적지 못해도 결제는 간다 */ }
 
         await payment.requestPayment(opts);
       } catch (e) {

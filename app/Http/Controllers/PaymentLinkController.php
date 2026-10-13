@@ -423,6 +423,56 @@ class PaymentLinkController extends Controller
     /**
      * 시험 승인 — 토스를 부르지 않고 낸 것으로 적는다 (2026-09-16 지시).
      *
+     * 결제창을 열기 바로 앞에 **무엇을 보내는지** 적어 둔다 (2026-10-13 지시).
+     *
+     * 토스는 승인 응답에 `customerName` 을 돌려주지 않는다. 그래서 「구매자명으로 무엇을
+     * 보냈나」를 우리 자료만으로는 셀 수 없었다 — 2026-10-12 에 카드ㆍ간편결제 구매자명이
+     * 상호로 나간 일을 확인할 때, 코드가 바뀐 시각으로 가려 세어야 했다.
+     *
+     * **이름과 금액은 서버가 짓는다.** 브라우저가 적어 보낸 이름을 그대로 담으면, 적어 둔
+     * 기록이 「우리가 보낸 값」이 아니라 「누군가 보냈다고 말한 값」이 된다. 결제창이 쓰는
+     * 것과 같은 자리(PayNames)에서 다시 지어 담는다 — 두 곳이 갈리지 않는다.
+     *
+     * 브라우저에서 받는 것은 **고른 결제수단과 그때 만든 토스 주문번호** 둘뿐이다.
+     * 그 둘은 서버가 알 수 없고, 거짓으로 적어도 기록 한 줄이 늘 뿐 결제에 닿지 않는다.
+     *
+     * 적지 못해도 결제를 막지 않는다 — 환자가 돈을 내는 일이 먼저다.
+     */
+    public function 시도적기(Request $request, string $token): JsonResponse
+    {
+        $link = PaymentLink::with('order.patient')->where('token', $token)->first();
+
+        if (! $link) {
+            return response()->json(['success' => false], 404);
+        }
+
+        try {
+            $수단 = substr(trim((string) $request->input('method')), 0, 30);
+
+            \App\Models\TossPaymentRequest::create([
+                'payment_link_id' => $link->id,
+                'order_id'        => $link->order_id,
+                'toss_order_id'   => substr(trim((string) $request->input('orderId')), 0, 80),
+                'method'          => $수단,
+                'amount'          => (int) $link->amount,
+                'customer_name'   => \App\Support\PayNames::토스에보낼이름($link->order, $수단),
+                'order_name'      => substr((string) $request->input('orderName'), 0, 120),
+                'ip'              => $request->ip(),
+                'user_agent'      => substr((string) $request->userAgent(), 0, 300),
+                'requested_at'    => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('[결제] 보낸 값을 적지 못했다', [
+                'token' => $token, 'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['success' => false], 200);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * 카드 결제가 끝났을 때 토스가 돌려주는 것과 같은 꼴을 만들어 record() 에 넘긴다.
      * 그 뒤는 실제 결제와 한 길이다 — 세무 서류, 카드매출전표, 창고 확정까지.
      */
