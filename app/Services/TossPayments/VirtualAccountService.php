@@ -20,12 +20,12 @@ class VirtualAccountService extends TossClient
      * @return TossPayment  저장된 결제 레코드
      */
     /**
-     * 가상계좌 **예금주** — 환자가 은행 앱에서 보는 「받는 사람」 (2026-10-12 지시).
+     * 사업자 상호 — 설정값이 비어 있으면 팝빌에 적어 둔 상호를 쓴다.
      *
-     * 발급하는 길이 둘이라(서버ㆍ결제창) 두 곳에서 따로 지으면 언젠가 갈린다.
-     * 여기 한 곳에서 짓고 두 길이 함께 쓴다.
+     * **예금주는 환자 이름이다** (2026-10-13 지시). 이 값은 환자 이름을 하나도 찾지
+     * 못했을 때 마지막으로 기대는 곳일 뿐이다 — PayNames::상호 가 그렇게 쓴다.
      *
-     * 설정값이 비어 있으면 사업자 상호를 쓴다.
+     * 2026-10-12 ~ 10-13 하루 동안은 이 값이 그대로 예금주였다.
      */
     public static function 예금주(): string
     {
@@ -59,14 +59,18 @@ class VirtualAccountService extends TossClient
             'orderName'    => ($order->product_name ?? '처방조제') . ' 본인부담금',
             /* 이 값이 곧 **가상계좌 예금주**다 — 환자가 은행 앱에서 보는 「받는 사람」.
 
-               2026-10-12 지시로 **상호**를 보낸다. 여태 환자 이름을 보냈는데, 제 이름이
-               뜨면 「내가 나에게 보내나」로 읽혀 입금을 망설인다. 대신 내는 분도 많다 —
-               같은 날 홍영철 님 건은 김지원 님이 입금했다.
+               **환자 이름을 보낸다** (2026-10-13 지시 「가상계좌는 예금주가 환자명이
+               되어야 한다」).
 
-               환자 이름은 토스에 남기지 않아도 된다. 어느 주문인지는 orderId
-               (CE-{주문번호}-…)가 말하고, 실제 입금한 사람은 토스가 depositorName 에
-               적어 돌려준다. */
-            'customerName' => self::예금주(),
+               2026-10-12 에는 상호로 바꿨었다 — 제 이름이 뜨면 「내가 나에게 보내나」로
+               읽혀 입금을 망설인다는 까닭이었다. 그 지시를 되돌린다.
+
+               그때 고치려던 것은 사실 이름에 붙은 동명이인 꼬리였다(홍영철**A**).
+               PayNames 가 Patient::실명 으로 지으므로 꼬리 없이 「홍영철」로 나간다.
+
+               결제 화면이 보내는 값과 **같은 자리**에서 짓는다(PayNames) — 두 곳에서
+               따로 지으면 같은 주문인데 예금주가 갈려 보인다. */
+            'customerName' => \App\Support\PayNames::토스에보낼이름($order, 'VIRTUAL_ACCOUNT'),
             'bank'         => $bank,
             'validHours'   => $validHours,
         ]);
@@ -143,9 +147,9 @@ class VirtualAccountService extends TossClient
                 'amount'         => $amount,
                 'bank'           => $bank,
                 'account_number' => $account,
-                /* 임의로 세운 줄도 예금주는 바깥에 보일 이름으로 적는다 — (E) 를 뗀다 */
-                /* 예금주 — 실제 발급과 같은 값을 적는다 (2026-10-12 지시) */
-                'customer_name'  => self::예금주(),
+                /* 예금주 — 실제 발급과 같은 값을 적는다. 시험에서 본 것과 운영에서
+                   나가는 것이 다르면 시험이 시험이 아니다 (2026-10-13 지시로 환자명). */
+                'customer_name'  => \App\Support\PayNames::토스에보낼이름($order, 'VIRTUAL_ACCOUNT'),
                 'due_date'       => $dueDate,
                 'raw_response'   => [
                     'simulated' => true,

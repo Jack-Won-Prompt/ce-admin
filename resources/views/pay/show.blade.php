@@ -130,8 +130,8 @@
      그래서 둘을 갈라 짓는다. 가상계좌면 상호, 그 밖이면 환자 이름이다.
      환자 이름은 Patient::실명 으로 짓는다 — 동명이인 꼬리는 우리 표시이지 사람 이름이
      아니라 밖으로 내보내지 않는다(2026-10-06 · SR #90ㆍ#102). */
-  $예금주이름 = \App\Support\PayNames::예금주();
-  $구매자이름 = \App\Support\PayNames::구매자($order);
+  $예금주이름 = \App\Support\PayNames::토스에보낼이름($order, 'VIRTUAL_ACCOUNT');
+  $구매자이름 = \App\Support\PayNames::토스에보낼이름($order, 'CARD');
 @endphp
 <script>
   /* 결제창을 연다. 금액과 주문번호는 서버가 정한 값을 그대로 쓴다 —
