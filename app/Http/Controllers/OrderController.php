@@ -296,6 +296,12 @@ class OrderController extends Controller
                 'nhis_fax'       => $공단팩스[$o->prescription_id]['text']  ?? '',
                 'nhis_fax_state' => $공단팩스[$o->prescription_id]['state'] ?? '',
                 'rx_no'     => $o->prescription?->rx_number ?? '',
+                /* 주민등록번호 — **가린 값만** 싣는다 (2026-10-13 · SR #193).
+                   칸만 세우고 값을 만들지 않아 563줄 모두 비어 있었다.
+                   주문 등록의 주문 목록과 같은 자리를 본다 — 처방전에 적힌 가린 번호가
+                   먼저이고, 없으면 거래처의 가린 번호다. 원문은 어느 목록에도 싣지 않는다. */
+                'resident_no' => $o->prescription?->resident_no_ocr_masked
+                                 ?? $o->patient?->masked_resident_no ?? '',
                 'deal'      => $deal,
                 // 교환·반품·취소 건만 진행 상태가 있다. 판매는 옆의 '상태'가 그 자리다.
                 'deal_state' => $rt ? (\App\Models\OrderReturn::STATUS_LABELS[$rt->status] ?? $rt->status) : '',
