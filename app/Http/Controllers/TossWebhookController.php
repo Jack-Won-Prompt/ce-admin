@@ -70,10 +70,30 @@ class TossWebhookController extends Controller
             : null;
 
         if ($signature !== '' && $맞은꼴 === null && config('toss.webhook_secret')) {
+            /* **생김새를 잰다** (2026-10-14).
+
+               132가지를 다 맞춰 봐도 안 맞으면, 우리가 아는 꼴이 아니라는 뜻이다.
+               길이와 글자결이 어느 알고리즘인지 말해 준다 —
+
+                 base64 44자 → 32바이트 → SHA256
+                 base64 88자 → 64바이트 → SHA512
+                 hex 64자    → 32바이트 → SHA256
+                 그보다 길고 DER 꼴 → 열쇠 짝(비대칭) 서명이라 HMAC 으로는 맞출 수 없다
+
+               서명은 비밀이 아니다(열쇠로 만든 지문). 그래도 값 전체는 적지 않고
+               앞자락과 생김새만 남긴다. */
+            $값 = preg_replace('/^(v1|sha256)[:=]/i', '', trim($signature));
+            $풀림 = base64_decode($값, true);
+
             Log::warning('[Toss] 웹훅 서명이 우리 셈과 다르다 — 막지 않고 지나보낸다', [
-                'sig앞'   => substr($signature, 0, 24),
-                '시각'    => $txTime,
-                '본문길이' => strlen($rawBody),
+                '서명길이'   => strlen($값),
+                '글자결'     => preg_match('/^[0-9a-fA-F]+$/', $값) ? '16진수'
+                              : (preg_match('#^[A-Za-z0-9+/]+={0,2}$#', $값) ? 'base64'
+                              : (preg_match('/^[A-Za-z0-9\-_]+$/', $값) ? 'base64url' : '그 밖')),
+                '풀면몇바이트' => ($풀림 === false ? '풀리지 않음' : strlen($풀림)),
+                '앞자락'     => substr($값, 0, 12),
+                '시각'       => $txTime,
+                '본문길이'   => strlen($rawBody),
             ]);
         } elseif ($맞은꼴 !== null) {
             /* **찾았다** — 어느 꼴인지 또렷이 남긴다. 이 줄이 뜨면 그 꼴 하나만 보도록
