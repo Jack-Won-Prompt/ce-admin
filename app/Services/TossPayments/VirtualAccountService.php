@@ -108,6 +108,26 @@ class VirtualAccountService extends TossClient
             $this->가상계좌닫기($앞것, '가상계좌를 다시 발급했습니다');
         }
 
+        /* **앞 결제의 취소 자취를 지운다** (2026-10-14 점검에서 드러남).
+
+           이 줄은 한 주문에 하나다. 수단을 바꿔 다시 받으면 같은 줄을 덮어쓰는데,
+           취소액만 남겨 두면 `Order::받은금액()` 이 「받은 돈 − 취소액」을 0 으로 읽는다.
+
+           (E)김대한 님 EUD202610081716351 이 그랬다 —
+
+             08:53 카드 링크 발송 → 10:48 **카드 결제 취소 웹훅**(취소액 81,000 적힘)
+             → 10:47 가상계좌로 바꿔 발급(이 자리) → 12:31 **81,000원 입금**
+             → 현금영수증ㆍ세금계산서ㆍ위드웍스 확정ㆍ결제완료 안내까지 모두 나감
+             → 그런데 장부는 「받은 돈 0원」 (토스는 남은 금액 81,000원ㆍ취소 없음)
+
+           결제 줄을 세우는 다른 자리(주문결제줄)는 진작 이렇게 지우고 있었는데
+           (2026-09-23 무한 테스트 CASE 6), 가상계좌를 발급하는 이 자리만 빠져 있었다.
+
+           **결제키가 달라졌을 때만** 지운다 — 같은 키로 다시 들어오는 일이 있고
+           (돌아오는 화면 새로고침), 그때까지 지우면 부분취소한 금액이 없던 일이 된다. */
+        $앞결제키 = $앞것?->payment_key;
+        $새결제   = ($response['paymentKey'] ?? null) !== $앞결제키;
+
         return TossPayment::updateOrCreate(
             ['order_id' => $order->id],
             [
@@ -121,7 +141,12 @@ class VirtualAccountService extends TossClient
                 'customer_name'  => $response['virtualAccount']['customerName']  ?? '',
                 'due_date'       => $response['virtualAccount']['dueDate']       ?? $dueDate,
                 'raw_response'   => $response,
-            ]
+            ] + ($새결제 ? [
+                'cancel_amount'  => 0,
+                'cancel_reason'  => null,
+                'canceled_at'    => null,
+                'deposited_at'   => null,
+            ] : [])
         );
     }
 
