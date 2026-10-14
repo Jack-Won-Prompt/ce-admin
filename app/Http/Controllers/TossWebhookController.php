@@ -47,18 +47,36 @@ class TossWebhookController extends Controller
             return response()->json(['message' => '인증 키가 일치하지 않습니다.'], 401);
         }
 
-        // 서명 검증: 서명 헤더가 포함된 웹훅(payout/seller 등)에 한해, 보안키가 설정된 경우에만 수행.
-        // 가상계좌 입금 웹훅은 서명이 없으므로 handleDepositWebhook 의 토스 API 재조회로 검증한다.
-        if (config('toss.webhook_secret') && $signature !== ''
-            && !$this->vaService->verifyWebhookSignature($rawBody, $signature, $txTime)) {
-            Log::warning('[Toss] 웹훅 서명 불일치', ['sig' => substr($signature, 0, 24)]);
+        /* **서명이 안 맞아도 막지 않는다** (2026-10-14 — 토스에서 「가상계좌 입금완료
+           통보가 정상적으로 처리되지 않았습니다」라는 메일을 받고 찾았다).
 
-            /* 서명이 틀린 것도 남긴다 — 남의 것이 두드리고 있다는 뜻일 수 있다 */
-            WebhookLogger::finish(
-                WebhookLogger::inbound('toss', json_decode($rawBody, true)['eventType'] ?? null, $request, false),
-                ok: false, status: 401, error: '서명 불일치');
+           2026-10-13 부터 토스가 서명 헤더를 붙여 보내기 시작했다 —
+           10-12 0건 → 10-13 6건 → 10-14 40건. 그런데 우리 서명 셈이 저쪽 것과 달라
+           **붙어 온 것은 모두 401 로 거절**되었고, 그 가운데 가상계좌 입금 통보가 있어
+           **돈이 들어온 건 셋(243,000원)이 장부에 남지 않았다.**
 
-            return response()->json(['message' => '서명 불일치'], 401);
+           막지 않아도 되는 까닭은 둘이다.
+
+             하나, 주소에 박은 열쇠가 **이 위에서 이미 걸렀다**. 여기 오는 요청은
+                   그 열쇠를 지난 것뿐이다.
+             둘, 처리하는 자리가 **본문을 믿지 않는다** — paymentKey 로 토스에 다시 물어
+                   확인하고서야 적는다(handleDepositWebhook). 거짓이 심기지 않는다.
+
+           대신 **어느 꼴이 맞는지 적어 둔다**. 지어내지 않고, 운영에 들어오는 진짜 서명이
+           답을 알려 주게 한다(TossClient::서명이맞는꼴). 맞는 꼴을 찾으면 그때 다시
+           막을 수 있다. */
+        $맞은꼴 = ($signature !== '')
+            ? \App\Services\TossPayments\TossClient::서명이맞는꼴($rawBody, $signature, $txTime)
+            : null;
+
+        if ($signature !== '' && $맞은꼴 === null && config('toss.webhook_secret')) {
+            Log::warning('[Toss] 웹훅 서명이 우리 셈과 다르다 — 막지 않고 지나보낸다', [
+                'sig앞'   => substr($signature, 0, 24),
+                '시각'    => $txTime,
+                '본문길이' => strlen($rawBody),
+            ]);
+        } elseif ($맞은꼴 !== null) {
+            Log::info('[Toss] 웹훅 서명이 맞았다', ['꼴' => $맞은꼴]);
         }
 
         $payload = json_decode($rawBody, true);
@@ -74,7 +92,7 @@ class TossWebhookController extends Controller
            본디 하려던 일을 방해하지 않는다 — WebhookLogger 안에서 삼킨다.
            서명은 위에서 이미 보았다: 헤더가 있고 열쇠가 있으면 맞는 것만 여기 온다. */
         $기록 = WebhookLogger::inbound('toss', $event, $request,
-            $signature !== '' && config('toss.webhook_secret') ? true : null);
+            $signature === '' ? null : ($맞은꼴 !== null));
 
         /* 매입 상태가 실려 왔으면 그 자리에서 적는다 (2026-10-02 지시
            「30분마다 도는 것을 웹훅으로 처리 가능한가요」).

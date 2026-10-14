@@ -202,21 +202,57 @@ class TossClient
      */
     public function verifyWebhookSignature(string $rawBody, string $signature, string $transmissionTime): bool
     {
-        $secret = config('toss.webhook_secret', '');
-        if ($secret === '' || $signature === '' || $transmissionTime === '') {
-            return false;
+        return self::서명이맞는꼴($rawBody, $signature, $transmissionTime) !== null;
+    }
+
+    /**
+     * 서명이 맞는 **꼴의 이름**을 돌려준다 — 맞는 것이 없으면 null.
+     *
+     * 2026-10-13 부터 토스가 서명 헤더를 붙여 보내기 시작했다(10-12 0건 → 10-13 6건 →
+     * 10-14 40건). 그런데 우리가 쓰던 셈(`본문:시각`)이 저쪽 것과 달라 **붙어 온 것은
+     * 모두 서명 불일치로 거절**되었고, 그 가운데 가상계좌 입금 통보가 있어 돈이 들어온
+     * 건 셋이 장부에 남지 않았다.
+     *
+     * 어느 꼴이 맞는지 **지어내지 않는다.** 흔히 쓰는 꼴 몇 가지를 모두 맞춰 보고,
+     * 맞는 것이 있으면 그 이름을 돌려준다 — 운영에 들어오는 진짜 서명이 답을 알려 준다.
+     * 어느 것도 맞지 않으면 null 이고, 그래도 요청은 막지 않는다(TossWebhookController).
+     * 주소에 박은 열쇠가 이미 걸러 냈고, 처리하는 자리가 토스에 다시 물어 확인한다.
+     */
+    public static function 서명이맞는꼴(string $rawBody, string $signature, string $transmissionTime): ?string
+    {
+        $secret = (string) config('toss.webhook_secret', '');
+
+        if ($secret === '' || $signature === '') {
+            return null;
         }
 
-        $computed = hash_hmac('sha256', $rawBody . ':' . $transmissionTime, $secret, true);
-        $values   = preg_replace('/^v1:/', '', trim($signature));
+        $꼴들 = [
+            '본문:시각'  => $rawBody . ':' . $transmissionTime,
+            '시각:본문'  => $transmissionTime . ':' . $rawBody,
+            '시각.본문'  => $transmissionTime . '.' . $rawBody,
+            '본문.시각'  => $rawBody . '.' . $transmissionTime,
+            '본문만'     => $rawBody,
+            '시각+본문'  => $transmissionTime . $rawBody,
+        ];
 
-        foreach (preg_split('/[:\s,]+/', $values, -1, PREG_SPLIT_NO_EMPTY) as $part) {
-            $decoded = base64_decode($part, true);
-            if ($decoded !== false && hash_equals($decoded, $computed)) {
-                return true;
+        $values = preg_replace('/^v1[:=]/', '', trim($signature));
+        $조각들 = preg_split('/[:\s,]+/', $values, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        foreach ($꼴들 as $이름 => $재료) {
+            $raw = hash_hmac('sha256', $재료, $secret, true);
+            $hex = hash_hmac('sha256', $재료, $secret, false);
+
+            foreach ($조각들 as $조각) {
+                $decoded = base64_decode($조각, true);
+
+                if (($decoded !== false && hash_equals($decoded, $raw))
+                    || hash_equals(strtolower($조각), $hex)
+                    || hash_equals($조각, base64_encode($raw))) {
+                    return $이름;
+                }
             }
         }
 
-        return false;
+        return null;
     }
 }
