@@ -76,7 +76,26 @@ class TossWebhookController extends Controller
                 '본문길이' => strlen($rawBody),
             ]);
         } elseif ($맞은꼴 !== null) {
-            Log::info('[Toss] 웹훅 서명이 맞았다', ['꼴' => $맞은꼴]);
+            /* **찾았다** — 어느 꼴인지 또렷이 남긴다. 이 줄이 뜨면 그 꼴 하나만 보도록
+               좁히고 다시 막을 수 있다(지금은 보기만 하고 지나보낸다). */
+            Log::warning('[Toss] 웹훅 서명이 맞는 꼴을 찾았다 — 이 꼴로 좁히고 다시 막을 수 있다', [
+                '꼴' => $맞은꼴,
+            ]);
+
+            try {
+                \App\Models\ErrorLog::query()->updateOrCreate(
+                    ['fingerprint' => 'toss-webhook-signature-found'],
+                    [
+                        'source'  => 'toss',
+                        'level'   => 'info',
+                        'kind'    => '웹훅',
+                        'message' => '토스 웹훅 서명이 맞는 꼴을 찾았습니다 — ' . $맞은꼴
+                                   . ' (이 꼴로 좁히고 다시 막을 수 있습니다)',
+                        'status'  => 'open',
+                        'last_at' => now(),
+                    ]
+                );
+            } catch (\Throwable) { /* 적지 못해도 웹훅은 간다 */ }
         }
 
         $payload = json_decode($rawBody, true);

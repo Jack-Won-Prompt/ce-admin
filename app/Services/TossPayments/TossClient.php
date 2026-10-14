@@ -226,29 +226,57 @@ class TossClient
             return null;
         }
 
-        $꼴들 = [
-            '본문:시각'  => $rawBody . ':' . $transmissionTime,
-            '시각:본문'  => $transmissionTime . ':' . $rawBody,
-            '시각.본문'  => $transmissionTime . '.' . $rawBody,
-            '본문.시각'  => $rawBody . '.' . $transmissionTime,
-            '본문만'     => $rawBody,
-            '시각+본문'  => $transmissionTime . $rawBody,
-        ];
+        /* ── 무엇에 HMAC 을 거는가 ─────────────────────────────────────
+           흔히 쓰는 꼴을 모두 세운다. 어느 것이 맞는지 **지어내지 않고** 다 맞춰 본다. */
+        $재료들 = ['본문만' => $rawBody];
 
-        $values = preg_replace('/^v1[:=]/', '', trim($signature));
-        $조각들 = preg_split('/[:\s,]+/', $values, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        foreach (['' => '붙임', ':' => '쌍점', '.' => '점', '|' => '막대', "
+" => '줄바꿈'] as $사이 => $이름) {
+            $재료들['시각' . $이름 . '본문'] = $transmissionTime . $사이 . $rawBody;
+            $재료들['본문' . $이름 . '시각'] = $rawBody . $사이 . $transmissionTime;
+        }
 
-        foreach ($꼴들 as $이름 => $재료) {
-            $raw = hash_hmac('sha256', $재료, $secret, true);
-            $hex = hash_hmac('sha256', $재료, $secret, false);
+        /* ── 열쇠를 어떻게 쓰는가 ──────────────────────────────────────
+           우리 열쇠는 16진수 64자다 — **32바이트를 글자로 적어 둔 것**일 수 있다.
+           그대로 쓰는 것과 디코딩해 쓰는 것이 다른 서명을 낳는다. */
+        $열쇠들 = ['글자그대로' => $secret];
 
-            foreach ($조각들 as $조각) {
-                $decoded = base64_decode($조각, true);
+        if (ctype_xdigit($secret) && strlen($secret) % 2 === 0) {
+            $열쇠들['16진수디코딩'] = (string) hex2bin($secret);
+        }
 
-                if (($decoded !== false && hash_equals($decoded, $raw))
-                    || hash_equals(strtolower($조각), $hex)
-                    || hash_equals($조각, base64_encode($raw))) {
-                    return $이름;
+        $풀린것 = base64_decode($secret, true);
+        if ($풀린것 !== false && $풀린것 !== '' && base64_encode($풀린것) === $secret) {
+            $열쇠들['base64디코딩'] = $풀린것;
+        }
+
+        /* ── 서명 값은 어떤 꼴로 오는가 ────────────────────────────── */
+        $값 = preg_replace('/^(v1|sha256)[:=]/i', '', trim($signature));
+        $조각들 = preg_split('/[:\s,;]+/', (string) $값, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        foreach ($열쇠들 as $열쇠이름 => $열쇠) {
+            foreach ($재료들 as $재료이름 => $재료) {
+                $raw = hash_hmac('sha256', $재료, $열쇠, true);
+
+                $꼴들 = [
+                    'base64'     => base64_encode($raw),
+                    'base64url'  => rtrim(strtr(base64_encode($raw), '+/', '-_'), '='),
+                    'hex소문자'  => bin2hex($raw),
+                    'hex대문자'  => strtoupper(bin2hex($raw)),
+                ];
+
+                foreach ($조각들 as $조각) {
+                    foreach ($꼴들 as $꼴이름 => $기대) {
+                        if (hash_equals($기대, $조각)) {
+                            return $열쇠이름 . ' · ' . $재료이름 . ' · ' . $꼴이름;
+                        }
+                    }
+
+                    /* 받은 값이 base64 면 풀어서 날바이트로도 견준다 */
+                    $풀림 = base64_decode($조각, true);
+                    if ($풀림 !== false && strlen($풀림) === 32 && hash_equals($raw, $풀림)) {
+                        return $열쇠이름 . ' · ' . $재료이름 . ' · base64(날바이트)';
+                    }
                 }
             }
         }
