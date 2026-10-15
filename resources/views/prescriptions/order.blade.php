@@ -15246,8 +15246,11 @@ window.HELP_TOUR_STEPS = [
         /* 요양비위임장은 서명하면 시스템이 만들어 「생성 서류」에 담긴다. 이제 팩스가
            그쪽에서도 집어 보내므로 「보낼 수 있다」로 센다 — 예전에는 첨부가 아니라
            못 보낸다고 적었다(2026-09-03 고침). */
+        /* 생성 서류에 있는 요양비위임장도 **고를 수 있게** 세운다 (2026-10-15 지시).
+           여태 알리기만 하고 늘 따라 나갔다 — 보낼 서류는 담당자가 정한다. */
         rows.push({ label: req.label, att: null,
-                    state: (req.type === 'delegation' && faxGenDelegation) ? 'gen' : 'missing' });
+                    state: (req.type === 'delegation' && faxGenDelegation) ? 'doc' : 'missing',
+                    doc:   (req.type === 'delegation' && faxGenDelegation) ? 'delegation' : undefined });
       }
     });
     /* 공단으로 보낼 때는 신청 파일에 들지 않는 첨부를 세우지 않는다. 팩스로 나가는
@@ -15264,9 +15267,10 @@ window.HELP_TOUR_STEPS = [
       /* 첨부가 아닌 생성 서류도 세운다 (2026-10-02 지시).
 
          왼쪽 서류 칸에는 있는데 「보낼 서류」에 비치지 않아 빠진 줄로 읽혔다.
-         요양비위임장은 고르지 않아도 늘 나가므로 알리기만 하고, 나머지는 고르게 둔다. */
+         **요양비위임장도 고르게 둔다** (2026-10-15 지시) — 여태 알리기만 하고 늘
+         따라 나갔다. 보낼 서류는 담당자가 정한다. */
       if (faxGenDelegation) {
-        rows.push({ label: '요양비위임장', att: null, state: 'gen' });
+        rows.push({ label: '요양비위임장', att: null, state: 'doc', doc: 'delegation' });
       }
 
       FAX_GEN_DOCS.forEach(g => {
@@ -15305,6 +15309,10 @@ window.HELP_TOUR_STEPS = [
                         아이콘: 'fa-regular fa-id-card', 처음: true },
         guardian_id:  { 온곳: '동의 첨부',   설명: '개인정보동의에 받아 둔 파일이 그대로 나갑니다',
                         아이콘: 'fa-regular fa-id-card', 처음: true },
+        /* 요양비위임장은 공단 등록에 꼭 드는 서류라 처음부터 골라 둔다.
+           여태는 고를 수조차 없었다 (2026-10-15 지시로 고르게 바꿨다). */
+        delegation:   { 온곳: '생성 서류',   설명: '서명받은 요양비위임장을 함께 보냅니다',
+                        아이콘: 'fa-regular fa-file-signature', 처음: true },
         tax_invoice:  { 온곳: '생성 서류',   설명: '발행된 세금계산서를 함께 보냅니다',
                         아이콘: 'fa-regular fa-file-lines', 처음: false },
         cash_receipt: { 온곳: '생성 서류',   설명: '발행된 현금영수증을 함께 보냅니다',
@@ -15331,18 +15339,6 @@ window.HELP_TOUR_STEPS = [
           </div>
           <i class="${갈래.아이콘}" style="color:var(--text-muted);font-size:18px;flex-shrink:0;"></i>
         </label>`;
-    }
-
-    if (r.state === 'gen') {
-      return `
-        <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);
-                    border-radius:var(--radius);background:var(--bg);font-size:12px;margin-bottom:3px;">
-          <i class="fa-regular fa-file-lines" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:500;color:var(--text-secondary);">${esc(r.label)}</div>
-            <div style="font-size:10px;color:var(--text-muted);">생성 서류에 있음 — 그대로 함께 나갑니다</div>
-          </div>
-        </div>`;
     }
 
     const a = r.att;
@@ -15530,10 +15526,14 @@ window.HELP_TOUR_STEPS = [
     if (!faxNo) { showToast('수신 팩스번호를 입력해 주십시오.', 'warning'); return; }
 
     /* 등록신청서ㆍ결과지ㆍ신분증은 첨부(attachment_ids)로 나간다.
-       요양비위임장만 첨부가 아니라 생성 서류에 담기므로 따로 청한다 — 서명하면
-       시스템이 만드는 것이라 담당자가 올릴 일이 없다(2026-09-03 고침). */
-    const docs      = faxGenDelegation ? ['delegation'] : [];
-    const docLabels = faxGenDelegation ? ['요양비위임장'] : [];
+       요양비위임장은 첨부가 아니라 생성 서류에 담기므로 documents 로 따로 청한다 —
+       서명하면 시스템이 만드는 것이라 담당자가 올릴 일이 없다(2026-09-03 고침).
+
+       **여기서 박아 넣지 않는다** (2026-10-15 지시). 여태 생성 서류에 위임장이 있으면
+       고르든 말든 늘 실렸다. 이제 그 줄도 고르는 칸으로 서므로, 아래 고른 것을
+       거두는 자리에서 함께 담긴다. */
+    const docs      = [];
+    const docLabels = [];
 
     /* 첨부가 아닌 서류(법정대리인 신분증)는 documents 로 청한다 */
     document.querySelectorAll('.fax-doc-chk:checked').forEach(el => {
