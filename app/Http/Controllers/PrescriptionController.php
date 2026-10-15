@@ -4016,6 +4016,16 @@ class PrescriptionController extends Controller
 
         foreach ($거래처서류 as $줄) {
             $patientDocs[] = [
+                /* **갈래를 값으로 밝힌다** (2026-10-15).
+
+                   여태 화면이 「화면 id 가 -2000 아래면 거래처 종이」로 갈랐다. 그런데
+                   생성 서류는 `-1000 - id` 라 그 id 가 1000 을 넘는 순간 같은 자리로
+                   내려온다 — 운영에서 2026-10-07 에 넘었고, 827줄이 거래처 종이로
+                   잘못 읽혔다. 그 가운데 스물넷은 **다른 거래처의 종이**를 가리켰다.
+
+                   id 셈으로 갈래를 알아내려 하지 않는다. 서버가 적어 보낸다. */
+                'src'       => 'patient_doc',
+                'pdId'      => $줄->id,
                 'id'        => -2000 - $줄->id,
                 'url'       => route('patients.documents.show', [$prescription->patient_id, $줄->id]),
                 'type'      => $줄->doc_type,
@@ -7112,6 +7122,8 @@ class PrescriptionController extends Controller
     private static function generatedDocsJson(Prescription $prescription): array
     {
         return $prescription->documents->map(fn ($d) => [
+            /* 갈래를 값으로 밝힌다 — id 셈으로 가르지 않는다 (2026-10-15) */
+            'src'         => 'generated',
             'id'          => -1000 - $d->id,
             'docId'       => $d->id,
             'url'         => route('documents.preview', $d),
