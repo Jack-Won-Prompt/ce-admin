@@ -36,7 +36,7 @@ class FaxHistory extends Model
         'corp_num', 'receipt_num', 'sender', 'sender_name',
         'title', 'receivers', 'file_names', 'reserve_dt',
         'request_num', 'sent_by',
-        'fax_no', 'recipient_type', 'documents', 'attachment_ids', 'pdf_path',
+        'fax_no', 'recipient_type', 'documents', 'attachment_ids', 'patient_doc_ids', 'pdf_path',
         'popbill_state', 'popbill_result', 'synced_at',
     ];
 
@@ -45,6 +45,7 @@ class FaxHistory extends Model
         'file_names'     => 'array',
         'documents'      => 'array',
         'attachment_ids' => 'array',
+        'patient_doc_ids' => 'array',
         'popbill_state'  => 'integer',
         'popbill_result' => 'integer',
         'synced_at'      => 'datetime',
