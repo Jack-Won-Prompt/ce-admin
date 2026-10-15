@@ -276,7 +276,6 @@ final class MedicalAidClaimForm
             'care_from_d'      => $from?->format('d'),
             'care_days'        => $days ?: null,
             'disease_name'     => $rx?->disease_name,
-            'disease_code'     => $rx?->disease_code,
 
             'amount_total'     => number_format($nhis + $copay),
             'supply_days'      => $days ?: null,
