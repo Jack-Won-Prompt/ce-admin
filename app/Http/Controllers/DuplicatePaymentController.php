@@ -178,9 +178,17 @@ class DuplicatePaymentController extends Controller
     {
         abort_unless(perm(self::페이지, 'create'), 403, '환불을 요청할 권한이 없습니다.');
 
+        /* **결제키 길이를 좁게 재지 않는다** (2026-10-15 · 토스 공지).
+
+           2026-11-04 부터 거래식별자(paymentKey/TID)의 무작위성이 강화된다. 토스가
+           「길이ㆍ문자 패턴을 검사하는 로직이 있으면 즉시 제거」하라 했다.
+
+           여기 `max:100` 이 그 잣대였다. 아주 걷지는 않는다 — 담는 칸이 유한하므로
+           한도가 없으면 DB 가 터진다. 토스 문서가 적어 둔 **최대 길이(200자)**에 맞추고,
+           칸도 같은 날 200자로 넓혔다(2026_10_15_090000). */
         $data = $request->validate([
             'order_id'      => ['required', 'integer'],
-            'payment_key'   => ['required', 'string', 'max:100'],
+            'payment_key'   => ['required', 'string', 'max:200'],
             'toss_order_id' => ['nullable', 'string', 'max:120'],
             'method'        => ['nullable', 'string', 'max:20'],
             'amount'        => ['required', 'integer', 'min:1'],
