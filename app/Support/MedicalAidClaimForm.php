@@ -273,10 +273,14 @@ final class MedicalAidClaimForm
             'claim_y'          => $now->format('Y'),
             'claim_m'          => $now->format('n'),
             'claim_d'          => $now->format('j'),
-            /* 청구인은 환자 본인이다 — 서식의 「관계」 칸에 「본인」이 인쇄되어 있다.
-               우리 계좌로 받는 것은 수령 계좌 칸이 정하는 별개의 일이다. */
+            /* 청구인은 환자 본인이다 — 우리 계좌로 받는 것은 수령 계좌 칸이
+               정하는 별개의 일이다.
+
+               옇 서식에는 「관계」 칸에 「본인」이 인쇄되어 있었는데, **새 서식에는 없다**
+               (2026-10-15). 비워 두면 「진료받은 사람의 (    )」이 빈채로 나간다. */
             'claimant_name'    => \App\Models\Patient::실명($pt?->name ?: $rx?->patient_name_ocr),
             'claimant_phone'   => PhoneNo::format($pt?->mobile),
+            'relation'         => '본인',
         ];
     }
 
