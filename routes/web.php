@@ -686,6 +686,8 @@ Route::middleware(['auth'])->group(function () {
        (2026-09-21 지시). 기초ㆍ차상위경감 건에 만들어지는 서식이다. */
     Route::get('/settings/medical-aid-claim', [\App\Http\Controllers\MedicalAidClaimSettingController::class, 'edit'])->name('medical-aid-claim-settings.edit');
     Route::put('/settings/medical-aid-claim', [\App\Http\Controllers\MedicalAidClaimSettingController::class, 'update'])->name('medical-aid-claim-settings.update');
+    /* 미리보기 — 화면에 적힌 자리로 한 장 그려 새 창에 보인다 (2026-10-15) */
+    Route::post('/settings/medical-aid-claim/preview', [\App\Http\Controllers\MedicalAidClaimSettingController::class, 'preview'])->name('medical-aid-claim-settings.preview');
 
     // 처방전 OCR 공급자 설정
     Route::get('/settings/ocr',  [\App\Http\Controllers\OcrSettingController::class, 'edit'])->name('ocr-settings.edit');

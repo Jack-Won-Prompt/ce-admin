@@ -166,6 +166,87 @@ final class MedicalAidClaimForm
            담아 둔 것이 없으면 설정 파일 기본값 그대로다. */
         \App\Models\MedicalAidClaimSetting::applyToConfig();
 
+        return self::그리기(self::values($order), $order, '요양비 지급청구서 — ' . $order->order_number);
+    }
+
+    /**
+     * 설정 화면의 **미리보기** — 지금 자리로 한 장 그려 본다 (2026-10-15 지시).
+     *
+     * 자리를 고치고 나면 그것이 종이에 어떻게 앉는지 바로 보아야 한다. 여태는
+     * 고친 뒤 실제 건을 다시 만들어야 알 수 있었고, **이미 만들어 둔 청구서는
+     * 설정을 바꿔도 그대로**라 「고쳐도 그대로다」로 읽혔다.
+     *
+     * **실제 환자 자료를 쓰지 않는다.** 미리보기는 화면에 띄우는 것이라 거기에
+     * 남의 주민번호가 실릴 까닭이 없다. 대신 **칸마다 긴 보기**를 넣는다 — 짧은
+     * 글로는 칸을 넘치는지 알 수 없다.
+     *
+     * 서명은 받아 둔 그림이 없으므로 **자리를 네모로** 보인다.
+     */
+    public static function 미리보기(?array $덮을자리 = null): string
+    {
+        \App\Models\MedicalAidClaimSetting::applyToConfig();
+
+        /* 아직 담지 않은 자리로도 볼 수 있다 — 설정 화면이 입력한 그대로 넘긴다 */
+        if ($덮을자리) {
+            $바탕 = config('medical_aid_claim.fields', []);
+
+            foreach ($덮을자리 as $키 => $값) {
+                if (! isset($바탕[$키]) || ! is_array($값)) {
+                    continue;
+                }
+                foreach (['x', 'y', 'size'] as $칸) {
+                    if (isset($값[$칸]) && is_numeric($값[$칸])) {
+                        $바탕[$키][$칸] = (float) $값[$칸];
+                    }
+                }
+                if (isset($값['align']) && in_array($값['align'], ['L', 'R', 'C'], true)) {
+                    $바탕[$키]['align'] = $값['align'];
+                }
+            }
+
+            config(['medical_aid_claim.fields' => $바탕]);
+        }
+
+        return self::그리기(self::보기값(), null, '요양비 지급청구서 — 미리보기');
+    }
+
+    /** 미리보기에 넣는 보기 값 — 칸을 넘치는지 보이게 **긴 것**으로 둔다 */
+    private static function 보기값(): array
+    {
+        return [
+            'patient_name'   => '홍길동',
+            'patient_rrn'    => '880101-1234567',
+            'insurer_name'   => '서울특별시 영등포구청',
+            'hospital_name'  => '(의)인길의료재단길병원',
+            'hospital_code'  => '31100309',
+            'issued_date'    => '2026. 10. 15.',
+            'care_from_y'    => '2026',
+            'care_from_m'    => '10',
+            'care_from_d'    => '15',
+            'care_days'      => '90',
+            'disease_name'   => '달리 분류되지 않은 이완성 신경병성 방광',
+            'amount_total'   => '1,234,567',
+            'supply_days'    => '90',
+            'supply_count'   => '540',
+            'claim_y'        => '2026',
+            'claim_m'        => '10',
+            'claim_d'        => '15',
+            'claimant_name'  => '홍길동',
+            'claimant_phone' => '010-1234-5678',
+            'relation'       => '본인',
+        ];
+    }
+
+    /**
+     * 원본 서식 위에 값을 얹어 PDF 바이트를 돌려준다 — **그리는 자리는 여기 하나**다.
+     *
+     * 실제 발행과 미리보기가 같은 자리를 쓴다. 두 곳이 따로 그리면 미리보기에서
+     * 맞춰 둔 자리가 종이에서는 다르게 앉는다.
+     *
+     * `$order` 가 없으면 미리보기다 — 서명은 받아 둔 그림 대신 자리만 네모로 보인다.
+     */
+    private static function 그리기(array $값들, ?Order $order, string $제목): string
+    {
         $cfg      = config('medical_aid_claim');
         $template = resource_path($cfg['template']);
 
@@ -175,7 +256,7 @@ final class MedicalAidClaimForm
 
         $pdf = new \setasign\Fpdi\Tcpdf\Fpdi();
         $pdf->SetCreator('CE Admin');
-        $pdf->SetTitle('요양비 지급청구서 — ' . $order->order_number);
+        $pdf->SetTitle($제목);
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
         $pdf->SetAutoPageBreak(false);
@@ -190,7 +271,7 @@ final class MedicalAidClaimForm
         $font = self::font($pdf);
         $pdf->SetTextColor(0, 0, 0);
 
-        foreach (self::values($order) as $key => $text) {
+        foreach ($값들 as $key => $text) {
             $pos = $cfg['fields'][$key] ?? null;
             if (! $pos || $text === null || $text === '') {
                 continue;
@@ -234,7 +315,23 @@ final class MedicalAidClaimForm
             $pdf->Cell(0, 4, (string) $text, 0, 0, 'L');
         }
 
-        self::signature($pdf, $order, $cfg);
+        if ($order) {
+            self::signature($pdf, $order, $cfg);
+        } else {
+            /* 미리보기 — 받아 둔 서명이 없으므로 **자리만** 보인다 */
+            $sig = $cfg['signature'] ?? null;
+
+            if ($sig) {
+                $pdf->SetDrawColor(0, 150, 0);
+                $pdf->SetLineWidth(0.3);
+                $pdf->Rect((float) $sig['x'], (float) $sig['y'], (float) $sig['w'], 5);
+                $pdf->SetFont($font, '', 5);
+                $pdf->SetTextColor(0, 150, 0);
+                $pdf->SetXY((float) $sig['x'], (float) $sig['y'] - 3);
+                $pdf->Cell((float) $sig['w'], 3, '서명 자리', 0, 0, 'C');
+                $pdf->SetTextColor(0, 0, 0);
+            }
+        }
 
         return $pdf->Output('', 'S');
     }
@@ -245,12 +342,17 @@ final class MedicalAidClaimForm
         $rx   = $order->prescription;
         $pt   = $order->patient;
         $days = (int) ($rx?->total_days ?? 0);
-        /* 진료기간은 **주문 확정 날짜**다 — 거래명세서 발행일과 같은 날이다
-           (2026-10-12 지시 · SR #162). 여태 처방전의 구매일(buy_date)을 보았는데
-           그 칸은 대개 비어 있어 진료기간이 통째로 공란으로 나갔다. */
-        $from = $order->statement_date
-            ? Carbon::parse($order->statement_date)
-            : ($rx?->buy_date ? Carbon::parse($rx->buy_date) : null);
+        /* ⑤ 진료기간은 **실제 구매한 날**이다 (2026-10-15 지시).
+
+           처방전 발행일(④)과는 다른 날이다 — 처방을 받고 며칠 뒤에 사기도 한다.
+
+           2026-10-12 에는 주문 확정 날짜(거래명세서 발행일)를 쓰게 했다. 처방전의
+           구매일(buy_date)이 대개 비어 있어 진료기간이 통째로 공란으로 나갔기
+           때문이다. 그 까닭은 여전해서 **구매일을 먼저 보고, 없을 때만** 거래명세서
+           발행일로 물러난다 — 비는 것보다는 가까운 날이라도 서는 편이 낫다. */
+        $from = $rx?->buy_date
+            ? Carbon::parse($rx->buy_date)
+            : ($order->statement_date ? Carbon::parse($order->statement_date) : null);
         $now  = now();
 
         $nhis  = (int) round((float) ($order->items->sum('nhis_amount')   ?? 0));
@@ -279,7 +381,16 @@ final class MedicalAidClaimForm
 
             'amount_total'     => number_format($nhis + $copay),
             'supply_days'      => $days ?: null,
-            'supply_count'     => number_format((int) ($rx?->total_count ?? $order->items->sum('quantity'))),
+            /* ⑩ 개수는 **실제로 산 수량**이다 (2026-10-15 지시).
+
+               여태 처방전의 총계(total_count)를 먼저 보았다. 그것은 처방에 적힌
+               수이지 이번에 산 수가 아니다 — 나누어 사면 갈린다. 운영에서 처방 총계
+               540 개인데 이번 주문은 360 개인 건이 있었고, 청구서에는 540 이 찍혔다.
+
+               주문에 담긴 품목의 수량을 먼저 보고, 그것이 없을 때만 처방 총계로
+               물러난다. */
+            'supply_count'     => number_format((int) ($order->items->sum('quantity')
+                                                       ?: ($rx?->total_count ?? 0))),
 
             'request_date'     => $now->format('Y.  m.  d.'),
             'amount_decided'   => number_format($nhis + $copay),

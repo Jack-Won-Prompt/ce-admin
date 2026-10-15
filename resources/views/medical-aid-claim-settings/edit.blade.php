@@ -191,8 +191,26 @@
     </div>
     </div>{{-- /pane --}}
 
-    <div class="ds-save">
+    <div class="ds-save" style="display:flex;gap:8px;align-items:center;">
       <button type="submit" class="ds-btn ds-btn-primary"><i class="bx bx-save"></i> 설정 저장</button>
+
+      {{-- **미리보기** (2026-10-15 지시).
+
+           담기 전에 본다. 같은 폼을 그대로 보내므로 **지금 칸에 적힌 자리**로 그려진다 —
+           저장하지 않아도 고친 것이 바로 보인다.
+
+           새 창으로 연다. 이 창에서 열면 고치던 값이 날아가, 한 자리 볼 때마다
+           처음부터 다시 적어야 한다. --}}
+      <button type="submit" class="ds-btn"
+              formaction="{{ route('medical-aid-claim-settings.preview') }}"
+              formmethod="POST" formtarget="_blank" formnovalidate>
+        <i class="bx bx-show"></i> 미리보기
+      </button>
+
+      <span class="ds-grid-hint" style="margin-left:4px;">
+        미리보기는 <b>실제 환자 자료를 쓰지 않습니다</b> — 칸을 넘치는지 보이도록
+        긴 보기 값으로 그립니다.
+      </span>
     </div>
     </div>{{-- /card --}}
   </form>

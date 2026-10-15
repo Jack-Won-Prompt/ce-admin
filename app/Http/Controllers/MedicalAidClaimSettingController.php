@@ -21,6 +21,33 @@ class MedicalAidClaimSettingController extends Controller
         ]);
     }
 
+    /**
+     * 미리보기 — **지금 화면에 적힌 자리로** 한 장 그려 보인다 (2026-10-15 지시).
+     *
+     * 담기 전에 본다. 자리를 고치고 저장한 뒤 실제 건을 다시 만들어야 알 수 있었고,
+     * **이미 만들어 둔 청구서는 설정을 바꿔도 그대로**라 「고쳐도 그대로다」로 읽혔다.
+     *
+     * 실제 환자 자료를 쓰지 않는다 — 칸마다 긴 보기 값을 넣어 넘침까지 보인다.
+     */
+    public function preview(Request $request)
+    {
+        $자리 = (array) $request->input('fields', []);
+
+        try {
+            $pdf = \App\Support\MedicalAidClaimForm::미리보기($자리 ?: null);
+        } catch (\Throwable $e) {
+            return response('미리보기를 만들지 못했습니다 — ' . $e->getMessage(), 500)
+                ->header('Content-Type', 'text/plain; charset=UTF-8');
+        }
+
+        return response($pdf, 200, [
+            'Content-Type'        => 'application/pdf',
+            /* 새 창에서 바로 보인다 — 내려받게 하면 고칠 때마다 파일이 쌓인다 */
+            'Content-Disposition' => 'inline; filename="claim-preview.pdf"',
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate',
+        ]);
+    }
+
     public function update(Request $request)
     {
         /* 이 서식은 **가로 A4** 라 x 가 297, y 가 210 까지다.
