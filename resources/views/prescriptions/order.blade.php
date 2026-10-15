@@ -1522,8 +1522,21 @@ $calcDeposit  = $calcCopay;
                   <img id="csignImg" src="" alt="서명 이미지" style="max-width:100%;max-height:200px;display:block;margin:0 auto;" />
                 </div>
               </div>
-              <div id="csignNoSig" style="display:none;padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">
-                <i class="fa-solid fa-circle-info"></i> 저장된 서명 이미지가 없습니다.
+              {{-- 서명 그림이 없는 건은 대개 **종이로 받은 위임장**이다(2026-10-15 확인요청).
+                   「없습니다」만 적으면 자료가 사라진 것으로 읽힌다 — 무엇으로 받았고
+                   어디에 있는지를 함께 적고, 바로 여는 단추를 둔다. --}}
+              <div id="csignNoSig" style="display:none;padding:18px 20px;text-align:center;color:var(--text-muted);font-size:13px;">
+                <i class="fa-solid fa-circle-info"></i>
+                <span id="csignNoSigMsg">저장된 서명 이미지가 없습니다.</span>
+                <div id="csignPaperWrap" style="display:none;margin-top:10px;">
+                  <div id="csignPaperWhere" style="font-size:12px;margin-bottom:8px;"></div>
+                  <a id="csignPaperBtn" href="#" target="_blank" rel="noopener"
+                     style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;
+                            background:var(--primary);color:#fff;font-weight:700;font-size:12px;
+                            border-radius:var(--radius);text-decoration:none;">
+                    <i class="fa-solid fa-file-image"></i> <span id="csignPaperName">위임장 보기</span>
+                  </a>
+                </div>
               </div>
             </div>
             <div id="csignError" style="display:none;padding:24px;text-align:center;color:var(--danger);font-size:13px;">
@@ -17277,6 +17290,31 @@ window.HELP_TOUR_STEPS = [
         imgWrap.style.display = 'none';
         noSig.style.display   = 'block';
         if (pngBtn) pngBtn.style.display = 'none';
+
+        /* 종이로 받은 건이면 그렇게 적는다 — 「없습니다」로 끝내지 않는다 */
+        const msg    = document.getElementById('csignNoSigMsg');
+        const paper  = document.getElementById('csignPaperWrap');
+        const where  = document.getElementById('csignPaperWhere');
+        const pBtn   = document.getElementById('csignPaperBtn');
+        const pName  = document.getElementById('csignPaperName');
+
+        if (볼것.file_url) {
+          if (msg) {
+            msg.textContent = (볼것.label || '종이로 받은 서류')
+              + '입니다. 전자 서명이 아니므로 서명 이미지가 없습니다.';
+          }
+          if (where) {
+            where.textContent = 볼것.rx_number
+              ? ('처방전 ' + 볼것.rx_number + ' 에 첨부되어 있습니다.')
+              : '거래처 서류함에 보관되어 있습니다.';
+          }
+          if (pBtn)  pBtn.href = 볼것.file_url;
+          if (pName) pName.textContent = 볼것.file_name || '위임장 보기';
+          if (paper) paper.style.display = 'block';
+        } else {
+          if (msg)   msg.textContent = '저장된 서명 이미지가 없습니다.';
+          if (paper) paper.style.display = 'none';
+        }
       }
 
       // PDF 다운로드 버튼

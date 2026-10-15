@@ -1141,6 +1141,15 @@ class ConsentController extends Controller
                         'label'       => '거래처 서류함의 위임장',
                         'signed_at'   => $거래처종이->signed_at?->format('Y-m-d'),
                         'rx_number'   => null,
+                        /* **그 종이를 바로 열 수 있게 한다** (2026-10-15 확인요청).
+
+                           서명 그림이 없는 것은 종이로 받았기 때문인데, 창에는
+                           「저장된 서명 이미지가 없습니다」만 떴다. 담당자는 서명이
+                           사라진 줄 알고 찾아다닌다. 무엇을 받아 두었는지, 어디
+                           있는지를 함께 준다. */
+                        'file_url'    => route('patients.documents.show',
+                                               [$prescription->patient_id, $거래처종이->id]),
+                        'file_name'   => $거래처종이->file_original_name ?: null,
                         'valid_until' => \App\Support\DelegationGate::서명유효기간(
                             $거래처종이->signed_at, $prescription->patient)?->format('Y-m-d'),
                         'matched_by'  => null,
@@ -1165,7 +1174,15 @@ class ConsentController extends Controller
                         'source'      => 'paper',
                         'label'       => '서면 위임장(업로드)',
                         'signed_at'   => $서면위임장->created_at?->format('Y-m-d'),
-                        'rx_number'   => null,
+                        /* **어느 처방전에 붙어 있는지 적는다** (2026-10-15 확인요청).
+
+                           이 서류는 거래처의 **지난 처방전**에 붙어 있을 수 있다.
+                           (E)정용순 님이 그랬다 — 위임장은 2026-07-10 처방전에 있고
+                           지금 열린 것은 2026-10-12 건이라, 왼쪽 서류 칸에 위임장이
+                           보이지 않았다. 어디 있는지 모르면 없는 것과 같다. */
+                        'rx_number'   => $서면위임장->prescription?->rx_number,
+                        'file_url'    => route('files.prescription-attachment', $서면위임장),
+                        'file_name'   => $서면위임장->file_original_name ?: null,
                         'valid_until' => null,
                         'matched_by'  => null,
 
