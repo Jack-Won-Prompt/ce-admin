@@ -905,9 +905,9 @@
                value="{{ $consent->guardian_name ?: $g?->guardian_name }}" oninput="refreshAgree()" />
       </div>
       <div class="g-field">
-        <label>보호자 전화번호</label>
-        <input type="text" id="gPhone" maxlength="20" placeholder="010-XXXX-XXXX"
-               value="{{ $consent->guardian_phone ?: $g?->guardian_phone }}" />
+        <label>보호자 전화번호 <span style="color:#ef4444;">*</span></label>
+        <input type="text" id="gPhone" maxlength="20" placeholder="010-XXXX-XXXX" inputmode="numeric"
+               value="{{ $consent->guardian_phone ?: $g?->guardian_phone }}" oninput="refreshAgree()" />
       </div>
       <div class="g-field">
         <label>법정대리인 또는 가족 생년월일 <span style="color:#ef4444;">*</span></label>
@@ -1103,6 +1103,11 @@ function onEnd() { drawing = false; }
 /* ── 보호자(법정대리인) — 미성년자일 때만 화면에 있다 ────────── */
 const IS_MINOR = @json((bool) $consent->is_minor);
 let gHasSig = false, gIdData = null;
+/* 이미 받아 둔 보호자 신분증이 있나 (2026-10-15).
+
+   이 화면은 받아 둔 신분증을 다시 보여 주지 않는다. 그래서 신분증을 필수로 막으면
+   **이미 낸 사람까지** 다시 올려야 한다. 받아 둔 것이 있으면 그것으로 친다. */
+const G_ID_ALREADY = @json((bool) ($consent->guardian_id_path ?? false));
 
 /* 생년월일 — 숫자 여덟 자리를 치면 YYYY-MM-DD 로 맞춘다.
    휴대폰에서 하이픈을 찾아 누르는 일이 없어야 한다. */
@@ -1124,13 +1129,31 @@ function guardianBirthOk() {
   return dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d && dt <= new Date();
 }
 
-/* 신분증은 여기서 보지 않는다 — 없어도 서명은 받는다(2026-09-09 지시).
-   submitConsent 가 누를 때 한 번 묻는다. */
+/** 보호자 전화번호가 번호 꼴인가 (2026-10-15) */
+function guardianPhoneOk() {
+  const v = (document.getElementById('gPhone')?.value ?? '').replace(/\D/g, '');
+  return v.length >= 9 && v.length <= 11;
+}
+
+/** 보호자 신분증이 있나 — 지금 올린 것이든, 앞서 받아 둔 것이든 */
+function guardianIdOk() {
+  return !!(gIdData || G_ID_ALREADY);
+}
+
+/* **보호자 정보는 모두 필수다** (2026-10-15 지시).
+
+   여태 전화번호는 아예 재지 않았고, 신분증은 없어도 한 번 묻고 지나가게 두었다
+   (2026-09-09 지시 — 신분증이 없거나 흐려 못 올리는 사람이 있어, 통째로 막으면
+   받아 둘 수 있었던 서명마저 못 받는다는 까닭이었다).
+
+   그 지시를 오늘 되돌린다. 미성년 건은 보호자 서류가 갖춰져야 공단에 낼 수 있고,
+   반쪽으로 받아 두면 담당자가 다시 연락해 같은 일을 또 해야 한다. */
 function guardianReady() {
   if (!IS_MINOR) return true;
   const name = (document.getElementById('gName')?.value ?? '').trim();
   const rel  = document.getElementById('gRelation')?.value ?? '';
-  return !!(name && rel && guardianBirthOk() && gHasSig);
+  return !!(name && rel && guardianPhoneOk() && guardianBirthOk()
+            && gHasSig && guardianIdOk());
 }
 
 /* ── 문서 목록 (2026-09-10 「서명 동의」) ─────────────────
@@ -1284,8 +1307,10 @@ function whatIsMissing() {
     const name = (document.getElementById('gName')?.value ?? '').trim();
     if (!name)                 남은.push('법정대리인 또는 가족 성명');
     if (!document.getElementById('gRelation')?.value) 남은.push('가입자ㆍ피부양자와의 관계');
+    if (!guardianPhoneOk())    남은.push('보호자 전화번호');
     if (!guardianBirthOk())    남은.push('법정대리인 또는 가족 생년월일');
     if (!gHasSig)              남은.push('보호자 서명');
+    if (!guardianIdOk())       남은.push('법정대리인 또는 가족 신분증');
   } else if (!hasSig) {
     남은.push('본인 서명');
   }
@@ -1696,14 +1721,16 @@ async function submitConsent(action) {
     return;
   }
 
-  /* 신분증 없이 누르면 한 번 묻는다. 「필수인데 그냥 넘어갔다」로 남지 않게, 무엇이
-     뒤따르는지 그 자리에서 알린다 — 담당자가 다시 연락할 일이라는 것까지. */
-  if (action === 'agreed' && IS_MINOR && !gIdData) {
-    const 갈까 = await ceConfirm(
-      '신분증은 필수입니다. 그래도 저장하시겠습니까?\n담당자가 다시 연락을 드릴 수 있습니다.',
-      { tone: 'warning', confirmText: '저장', cancelText: '취소' },
-    );
-    if (!갈까) return;
+  /* **신분증 없이는 넘어가지 않는다** (2026-10-15 지시).
+
+     여태 한 번 묻고 지나가게 두었다(2026-09-09). 그러면 반쪽으로 받아 둔 건이
+     쌓이고 담당자가 다시 연락해 같은 일을 또 해야 한다. 미성년 건은 보호자
+     서류가 갖춰져야 공단에 낼 수 있다.
+
+     받아 둔 것이 있으면 통과한다 — 이 화면이 그것을 다시 보여 주지 않을 뿐이다. */
+  if (action === 'agreed' && IS_MINOR && !guardianIdOk()) {
+    ceAlert('법정대리인 또는 가족 신분증을 올려 주시기 바랍니다.', { tone: 'warning' });
+    return;
   }
   if (action === 'agreed' && !privacyReady()) {
     ceAlert('개인정보 수집·이용의 신청 유형ㆍ필수 입력ㆍ필수 동의 항목을 모두 채워 주시기 바랍니다.', { tone: 'warning' });

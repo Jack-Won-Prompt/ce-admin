@@ -204,7 +204,17 @@ class DelegationSign extends Model
      */
     public function 보낼번호(): ?string
     {
-        $번호 = $this->main_contact === 'guardian' ? $this->guardian_phone : $this->phone;
+        /* **미성년이면 보호자가 받는다** (2026-10-15 지시).
+
+           만 19세 미만의 위임은 법정대리인이 한다. 링크를 아이 번호로 보내면 보호자
+           칸에서 멈추고, 아이가 제 휴대전화로 본인확인을 할 수도 없다. Main contact
+           가 무엇으로 서 있든 이 경우에는 보호자가 먼저다.
+
+           보호자 번호가 비어 있으면 환자 번호로 **물러나지 않는다** — 그러면 미성년에게
+           링크가 가고, 그 링크는 어차피 보호자 칸에서 멈춘다. 보내지 않고 화면에서
+           ［수정］으로 채우게 한다(2026-09-14 에 Main contact 를 그렇게 다룬 것과 같다). */
+        $보호자쪽 = $this->미성년인가() || $this->main_contact === 'guardian';
+        $번호 = $보호자쪽 ? $this->guardian_phone : $this->phone;
         $숫자 = preg_replace('/\D/', '', (string) $번호);
 
         return strlen($숫자) >= 9 && strlen($숫자) <= 11 ? $숫자 : null;

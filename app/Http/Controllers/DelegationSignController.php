@@ -785,10 +785,16 @@ class DelegationSignController extends Controller
      */
     private function 보내기(DelegationSign $줄, ?string $이름): array
     {
-        /* 어디로 보낼지는 Main contact 가 정한다 (2026-09-14 지시) */
+        /* 어디로 보낼지는 Main contact 가 정한다 (2026-09-14 지시).
+           **미성년이면 그보다 먼저 보호자가 받는다** (2026-10-15 지시). */
         $번호 = $줄->보낼번호();
         if ($번호 === null) {
-            $쪽 = DelegationSign::연락[$줄->main_contact] ?? '환자';
+            /* 못 보내는 까닭을 **그 건에 맞게** 적는다. 미성년인데 보호자 번호가 없는
+               것을 「환자 전화번호가 없다」고 적으면, 담당자는 멀쩡한 환자 번호를
+               보며 무엇이 비었는지 찾지 못한다. */
+            $쪽 = $줄->미성년인가()
+                ? '미성년자 건이라 보호자(법정대리인)에게 보냅니다. 보호자'
+                : (DelegationSign::연락[$줄->main_contact] ?? '환자');
 
             return [[
                 'success' => false,

@@ -310,21 +310,30 @@ class ConsentController extends Controller
         }
 
         /* 미성년자는 혼자 위임할 수 없다. 화면에서도 막지만, 화면을 거치지 않고 들어오는
-           요청이 있으므로 서버에서 다시 본다. */
-        /* **신분증은 여기서 막지 않는다**(2026-09-09 지시).
+           요청이 있으므로 서버에서 다시 본다.
 
-           그 자리에 신분증이 없거나 사진이 흐려 못 올리는 사람이 있다. 그때 서명까지
-           통째로 막히면 받아 둘 수 있었던 것마저 못 받는다. 화면이 「신분증은 필수입니다.
-           그래도 저장하시겠습니까?」라 묻고, 담당자가 「신분증」 단추로 그 하나만 다시
-           청한다(issueIdCard). 나머지는 그대로 막는다 — 보호자 없이 미성년이 혼자
-           위임할 수는 없다. */
+           **보호자 정보는 모두 필수다** (2026-10-15 지시) — 전화번호와 신분증까지.
+
+           신분증은 2026-09-09 지시로 일부러 막지 않았다 — 없거나 흐려 못 올리는 사람이
+           있어, 통째로 막히면 받아 둘 수 있었던 서명마저 못 받는다는 까닭이었다.
+           그 지시를 오늘 되돌린다. 반쪽으로 받아 두면 담당자가 다시 연락해 같은 일을
+           또 해야 하고, 미성년 건은 보호자 서류가 갖춰져야 공단에 낼 수 있다.
+
+           **이미 받아 둔 신분증은 다시 청하지 않는다** — 이 화면은 받아 둔 것을 다시
+           보여 주지 않아, 그것까지 막으면 낸 사람이 또 올려야 한다. */
         if ($request->action === 'agreed' && $consent->is_minor) {
             foreach (['guardian_name' => '보호자 성명', 'guardian_relation' => '보호자 관계',
                       'guardian_birth' => '보호자 생년월일',
+                      'guardian_phone' => '보호자 전화번호',
                       'guardian_signature' => '보호자 서명'] as $k => $label) {
                 if (!trim((string) $request->input($k))) {
                     return response()->json(['success' => false, 'message' => "{$label}이(가) 필요합니다."], 422);
                 }
+            }
+
+            if (!trim((string) $request->input('guardian_id')) && ! $consent->guardian_id_path) {
+                return response()->json(['success' => false,
+                    'message' => '법정대리인 또는 가족 신분증이 필요합니다.'], 422);
             }
         }
 
