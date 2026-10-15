@@ -16564,9 +16564,15 @@ window.HELP_TOUR_STEPS = [
           'Accept': 'application/json',
           'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '',
         },
+        /* 목록에는 「주문 없음」 줄이 함께 선다 — 처방전은 들어왔는데 주문이 아직
+           없는 건이다. 그 줄의 id 는 null 이라, 그대로 보내면 서버가
+           「The order_ids.0 field must be an integer」로 막는다(2026-10-15 확인요청).
+           주문이 있는 줄은 주문 번호로, 없는 줄은 처방전 번호로 나눠 보낸다. */
         body: JSON.stringify({
           assigned_user_id: uid,
-          order_ids: olAsRows.map(r => r.id),
+          order_ids: olAsRows.filter(r => Number(r.id)  > 0).map(r => Number(r.id)),
+          rx_ids:    olAsRows.filter(r => !(Number(r.id) > 0) && Number(r.rx_id) > 0)
+                             .map(r => Number(r.rx_id)),
         }),
       });
 
@@ -16575,9 +16581,11 @@ window.HELP_TOUR_STEPS = [
 
       /* 목록을 통째로 다시 부르지 않는다 — 이 화면에는 적다 만 것이 딸려 있어
          새로 고치면 그것이 사라진다. 바뀐 줄만 고쳐 그린다. */
-      const byId = new Map(j.rows.map(r => [r.order_id, r]));
+      const byId = new Map(j.rows.filter(r => r.order_id).map(r => [r.order_id, r]));
+      /* 주문이 없는 줄은 처방전 번호로 찾는다 — 그 줄의 id 는 null 이라 짝이 안 선다 */
+      const byRx = new Map(j.rows.filter(r => r.rx_id).map(r => [r.rx_id, r]));
       const patch = list => list.forEach(r => {
-        const u = byId.get(r.id);
+        const u = (Number(r.id) > 0 ? byId.get(r.id) : null) || byRx.get(r.rx_id);
         if (!u) return;
         r.manager = u.manager; r.manager_id = Number(j.user_id);
         r.rx_number = u.rx_number; r.url = u.url;

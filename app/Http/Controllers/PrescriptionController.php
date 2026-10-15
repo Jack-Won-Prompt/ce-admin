@@ -2838,6 +2838,10 @@ class PrescriptionController extends Controller
             return [
                 /* 주문이 없으므로 주문 번호가 없다 — 표는 처방번호로 가린다 */
                 'id'             => null,
+                /* 담당자 배정은 주문 번호로 보내는데 이 줄에는 그것이 없다. 처방전
+                   번호를 함께 실어, 주문이 아직 없는 건도 넘길 수 있게 한다
+                   (2026-10-15 — 「The order_ids.0 field must be an integer」). */
+                'rx_id'          => $rx->id,
                 'order_no'       => '',
                 'rx_number'      => $rx->rx_number ?? '',
                 'patient'        => $rx->patient?->name ?? ($rx->patient_name_ocr ?? ''),
@@ -3716,24 +3720,65 @@ class PrescriptionController extends Controller
      */
     public function bulkAssign(Request $request): JsonResponse
     {
+        /* **주문이 아직 없는 줄도 넘어온다** (2026-10-15).
+
+           목록에는 「주문 없음」 줄이 함께 선다 — 처방전은 들어왔는데 주문이 아직
+           서지 않은 건이다. 그 줄의 주문 id 는 `null` 이라, 화면이 그대로 보내면
+           여기서 「The order_ids.0 field must be an integer」로 막혔다. 담당자를
+           바꾸려던 사람은 창 아래에 영문 한 줄만 보았다.
+
+           그 줄은 처방전 id 로 받는다. 담당자는 본디 처방전에 붙으므로 주문을
+           거치지 않아도 되는 일이다. 둘 다 비면 그때 막는다. */
         $data = $request->validate([
-            'order_ids'        => 'required|array|min:1',
+            'order_ids'        => 'nullable|array',
             'order_ids.*'      => 'integer',
+            'rx_ids'           => 'nullable|array',
+            'rx_ids.*'         => 'integer',
             'assigned_user_id' => 'required|exists:users,id',
         ]);
 
+        $주문id = array_filter((array) ($data['order_ids'] ?? []));
+        $처방id = array_filter((array) ($data['rx_ids'] ?? []));
+
+        if (! $주문id && ! $처방id) {
+            return response()->json([
+                'success' => false,
+                'message' => '담당자를 배정할 건을 목록에서 선택해 주십시오.',
+            ], 422);
+        }
+
         $to = User::findOrFail($data['assigned_user_id']);
 
-        $orders = Order::with(['prescription.assignedUser', 'prescription.patient', 'patient'])
-            ->whereIn('id', $data['order_ids'])
-            ->get();
+        /* 넘길 것을 한 묶음으로 모은다 — 주문에서 온 것과 처방전에서 바로 온 것.
+           같은 처방전이 두 길로 들어오면 한 번만 다룬다(처방번호로 가린다). */
+        $넘길것 = [];
+
+        $orders = $주문id
+            ? Order::with(['prescription.assignedUser', 'prescription.patient', 'patient'])
+                ->whereIn('id', $주문id)->get()
+            : collect();
+
+        foreach ($orders as $order) {
+            $rx = $this->prescriptionFor($order);
+            $넘길것[$rx->id] = ['rx' => $rx, 'order' => $order];
+        }
+
+        if ($처방id) {
+            $처방들 = Prescription::with(['assignedUser', 'patient'])
+                ->whereIn('id', $처방id)->get();
+
+            foreach ($처방들 as $rx) {
+                if (isset($넘길것[$rx->id])) {
+                    continue;
+                }
+                $넘길것[$rx->id] = ['rx' => $rx, 'order' => null];
+            }
+        }
 
         $moved = [];   // 실제로 바뀐 것
         $same  = 0;    // 이미 그 사람 것이던 건
 
-        foreach ($orders as $order) {
-            $rx = $this->prescriptionFor($order);
-
+        foreach ($넘길것 as ['rx' => $rx, 'order' => $order]) {
             if ((int) $rx->assigned_user_id === (int) $to->id) {
                 $same++;
                 continue;
@@ -3748,7 +3793,10 @@ class PrescriptionController extends Controller
                     : "담당자로 {$to->name} 을(를) 배정했습니다"
             );
 
-            $rx->setRelation('order', $order);
+            if ($order) {
+                $rx->setRelation('order', $order);
+            }
+
             $moved[] = ['order' => $order, 'rx' => $rx];
         }
 
@@ -3768,7 +3816,9 @@ class PrescriptionController extends Controller
             /* 목록을 통째로 다시 부르지 않고 바뀐 줄만 고쳐 그린다 — 이 화면은
                적다 만 것이 딸린 자리라 새로 고치면 그것이 사라진다. */
             'rows'    => collect($moved)->map(fn ($m) => [
-                'order_id'  => $m['order']->id,
+                /* 주문이 없는 줄은 처방전 id 로 돌려준다 — 화면이 그것으로 줄을 찾는다 */
+                'order_id'  => $m['order']?->id,
+                'rx_id'     => $m['rx']->id,
                 'rx_number' => $m['rx']->rx_number,
                 'manager'   => $to->name,
                 'url'       => route('prescriptions.show', $m['rx']) . '?claim=1',
