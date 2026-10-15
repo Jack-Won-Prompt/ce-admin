@@ -411,6 +411,20 @@ class OrderReturnController extends Controller
                     . '상세 화면의 ［위드웍스 다시 보내기］로 다시 보내거나, 창고에 직접 안내해 주십시오.']);
         }
 
+        /* **보내긴 보냈는데 뜻대로 가지 못한 건**도 알린다 (2026-10-15 확인요청).
+
+           출고 전 취소는 원 판매주문을 취소해야 하는데, 창고가 거절하면 반품 주문으로
+           되돌아간다. 그때 「전달했습니다」로만 끝내면 담당자는 취소가 간 줄 안다 —
+           원 판매주문은 살아 있어 물건이 그대로 나간다. 실제로 (E)이정현A 건이 그렇게
+           출고되어 배송까지 끝났다. */
+        $남긴말 = (string) $return->fresh()->withworks_error;
+
+        if ($남긴말 !== '') {
+            return redirect()->route('order-returns.show', $return)
+                ->with('status', "접수했습니다. 접수번호 {$return->receipt_no}." . $안내)
+                ->withErrors(['withworks' => $남긴말]);
+        }
+
         return redirect()->route('order-returns.show', $return)
             ->with('status',
                 "접수했습니다. 접수번호 {$return->receipt_no} — 위드웍스에 전달했습니다." . $안내);

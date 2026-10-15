@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\OrderReturn;
+use App\Services\WithworksSync;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -71,22 +72,72 @@ class WithworksReturns
                 . '위드웍스에서 수량을 줄여 주십시오 (Consumer Operation)');
         }
 
-        return $this->cancelOrigin($return, $order);
+        /* **거절당하면 반품 주문으로 되돌아간다** (2026-10-15).
+
+           할당ㆍ피킹이 걸린 건은 창고가 취소를 받아 주지 않을 수 있다. 그때 그대로
+           멈추면 반품 주문도 서지 않아 수거할 길이 없어진다 — 물건은 나가는데 우리는
+           아무것도 보내지 못한 꼴이다. 취소가 막히면 반품으로 세워 둔다. */
+        if ($this->cancelOrigin($return, $order)) {
+            return true;
+        }
+
+        $막힌말 = (string) $return->fresh()->withworks_error;
+
+        Log::warning('[반품] 판매주문 취소가 막혀 반품 주문으로 세운다', [
+            'receipt' => $return->receipt_no,
+            'order'   => $order->order_number,
+            'message' => $막힌말,
+        ]);
+
+        if (! $this->storeReturn($return->fresh(), $order)) {
+            return false;
+        }
+
+        /* 취소를 못 보냈다는 사실을 지우지 않는다 — 담당자가 창고에 따로 말해야 한다 */
+        $return->fresh()->forceFill([
+            'withworks_error' => $this->fit(
+                '판매주문을 취소하지 못해 반품 주문으로 등록했습니다 — ' . $막힌말
+                . ' 창고에 원 판매주문 취소를 직접 요청해 주십시오.', 500),
+        ])->save();
+
+        return true;
     }
 
     /**
      * 아직 나가지 않은 물건인가.
      *
-     * 송장이 채번되기 전이면 창고에서 물건이 나가지 않았다. 그때는 종류가 무엇이든
-     * 되돌려 받을 물건이 없다 — 반품도 교환도 실질은 「이 주문을 없던 일로」다.
+     * 되돌려 받을 물건이 없으면 종류가 무엇이든 실질은 「이 주문을 없던 일로」다.
      * 반품 주문을 세우면 창고는 오지 않을 물건을 기다리고, 우리 표에는 나가지도 않은
      * 건의 수거·검수 단계가 남는다.
      *
-     * 송장이 붙었으면 물건이 나간 것이므로 종류대로 반품 주문을 세운다.
+     * **출고 완료를 기준으로 본다** (2026-10-15 확인요청).
+     *
+     * 여태 `withworks_ship_no` 가 있으면 「나갔다」로 보았다. 그런데 그 번호는 창고가
+     * 출고 줄을 세우는 순간 생긴다 — 확정 직후, 아직 물건은 창고에 그대로 있을 때다.
+     * 그래서 취소할 수 있는 건이 「출고 후」로 갈려 반품 주문이 섰고, 원 판매주문은
+     * 살아남아 예정대로 나갔다.
+     *
+     * (E)이정현A 건이 그랬다. 10-12 17:25 확정과 함께 출고 줄 SH2610120475 가 섰고,
+     * 10-13 09:46 에 취소를 접수했는데 그때 출고 상태는 **02(신규)** 였다. 그런데도
+     * 출고번호가 있다는 이유로 반품 주문이 섰고, 물건은 그날 17:47 에 나가 배송까지
+     * 끝났다. 운영에서 출고 전 취소로 접수한 건은 그 한 건뿐이고, **원 판매주문이
+     * 취소된 적은 한 번도 없었다.**
+     *
+     * 이제 보는 것은 셋이다 — 출고 완료 상태(95ㆍ98), 우리 쪽 출고일, 송장번호.
+     * 하나라도 있으면 나간 것이다. 할당ㆍ피킹까지 간 건은 아직 「출고 전」이라
+     * 판매주문 취소를 시도하고, 창고가 거절하면 반품 주문으로 되돌아간다(push 참고).
      */
     private function isPreShipCancel(OrderReturn $return, Order $order): bool
     {
-        return !$order->withworks_ship_no && !$order->withworks_tracking_no;
+        if ($order->isShipped()) {
+            return false;
+        }
+
+        if (in_array((string) $order->withworks_ship_status, WithworksSync::SHIPPED, true)) {
+            return false;
+        }
+
+        return blank($order->withworks_tracking_no) && blank($order->tracking_number);
     }
 
     /** 원 판매주문을 취소한다 — 반품 주문을 만들지 않는다 */
