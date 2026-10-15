@@ -489,6 +489,16 @@ class TaxinvoiceController extends Controller
             try {
                 $info = $this->svc->getInfo($corpNum, $mgtKeyType, $record->mgt_key);
                 $data = PopbillTaxinvoice::fromPopbillInfo($info, $corpNum, $mgtKeyType);
+
+                /* 이미 있는 줄의 **주문 연결은 덮지 않는다** (2026-10-15 지시).
+
+                   `fromPopbillInfo` 는 관리번호에서 주문을 다시 계산한다. 그 규칙이
+                   달라지면(실제로 오늘 달라졌다) 조회 한 번에 옛 줄의 연결이 조용히
+                   바뀐다 — 사람이 보기만 했는데 자료가 바뀌는 셈이다.
+
+                   연결은 줄이 설 때 한 번 정하고, 고쳐야 할 때는 손으로 고친다. */
+                unset($data['order_id']);
+
                 $record->fill($data)->save();
                 $updated++;
             } catch (\Throwable) {
@@ -522,10 +532,16 @@ class TaxinvoiceController extends Controller
         // 조회 결과를 DB에 upsert
         $data = PopbillTaxinvoice::fromPopbillInfo($result, $corpNum, $mgtKeyType);
         if (!empty($data['mgt_key'])) {
-            PopbillTaxinvoice::updateOrCreate(
-                ['corp_num' => $corpNum, 'mgt_key_type' => $mgtKeyType, 'mgt_key' => $data['mgt_key']],
-                $data
-            );
+            $열쇠 = ['corp_num' => $corpNum, 'mgt_key_type' => $mgtKeyType, 'mgt_key' => $data['mgt_key']];
+
+            /* 이미 있는 줄의 **주문 연결은 덮지 않는다** (2026-10-15 지시).
+               여기는 목록에서 한 줄을 눌러 여는 자리다 — 보기만 한 사람이 자료를
+               바꾸게 두지 않는다. 새로 서는 줄에만 연결을 적는다. */
+            if (PopbillTaxinvoice::where($열쇠)->exists()) {
+                unset($data['order_id']);
+            }
+
+            PopbillTaxinvoice::updateOrCreate($열쇠, $data);
         }
 
         return response()->json($result);
