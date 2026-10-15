@@ -264,7 +264,9 @@ final class TaxInvoiceForm
      * 찍혔는데, **공단에 내는 서류는 번호가 보이지 않으면 반려된다.**
      *
      * 담는 값은 그대로 둔다. 종이를 그릴 때만 원문을 연다 — 여는 자리마다 감사로그가
-     * 남으므로 누가 언제 보았는지 되짚을 수 있다.
+     * 남으므로 누가 언제 보았는지 되짚을 수 있다. 사유 코드는 `tax_invoice` 다
+     * (`config/rrn.php` · 「전자세금계산서 공급받는자(개인) 주민등록번호 기재」).
+     * 등록되지 않은 코드를 쓰면 복호화가 거절된다.
      *
      * 원문을 찾지 못하면 **담긴 값을 그대로 쓴다.** 가려진 번호라도 비어 있는 것보다
      * 낫고, 지어낼 수는 없다.
@@ -278,11 +280,11 @@ final class TaxInvoiceForm
         }
 
         $원문 = preg_replace('/\D/', '',
-            (string) $order->prescription?->residentNoOcrFor('세금계산서 서식 출력')) ?? '';
+            (string) $order->prescription?->residentNoOcrFor('tax_invoice')) ?? '';
 
         if (strlen($원문) !== 13) {
             $원문 = preg_replace('/\D/', '',
-                (string) $order->patient?->residentNoFor('세금계산서 서식 출력')) ?? '';
+                (string) $order->patient?->residentNoFor('tax_invoice')) ?? '';
         }
 
         return strlen($원문) === 13
@@ -356,8 +358,8 @@ final class TaxInvoiceForm
         $값 = preg_replace('/\(\s*\)/', '', $값);
         $값 = preg_replace('/\s+/u', ' ', $값);
 
-        return trim($값, " 	
- ,·/");
+        /* 앞뒤에 걸린 공백ㆍ쉼표ㆍ중점ㆍ빗금을 걷는다 */
+        return trim(preg_replace('/^[\s,\x{00B7}\/]+|[\s,\x{00B7}\/]+$/u', '', $값));
     }
 
     private static function parties(Order $order, array $company): array
