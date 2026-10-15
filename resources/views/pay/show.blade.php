@@ -82,25 +82,16 @@
 
   @else
     <div class="card">
-      {{-- 가상계좌는 상점에 계약이 있을 때만 내놓는다. 없으면 토스가 결제창을 열지
-           않고 「계약된 결제수단이 아닙니다」로 되돌린다 — 고를 수는 있는데 누르면
-           실패하는 자리를 환자 앞에 두지 않는다. --}}
-      @if(config('toss.virtual_account.selectable'))
-        <div style="font-weight:700; margin-bottom:8px;">결제 수단을 선택해 주시기 바랍니다</div>
-        <div class="ways">
-          <label class="way">
-            <input type="radio" name="payway" value="CARD" checked>
-            <span><b>카드</b>신용ㆍ체크카드로 즉시 결제합니다</span>
-          </label>
-          <label class="way">
-            <input type="radio" name="payway" value="VIRTUAL_ACCOUNT">
-            <span><b>가상계좌</b>가상계좌를 발급받아 입금합니다. 입금이 확인되면 결제가 완료됩니다</span>
-          </label>
-        </div>
-      @else
-        <div style="font-weight:700; margin-bottom:4px;">카드로 결제합니다</div>
-        <p class="sub" style="margin:0;">아래 버튼을 누르시면 토스페이먼츠 결제창이 열립니다.</p>
-      @endif
+      {{-- **링크페이는 카드 결제만 한다** (2026-10-15 지시).
+
+           여태 이 자리에서 가상계좌도 고를 수 있었다. 그래서 담당자가 「링크페이」로
+           안내해도 환자가 가상계좌를 골라, 안내한 수단과 실제 받은 수단이 갈렸다.
+
+           앞으로 상담 담당자가 환자에게 결제 수단을 물어 고른 뒤 보낸다 —
+           링크페이는 카드, 가상계좌는 계좌 입금으로 한 가지씩만 연다.
+           가상계좌로 받을 건은 결제전송에서 「가상계좌」를 골라 보낸다. --}}
+      <div style="font-weight:700; margin-bottom:4px;">카드로 결제합니다</div>
+      <p class="sub" style="margin:0;">아래 버튼을 누르시면 토스페이먼츠 결제창이 열립니다.</p>
       <button class="btn" id="payBtn">{{ number_format($link->amount) }}원 결제</button>
       <p class="note">결제는 토스페이먼츠를 통해 처리되며, 카드 정보는 당사 서버에 저장되지 않습니다.</p>
     </div>
@@ -210,7 +201,8 @@
     btn.addEventListener('click', async () => {
       btn.disabled = true;
       try {
-        const way = (document.querySelector('input[name=payway]:checked') || {}).value || 'CARD';
+        /* 링크페이는 카드 한 가지다 (2026-10-15 지시) — 고르는 칸이 없다 */
+        const way = 'CARD';
 
         /* 고른 방법의 칸만 싣는다 — 가상계좌인데 card 를 함께 주면 토스가
            「card는 정의되지 않은 파라미터입니다」로 되돌린다 */

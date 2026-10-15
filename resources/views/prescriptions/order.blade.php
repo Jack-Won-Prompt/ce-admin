@@ -12333,18 +12333,23 @@ window.HELP_TOUR_STEPS = [
     /* 주문 확정 안내 — 창고에 줄이 선 뒤에만 나간다. 무엇으로 보냈는지(무통장입금ㆍ
        링크페이), 보냈는지, 왜 못 보냈는지를 이 창에서 바로 읽어야 한다. 못 보낸 건은
        담당자가 결제전송으로 손수 보내야 하기 때문이다. */
+    /* 연계가 안내를 보내지 않는 것은 잘못이 아니다 (2026-10-15 지시) — 담당자가
+       결제 수단을 고른 뒤 손으로 보낸다. 「발송 안 됨」으로 적으면 실패로 읽혀,
+       담당자가 까닭을 찾는다. 그런 건은 「수동 발송」으로 적고 다음에 할 일을
+       그 자리에 쓴다. */
+    const smsManual = !!smsResult?.manual;
     const smsRow = smsResult ? `
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="color:var(--text-muted);">${smsResult.method || '결제'} 안내</span>
           <span style="display:inline-block;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;
                        background:${smsResult.sent ? 'var(--primary-50)' : 'var(--gray-100)'};
                        color:${smsResult.sent ? 'var(--primary)' : 'var(--gray-600)'};">
-            ${smsResult.sent ? '발송 완료' : '발송 안 됨'}
+            ${smsResult.sent ? '발송 완료' : (smsManual ? '수동 발송' : '발송 안 됨')}
           </span>
         </div>
         <div style="display:flex;justify-content:space-between;gap:8px;">
-          <span style="color:var(--text-muted);">${smsResult.sent ? '보낸 방법' : '사유'}</span>
-          <span style="font-size:11px;text-align:right;${smsResult.sent ? '' : 'color:var(--warning);'}">${smsResult.message ?? ''}</span>
+          <span style="color:var(--text-muted);">${smsResult.sent ? '보낸 방법' : (smsManual ? '다음 할 일' : '사유')}</span>
+          <span style="font-size:11px;text-align:right;${smsResult.sent || smsManual ? '' : 'color:var(--warning);'}">${smsResult.message ?? ''}</span>
         </div>` : '';
 
     document.getElementById('orderModalBody').innerHTML = `
