@@ -464,7 +464,15 @@ class VirtualAccountService extends TossClient
             'amount'         => (int) ($res['totalAmount'] ?? $link->amount),
             'bank'           => $va['bankCode']      ?? null,
             'account_number' => $va['accountNumber'] ?? null,
-            'customer_name'  => $va['customerName']  ?? ($link->order?->patient?->name),
+            /* 가상계좌면 토스가 돌려준 예금주를 그대로 적는다 — 저쪽이 아는 값이 정본이다.
+               카드면 토스 응답에 그 칸이 없으므로 **우리가 보낸 값**을 적는다.
+
+               여태 여기서 `patient->name` 을 그대로 썼다. 그 값에는 `(E)` 와 동명이인
+               꼬리가 붙어 있어, 보낸 것은 「최재웅」인데 우리 표에는 「(E)최재웅」이
+               담겼다(2026-10-15 에 드러남). 밖으로 나가는 이름에서 그 표시를 떼기로
+               한 잣대와도 어긋난다 — 짓는 자리를 PayNames 하나로 모은 까닭이다. */
+            'customer_name'  => $va['customerName']
+                                ?? \App\Support\PayNames::토스에보낼이름($link->order, 'CARD'),
             'due_date'       => $va['dueDate']       ?? null,
             /* **다 냈을 때만 입금 시각을 적는다** (2026-10-13 저녁 점검에서 드러남).
 
