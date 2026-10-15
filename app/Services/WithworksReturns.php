@@ -129,15 +129,7 @@ class WithworksReturns
      */
     private function isPreShipCancel(OrderReturn $return, Order $order): bool
     {
-        if ($order->isShipped()) {
-            return false;
-        }
-
-        if (in_array((string) $order->withworks_ship_status, WithworksSync::SHIPPED, true)) {
-            return false;
-        }
-
-        return blank($order->withworks_tracking_no) && blank($order->tracking_number);
+        return ! $order->출고완료인가();
     }
 
     /** 원 판매주문을 취소한다 — 반품 주문을 만들지 않는다 */

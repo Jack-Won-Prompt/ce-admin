@@ -820,6 +820,40 @@ class Order extends Model
             || in_array($this->status, self::AFTER_SHIP, true);
     }
 
+    /**
+     * 창고에서 물건이 **실제로 나갔는가** (2026-10-15 확인요청).
+     *
+     * 「출고번호가 있는가」로 가리면 안 된다. 그 번호는 판매주문이 확정되는 순간
+     * 창고가 출고 줄을 세우면서 생기고, 그때 물건은 아직 창고에 있다. 그 잣대 때문에
+     * 취소할 수 있던 건이 「출고 후」로 갈려 반품 주문이 섰고, 원 판매주문은 살아남아
+     * 예정대로 나갔다((E)이정현A · 2026-10-13).
+     *
+     * 보는 것은 셋이다.
+     *
+     *   · 창고 출고 상태가 출고완료(95)ㆍ오더종결(98)인가
+     *   · 우리 쪽 출고일이 적혔는가 (isShipped — 배송 단계 포함)
+     *   · 송장번호가 붙었는가
+     *
+     * 하나라도 참이면 나간 것이다. 할당ㆍ피킹까지 간 건은 아직 나가지 않았다.
+     *
+     * **한 곳에 둔다.** 취소를 창고에 어떻게 보낼지(WithworksReturns), 접수 건이
+     * 절차서의 어느 갈래인지(OrderReturn::scenario), 접수 화면이 미리 보여 주는 말까지
+     * 모두 이 판정에 걸린다. 두 곳에 적어 두면 언젠가 갈린다 — 실제로 갈려 있었다.
+     */
+    public function 출고완료인가(): bool
+    {
+        if ($this->isShipped()) {
+            return true;
+        }
+
+        if (in_array((string) $this->withworks_ship_status,
+                     \App\Services\WithworksSync::SHIPPED, true)) {
+            return true;
+        }
+
+        return filled($this->withworks_tracking_no) || filled($this->tracking_number);
+    }
+
     /** 담당자가 손으로 확인한 건인가 — 토스가 아니라 사람이 본 것 */
     public function isDepositConfirmedByHand(): bool
     {

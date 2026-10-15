@@ -348,9 +348,15 @@
     });
   }
 
+  /* 고른 주문이 이미 나갔는가 — 서버가 조회 결과에 실어 준다(Order::출고완료인가).
+     갈래 미리보기가 이 값을 본다 (2026-10-15 지시). */
+  let 고른주문나감 = false;
+
   function pick(i) {
     picked = i;
     const r = rows[i];
+
+    고른주문나감 = !!r.shipped;
 
     $('rtoOrderId').value   = r.id;
     $('rtoOrderNo').value   = r.order_no;
@@ -449,8 +455,12 @@
     const r = $('rtoReason').value;
     if (t === 'exchange') return DEFECTS.includes(r) ? 'exchange_defect' : 'exchange_mind';
     if (t === 'return')   return DEFECTS.includes(r) ? 'return_defect'   : 'return_refund';
-    return (r === 'eligibility' || $('rtoSubtype').value === 'refund_only')
-      ? 'refund_only' : 'cancel_before_ship';
+    if (r === 'eligibility' || $('rtoSubtype').value === 'refund_only') return 'refund_only';
+
+    /* 이미 나간 물건이면 취소를 골라도 「반품 및 환불」이다 (2026-10-15 지시) —
+       서버의 OrderReturn::scenario 와 같은 규칙이다. 고른 주문이 나갔는지는
+       조회 결과가 알려 준다(shipped). */
+    return 고른주문나감 ? 'return_refund' : 'cancel_before_ship';
   }
 
   function syncReason() {

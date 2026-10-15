@@ -444,8 +444,24 @@ class OrderReturn extends Model
             return $this->isDefect() ? self::SC_RETURN_DEFECT : self::SC_RETURN_REFUND;
         }
 
-        return $this->subtype === self::SUB_REFUND_ONLY
-            ? self::SC_REFUND_ONLY
+        if ($this->subtype === self::SUB_REFUND_ONLY) {
+            return self::SC_REFUND_ONLY;
+        }
+
+        /* **이미 나간 건은 출고 전 취소가 아니다** (2026-10-15 지시).
+
+           여태 고른 유형만 보았다. 그래서 물건이 나간 뒤에 접수한 취소도 화면에는
+           「출고 전 취소」로 서고, 단계도 접수 → 확인요청 → 반품 승인 → 환불완료로
+           잡혔다 — 수거도 검수도 없는 흐름이다. 창고에는 반품 주문이 서서 물건이
+           돌아오는데, 우리 화면에는 그것을 받아 적을 자리가 없었다.
+
+           나간 건은 「반품 및 환불」로 본다. 수거ㆍ검수를 거쳐 승인하고 환불한 뒤
+           마이너스 발행까지 가는 그 흐름이 실제로 해야 할 일이다.
+
+           판정은 주문이 쥔다(Order::출고완료인가) — 창고로 무엇을 보낼지 가리는
+           잣대와 같은 것이라야 화면과 창고가 갈리지 않는다. */
+        return $this->order?->출고완료인가()
+            ? self::SC_RETURN_REFUND
             : self::SC_CANCEL_PRESHIP;
     }
 
