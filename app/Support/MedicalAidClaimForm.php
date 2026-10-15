@@ -196,7 +196,24 @@ final class MedicalAidClaimForm
                 continue;
             }
 
-            $pdf->SetFont($font, '', $pos['size'] ?? $cfg['size']);
+            $크기 = (float) ($pos['size'] ?? $cfg['size']);
+            $pdf->SetFont($font, '', $크기);
+
+            /* **칸을 넘치면 글자를 줄인다** (2026-10-15).
+
+               상병명은 길이가 제각이다 — 「방광염」처럼 짧은 것도 있고
+               「달리 분류되지 않은 이완성 신경병성 방광」처럼 스무두 자인 것도 있다.
+               운영 65건 가운데 서른여덟이 열네 자를 넘어, 그대로 찍으면 옆 칸(회색
+               「상병코드」)을 침범한다.
+
+               칸 폭(w)을 적어 둔 칸은 그 폭에 들어갈 때까지 줄인다. 잘라 버리지
+               않는다 — 관청에 내는 서류라 말이 반토막 나면 읽히지 않는다. */
+            if (($칸폭 = (float) ($pos['w'] ?? 0)) > 0) {
+                while ($크기 > 4.5 && $pdf->GetStringWidth((string) $text) > $칸폭) {
+                    $크기 -= 0.25;
+                    $pdf->SetFont($font, '', $크기);
+                }
+            }
 
             $맞춤 = $pos['align'] ?? 'L';
 
