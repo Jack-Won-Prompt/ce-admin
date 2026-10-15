@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Order;
+use Illuminate\Support\Carbon;
 
 /**
  * 팝빌에 발행한 건이 우리 어느 주문의 것인가 (요청서 6쪽, 2026-08-31).
@@ -26,8 +27,8 @@ use App\Models\Order;
  */
 class PopbillLink
 {
-    /** 접두사 + 날짜 여덟 자리 + 주문 id 여섯 자리. 뒤에 무엇이 붙어도 좋다. */
-    private const MGT_KEY = '/^(?:TI|CRC|CR)\d{8}(\d{6})/';
+    /** 접두사 + 발행일 여덟 자리 + 주문 id 여섯 자리. 뒤에 무엇이 붙어도 좋다. */
+    private const MGT_KEY = '/^(?:TI|CRC|CR)(\d{8})(\d{6})/';
 
     /**
      * 이 발행 건의 주문 id — 못 찾으면 null.
@@ -52,6 +53,19 @@ class PopbillLink
      *
      * 있는 주문인지 확인하고 돌려준다 — 여섯 자리가 우연히 숫자로 읽히는 옛 번호가
      * 섞여 있어, 읽히는 대로 믿으면 없는 주문을 가리킨다.
+     *
+     * **있는 것만으로는 모자라다** (2026-10-15).
+     *
+     * 주문 id 는 다시 쓰인다. 시험 자료를 비우는 명령(ResetBusinessData 들)이 `orders`
+     * 를 비우면 자동 번호가 처음부터 매겨지고, 그러면 8월에 발행한 관리번호
+     * `TI20260824000034` 가 **10월에 선 남의 주문 #34** 를 가리킨다. 실제로 그렇게 세
+     * 줄이 엉뚱한 환자에게 붙었고, 그 주문들은 삭제까지 막혀 있었다.
+     *
+     * 그래서 **발행일에 그 주문이 이미 있었는지**까지 본다. 주문보다 먼저 발행된 것은
+     * 그 주문의 것이 아니다.
+     *
+     * 지워진 주문도 함께 본다(withTrashed). 발행 기록은 주문을 지워도 남아야 하므로,
+     * 지운 주문을 없는 것으로 보면 멀쩡히 이어져 있던 건이 제 자리를 잃는다.
      */
     public static function fromMgtKey(?string $mgtKey): ?int
     {
@@ -59,8 +73,19 @@ class PopbillLink
             return null;
         }
 
-        $id = (int) $m[1];
+        $발행일 = $m[1];
+        $id     = (int) $m[2];
 
-        return $id > 0 && Order::whereKey($id)->exists() ? $id : null;
+        if ($id <= 0) {
+            return null;
+        }
+
+        $생긴때 = Order::withTrashed()->whereKey($id)->value('created_at');
+
+        if (!$생긴때) {
+            return null;
+        }
+
+        return Carbon::parse($생긴때)->format('Ymd') <= $발행일 ? $id : null;
     }
 }
