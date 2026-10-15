@@ -196,6 +196,9 @@
     .doc-note {
       padding: 0 13px 12px; font-size: 12px; line-height: 1.6; color: #6b7280;
       background: #fafafa; border-bottom: 1px solid #f1f3f5;
+      /* 설명 줄을 눌러도 펌쳐진다 (2026-10-15 지시) — 머리 글자만
+         눌러야 하는 줄 알고 닫힌 채로 지나쳤다. */
+      cursor: pointer;
     }
     .doc-item.open .doc-note { background: #eef7f9; }
     .doc-body { display: none; padding: 12px 13px; }
@@ -543,13 +546,16 @@
          이미 동의를 받아 둔 사람에게는 이 영역이 아예 서지 않는다. 동의는 사람에게
          한 번 받으면 족하고, 처방전마다 다시 물으면 같은 것을 몇 번씩 읽히게 된다. --}}
     @if(! $privacyDone)
-      <div class="doc-item" data-doc="privacy">
+      {{-- **처음부터 펌쳐 둔다** (2026-10-15 지시) — 다른 카드는 읽어 보는
+           서식이지만 이것은 **골라야 하는 칸**이다. 안에 동의 항목이 줄줄이 있는데
+           접혀 있어, 그런 것이 있는 줄도 모르고 지나쳤다. --}}
+      <div class="doc-item open" data-doc="privacy">
         <button type="button" class="doc-top" onclick="toggleDoc(this)">
           <span class="doc-mark">☑</span>
           <span class="doc-name">{{ App\Support\SignDocs::이름[App\Support\SignDocs::개인정보] }}</span>
           <span class="doc-more">펼치기 ▼</span>
         </button>
-        <div class="doc-note">수집·이용 목적과 항목, 제3자 제공을 확인하고 항목마다 동의합니다.</div>
+        <div class="doc-note" onclick="toggleDoc(this.previousElementSibling)">수집·이용 목적과 항목, 제3자 제공을 확인하고 항목마다 동의합니다.</div>
         <div class="doc-body">
     <div class="sig-section" id="privacyBlock">
       <div class="agree-title">개인정보 수집·이용 동의</div>
@@ -791,7 +797,7 @@
             <span class="doc-name">{{ $_d['name'] }}</span>
             <span class="doc-more">펼치기 ▼</span>
           </button>
-          <div class="doc-note">{{ $_d['note'] }}</div>
+          <div class="doc-note" onclick="toggleDoc(this.previousElementSibling)">{{ $_d['note'] }}</div>
           <div class="doc-body">
             @if($_d['key'] === App\Support\SignDocs::위임장)
               <div class="doc-say">
@@ -1141,6 +1147,18 @@ window.toggleDoc = function (btn) {
     if (f && !f.src) f.src = f.dataset.src;
   }
 };
+
+/* 처음부터 열어 둔 카드는 **글자와 속을 함께 맞춘다** (2026-10-15).
+
+   열림·닫힘을 클래스로 정하므로, 마크업에 open 을 달아 두면 속은 보이는데
+   머리 글자는 「펼치기」 그대로고, 서식 틀도 불러오지 않는다. 그 둘을 여기서
+   한 번 맞춘다 — 마크업에 글자를 박아 두면 두 곳이 갈린다. */
+document.querySelectorAll('.doc-item.open').forEach(function (it) {
+  var m = it.querySelector('.doc-more');
+  if (m) m.textContent = '접기 ▲';
+  var f = it.querySelector('iframe[data-src]');
+  if (f && !f.src) f.src = f.dataset.src;
+});
 
 /* ── 개인정보 수집·이용 동의 ───────────────────────────── */
 function toggleAgreeBox(btn) {
