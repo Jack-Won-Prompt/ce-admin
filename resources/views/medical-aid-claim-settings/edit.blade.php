@@ -116,8 +116,8 @@
     <div class="ds-card">
       <h3><i class="bx bx-text"></i> 글자 항목 위치 (원본 PDF 오버레이, 단위 mm)</h3>
       <div class="ds-hint" style="margin-bottom:12px;">
-        X는 왼쪽에서, Y는 위에서 잰 거리입니다. 이 서식은 <b>가로 A4(297 × 210)</b>입니다 —
-        위임장(세로)과 가로세로가 반대이니 값을 옮겨 적지 마십시오.
+        X는 왼쪽에서, Y는 위에서 잰 거리입니다. 이 서식은 <b>세로 A4(210 × 297)</b>입니다 —
+        2026-10-15 에 새 양식으로 바뀌면서 가로세로가 바뀌었습니다.
         값이 비면 기본 자리를 씁니다. 고친 뒤 <b>지급청구서 PDF</b>를 내려받아 확인하십시오.
       </div>
       <div style="overflow-x:auto;">
@@ -136,11 +136,11 @@
             <tr>
               <td style="padding:6px 10px;border-bottom:1px solid var(--border-light);">{{ $f['label'] ?? $key }}</td>
               <td style="padding:6px 10px;border-bottom:1px solid var(--border-light);">
-                <input type="number" step="0.1" min="0" max="297" style="width:100%;"
+                <input type="number" step="0.1" min="0" max="210" style="width:100%;"
                        name="fields[{{ $key }}][x]" value="{{ old("fields.$key.x", $f['x']) }}">
               </td>
               <td style="padding:6px 10px;border-bottom:1px solid var(--border-light);">
-                <input type="number" step="0.1" min="0" max="210" style="width:100%;"
+                <input type="number" step="0.1" min="0" max="297" style="width:100%;"
                        name="fields[{{ $key }}][y]" value="{{ old("fields.$key.y", $f['y']) }}">
               </td>
               <td style="padding:6px 10px;border-bottom:1px solid var(--border-light);">
@@ -180,8 +180,8 @@
     <div class="ds-card">
       <h3><i class="bx bx-move"></i> 서명 위치 (단위 mm)</h3>
       <div class="ds-grid">
-        <div class="ds-field"><label>X (좌우)</label><input type="number" step="0.1" min="0" max="297" name="sig_x" value="{{ old('sig_x', $setting->sig_x) }}" required></div>
-        <div class="ds-field"><label>Y (상하)</label><input type="number" step="0.1" min="0" max="210" name="sig_y" value="{{ old('sig_y', $setting->sig_y) }}" required></div>
+        <div class="ds-field"><label>X (좌우)</label><input type="number" step="0.1" min="0" max="210" name="sig_x" value="{{ old('sig_x', $setting->sig_x) }}" required></div>
+        <div class="ds-field"><label>Y (상하)</label><input type="number" step="0.1" min="0" max="297" name="sig_y" value="{{ old('sig_y', $setting->sig_y) }}" required></div>
         <div class="ds-field"><label>너비 (크기)</label><input type="number" step="0.1" name="sig_w" value="{{ old('sig_w', $setting->sig_w) }}" required></div>
       </div>
       <div class="ds-hint" style="margin-top:8px;">
