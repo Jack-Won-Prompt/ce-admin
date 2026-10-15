@@ -1573,7 +1573,10 @@ class OrderController extends Controller
             try {
                 $order->loadMissing('patient');
                 $pdfBytes = $this->buildTaxInvoicePdf($order);
-                $pdfName  = '세금계산서_' . ($order->tax_invoice_biz_name ?? '') . '_' . $order->order_number . '.pdf';
+                /* 파일 이름에도 동명이인 꼬리를 싣지 않는다 (2026-10-15 지시) —
+                   공단에 내는 서류라 이름이 맞아야 한다. 종이 안도 같은 잣대다. */
+                $pdfName  = '세금계산서_' . \App\Models\Patient::실명((string) ($order->tax_invoice_biz_name ?? ''))
+                          . '_' . $order->order_number . '.pdf';
                 $pdfPath  = 'tax_invoices/' . $order->id . '/' . $pdfName;
                 Storage::put($pdfPath, $pdfBytes);
                 /* 같은 자리를 가리키는 줄이 있으면 그것을 쓴다 (SR #85) */
@@ -2170,7 +2173,8 @@ class OrderController extends Controller
 
         return $this->inlinePdf(
             \App\Support\TaxInvoiceForm::render($order),
-            '세금계산서_' . ($order->tax_invoice_biz_name ?? '') . '_' . $order->order_number . '.pdf'
+            '세금계산서_' . \App\Models\Patient::실명((string) ($order->tax_invoice_biz_name ?? ''))
+            . '_' . $order->order_number . '.pdf'
         );
     }
 
