@@ -83,15 +83,26 @@ class ShipNotice
 
            승인 문구가 쓰는 이름(#{송장번호})은 우리 문자 이름(#{운송장번호})과 달라
            둘 다 건넨다 — 알림톡 본문은 한 글자도 고칠 수 없다. */
+        /* 발송 방식은 채널마다 한 곳이 정한다 — 알림톡 우선・실패 시 문자가 기본이고,
+           설정에서 「모두 보냄」으로 바꿀 수 있다 (2026-09-30 지시).
+
+           **운송장이 없으면 알림톡을 건너뛰고 문자로만 보낸다** (2026-10-15).
+
+           알림톡 승인 문구는 `#{송장번호}` 를 **비울 수 없다** — 빈 값으로 보내면
+           팝빌이 「입력되지 않은 항목이 있습니다」로 돌려보낸다(2026-10-15 에 실제로
+           거절됐다). 그러면 문자로 넘어가므로 환자는 받긴 하지만, 오류 줄이
+           매번 쌓여 진짜 고장과 섞인다. 보낼 수 없는 것을 보내 보고 거절당하지
+           않는다 — 문자는 그 줄을 걷고 제대로 나간다. */
         ['보낸채널' => $보낸채널, '못보낸말' => $못보낸말] =
-            \App\Models\MessageTemplate::채널마다(self::TEMPLATE,
+            \App\Models\MessageTemplate::채널마다(
+                $tracking === '' ? [] : self::TEMPLATE,
                 fn (string $채널, ?string $틀코드) => $this->sender->sendBulk(
                     $채널,
                     [['rcv' => $mobile, 'rcvnm' => \App\Models\Patient::실명($order->patient?->name),
                       'patient_id' => $order->patient_id]],
                     $text, $틀코드 ?: self::TEMPLATE,
                     ['source' => self::SOURCE, 'prescription_id' => $order->prescription_id],
-                    array_filter(['#{송장번호}' => $tracking], fn ($v) => trim((string) $v) !== '')),
+                    $tracking === '' ? [] : ['#{송장번호}' => $tracking]),
                 문자는틀없이도: true);
 
         $res = $보낸채널
@@ -182,11 +193,21 @@ class ShipNotice
         }
 
         /* 운송장이 없으면 그 줄을 통째로 뺀다 — 「운송장: 」만 남으면 빠뜨린 것처럼 읽힌다.
-           담당자가 문구를 고쳐도 자리표만 찾으면 되므로 그대로 걸린다. */
+           담당자가 문구를 고쳐도 자리표만 찾으면 되므로 그대로 걸린다.
+
+           **자리표 이름이 둘이다** (2026-10-15 에 드러남). 우리 문자는 본디
+           `#{운송장번호}` 를 썼는데, 알림톡 승인 문구가 `#{송장번호}` 로 서 있어
+           메시지 유형의 본문도 그 이름으로 바뀌었다. 여기서는 예전 이름만 찾고 있어
+           **줄을 걷지도 치환하지도 못했다** — 운송장이 없는 건에서 환자에게
+           「-운송장번호:#{송장번호}」가 그대로 나갔다(세 건, 여섯 통).
+
+           둘 다 본다. 어느 쪽으로 적어 두어도 걸린다. */
+        $자리표 = ['#{운송장번호}', '#{송장번호}'];
+
         if ($tracking === '') {
             $body = implode("\n", array_filter(
                 explode("\n", $body),
-                fn ($line) => !str_contains($line, '#{운송장번호}'),
+                fn ($line) => ! \Illuminate\Support\Str::contains($line, $자리표),
             ));
         }
 
@@ -194,6 +215,7 @@ class ShipNotice
             '#{고객명}'      => $name,
             '#{주문번호}'    => (string) $order->order_number,
             '#{운송장번호}'  => $tracking,
+            '#{송장번호}'    => $tracking,
         ]);
     }
 }
