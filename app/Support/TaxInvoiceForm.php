@@ -255,9 +255,121 @@ final class TaxInvoiceForm
      * 그 칸이 없던 시절에 발행한 건은 환자의 지금 주소로 물러난다. 비워 두는 것보다
      * 낫고, 개인 건의 주소는 대개 바뀌지 않는다.
      */
+    /**
+     * 공급받는자 등록번호 — 개인 건은 **주민등록번호를 가리지 않고** 적는다
+     * (2026-10-15 지시).
+     *
+     * `tax_invoice_biz_no` 는 평문 칸이라 발행할 때 일부러 가려서 담는다(P0-1) —
+     * 원문은 처방전ㆍ거래처의 암호화 칸에만 있다. 그 때문에 종이에도 가려진 채로
+     * 찍혔는데, **공단에 내는 서류는 번호가 보이지 않으면 반려된다.**
+     *
+     * 담는 값은 그대로 둔다. 종이를 그릴 때만 원문을 연다 — 여는 자리마다 감사로그가
+     * 남으므로 누가 언제 보았는지 되짚을 수 있다.
+     *
+     * 원문을 찾지 못하면 **담긴 값을 그대로 쓴다.** 가려진 번호라도 비어 있는 것보다
+     * 낫고, 지어낼 수는 없다.
+     */
+    private static function 등록번호(Order $order, bool $개인인가): string
+    {
+        $담긴것 = (string) ($order->tax_invoice_biz_no ?? '');
+
+        if (! $개인인가 || ! str_contains($담긴것, '*')) {
+            return $담긴것;
+        }
+
+        $원문 = preg_replace('/\D/', '',
+            (string) $order->prescription?->residentNoOcrFor('세금계산서 서식 출력')) ?? '';
+
+        if (strlen($원문) !== 13) {
+            $원문 = preg_replace('/\D/', '',
+                (string) $order->patient?->residentNoFor('세금계산서 서식 출력')) ?? '';
+        }
+
+        return strlen($원문) === 13
+            ? substr($원문, 0, 6) . '-' . substr($원문, 6)
+            : $담긴것;
+    }
+
+    /**
+     * 사업장 주소 칸에서 **주소가 아닌 것을 걷는다** (2026-10-15 지시).
+     *
+     * 이 칸은 환자의 주소를 그대로 옮겨 적는데, 상세주소 칸에 받는 사람과 전화번호를
+     * 함께 적어 둔 건이 많다. 그대로 찍히면 세금계산서에 전화번호가 박힌다.
+     *
+     *     (21065) 인천 … 410호 이건우님(010-4238-8077) 010-4238-8077
+     *     (54898) 전북 … 1215호((E)박소영 010-2088-2573) (E)박소영 010-2088-2573
+     *
+     * 걷는 차례가 중요하다 —
+     *
+     *   1. `(E)` 와 그 뒤에 붙은 이름을 뗀다. 우리가 붙인 표시이지 주소가 아니다
+     *   2. **전화번호가 처음 나오는 자리에서 뒤를 통째로 자른다.** 주소는 늘 그 앞이다
+     *   3. 자르고 나면 괄호가 열린 채 끝날 수 있다 — 짝 없는 여는 괄호부터 끝까지 자른다
+     *   4. 「○○○님」처럼 받는 사람을 적어 둔 꼬리를 뗀다
+     *
+     * 우편번호 `(21065)` 와 법정동 `(공릉동)` 은 괄호 안에 전화번호가 없으므로 남는다.
+     *
+     * **홀로 선 이름은 떼지 않는다.** 「103호 김슬기」의 김슬기를 지우려면 사람 이름인지
+     * 건물 이름인지 갈라야 하는데, 「라온채」 같은 세 글자 건물명과 구별할 길이 없다.
+     * 주소를 깎는 쪽이 더 나쁘다.
+     */
+    private static function 주소만(string $주소): string
+    {
+        $값 = trim($주소);
+
+        if ($값 === '') {
+            return '';
+        }
+
+        /* 1. (E) 와 뒤에 붙은 이름 */
+        $값 = preg_replace('/\(E\)\s*[가-힣]{2,5}/u', '', $값);
+        $값 = str_replace('(E)', '', $값);
+
+        /* 2. 전화번호가 처음 나오는 자리부터 끝까지 */
+        $전화 = '/(01[016789]|0\d{1,2})[-\s]?\d{3,4}[-\s]?\d{4}/';
+
+        if (preg_match($전화, $값, $m, PREG_OFFSET_CAPTURE)) {
+            $값 = substr($값, 0, $m[0][1]);
+        }
+
+        /* 3. 짝 없는 여는 괄호부터 끝까지 */
+        $깊이 = 0;
+        $연자리 = null;
+
+        for ($i = 0, $끝 = strlen($값); $i < $끝; $i++) {
+            if ($값[$i] === '(') {
+                if ($깊이 === 0) { $연자리 = $i; }
+                $깊이++;
+            } elseif ($값[$i] === ')') {
+                $깊이 = max(0, $깊이 - 1);
+                if ($깊이 === 0) { $연자리 = null; }
+            }
+        }
+
+        if ($연자리 !== null) {
+            $값 = substr($값, 0, $연자리);
+        }
+
+        /* 4. 받는 사람을 적어 둔 꼬리 */
+        $값 = preg_replace('/\s*[가-힣]{2,4}님\s*$/u', '', $값);
+
+        /* 남은 자국 — 빈 괄호와 겹친 공백, 끝에 걸린 구두점 */
+        $값 = preg_replace('/\(\s*\)/', '', $값);
+        $값 = preg_replace('/\s+/u', ' ', $값);
+
+        return trim($값, " 	
+ ,·/");
+    }
+
     private static function parties(Order $order, array $company): array
     {
-        $buyerName = (string) ($order->tax_invoice_biz_name ?? '');
+        /* 상호ㆍ성명에서 **동명이인 꼬리를 뗀다** (2026-10-15 지시).
+
+           「이영주A」의 A 는 같은 이름을 가르려고 우리가 붙인 글자다. 그 사람의 이름은
+           「이영주」다. 공단에 내는 종이에 꼬리가 찍히면 이름이 맞지 않는다고 반려된다.
+
+           **신고한 값(`tax_invoice_biz_name`)은 그대로 둔다** — 국세청에 간 것은 그것이고,
+           되짚어 고치면 기록과 어긋난다. 종이에 그릴 때만 뗀다. */
+        $buyerName = \App\Models\Patient::실명((string) ($order->tax_invoice_biz_name ?? ''));
 
         /* 개인 건만 주소를 세운다 — 사업자 건은 받아 둔 주소가 없다.
            개인인지는 등록번호로 가른다(사업자등록번호는 열 자리다). */
@@ -270,12 +382,15 @@ final class TaxInvoiceForm
             $buyerAddr = trim((string) $order->patient?->full_address);
         }
 
+        /* 주소 칸에는 **주소만** 남긴다 (2026-10-15 지시) */
+        $buyerAddr = self::주소만($buyerAddr);
+
         return [
             [
                 'label' => '등록번호', 'label2' => '종사업장', 'narrow' => false, 'wide' => false,
                 'supplier'  => self::bizNo((string) config('popbill.test.corp_num')),
                 'supplier2' => '',
-                'buyer'     => (string) ($order->tax_invoice_biz_no ?? ''),
+                'buyer'     => self::등록번호($order, $개인인가),
                 'buyer2'    => '',
             ],
             [
@@ -283,7 +398,7 @@ final class TaxInvoiceForm
                 'supplier'  => (string) ($company['corp_name'] ?? ''),
                 'supplier2' => (string) ($company['ceo_name'] ?? ''),
                 'buyer'     => $buyerName,
-                'buyer2'    => (string) ($order->tax_invoice_ceo_name ?? ''),
+                'buyer2'    => \App\Models\Patient::실명((string) ($order->tax_invoice_ceo_name ?? '')),
             ],
             [
                 'label' => '사업장 주소', 'label2' => '', 'narrow' => false, 'wide' => true,
