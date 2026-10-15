@@ -160,6 +160,17 @@ class OrderReturnController extends Controller
                 $to = collect($r->nextStatuses())->first(fn ($x) => OrderReturn::needsApproval($x));
                 return $to ? (OrderReturn::STATUS_LABELS[$to] ?? $to) : '';
             })(),
+            /* 승인 차례가 아닌 건에는 **다음에 눌러야 할 단계**를 알려 준다
+               (2026-10-15 확인요청).
+
+               여태 건너뛴 건을 「RN… (접수)」로만 적었다. 누르려던 사람은 왜 안 되는지,
+               무엇을 먼저 해야 하는지 알 수 없어 결함으로 보였다. 출고 전 취소는
+               절차상 접수 다음이 「확인요청」이고 그 뒤라야 승인이 선다. */
+            'ap_step'      => (function () use ($r) {
+                $to = collect($r->nextStatuses())->first(fn ($x) => $x !== 'cancelled');
+
+                return $to ? (OrderReturn::STATUS_LABELS[$to] ?? $to) : '';
+            })(),
             'ap_role'      => $r->approverRole(),
             'ap_order_amt' => (int) ($r->order?->total_amount ?? 0),
             'ap_copay'     => (int) ($r->order?->patient_copay ?? 0),

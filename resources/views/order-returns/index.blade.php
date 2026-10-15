@@ -509,15 +509,37 @@
         </div>
       </div>`;
 
+    /* 왜 건너뛰는지, 무엇을 먼저 해야 하는지까지 적는다 (2026-10-15 확인요청).
+
+       「RN… (접수)」만 적어 두면 누르려던 사람은 결함으로 본다. 승인은 정해진 단계에
+       이르러야 서는 것이고, 그 앞에 눌러야 할 단추가 무엇인지는 우리가 안다. */
+    const 건너뜀줄 = r => `
+      <div style="padding:5px 0;">
+        <b style="color:var(--text-primary);">${r.receipt}</b>
+        <span>· ${r.patient || '—'} · ${r.scenario || ''}</span>
+        <span style="margin-left:6px;">지금 <b>${r.status}</b></span>
+        ${r.ap_step
+          ? `<span style="margin-left:6px;color:#B54708;">→ 먼저 「<b>${r.ap_step}</b>」(으)로 옮겨야 승인할 수 있습니다</span>`
+          : '<span style="margin-left:6px;">→ 더 나아갈 단계가 없습니다</span>'}
+      </div>`;
+
     const 건너뜀 = 안될것.length ? `
       <div style="margin-top:10px;padding:9px 11px;background:var(--bg-muted,#F8FAFC);border-radius:8px;
                   font-size:12px;color:var(--text-muted);">
-        승인을 기다리지 않는 ${안될것.length}건은 건너뜁니다 —
-        ${안될것.slice(0, 5).map(r => r.receipt + ' (' + r.status + ')').join(', ')}${안될것.length > 5 ? ' 외' : ''}
+        <div style="margin-bottom:4px;">아직 승인할 차례가 아닌 ${안될것.length}건은 건너뜁니다.</div>
+        ${안될것.slice(0, 8).map(건너뜀줄).join('')}
+        ${안될것.length > 8 ? '<div style="padding-top:4px;">외 ' + (안될것.length - 8) + '건</div>' : ''}
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border-light);">
+          단계는 목록에서 그 줄을 열어 <b>상세</b> 탭에서 옮깁니다.
+        </div>
       </div>` : '';
 
     document.getElementById('rtnApBody').innerHTML =
-      (될것.length ? 될것.map(줄).join('') : '<div style="padding:14px 0;color:var(--text-muted);">승인할 건이 없습니다.</div>')
+      (될것.length
+        ? 될것.map(줄).join('')
+        : `<div style="padding:14px 0;color:var(--text-muted);">
+             고른 ${rows.length}건 가운데 지금 승인할 수 있는 건이 없습니다.
+           </div>`)
       + 건너뜀;
 
     document.getElementById('rtnApGo').disabled = 될것.length === 0;
