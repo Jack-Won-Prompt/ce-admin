@@ -12280,10 +12280,12 @@ window.HELP_TOUR_STEPS = [
         shipping_address:        shippingBase || null,
         shipping_address_detail: shippingDetail,
         recipient_name:    shippingRecipient,
-        /* 적어 둔 출고요청일이 먼저다. 없으면 여태처럼 예상 배송일로 나간다
-           (2026-09-11 확인요청 5쪽). */
-        delivery_date:     document.getElementById('shipRequestDate')?.value
-                             || res.estimated_delivery || null,
+        /* 적어 둔 출고요청일만 보낸다. 비우면 **서버가 오늘로 채운다**
+           (2026-10-15 지시 · WithworksLink::창고내용).
+
+           여태 여기서 예상 배송일(오늘 +3일)을 대신 실었다. 담당자가 고르지 않았는데
+           창고에 사흘 뒤가 서던 까닭이다 — 판매일자 10-14 에 배송요청일자 10-17. */
+        delivery_date:     document.getElementById('shipRequestDate')?.value || null,
         so_type:           currentSoType,
       };
       const wwRes = await apiRequest(`/prescriptions/${RX_NUMBER}/withworks-order`, 'POST', wwPayload);
