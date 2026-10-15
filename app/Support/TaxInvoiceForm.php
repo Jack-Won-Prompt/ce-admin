@@ -351,8 +351,11 @@ final class TaxInvoiceForm
             $값 = substr($값, 0, $연자리);
         }
 
-        /* 4. 받는 사람을 적어 둔 꼬리 */
-        $값 = preg_replace('/\s*[가-힣]{2,4}님\s*$/u', '', $값);
+        /* 4. 받는 사람을 적어 둔 꼬리 — 「○○○님」ㆍ「○○○님앞」 */
+        $값 = preg_replace('/\s*[가-힣]{2,4}님(앞)?\s*$/u', '', $값);
+
+        /* 5. 끝에 홀로 선 **사람 이름** (2026-10-15 지시) */
+        $값 = self::끝의이름떼기($값);
 
         /* 남은 자국 — 빈 괄호와 겹친 공백, 끝에 걸린 구두점 */
         $값 = preg_replace('/\(\s*\)/', '', $값);
@@ -360,6 +363,80 @@ final class TaxInvoiceForm
 
         /* 앞뒤에 걸린 공백ㆍ쉼표ㆍ중점ㆍ빗금을 걷는다 */
         return trim(preg_replace('/^[\s,\x{00B7}\/]+|[\s,\x{00B7}\/]+$/u', '', $값));
+    }
+
+    /**
+     * 주소 끝에 홀로 선 **사람 이름**을 뗀다 (2026-10-15 지시).
+     *
+     * 상세주소 끝에 받는 사람을 적어 둔 건이 있다 — 「102동 303호 김슬기」.
+     * 전화번호와 달리 생김새만으로는 가릴 수 없다. 운영 342건의 끝 토막을 모두
+     * 눈으로 보니 스물여섯이 순 한글이었는데, 그 가운데 **사람 이름은 여덟뿐**이었다.
+     *
+     *     사람 이름   김슬기 · 김천수 · 이승민 · 남석현 · 손주훈 …
+     *     주소다      지하 · 지층 · 좌측 · 중문앞 · 초록문 · 단독주택 · 청구빌라
+     *                 빨간대문 · 디딤자리 · 또래분식 · 대흥칼국수 · 우리세차장
+     *                 승표기름집 · 복뎅이갈비
+     *
+     * 「한글 두세 자면 이름」이라는 잣대는 **지하ㆍ지층ㆍ좌측ㆍ초록문을 함께 지운다.**
+     * 성씨로 가르는 잣대도 마찬가지다 — 초ㆍ우ㆍ승ㆍ복 모두 실제 성씨다.
+     *
+     * 그래서 **우리가 아는 이름과 같을 때만 뗀다.** 거래처ㆍ환자 명단(운영 15,383개)에
+     * 그 이름이 있으면 사람으로 보고, 없으면 주소로 두고 건드리지 않는다. 위 열넷은
+     * 하나도 명단에 없고, 여덟은 모두 있다.
+     *
+     * 명단은 열 분 동안 담아 둔다 — 공단 팩스 합본처럼 여러 장을 잇달아 그릴 때
+     * 장마다 표를 훑지 않게 한다.
+     */
+    private static function 끝의이름떼기(string $주소): string
+    {
+        $토막들 = preg_split('/\s+/u', trim($주소));
+        $끝     = (string) (end($토막들) ?: '');
+
+        /* 이름일 만한 것만 묻는다 — 숫자가 섞였으면 주소다(「1102호」).
+           토막이 하나뿐이면 그것이 주소 전부이므로 떼지 않는다. */
+        if ($끝 === '' || count($토막들) < 2
+            || ! preg_match('/^[가-힣]{2,4}$/u', $끝)) {
+            return $주소;
+        }
+
+        if (! isset(self::아는이름들()[$끝])) {
+            return $주소;
+        }
+
+        array_pop($토막들);
+
+        return implode(' ', $토막들);
+    }
+
+    /** 거래처ㆍ환자 이름 — 꼬리와 (E) 를 뗀 실명으로 모은다 */
+    private static function 아는이름들(): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            'tax_invoice.known_names', now()->addMinutes(10),
+            function (): array {
+                $모음 = [];
+
+                $담기 = function ($값) use (&$모음) {
+                    $실 = \App\Models\Patient::실명((string) $값);
+                    if ($실 !== '') { $모음[$실] = true; }
+                };
+
+                \App\Models\Patient::select('name')->orderBy('id')
+                    ->chunk(2000, function ($덩어리) use ($담기) {
+                        foreach ($덩어리 as $p) { $담기($p->name); }
+                    });
+
+                if (\Illuminate\Support\Facades\Schema::hasTable('ww_customers')) {
+                    \Illuminate\Support\Facades\DB::table('ww_customers')
+                        ->select('account_name')->orderBy('id')
+                        ->chunk(2000, function ($덩어리) use ($담기) {
+                            foreach ($덩어리 as $c) { $담기($c->account_name); }
+                        });
+                }
+
+                return $모음;
+            }
+        );
     }
 
     private static function parties(Order $order, array $company): array
