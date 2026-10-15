@@ -4088,11 +4088,56 @@ class PrescriptionController extends Controller
             ];
         }
 
+        /* **거래처의 위임장은 지난 처방전에 붙어 있어도 함께 세운다**
+           (2026-10-15 지시 「서명위임이 완료되었으면 매번 주문 등록 시 처방전 서류
+           목록에 거래처의 위임장을 함께 표시되게」).
+
+           위임 서명 판정(`DelegationGate::서면위임장`)은 **거래처 단위**로 보는데,
+           서류 목록은 **그 처방전의 첨부만** 보여 주었다. 그래서 승인은 되는데 서류는
+           보이지 않는 일이 생긴다 — (E)정용순 님이 그랬다. 위임장은 2026-07-10
+           처방전에 붙어 있고 열린 화면은 2026-10-12 건이라, 담당자는 받아 둔 위임장을
+           찾지 못했다.
+
+           이 처방전의 첨부는 위에서 이미 세웠으므로 **다른 처방전의 것만** 더한다.
+           어느 처방전에서 왔는지 이름에 적는다 — 적지 않으면 같은 서류가 여럿일 때
+           어느 것이 최근 것인지 가릴 수 없다.
+
+           첨부번호를 그대로 쓰지 않는다. 이 화면의 첨부로 읽히면 지우기ㆍ유형 바꾸기ㆍ
+           팩스 첨부가 남의 처방전 서류에 가 닿는다. 겹치지 않는 자리를 따로 주고
+           갈래(`src`)를 값으로 밝힌다. */
+        $지난위임장 = [];
+
+        if ($prescription->patient_id) {
+            $지난것들 = \App\Models\PrescriptionAttachment::with('prescription:id,rx_number')
+                ->whereIn('doc_type', \App\Support\DelegationGate::종이서명유형)
+                ->whereIn('prescription_id',
+                    Prescription::where('patient_id', $prescription->patient_id)
+                        ->where('id', '!=', $prescription->id)->select('id'))
+                ->orderByDesc('id')->get();
+
+            foreach ($지난것들 as $a) {
+                $쪽번호 = $a->prescription?->rx_number;
+
+                $지난위임장[] = [
+                    'src'       => 'other_rx',
+                    'id'        => -5000000 - $a->id,
+                    'url'       => $a->file_url,
+                    'type'      => $a->doc_type,
+                    'typeLabel' => $a->doc_type_label . ' (지난 처방전)',
+                    'name'      => ($a->file_original_name ?: $a->doc_type_label)
+                                   . ($쪽번호 ? ' · ' . $쪽번호 : ''),
+                    'isPdf'     => $a->is_pdf,
+                    'isRx'      => false,
+                    'isSign'    => true,
+                ];
+            }
+        }
+
         /* 시스템이 만든 서류(위임동의서ㆍ요양비위임장ㆍ팩스통합본ㆍ세금계산서…)도
            같은 자리에 세운다. 따로 목록 카드를 두던 것을 걷었다 — 보는 자리가 둘이면
            어느 쪽을 봐야 하는지 매번 헤맸고, 그 카드에서는 확대도 이동도 되지 않았다. */
         $allDocsJson = array_merge($rxDoc, $attachmentsJson,
-            self::generatedDocsJson($prescription), $signDocs, $patientDocs);
+            self::generatedDocsJson($prescription), $signDocs, $patientDocs, $지난위임장);
 
         // 이름 옆 「조회」 창이 쓰는 목록 — 업로드 화면과 같은 것을 쓴다
         /* 고르개 목록은 더 이상 화면에 박지 않는다 (2026-10-01) — 두 글자부터
