@@ -1004,6 +1004,19 @@ class wwGrid {
       ? 'wwgrid.o:' + this._screenPath + '#' + this.el.id
       : null;
     this._codeOrder = this.columns.map(c => c.name);   // 코드에 적힌 첫 차례
+
+    /* **코드 차례가 바뀌면 남긴 것을 버린다** (2026-10-15 지시).
+
+       남긴 차례는 코드보다 앞선다 — 담당자가 끌어 둔 자리를 배포로 덮어
+       버리지 않으려는 뜻이었다. 그런데 그 한 가지만으로 **우리가 칸을 더하거나
+       자리를 바꿔도 보이지 않았다.** 한 번이라도 칸을 끌어 본 사람은 그 뒤로
+       코드가 어떻게 바뀌든 여태 차례만 보게 된다 — 담당자에게는 「바꿔 달라
+       했는데 그대로다」로 보인다.
+
+       코드 차례를 이은 글을 지문으로 함께 담아 둔다. 칸이 늘거나 줄거나
+       자리가 바뀌면 지문이 달라지고, 그때는 남긴 것을 버리고 코드를
+       따른다. 다시 끌어 두면 그것이 새 지문으로 담긴다. */
+    this._orderSig = this._codeOrder.join('|');
     this._applySavedOrder();
 
     /* 감춰 둔 칸도 남긴다 (2026-09-22 확인요청 1쪽 「Grid 조정 팝업 설정」).
@@ -1339,7 +1352,15 @@ class wwGrid {
     if (!this._orderKey) return null;
     try {
       const v = JSON.parse(localStorage.getItem(this._orderKey) || 'null');
-      return Array.isArray(v) && v.length ? v : null;
+
+      /* 옛 꼴(이름만 담은 배열)은 버린다 — 지문이 없어 코드가 바뀌었는지 알 수 없다.
+         한 번 버려지면 다음부터는 지문이 붙은 새 꼴로 쌓인다. */
+      if (Array.isArray(v)) return null;
+
+      /* 코드 차례가 바뀌었으면 남긴 것을 쓰지 않는다 */
+      if (!v || v.sig !== this._orderSig) return null;
+
+      return Array.isArray(v.order) && v.order.length ? v.order : null;
     } catch (e) {
       return null;
     }
@@ -1357,7 +1378,11 @@ class wwGrid {
                           .map(c => c.name)
                           .filter(n => !보이는것.includes(n));
 
-      localStorage.setItem(this._orderKey, JSON.stringify([...보이는것, ...감춘것]));
+      /* 지문을 함께 담는다 — 코드 차례가 바뀌면 이 줄이 쓸모없어진 것을 알 수 있다 */
+      localStorage.setItem(this._orderKey, JSON.stringify({
+        sig:   this._orderSig,
+        order: [...보이는것, ...감춘것],
+      }));
     } catch (e) {
       /* 남기지 못해도 이번 화면에서는 이미 옮겨져 있다 */
     }
