@@ -206,7 +206,7 @@ class DuplicatePaymentRefundService
     public function 반려(DuplicatePaymentRefund $건, string $까닭): array
     {
         if (! $건->기다리는중인가()) {
-            return ['ok' => false, 'message' => '되돌릴 수 있는 걸음이 아닙니다 — 지금은 「' . $건->상태말() . '」입니다.'];
+            return ['ok' => false, 'message' => '되돌릴 수 있는 단계가 아닙니다 — 현재 「' . $건->상태말() . '」 상태입니다.'];
         }
 
         $건->update([

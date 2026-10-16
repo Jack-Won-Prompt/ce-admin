@@ -109,8 +109,8 @@ class TossWebhookController extends Controller
                         'source'  => 'toss',
                         'level'   => 'info',
                         'kind'    => '웹훅',
-                        'message' => '토스 웹훅 서명이 맞는 꼴을 찾았습니다 — ' . $맞은꼴
-                                   . ' (이 꼴로 좁히고 다시 막을 수 있습니다)',
+                        'message' => '토스 웹훅 서명 형식을 확인했습니다 — ' . $맞은꼴
+                                   . ' (이 형식으로 제한하여 검증을 다시 적용할 수 있습니다)',
                         'status'  => 'open',
                         'last_at' => now(),
                     ]

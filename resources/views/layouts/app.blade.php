@@ -4044,7 +4044,7 @@ input#chatFileInput { display: none; }
             <div class="chat-win-members" id="chatWinMembers"></div>
           </div>
           {{-- 이 방의 첨부를 한 벌로 받는다. 하나씩 누르면 스무 번이다(2026-09-02). --}}
-          <a id="chatZipBtn" href="#" title="이 방의 첨부를 한 벌로 받습니다"
+          <a id="chatZipBtn" href="#" title="이 대화방의 첨부파일을 한 번에 내려받습니다"
              style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;
                     padding:4px 9px;border:1px solid var(--border);border-radius:6px;
                     font-size:11px;color:var(--text-secondary);text-decoration:none;white-space:nowrap;">

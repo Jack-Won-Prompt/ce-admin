@@ -226,7 +226,7 @@ class VirtualAccountService extends TossClient
         if (self::isSimulated($결제)) {
             $결제->forceFill(['status' => 'CANCELED'])->save();
 
-            return ['ok' => true, 'message' => '임의로 세운 계좌라 우리 쪽에서만 닫았습니다.'];
+            return ['ok' => true, 'message' => '시험용으로 발급한 계좌이므로 시스템에서만 해지했습니다.'];
         }
 
         try {

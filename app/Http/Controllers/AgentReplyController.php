@@ -57,7 +57,7 @@ class AgentReplyController extends Controller
         $결과 = match ($갈래) {
             'sr.answer'  => $this->sr에적는다($짐),
             'error.memo' => $this->오류에적는다($짐),
-            default      => ['ok' => false, 'message' => "모르는 갈래입니다 ({$갈래})"],
+            default      => ['ok' => false, 'message' => "알 수 없는 유형입니다 ({$갈래})"],
         };
 
         $this->남긴다($request, $갈래, $결과['message'], $결과['ok'] ? 200 : 422);

@@ -804,7 +804,7 @@
                       + 'border:1px solid var(--gray-200);border-radius:6px;background:var(--gray-0);'
                       + 'color:var(--danger);line-height:1;';
     btn.textContent = '취소';
-    btn.title = '손으로 세운 입금 확인을 되돌립니다';
+    btn.title = '수동으로 등록한 입금 확인을 취소합니다';
     btn.onclick = (ev) => { ev.stopPropagation(); depositAct(row, rowIndex, btn); };
     box.appendChild(btn);
 

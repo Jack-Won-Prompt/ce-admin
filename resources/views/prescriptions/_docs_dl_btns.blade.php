@@ -14,7 +14,7 @@
 
 <button type="button" class="vw-btn-sm" id="btnDocsMerged-{{ $_자리 }}"
         onclick="downloadDocsMerged(event)"
-        title="올린 서류와 만들어진 서류를 한 PDF 로 묶어 내려받습니다 — 공단에 낼 한 벌">
+        title="업로드한 서류와 생성된 서류를 하나의 PDF 로 묶어 내려받습니다 — 공단 제출용">
   <i class="fa-regular fa-file-pdf"></i> 모두 PDF로 다운로드
 </button>
 <button type="button" class="vw-btn-sm" id="btnDocsZip-{{ $_자리 }}"

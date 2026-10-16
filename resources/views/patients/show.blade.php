@@ -1310,7 +1310,7 @@
 
   async function pdDelete(id) {
     if (!await ceConfirm('이 서류를 지우시겠습니까?' + String.fromCharCode(10) + String.fromCharCode(10)
-        + '파일은 남고 목록에서만 가려집니다 — 공단에 이미 낸 서류일 수 있어 자취는 지우지 않습니다.',
+        + '파일은 보관되며 목록에서만 숨겨집니다 — 공단에 이미 제출한 서류일 수 있어 기록은 삭제하지 않습니다.',
         { title: '서류 지우기', confirmText: '지우기', tone: 'danger' })) {
       return;
     }

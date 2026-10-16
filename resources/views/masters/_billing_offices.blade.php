@@ -214,7 +214,7 @@ async function boUpload(input) {
 
   const 갈까 = await ceConfirm(
     '「' + 파일.name + '」을 ' + 갈래말 + ' 청구처로 올립니다.\n\n'
-    + '같은 곳(기관명ㆍ부서가 같은 줄)은 덮어씁니다. 표에 없는 곳은 지우지 않습니다.',
+    + '같은 곳(기관명ㆍ부서가 같은 행)은 덮어씁니다. 목록에 없는 곳은 삭제하지 않습니다.',
     { title: '청구처 엑셀 업로드', confirmText: '올립니다', cancelText: '그만' });
 
   if (!갈까) return;
