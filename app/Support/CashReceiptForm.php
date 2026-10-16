@@ -121,8 +121,14 @@ final class CashReceiptForm
         return [
             'doc' => [
                 'identifier'  => self::maskIdentifier((string) $order->cash_receipt_identifier),
-                // 취소된 건은 취소거래로 선다 — 승인된 것처럼 보이면 안 된다
-                'docKind'     => $order->cash_receipt_cancelled_at ? '취소거래' : '승인거래',
+                /* 취소된 건은 취소거래로 선다 — 승인된 것처럼 보이면 안 된다.
+
+                   **상태를 먼저 본다** (2026-10-16 확인요청). 취소 시각 하나로 가리면,
+                   취소하고 다시 발행한 건이 「취소거래」로 그려진다. 지금 살아 있는
+                   증빙이 무엇인지는 상태 칸이 말한다. */
+                'docKind'     => ((string) $order->cash_receipt_status === 'cancelled'
+                                  || (! $order->cash_receipt_no && $order->cash_receipt_cancelled_at))
+                                 ? '취소거래' : '승인거래',
                 'purpose'     => $order->cash_receipt_type === 'income_deduction' ? '소득공제용' : '지출증빙용',
                 'dealType'    => '일반',
                 'issuedAt'    => $order->cash_receipt_issued_at?->format('Y-m-d H:i:s') ?? '-',

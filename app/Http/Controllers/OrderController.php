@@ -1728,6 +1728,15 @@ class OrderController extends Controller
                 'cash_receipt_identifier' => $data['cash_receipt_identifier'],
                 'cash_receipt_amount'     => $data['cash_receipt_amount'],
                 'cash_receipt_issued_at'  => $issuedAt,
+                /* **취소 시각을 비운다** (2026-10-16 확인요청).
+
+                   취소하고 번호를 바꿔 다시 발행하는 일이 있다. 그때 이 칸이 남아
+                   있으면 서식이 「취소거래」로 그려져, 팝빌에는 승인거래인데 우리
+                   종이만 취소로 보인다 — (E)김종욱A 님 건이 그랬다.
+
+                   지금 살아 있는 증빙은 방금 발행한 것이다. 취소된 것은 앞 건이고
+                   그 기록은 팝빌과 우리 cashbill_records 에 그대로 남는다. */
+                'cash_receipt_cancelled_at' => null,
             ]);
 
             /* 방금 쓴 것을 거래처에도 적어 둔다. 그러지 않으면 다음 발행에서 또 빈칸으로
