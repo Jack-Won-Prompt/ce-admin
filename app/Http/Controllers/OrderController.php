@@ -1564,6 +1564,16 @@ class OrderController extends Controller
                 'tax_invoice_supply'    => $data['tax_invoice_supply'],
                 'tax_invoice_vat'       => $data['tax_invoice_vat'],
                 'tax_invoice_issued_at' => $issuedAt,
+                /* **취소 시각을 비운다** (2026-10-16).
+
+                   취소하고 다시 내는 일이 있다 — 작성일자를 바로잡거나 금액을 고칠
+                   때다. 그때 이 칸이 남아 있으면 전자세금계산서 화면이 그 건을
+                   「발행됨」으로 세우지 않는다(TaxinvoiceController 의
+                   `status === 'issued' && ! cancelled_at`).
+
+                   취소된 앞 건의 기록은 팝빌과 우리 popbill_taxinvoices 에 그대로
+                   남는다. 현금영수증도 같은 자리를 같은 뜻으로 고쳤다. */
+                'tax_invoice_cancelled_at' => null,
             ]);
 
             activity()->causedBy(Auth::user())->performedOn($order)
