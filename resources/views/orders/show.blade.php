@@ -1226,6 +1226,18 @@
   $_tiAmt   = $_tiRate > 0 ? (int) round($_tiBase * $_tiRate / 100) : (int) $order->total_amount;
   $_tiSupply = (int) round($_tiAmt / 1.1);
   $_tiVat    = $_tiAmt - $_tiSupply;
+  /* **작성일자는 공급시기다** — 돈이 들어온 날이다 (2026-10-06 지시).
+
+     여태 이 화면은 작성일자를 보내지 않았고, 받는 쪽이 비어 있으면 오늘로 적었다.
+     그래서 뒤늦게 손으로 내면 공급시기가 어긋났다 — (E)이완영 님 건은 10-12 에
+     입금됐는데 10-16 에 다시 내면서 작성일자가 10-16 으로 찍혔다(2026-10-16 확인요청).
+
+     자동 발행(DepositAutoIssue::낸때)과 같은 값을 쓴다 — 담당자가 확인한 입금일이
+     먼저고, 없으면 토스가 알려 준 입금 시각이다. 고칠 수 있는 칸으로 둔다. */
+  $_tiWriteAt = $order->deposit_confirmed_at
+             ?? $order->tossPayment?->deposited_at
+             ?? $order->created_at;
+  $_tiWrite   = $_tiWriteAt ? \Illuminate\Support\Carbon::parse($_tiWriteAt)->format('Y-m-d') : now()->format('Y-m-d');
   /* 공급받는자 이름은 **밖으로 나가는 이름**이다 — (E) 와 동명이인 꼬리를 뗀다
      (2026-10-06 · SR #90 「공급받는자/이름 뒤에 알파벳 제외」). 꼬리는 같은 이름을
      가리려고 우리가 붙인 것이고 법적 이름이 아니다. 담당자가 고칠 수 있는 칸이므로
@@ -1284,6 +1296,11 @@
       <div class="form-group" id="ti_email_group">
         <label class="form-label">이메일 (전자발송)</label>
         <input type="email" id="ti_email" class="form-control" placeholder="tax@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">작성일자 <span>*</span></label>
+        <input type="date" id="ti_write_date" class="form-control" value="{{ $_tiWrite }}">
+        <div class="amount-hint">공급시기입니다 — 입금일로 채웠습니다 (수정 가능)</div>
       </div>
       <div class="form-group">
         <label class="form-label">공급가액 <span>*</span></label>
@@ -1498,7 +1515,10 @@ async function submitTaxInvoice() {
   const email    = document.getElementById('ti_email').value.trim();
   const supply   = parseInt(document.getElementById('ti_supply').value) || 0;
   const vat      = parseInt(document.getElementById('ti_vat').value)    || 0;
+  /* 받는 쪽은 Ymd 를 받는다 — 날짜 칸은 YYYY-MM-DD 로 주므로 붙임표를 뗀다 */
+  const writeDate = (document.getElementById('ti_write_date')?.value || '').replace(/-/g, '');
 
+  if (!writeDate) { showToast('작성일자를 입력해 주십시오.', 'warning'); return; }
   if (!bizName) { showToast(invoicee === '사업자' ? '사업자명을 입력해 주십시오.' : '이름을 입력해 주십시오.', 'warning'); return; }
   if (!ceoName) { showToast('대표자명을 입력해 주십시오.', 'warning'); return; }
   if (invoicee === '사업자' && !bizNo) { showToast('사업자등록번호를 입력해 주십시오.', 'warning'); return; }
@@ -1513,6 +1533,8 @@ async function submitTaxInvoice() {
     tax_invoice_email:    email || null,
     tax_invoice_supply:   supply,
     tax_invoice_vat:      vat,
+    /* 작성일자(공급시기)를 함께 보낸다 — 보내지 않으면 받는 쪽이 오늘로 적는다 */
+    write_date:           writeDate,
   });
 
   if (res.success) {
