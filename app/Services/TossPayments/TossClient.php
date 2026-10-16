@@ -90,9 +90,9 @@ class TossClient
     }
 
     /** POST 요청 */
-    public function post(string $path, array $data = []): array
+    public function post(string $path, array $data = [], array $맡아서처리할코드 = []): array
     {
-        return $this->request('POST', $path, $data);
+        return $this->request('POST', $path, $data, $맡아서처리할코드);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -136,7 +136,13 @@ class TossClient
      * 성공: 응답 배열 반환
      * 실패: TossApiException throw
      */
-    protected function request(string $method, string $path, array $data = []): array
+    /**
+     * @param  array<int, string>  $맡아서처리할코드  부르는 쪽이 다룰 오류 코드.
+     *         그런 코드는 오류가 아니라 경고로 적는다 — 처리되는 일을 오류로 쌓으면
+     *         진짜 오류가 묻힌다 (2026-10-16 지시).
+     */
+    protected function request(string $method, string $path, array $data = [],
+                               array $맡아서처리할코드 = []): array
     {
         if (!$this->isConfigured()) {
             throw new TossApiException('토스페이먼츠 API 키가 설정되지 않았습니다. .env의 TOSS_SECRET_KEY를 확인하십시오.');
@@ -179,8 +185,11 @@ class TossClient
         if ($httpCode >= 400) {
             $code    = $decoded['code']    ?? 'UNKNOWN';
             $message = $decoded['message'] ?? '알 수 없는 오류';
-            Log::error('[Toss] API 오류', ['http' => $httpCode, 'code' => $code, 'msg' => $message]);
-            throw new TossApiException("[{$code}] {$message}", $httpCode);
+
+            $적을곳 = in_array($code, $맡아서처리할코드, true) ? 'warning' : 'error';
+            Log::$적을곳('[Toss] API 오류', ['http' => $httpCode, 'code' => $code, 'msg' => $message]);
+
+            throw new TossApiException("[{$code}] {$message}", $code, $httpCode);
         }
 
         Log::debug('[Toss] 응답', ['status' => $httpCode, 'keys' => array_keys($decoded ?? [])]);

@@ -229,16 +229,80 @@ class VirtualAccountService extends TossClient
             return ['ok' => true, 'message' => '시험용으로 발급한 계좌이므로 시스템에서만 해지했습니다.'];
         }
 
+        /* 저쪽이 거절할 수 있는 두 가지는 **우리가 맡아서 처리한다**
+           (2026-10-16 지시 — 오류 로그 정리).
+
+             FORBIDDEN_CONSECUTIVE_REQUEST  같은 계좌를 잇따라 닫으려 했다. 잠깐 쉬고
+                                            한 번 더 부르면 지나간다.
+             NOT_CANCELABLE_PAYMENT         이미 취소됐거나, 이미 입금됐다. 둘은 결과가
+                                            전혀 다르므로 **저쪽에 다시 물어** 가른다.
+
+           두 코드는 오류가 아니라 경고로 적는다. 처리되는 일을 오류로 쌓으면 진짜
+           오류가 묻힌다 — 10-16 하루 ERROR 둘이 모두 이것이었고, 결과는 멀쩡했다. */
+        $맡을코드 = ['FORBIDDEN_CONSECUTIVE_REQUEST', 'NOT_CANCELABLE_PAYMENT'];
+
         try {
             $답 = $this->post('/v1/payments/' . $결제->payment_key . '/cancel', [
                 'cancelReason' => mb_substr($사유, 0, 200),
-            ]);
+            ], $맡을코드);
         } catch (TossApiException $e) {
-            Log::warning('[Toss] 입금 전 가상계좌를 닫지 못했다', [
-                'order' => $결제->order_id, 'key' => $결제->payment_key, 'error' => $e->getMessage(),
-            ]);
+            $코드 = $e->토스코드();
 
-            return ['ok' => false, 'message' => $e->getMessage()];
+            /* 잇따라 부른 것 — 한 박자 쉬고 한 번만 더 */
+            if ($코드 === 'FORBIDDEN_CONSECUTIVE_REQUEST') {
+                usleep(800000);
+
+                try {
+                    $답 = $this->post('/v1/payments/' . $결제->payment_key . '/cancel', [
+                        'cancelReason' => mb_substr($사유, 0, 200),
+                    ], $맡을코드);
+
+                    Log::info('[Toss] 가상계좌를 한 번 더 불러 닫았다', [
+                        'order' => $결제->order_id, 'key' => $결제->payment_key,
+                    ]);
+                } catch (TossApiException $다시) {
+                    $코드 = $다시->토스코드();
+                    $e    = $다시;
+                }
+            }
+
+            /* 취소할 수 없다 — 진짜 상태를 저쪽에서 확인한다 */
+            if (isset($e) && ! isset($답) && $코드 === 'NOT_CANCELABLE_PAYMENT') {
+                try {
+                    $저쪽 = $this->get('/v1/payments/' . urlencode((string) $결제->payment_key));
+                    $저쪽상태 = (string) ($저쪽['status'] ?? '');
+                } catch (TossApiException) {
+                    $저쪽상태 = '';
+                }
+
+                if (in_array($저쪽상태, ['CANCELED', 'EXPIRED', 'ABORTED'], true)) {
+                    $결제->forceFill(['status' => $저쪽상태, 'raw_response' => $저쪽])->save();
+
+                    Log::info('[Toss] 가상계좌가 이미 닫혀 있었다', [
+                        'order' => $결제->order_id, 'key' => $결제->payment_key, '저쪽' => $저쪽상태,
+                    ]);
+
+                    return ['ok' => true, 'message' => '이미 닫혀 있는 계좌였습니다.'];
+                }
+
+                if ($저쪽상태 === 'DONE') {
+                    Log::warning('[Toss] 닫으려던 가상계좌에 이미 입금이 들어와 있었다', [
+                        'order' => $결제->order_id, 'key' => $결제->payment_key,
+                    ]);
+
+                    return ['ok' => false,
+                            'message' => '이미 입금된 계좌라 닫을 수 없습니다 — 환불로 처리해야 합니다.'];
+                }
+            }
+
+            if (! isset($답)) {
+                Log::warning('[Toss] 입금 전 가상계좌를 닫지 못했다', [
+                    'order' => $결제->order_id, 'key' => $결제->payment_key,
+                    'code'  => $코드, 'error' => $e->getMessage(),
+                ]);
+
+                return ['ok' => false, 'message' => $e->getMessage()];
+            }
         }
 
         $결제->forceFill([
