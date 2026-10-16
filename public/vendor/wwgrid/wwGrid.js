@@ -904,7 +904,36 @@ class wwGrid {
    */
   constructor(options) {
     this.el           = options.el;
-    this.columns      = options.columns || [];
+    /* **이름이 겹치는 칸은 뒤엣것을 버린다** (2026-10-16 확인요청).
+
+       화면이 제 칸을 세운 뒤 공통 칸 묶음(ceWwCols)을 덧붙이는 자리가 많다. 그때
+       같은 이름이 두 번 들어가는 일이 있었다 — 주문 관리 31개, 주문 등록 2개,
+       결제 1개.
+
+       이름이 겹치면 **칸을 끌어 옮길 수 없다.** 끌기는 이름으로 칸을 찾는데
+       (`findIndex(c => c.name === …)`) 첫째 것만 잡히고, 같은 이름 위에는 놓을 수도
+       없다(`dataset.colName` 이 같아 dragover 가 걸러 낸다). 담당자에게는
+       「조정하려 했으나 이동되지 않는다」로 보인다.
+
+       먼저 적힌 것을 남긴다 — 화면이 제 자리에 세운 칸이 의도된 자리이고, 공통 칸은
+       뒤에 붙는다. 무엇을 버렸는지는 한 번 알린다. 조용히 지나가면 다음에 같은 일이
+       또 생긴다. */
+    const 들어온칸 = options.columns || [];
+    const 본이름   = new Set();
+    const 버린것   = [];
+
+    this.columns = 들어온칸.filter(c => {
+      const n = c && c.name;
+      if (!n) return true;
+      if (본이름.has(n)) { 버린것.push(n); return false; }
+      본이름.add(n);
+      return true;
+    });
+
+    if (버린것.length && typeof console !== 'undefined' && console.warn) {
+      console.warn('[wwGrid] 이름이 겹쳐 뒤엣 칸을 버렸습니다 — '
+                 + (this.el && this.el.id ? this.el.id + ' : ' : '') + 버린것.join(', '));
+    }
     this.columnGroups = options.columnGroups || [];
     this.data         = options.data ? JSON.parse(JSON.stringify(options.data)) : [];
     this.originalData = options.data ? JSON.parse(JSON.stringify(options.data)) : [];
