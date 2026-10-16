@@ -191,14 +191,23 @@ class WithworksSync
     }
 
     /**
-     * 출고 상태 이름표 — 저쪽 API 가 준 짝에서 확인된 둘만 쓴다 (2026-10-06 · SR #106).
+     * 출고 상태 이름표 — **SHIP_STATUS 를 쓴다** (2026-10-16 지시).
      *
-     * 우리 표에 이미 담긴 짝을 세어 확인했다 — 02 → 신규(4건), 95 → 출고완료(76건).
-     * 저쪽 출고 표에는 02ㆍ14ㆍ17ㆍ52ㆍ55ㆍ61ㆍ68ㆍ92ㆍ93ㆍ95ㆍ98 열한 가지가 서는데,
-     * 나머지 아홉은 어느 자료에도 이름이 없다. **이름표를 지어내지 않는다** — 화면이
-     * 틀린 말을 하는 것이 비어 있는 것보다 나쁘다.
+     * 여태 이 자리에 02ㆍ95 둘만 담긴 좁은 지도를 따로 두었다(2026-10-06 · SR #106).
+     * 그때는 「이름을 지어내지 않는다」는 뜻이었는데, **같은 파일에 이미 이름표가
+     * 다 있었다** — 창고 화면의 고르는 칸을 그대로 옮겨 적은 `SHIP_STATUS` 열다섯
+     * 가지다(2026-08-31 확인). 지어내는 것이 아니라 있는 것을 못 쓰고 있었다.
+     *
+     * 그 사이 14(부분할당)ㆍ17(할당완료)ㆍ55(피킹완료)ㆍ98(오더종결)은 **한 번도
+     * 저장되지 않았다.** 창고가 피킹까지 끝낸 건이 화면에는 「신규」나 공란으로 섰고,
+     * 어긋난 건이 날마다 쌓였다 — 10-15 에 9건, 10-16 아침에 21건.
+     *
+     * 이름이 없는 코드는 여전히 적지 않는다. 그런 코드는 지금 창고에 서 있지 않다.
      */
-    private const DB_SHIP_LABEL = ['02' => '신규', '95' => '출고완료'];
+    private static function 출고이름표(string $코드): ?string
+    {
+        return self::SHIP_STATUS[$코드] ?? null;
+    }
 
     /**
      * 출고 정보를 저쪽 표에서 되짚는다 (2026-10-06 지시 · SR #106).
@@ -258,10 +267,10 @@ class WithworksSync
 
         $바꿀것 = [];
 
-        if (isset(self::DB_SHIP_LABEL[$코드])) {
+        if (($이름 = self::출고이름표($코드)) !== null) {
             if ((string) $order->withworks_ship_status !== $코드) {
                 $바꿀것['withworks_ship_status']       = $코드;
-                $바꿀것['withworks_ship_status_label'] = self::DB_SHIP_LABEL[$코드];
+                $바꿀것['withworks_ship_status_label'] = $이름;
             }
         } else {
             Log::info('[Withworks] 모르는 출고 상태 — 이름을 적지 않는다', [
@@ -510,8 +519,23 @@ class WithworksSync
             return ['configured' => false, 'checked' => 0, 'updated' => 0];
         }
 
+        /* **끝난 건은 다시 묻지 않는다** (2026-10-16 지시).
+
+           출고가 끝나고 송장까지 받은 건은 더 볼 것이 없다. 그런데도 주문 상태가
+           `shipping` 이라 계속 훑기 대상에 남아, 정정을 거친 건마다 10분마다
+           「다른 판매주문의 상태가 왔다」 경고가 쌓였다 — 주문 여섯 건이 하루
+           346회를 차지해 진짜 경고를 가렸다.
+
+           송장이 아직 없는 건은 남겨 둔다. 출고 안내가 운송장을 기다리다 멈춰 선
+           건을 마저 보내는 자리가 아래에 있고, 그 그물은 살아 있어야 한다. */
         $orders = Order::whereNotNull('withworks_so_no')
             ->whereIn('status', self::OPEN_STATUSES)
+            ->where(function ($q) {
+                $q->whereNull('withworks_ship_status')
+                  ->orWhereNotIn('withworks_ship_status', self::SHIPPED)
+                  ->orWhereNull('tracking_number')
+                  ->orWhere('tracking_number', '');
+            })
             ->orderBy('withworks_status_at')          // 오래 안 본 것부터
             ->limit($limit)
             ->get();
