@@ -108,6 +108,50 @@ final class CashReceiptForm
         return $dompdf->output();
     }
 
+    /**
+     * 그 증빙에 대한 **팝빌 기록 한 줄** — 거래일시를 저쪽 값으로 적기 위함이다
+     * (2026-10-16 지시).
+     *
+     * 여태 거래일시에 `cash_receipt_issued_at`(우리가 발행을 요청한 시각)을 적었다.
+     * 국세청에 신고된 거래일시는 팝빌이 적은 값이고, 둘이 다른 건이 있다 —
+     * (E)김정수C 님 건은 우리 10-13 12:20:49, 팝빌 10-12 16:12:51 이었다.
+     *
+     * 증빙에 찍히는 값은 **신고된 값**이어야 한다. 승인번호로 그 줄을 찾는다.
+     */
+    private static function 팝빌줄(Order $order): ?object
+    {
+        $번호 = trim((string) ($order->cash_receipt_no ?? ''));
+
+        if ($번호 === '' || ! \Illuminate\Support\Facades\Schema::hasTable('cashbill_records')) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\DB::table('cashbill_records')
+            ->where('order_id', $order->id)
+            ->where('confirm_num', $번호)
+            ->orderByDesc('id')
+            ->first(['trade_dt', 'trade_type', 'confirm_num']);
+    }
+
+    /** `YmdHis` 를 사람이 읽는 꼴로 — 못 읽으면 null */
+    private static function 시각(?string $값): ?string
+    {
+        $값 = preg_replace('/\D/', '', (string) $값);
+
+        if (strlen((string) $값) < 8) {
+            return null;
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::createFromFormat(
+                strlen($값) >= 14 ? 'YmdHis' : 'Ymd',
+                substr($값, 0, strlen($값) >= 14 ? 14 : 8)
+            )->format('Y-m-d H:i:s');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     /** 서식이 쓰는 값 한 벌. */
     public static function data(Order $order): array
     {
@@ -117,6 +161,13 @@ final class CashReceiptForm
         $supply = (int) round($amount / 1.1);
 
         $company = config('popbill.company');
+
+        /* 거래일시는 **팝빌이 적은 값**을 쓴다. 저쪽 기록이 없으면(아직 동기화되지
+           않았거나 옛 건) 우리 발행 시각으로 갈음한다 — 비워 두는 것보다 낫다. */
+        $팝빌 = self::팝빌줄($order);
+        $거래일시 = self::시각($팝빌->trade_dt ?? null)
+                 ?? $order->cash_receipt_issued_at?->format('Y-m-d H:i:s')
+                 ?? '-';
 
         return [
             'doc' => [
@@ -131,7 +182,7 @@ final class CashReceiptForm
                                  ? '취소거래' : '승인거래',
                 'purpose'     => $order->cash_receipt_type === 'income_deduction' ? '소득공제용' : '지출증빙용',
                 'dealType'    => '일반',
-                'issuedAt'    => $order->cash_receipt_issued_at?->format('Y-m-d H:i:s') ?? '-',
+                'issuedAt'    => $거래일시,
                 // 국세청 전송일은 우리가 받아 두지 않는다 — 지어내지 않고 비운다
                 'sentAt'      => '-',
                 'approvalNo'  => (string) ($order->cash_receipt_no ?? ''),
